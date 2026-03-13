@@ -1,0 +1,31 @@
+{
+  "name": "agentflow",
+  "version": "0.1.0",
+  "description": "Universal execution tracing for AI agent systems",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --dts --clean --tsconfig tsconfig.build.json"
+  },
+  "dependencies": {},
+  "keywords": [
+    "ai",
+    "agent",
+    "tracing",
+    "execution-graph",
+    "observability"
+  ],
+  "license": "MIT"
+}

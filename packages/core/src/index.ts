@@ -1,0 +1,51 @@
+/**
+ * AgentFlow — Universal execution tracing for AI agent systems.
+ *
+ * @example
+ * ```ts
+ * import { createGraphBuilder, getStats } from 'agentflow';
+ *
+ * const builder = createGraphBuilder({ agentId: 'my-agent' });
+ * const rootId = builder.startNode({ type: 'agent', name: 'main' });
+ * builder.endNode(rootId);
+ * const graph = builder.build();
+ * console.log(getStats(graph));
+ * ```
+ * @module
+ */
+
+// Graph construction
+export { createGraphBuilder } from './graph-builder.js';
+// Graph querying
+export {
+  findWaitingOn,
+  getChildren,
+  getCriticalPath,
+  getDepth,
+  getDuration,
+  getFailures,
+  getHungNodes,
+  getNode,
+  getParent,
+  getStats,
+  getSubtree,
+} from './graph-query.js';
+// Types
+export type {
+  Adapter,
+  AgentFlowConfig,
+  EdgeType,
+  ExecutionEdge,
+  ExecutionGraph,
+  ExecutionNode,
+  GraphBuilder,
+  GraphStats,
+  GraphStatus,
+  MutableExecutionNode,
+  NodeStatus,
+  NodeType,
+  StartNodeOptions,
+  TraceEvent,
+  TraceEventType,
+  Writer,
+} from './types.js';
