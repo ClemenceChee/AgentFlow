@@ -42,6 +42,9 @@ class AgentFlowTracer:
         self.agent_id = agent_id
         self.workspace_dir = workspace_dir or self._detect_workspace()
         self.wrapper_script = self._find_agentflow_wrapper()
+        self.trace_id = os.environ.get('AGENTFLOW_TRACE_ID')
+        self.parent_span_id = os.environ.get('AGENTFLOW_PARENT_SPAN_ID')
+        self.span_id = None  # Set after first trace execution
 
     def _detect_workspace(self) -> str:
         """Auto-detect workspace directory containing AgentFlow"""
@@ -119,6 +122,8 @@ async function executeTracing(inputData, agentId) {
         agentId,
         trigger: metadata.trigger || 'python_agent',
         name: `${agentId} ${action} execution`,
+        traceId: metadata.traceId || undefined,
+        parentSpanId: metadata.parentSpanId || undefined,
     });
 
     // Root node
@@ -164,6 +169,8 @@ async function executeTracing(inputData, agentId) {
 
     return {
         ...result,
+        traceId: graph.traceId,
+        spanId: graph.spanId,
         trace: {
             path: tracePath,
             stats: getStats(graph),
@@ -193,6 +200,9 @@ function saveTrace(graph, agentId) {
         timestamp: graph.timestamp || Date.now(),
         nodes: graph.nodes instanceof Map ? Array.from(graph.nodes.entries()) : graph.nodes,
         rootId: graph.rootId,
+        traceId: graph.traceId,
+        spanId: graph.spanId,
+        parentSpanId: graph.parentSpanId,
         metadata: graph.metadata || {}
     };
 
@@ -237,12 +247,19 @@ if (import.meta.url === `file://${process.argv[1]}`) {
             metadata = {}
 
         # Prepare input data
+        trace_context = {}
+        if self.trace_id:
+            trace_context["traceId"] = self.trace_id
+        if self.parent_span_id:
+            trace_context["parentSpanId"] = self.parent_span_id
+
         input_data = {
             "action": action,
             "data": data,
             "metadata": {
                 "trigger": "python_agent",
                 "python_pid": os.getpid(),
+                **trace_context,
                 **metadata
             }
         }
@@ -265,7 +282,12 @@ if (import.meta.url === `file://${process.argv[1]}`) {
                 logger.error(f"AgentFlow tracing failed: {result.stderr}")
                 raise Exception(f"AgentFlow tracing failed: {result.stderr}")
 
-            return json.loads(result.stdout)
+            result_data = json.loads(result.stdout)
+            if 'spanId' in result_data:
+                self.span_id = result_data['spanId']
+            if 'traceId' in result_data:
+                self.trace_id = result_data['traceId']
+            return result_data
 
         except subprocess.TimeoutExpired:
             logger.error(f"AgentFlow tracing timed out after {timeout}s")
@@ -279,6 +301,24 @@ if (import.meta.url === `file://${process.argv[1]}`) {
                 os.unlink(input_file)
             except OSError:
                 pass
+
+    def get_child_env(self) -> Dict[str, str]:
+        """Get environment variables to propagate trace context to child processes."""
+        env = dict(os.environ)
+        if self.trace_id:
+            env['AGENTFLOW_TRACE_ID'] = self.trace_id
+        if self.span_id:
+            env['AGENTFLOW_PARENT_SPAN_ID'] = self.span_id
+        return env
+
+    def spawn_traced(self, cmd, **kwargs):
+        """Spawn a child process with trace context automatically propagated.
+
+        Usage:
+            result = tracer.spawn_traced(['python3', 'child_agent.py'])
+        """
+        child_env = self.get_child_env()
+        return subprocess.run(cmd, env=child_env, **kwargs)
 
     def trace_task(self, task_name: str, data: Any, metadata: Optional[Dict] = None) -> Dict:
         """Trace a generic task execution"""

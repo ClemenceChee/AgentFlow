@@ -16,6 +16,8 @@
 
 // Graph construction
 export { createGraphBuilder } from './graph-builder.js';
+// Distributed tracing
+export { stitchTrace, groupByTraceId, getTraceTree } from './graph-stitch.js';
 // Graph querying
 export {
   findWaitingOn,
@@ -34,6 +36,7 @@ export {
 export type {
   Adapter,
   AgentFlowConfig,
+  DistributedTrace,
   EdgeType,
   ExecutionEdge,
   ExecutionGraph,

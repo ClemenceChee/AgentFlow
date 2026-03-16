@@ -15,6 +15,8 @@
  * @module
  */
 
+import { randomUUID } from 'crypto';
+
 import type {
   AgentFlowConfig,
   EdgeType,
@@ -82,6 +84,9 @@ export function createGraphBuilder(config?: AgentFlowConfig): GraphBuilder {
   const generateId = config?.idGenerator ?? createCounterIdGenerator();
   const agentId = config?.agentId ?? 'unknown';
   const trigger = config?.trigger ?? 'manual';
+  const spanId = randomUUID();
+  const traceId = config?.traceId ?? (typeof process !== 'undefined' ? process.env?.AGENTFLOW_TRACE_ID : undefined) ?? randomUUID();
+  const parentSpanId = config?.parentSpanId ?? (typeof process !== 'undefined' ? process.env?.AGENTFLOW_PARENT_SPAN_ID : undefined) ?? null;
 
   // --- Mutable internal state (closure scope) ---
   const graphId = generateId();
@@ -172,6 +177,9 @@ export function createGraphBuilder(config?: AgentFlowConfig): GraphBuilder {
       trigger,
       agentId,
       events: [...events],
+      traceId,
+      spanId,
+      parentSpanId,
     };
 
     return deepFreeze(graph);
@@ -180,6 +188,10 @@ export function createGraphBuilder(config?: AgentFlowConfig): GraphBuilder {
   const builder: GraphBuilder = {
     get graphId() {
       return graphId;
+    },
+
+    get traceContext() {
+      return { traceId, spanId };
     },
 
     startNode(opts: StartNodeOptions): string {

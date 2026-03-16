@@ -91,6 +91,12 @@ export interface ExecutionGraph {
   readonly agentId: string;
   /** Full ordered event log for auditability. */
   readonly events: readonly TraceEvent[];
+  /** Distributed trace ID linking graphs across services. */
+  readonly traceId?: string;
+  /** Unique span ID for this graph within the trace. */
+  readonly spanId?: string;
+  /** Parent span ID, or null if this is the root span. */
+  readonly parentSpanId?: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -131,6 +137,10 @@ export interface AgentFlowConfig {
   readonly logger?: (message: string) => void;
   /** Error callback for internal failures. */
   readonly onError?: (error: unknown) => void;
+  /** Distributed trace ID to join an existing trace. */
+  readonly traceId?: string;
+  /** Parent span ID for linking to an upstream graph. */
+  readonly parentSpanId?: string;
 }
 
 /**
@@ -201,6 +211,9 @@ export interface GraphBuilder {
   /** The graph's ID, available before `build()`. */
   readonly graphId: string;
 
+  /** Trace context for propagating distributed trace information. */
+  readonly traceContext: { traceId: string; spanId: string };
+
   /** Start a new execution node. Returns the generated node ID. */
   startNode(opts: StartNodeOptions): string;
 
@@ -256,6 +269,21 @@ export interface GraphStats {
   readonly duration: number;
   readonly failureCount: number;
   readonly hungCount: number;
+}
+
+// ---------------------------------------------------------------------------
+// Distributed tracing
+// ---------------------------------------------------------------------------
+
+/** A stitched distributed trace spanning multiple execution graphs. */
+export interface DistributedTrace {
+  readonly traceId: string;
+  readonly graphs: ReadonlyMap<string, ExecutionGraph>;
+  readonly rootGraph: ExecutionGraph;
+  readonly childMap: ReadonlyMap<string, readonly string[]>;
+  readonly startTime: number;
+  readonly endTime: number | null;
+  readonly status: GraphStatus;
 }
 
 // ---------------------------------------------------------------------------
