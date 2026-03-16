@@ -16,6 +16,8 @@
 
 // Graph construction
 export { createGraphBuilder } from './graph-builder.js';
+// Serialization / deserialization
+export { graphToJson, loadGraph } from './loader.js';
 // CLI runner
 export { runTraced } from './runner.js';
 export type { RunConfig, RunResult } from './runner.js';

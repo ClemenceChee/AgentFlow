@@ -20,6 +20,7 @@ import { existsSync, mkdirSync, readdirSync, statSync, writeFileSync } from 'nod
 import { basename, join, resolve } from 'node:path';
 
 import { createGraphBuilder } from './graph-builder.js';
+import { graphToJson } from './loader.js';
 import type { ExecutionGraph } from './types.js';
 
 // ---------------------------------------------------------------------------
@@ -105,28 +106,7 @@ function fileTimestamp(): string {
   return new Date().toISOString().replace(/:/g, '-').replace(/\.\d+Z$/, '');
 }
 
-/** Serialize an ExecutionGraph to a plain JSON-safe object. */
-function graphToJson(graph: ExecutionGraph): Record<string, unknown> {
-  const nodesObj: Record<string, unknown> = {};
-  for (const [id, node] of graph.nodes) {
-    nodesObj[id] = node;
-  }
-  return {
-    id: graph.id,
-    rootNodeId: graph.rootNodeId,
-    nodes: nodesObj,
-    edges: graph.edges,
-    startTime: graph.startTime,
-    endTime: graph.endTime,
-    status: graph.status,
-    trigger: graph.trigger,
-    agentId: graph.agentId,
-    events: graph.events,
-    traceId: graph.traceId,
-    spanId: graph.spanId,
-    parentSpanId: graph.parentSpanId,
-  };
-}
+// graphToJson is imported from ./loader.js
 
 // ---------------------------------------------------------------------------
 // Main

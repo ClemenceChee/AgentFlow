@@ -1,5 +1,5 @@
-import { ExecutionGraph } from './watcher.js';
-import { getStats, getFailures, getHungNodes } from '../../core/dist/index.js';
+import type { WatchedTrace } from './watcher.js';
+import { getStats, getFailures, getHungNodes } from 'agentflow-core';
 
 export interface AgentMetrics {
     agentId: string;
@@ -22,7 +22,7 @@ export interface GlobalMetrics {
     totalAgents: number;
     totalExecutions: number;
     globalSuccessRate: number;
-    activeAgents: number; // Agents with executions in last hour
+    activeAgents: number;
     topAgents: Array<{
         agentId: string;
         executionCount: number;
@@ -40,9 +40,8 @@ export class AgentStats {
     private agentMetrics = new Map<string, AgentMetrics>();
     private processedTraces = new Set<string>();
 
-    public processTrace(trace: ExecutionGraph) {
-        // Skip if we've already processed this exact trace
-        const traceKey = `${trace.filename || trace.agentId}-${trace.timestamp}`;
+    public processTrace(trace: WatchedTrace) {
+        const traceKey = `${trace.filename || trace.agentId}-${trace.startTime}`;
         if (this.processedTraces.has(traceKey)) {
             return;
         }
@@ -50,7 +49,6 @@ export class AgentStats {
 
         const agentId = trace.agentId;
 
-        // Get or create agent metrics
         let metrics = this.agentMetrics.get(agentId);
         if (!metrics) {
             metrics = {
@@ -67,12 +65,10 @@ export class AgentStats {
             this.agentMetrics.set(agentId, metrics);
         }
 
-        // Analyze execution
         const analysis = this.analyzeExecution(trace);
 
-        // Update metrics
         metrics.totalExecutions++;
-        metrics.lastExecution = Math.max(metrics.lastExecution, trace.timestamp);
+        metrics.lastExecution = Math.max(metrics.lastExecution, trace.startTime);
 
         const trigger = trace.trigger || 'unknown';
         metrics.triggers[trigger] = (metrics.triggers[trigger] || 0) + 1;
@@ -85,16 +81,14 @@ export class AgentStats {
 
         metrics.successRate = (metrics.successfulExecutions / metrics.totalExecutions) * 100;
 
-        // Update execution time average
         if (analysis.executionTime > 0) {
             const currentAvg = metrics.avgExecutionTime;
             const count = metrics.totalExecutions;
             metrics.avgExecutionTime = ((currentAvg * (count - 1)) + analysis.executionTime) / count;
         }
 
-        // Add to recent activity (keep last 100)
         metrics.recentActivity.push({
-            timestamp: trace.timestamp,
+            timestamp: trace.startTime,
             success: analysis.success,
             executionTime: analysis.executionTime,
             trigger: trigger
@@ -104,11 +98,10 @@ export class AgentStats {
             metrics.recentActivity = metrics.recentActivity.slice(-100);
         }
 
-        // Sort by timestamp
         metrics.recentActivity.sort((a, b) => b.timestamp - a.timestamp);
     }
 
-    private analyzeExecution(trace: ExecutionGraph): {
+    private analyzeExecution(trace: WatchedTrace): {
         success: boolean;
         executionTime: number;
         nodeCount: number;
@@ -116,31 +109,27 @@ export class AgentStats {
         hungCount: number;
     } {
         try {
-            // Use AgentFlow's built-in analysis
             const stats = getStats(trace);
             const failures = getFailures(trace);
             const hungNodes = getHungNodes(trace);
 
             return {
                 success: failures.length === 0 && hungNodes.length === 0,
-                executionTime: stats.totalTime || 0,
+                executionTime: stats.duration || 0,
                 nodeCount: stats.totalNodes || 0,
                 failureCount: failures.length,
                 hungCount: hungNodes.length
             };
         } catch (error) {
-            // Fallback analysis if AgentFlow functions fail
             console.warn('Error analyzing trace with AgentFlow:', error);
 
             const nodes = trace.nodes instanceof Map ?
-                Array.from(trace.nodes.values()) :
-                Array.isArray(trace.nodes) ? trace.nodes.map(([, node]) => node) : [];
+                Array.from(trace.nodes.values()) : [];
 
             const failedNodes = nodes.filter(node => node.status === 'failed').length;
-            const success = failedNodes === 0;
 
             return {
-                success,
+                success: failedNodes === 0,
                 executionTime: 0,
                 nodeCount: nodes.length,
                 failureCount: failedNodes,
@@ -179,7 +168,6 @@ export class AgentStats {
                 successRate: agent.successRate
             }));
 
-        // Collect recent activity from all agents
         const recentActivity: Array<{
             timestamp: number;
             agentId: string;
@@ -188,7 +176,7 @@ export class AgentStats {
         }> = [];
 
         for (const agent of agents) {
-            for (const activity of agent.recentActivity.slice(0, 20)) { // Last 20 from each
+            for (const activity of agent.recentActivity.slice(0, 20)) {
                 recentActivity.push({
                     timestamp: activity.timestamp,
                     agentId: agent.agentId,
@@ -198,9 +186,8 @@ export class AgentStats {
             }
         }
 
-        // Sort by timestamp and limit
         recentActivity.sort((a, b) => b.timestamp - a.timestamp);
-        recentActivity.splice(200); // Keep last 200 activities
+        recentActivity.splice(200);
 
         return {
             totalAgents: agents.length,
@@ -260,17 +247,14 @@ export class AgentStats {
         };
     }
 
-    // Clear old data (useful for long-running dashboard instances)
     public cleanup() {
-        const cutoff = Date.now() - (7 * 24 * 60 * 60 * 1000); // 7 days ago
+        const cutoff = Date.now() - (7 * 24 * 60 * 60 * 1000);
 
         for (const [agentId, metrics] of this.agentMetrics.entries()) {
-            // Remove old activity
             metrics.recentActivity = metrics.recentActivity.filter(
                 activity => activity.timestamp > cutoff
             );
 
-            // Remove agents with no recent activity
             if (metrics.lastExecution < cutoff) {
                 this.agentMetrics.delete(agentId);
             }

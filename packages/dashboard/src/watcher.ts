@@ -2,22 +2,18 @@ import chokidar from 'chokidar';
 import * as fs from 'fs';
 import * as path from 'path';
 import { EventEmitter } from 'events';
+import type { ExecutionGraph } from 'agentflow-core';
+import { loadGraph } from 'agentflow-core';
 
-export interface ExecutionGraph {
-    agentId: string;
-    trigger: string;
-    name: string;
-    timestamp: number;
-    nodes: Array<[string, any]> | Map<string, any>;
-    rootId: string;
-    metadata?: any;
+/** Extended graph with file metadata added by the watcher. */
+export interface WatchedTrace extends ExecutionGraph {
     filename?: string;
     lastModified?: number;
 }
 
 export class TraceWatcher extends EventEmitter {
     private watcher?: chokidar.FSWatcher;
-    private traces = new Map<string, ExecutionGraph>();
+    private traces = new Map<string, WatchedTrace>();
     private tracesDir: string;
 
     constructor(tracesDir: string) {
@@ -55,23 +51,15 @@ export class TraceWatcher extends EventEmitter {
     private loadTraceFile(filePath: string): boolean {
         try {
             const content = fs.readFileSync(filePath, 'utf8');
-            const trace = JSON.parse(content) as ExecutionGraph;
+            const graph = loadGraph(content) as WatchedTrace;
 
-            // Add metadata
             const filename = path.basename(filePath);
             const stats = fs.statSync(filePath);
 
-            trace.filename = filename;
-            trace.lastModified = stats.mtime.getTime();
+            graph.filename = filename;
+            graph.lastModified = stats.mtime.getTime();
 
-            // Normalize nodes format (handle both Map serialization formats)
-            if (Array.isArray(trace.nodes)) {
-                // Convert from Map serialization format
-                const nodesMap = new Map(trace.nodes);
-                trace.nodes = nodesMap;
-            }
-
-            this.traces.set(filename, trace);
+            this.traces.set(filename, graph);
             return true;
         } catch (error) {
             console.error(`Error loading trace file ${filePath}:`, error);
@@ -81,7 +69,7 @@ export class TraceWatcher extends EventEmitter {
 
     private startWatching() {
         this.watcher = chokidar.watch(this.tracesDir, {
-            ignored: /^\\./,
+            ignored: /^\./,
             persistent: true,
             ignoreInitial: true
         });
@@ -128,21 +116,21 @@ export class TraceWatcher extends EventEmitter {
         console.log(`Started watching traces directory: ${this.tracesDir}`);
     }
 
-    public getAllTraces(): ExecutionGraph[] {
+    public getAllTraces(): WatchedTrace[] {
         return Array.from(this.traces.values()).sort((a, b) => {
-            return (b.lastModified || b.timestamp) - (a.lastModified || a.timestamp);
+            return (b.lastModified || b.startTime) - (a.lastModified || a.startTime);
         });
     }
 
-    public getTrace(filename: string): ExecutionGraph | undefined {
+    public getTrace(filename: string): WatchedTrace | undefined {
         return this.traces.get(filename);
     }
 
-    public getTracesByAgent(agentId: string): ExecutionGraph[] {
+    public getTracesByAgent(agentId: string): WatchedTrace[] {
         return this.getAllTraces().filter(trace => trace.agentId === agentId);
     }
 
-    public getRecentTraces(limit: number = 50): ExecutionGraph[] {
+    public getRecentTraces(limit: number = 50): WatchedTrace[] {
         return this.getAllTraces().slice(0, limit);
     }
 
@@ -166,11 +154,10 @@ export class TraceWatcher extends EventEmitter {
         }
     }
 
-    // Utility method to get trace statistics
     public getTraceStats() {
         const total = this.traces.size;
         const agentCount = this.getAgentIds().length;
-        const recentCount = this.getRecentTraces(24).length; // Last 24 traces
+        const recentCount = this.getRecentTraces(24).length;
 
         const triggers = new Map<string, number>();
         for (const trace of this.traces.values()) {
