@@ -2,318 +2,274 @@
 
 **Universal execution tracing and monitoring for AI agent systems.**
 
-AgentFlow is a comprehensive monitoring platform that captures, stores, and analyzes the full execution graphs of AI agent systems. Monitor single agents or entire multi-agent ecosystems with real-time dashboards, persistent analytics, and cross-language support.
+AgentFlow captures, stores, and analyzes the full execution graphs of AI agent systems — including **distributed traces across multiple processes**. Monitor single agents or entire multi-agent ecosystems with a real-time CLI, web dashboard, and cross-language support.
 
-## 🚀 Platform Overview
-
-AgentFlow consists of four integrated packages:
-
-- **🔧 [Core Library](#core-library)** — Zero-dependency graph builder and query engine
-- **🐍 [Python Integration](#python-integration)** — Seamless Python ↔ JavaScript agent monitoring
-- **📊 [Real-time Dashboard](#dashboard)** — Beautiful web interface with live monitoring
-- **🗃️ [Analytics & Storage](#analytics--storage)** — SQLite-powered storage with rich querying
-
-## ✨ What Makes AgentFlow Different
-
-- **Framework-agnostic** — Works with LangChain, CrewAI, Mastra, or custom agent systems
-- **Multi-language support** — Monitor Python and JavaScript agents in unified interface
-- **Real-time monitoring** — Live dashboard updates as your agents execute
-- **Rich analytics** — Health scoring, anomaly detection, trend analysis, failure patterns
-- **Production-ready** — Docker support, CLI tools, comprehensive documentation
-- **Zero lock-in** — Export your data anytime, run entirely self-hosted
-
-## 🏃‍♂️ Quick Start
-
-### 1. **Installation**
+## Installation
 
 ```bash
-# Core + Dashboard + Storage
-npm install agentflow-core agentflow-dashboard agentflow-storage
-
-# Python integration
-pip install agentflow-python
+npm install agentflow-core
 ```
 
-### 2. **Start Monitoring**
+That's it. The core library has zero dependencies and works in any Node.js 20+ environment.
+
+**Optional packages:**
 
 ```bash
-# Start the monitoring stack
-agentflow-query ingest --traces ./traces &
-agentflow-dashboard --traces ./traces --port 3000
-
-# Open http://localhost:3000 for real-time dashboard
+npm install agentflow-dashboard   # Web dashboard
+npm install agentflow-storage     # SQLite persistence & analytics
+pip install agentflow-python      # Python agent integration
 ```
 
-### 3. **Instrument Your Agents**
+## Quick Start
 
-**Python agents:**
-```python
-from agentflow_python import AgentFlowTracer, traced_execution
-
-tracer = AgentFlowTracer("my-ai-agent")
-
-with traced_execution(tracer, "process_request", user_data) as trace:
-    # Your agent logic
-    result = analyze_data(user_data)
-    response = generate_response(result)
-
-# Execution automatically traced and saved
-```
-
-**JavaScript/Node.js agents:**
-```typescript
-import { createGraphBuilder, getStats } from 'agentflow-core';
-
-const builder = createGraphBuilder({
-  agentId: 'my-agent',
-  trigger: 'api-request'
-});
-
-const root = builder.startNode({ type: 'agent', name: 'main' });
-// ... build your execution graph
-const graph = builder.build();
-
-// Query and analyze
-const stats = getStats(graph);
-```
-
-## 🔧 Core Library
-
-The foundation of AgentFlow — a zero-dependency TypeScript library for building queryable execution graphs.
-
-### Features
-
-- **Zero dependencies** — Core package has no runtime dependencies
-- **Queryable graphs** — Find failures, hung nodes, critical paths, performance bottlenecks
-- **Immutable output** — `build()` returns a deeply frozen execution graph
-- **Snapshot support** — Inspect graphs mid-flight without finalizing
-- **TypeScript-first** — Strict types, full IntelliSense, no `any`
-
-### Basic Usage
+### 1. Instrument an agent (JavaScript)
 
 ```typescript
 import { createGraphBuilder, getStats, getFailures } from 'agentflow-core';
+import fs from 'fs';
 
-// Create builder
 const builder = createGraphBuilder({
-  agentId: 'portfolio-agent',
-  trigger: 'user-request',
+  agentId: 'my-agent',
+  trigger: 'api-request',
 });
 
-// Build execution graph
 const root = builder.startNode({ type: 'agent', name: 'main' });
-
-const search = builder.startNode({
-  type: 'tool',
-  name: 'web-search',
-  parentId: root
-});
-builder.endNode(search);
-
-const analysis = builder.startNode({
-  type: 'tool',
-  name: 'analysis',
-  parentId: root
-});
-builder.endNode(analysis);
-
+const tool = builder.startNode({ type: 'tool', name: 'search', parentId: root });
+builder.endNode(tool);
 builder.endNode(root);
 
-// Query and analyze
 const graph = builder.build();
-const stats = getStats(graph);
-const failures = getFailures(graph);
 
-console.log(`Executed ${stats.totalNodes} nodes in ${stats.duration}ms`);
-console.log(`Failures: ${failures.length}`);
+// Save trace to disk
+fs.writeFileSync(
+  `traces/${graph.agentId}-${Date.now()}.json`,
+  JSON.stringify({
+    ...graph,
+    nodes: Array.from(graph.nodes.entries()),
+  }, null, 2)
+);
+
+// Query the graph
+const stats = getStats(graph);
+console.log(stats); // { totalNodes: 2, failureCount: 0, depth: 1, ... }
 ```
 
-### Core API Reference
-
-| Function | Description |
-|----------|-------------|
-| `createGraphBuilder(config)` | Create new graph builder |
-| `builder.startNode(options)` | Start execution node |
-| `builder.endNode(nodeId)` | Mark node completed |
-| `builder.failNode(nodeId, error)` | Mark node failed |
-| `builder.build()` | Finalize frozen graph |
-| `getStats(graph)` | Get execution statistics |
-| `getFailures(graph)` | Get all failed nodes |
-| `getHungNodes(graph)` | Get incomplete nodes |
-| `getCriticalPath(graph)` | Get longest execution path |
-
-[**📖 Complete Core API Documentation**](packages/core/README.md)
-
-## 🐍 Python Integration
-
-Zero-dependency Python package for monitoring Python-based AI agents.
-
-### Features
-
-- **Zero Python dependencies** — Uses subprocess to call AgentFlow core
-- **Auto-discovery** — Automatically finds AgentFlow installation
-- **Context managers** — Clean integration with `traced_execution`
-- **Full compatibility** — Works with all AgentFlow query functions
-- **Error handling** — Traces both successful and failed executions
-
-### Python Usage
+### 2. Instrument an agent (Python)
 
 ```python
 from agentflow_python import AgentFlowTracer, traced_execution
 
-# Initialize tracer
-tracer = AgentFlowTracer("data-processor")
+tracer = AgentFlowTracer("my-python-agent")
 
-# Trace individual executions
-result = tracer.trace_execution("analyze_data", dataset, {
-    "model": "gpt-4",
-    "batch_size": 1000
-})
+# Option A: context manager
+with traced_execution(tracer, "process_data", input_data) as trace:
+    result = do_work(input_data)
 
-# Context manager (recommended)
-with traced_execution(tracer, "train_model", training_data) as trace:
-    model = train_model(training_data)
-    metrics = evaluate_model(model, test_data)
-
-# Integration with AI frameworks
-class MyAIAgent:
-    def __init__(self):
-        self.tracer = AgentFlowTracer("my-ai-agent")
-
-    def process_request(self, user_input):
-        with traced_execution(self.tracer, "handle_request", user_input):
-            intent = self.parse_intent(user_input)
-            context = self.retrieve_context(intent)
-            response = self.generate_response(intent, context)
-            return response
+# Option B: direct call
+result = tracer.trace_execution("analyze", data, {"model": "gpt-4"})
 ```
 
-### Installation & Setup
+### 3. Monitor in real-time (CLI)
+
+Create a monitoring script that reads your trace files:
+
+```javascript
+// monitor.js
+import fs from 'fs';
+import { getStats, getFailures, groupByTraceId, stitchTrace, getTraceTree } from 'agentflow-core';
+
+const traces = fs.readdirSync('./traces')
+  .filter(f => f.endsWith('.json'))
+  .map(f => JSON.parse(fs.readFileSync(`./traces/${f}`, 'utf8')))
+  .map(t => ({ ...t, nodes: new Map(t.nodes) }));
+
+// Per-agent stats
+const agents = {};
+for (const t of traces) {
+  const stats = getStats(t);
+  const fails = getFailures(t);
+  agents[t.agentId] ??= { runs: 0, ok: 0, fail: 0 };
+  agents[t.agentId].runs++;
+  fails.length === 0 ? agents[t.agentId].ok++ : agents[t.agentId].fail++;
+}
+
+console.table(agents);
+
+// Distributed traces (multi-agent workflows)
+const groups = groupByTraceId(traces);
+for (const [traceId, graphs] of groups) {
+  if (graphs.length > 1) {
+    const dt = stitchTrace(graphs);
+    const tree = getTraceTree(dt);
+    console.log(`\nDistributed trace ${traceId.slice(0,8)}:`);
+    for (const g of tree) console.log(`  ${g.agentId} [${g.status}]`);
+  }
+}
+```
+
+```bash
+node monitor.js
+```
+
+A complete live-updating monitor example is included in [examples/live-monitor.js](examples/).
+
+## Distributed Tracing
+
+AgentFlow supports **cross-process trace propagation**. When one agent spawns another, the execution graphs are automatically linked via shared trace IDs and rendered as a tree:
+
+```
+✓  trace:75629bc2  1:56 PM  (4 agents)
+     ✓ orchestrator [cron] 1ms
+   ├─ ✓ curator [spawned] 12ms
+   │  └─ ✓ sub-worker [spawned] 3ms
+   └─ ✓ janitor [spawned] 8ms
+```
+
+### How it works
+
+1. **Parent agent** creates a graph and gets a trace context:
+
+```typescript
+const builder = createGraphBuilder({ agentId: 'orchestrator', trigger: 'cron' });
+const { traceId, spanId } = builder.traceContext;
+```
+
+2. **Pass context to child** via environment variables:
+
+```bash
+AGENTFLOW_TRACE_ID=<traceId> AGENTFLOW_PARENT_SPAN_ID=<spanId> node child-agent.js
+```
+
+3. **Child agent** automatically picks up the context:
+
+```typescript
+// child-agent.js — no extra config needed
+const builder = createGraphBuilder({ agentId: 'worker', trigger: 'spawned' });
+// traceId and parentSpanId are read from env vars automatically
+const graph = builder.build();
+// graph.traceId === parent's traceId
+// graph.parentSpanId === parent's spanId
+```
+
+4. **Stitch and visualize** across process boundaries:
+
+```typescript
+import { groupByTraceId, stitchTrace, getTraceTree } from 'agentflow-core';
+
+const groups = groupByTraceId(allGraphs);
+for (const [traceId, graphs] of groups) {
+  const trace = stitchTrace(graphs);
+  const tree = getTraceTree(trace);
+  // tree is depth-first ordered: [orchestrator, curator, sub-worker, janitor]
+}
+```
+
+### Python distributed tracing
+
+```python
+tracer = AgentFlowTracer("orchestrator")
+tracer.trace_execution("dispatch", task_data)
+
+# Spawn child with trace context propagated automatically
+result = tracer.spawn_traced(["python3", "worker.py", "--task", task_id])
+
+# Or get env vars to pass manually
+child_env = tracer.get_child_env()
+subprocess.run(["node", "worker.js"], env=child_env)
+```
+
+## Core API Reference
+
+### Graph Construction
+
+| Function | Description |
+|----------|-------------|
+| `createGraphBuilder(config?)` | Create a new graph builder |
+| `builder.startNode(options)` | Start an execution node, returns node ID |
+| `builder.endNode(nodeId)` | Mark a node as completed |
+| `builder.failNode(nodeId, error)` | Mark a node as failed |
+| `builder.withParent(id, fn)` | Auto-parent all nodes created inside `fn` |
+| `builder.build()` | Finalize and return a frozen `ExecutionGraph` |
+| `builder.getSnapshot()` | Get a frozen snapshot without finalizing |
+| `builder.traceContext` | Get `{ traceId, spanId }` for propagation |
+
+### Graph Querying
+
+| Function | Description |
+|----------|-------------|
+| `getStats(graph)` | Aggregate statistics (nodes, depth, duration, failures) |
+| `getFailures(graph)` | All failed nodes |
+| `getHungNodes(graph)` | Nodes still in `running` status |
+| `getCriticalPath(graph)` | Longest execution path |
+| `getNode(graph, id)` | Get a single node by ID |
+| `getChildren(graph, id)` | Get direct children of a node |
+| `getSubtree(graph, id)` | Get a node and all descendants |
+| `getDepth(graph)` | Maximum nesting depth |
+| `getDuration(graph)` | Total execution duration in ms |
+
+### Distributed Tracing
+
+| Function | Description |
+|----------|-------------|
+| `groupByTraceId(graphs)` | Group graphs by their shared `traceId` |
+| `stitchTrace(graphs)` | Combine graphs into a `DistributedTrace` tree |
+| `getTraceTree(trace)` | Depth-first ordered list of graphs in a trace |
+
+### Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `AGENTFLOW_TRACE_ID` | Trace ID to join (read automatically by `createGraphBuilder`) |
+| `AGENTFLOW_PARENT_SPAN_ID` | Parent span ID (read automatically by `createGraphBuilder`) |
+
+## Node Types
+
+Execution nodes have a `type` field:
+
+| Type | Use for |
+|------|---------|
+| `agent` | Top-level agent execution |
+| `subagent` | Agent spawned by another agent |
+| `tool` | Tool call (API, database, file I/O) |
+| `decision` | Branching logic or routing |
+| `wait` | Waiting for external input |
+| `custom` | Anything else |
+
+## Python Integration
 
 ```bash
 pip install agentflow-python
 ```
 
-The Python package automatically detects your AgentFlow installation and requires Node.js 18+ to be available.
+Requires Node.js 18+ (used internally via subprocess).
 
-[**📖 Complete Python Documentation**](packages/python/README.md)
+```python
+from agentflow_python import AgentFlowTracer, traced_execution
 
-## 📊 Dashboard
+tracer = AgentFlowTracer("my-agent")
 
-Real-time web interface for monitoring agent executions with live updates and performance insights.
+# Trace a function
+result = tracer.trace_execution("process", data, {"batch_size": 100})
 
-### Features
+# Context manager
+with traced_execution(tracer, "train_model", config) as trace:
+    model = train(config)
 
-- **Real-time updates** — WebSocket-powered live monitoring
-- **Agent performance metrics** — Success rates, execution times, health scores
-- **Interactive visualization** — Execution graphs and performance charts
-- **Multi-agent overview** — Monitor entire agent ecosystems
-- **Responsive design** — Works on desktop and mobile
-- **REST API** — Integrate with external systems
+# Spawn a child process with trace context
+result = tracer.spawn_traced(["python3", "child_agent.py"])
 
-### Dashboard Usage
-
-```bash
-# Start dashboard
-npx agentflow-dashboard --port 3000 --traces ./agent-traces
-
-# Custom configuration
-agentflow-dashboard \
-  --port 8080 \
-  --traces /var/log/agents \
-  --host 0.0.0.0 \
-  --cors
-
-# Open http://localhost:3000
+# Or get env vars for manual propagation
+env = tracer.get_child_env()
+subprocess.run(["node", "worker.js"], env=env)
 ```
 
-### Dashboard Features
+## Production Deployment
 
-- 📈 **Real-time metrics** — Live execution counts, success rates, performance trends
-- 🎯 **Agent health scoring** — Automated health assessment based on performance patterns
-- 📊 **Interactive graphs** — Visual execution flow and dependency tracking
-- 🔍 **Filtering & search** — Find specific executions, agents, or time periods
-- 📱 **Mobile responsive** — Monitor from anywhere
-- 🔗 **API access** — REST endpoints for custom integrations
-
-[**📖 Complete Dashboard Documentation**](packages/dashboard/README.md)
-
-## 🗃️ Analytics & Storage
-
-SQLite-powered persistent storage with advanced analytics, querying, and insights.
-
-### Features
-
-- **Automatic ingestion** — Watch trace directories and ingest files automatically
-- **Rich querying** — Filter by agent, time, success/failure, performance metrics
-- **Advanced analytics** — Health scoring, anomaly detection, trend analysis
-- **Failure pattern analysis** — Identify common failure modes and optimization opportunities
-- **Data export** — Export to JSON/CSV for external analysis
-- **CLI tools** — Command-line interface for operations and analysis
-
-### Storage Usage
-
-```bash
-# Start live ingestion
-agentflow-query ingest --traces ./agent-traces
-
-# Query executions
-agentflow-query query --agent my-agent --days 7 --limit 100
-
-# Analyze agent health
-agentflow-query analyze --type health --agent my-agent
-
-# Export data
-agentflow-query export --format csv --agent my-agent --output data.csv
-
-# Performance analysis
-agentflow-query analyze --type performance --days 30
-```
-
-### Programmatic API
-
-```typescript
-import { AgentFlowStorage } from 'agentflow-storage';
-
-const storage = new AgentFlowStorage({
-  dbPath: './agentflow.db',
-  tracesDir: './traces',
-  autoIngest: true
-});
-
-// Query executions
-const recent = storage.getExecutions({
-  since: Date.now() - 24 * 60 * 60 * 1000,
-  success: true,
-  limit: 100
-});
-
-// Advanced analytics
-const analytics = storage.getAnalytics();
-const healthScore = analytics.getHealthScore('my-agent');
-const anomalies = analytics.detectAnomalies('my-agent', 30);
-const trends = analytics.getTrends('my-agent', 30);
-```
-
-[**📖 Complete Storage Documentation**](packages/storage/README.md)
-
-## 🚀 Production Deployment
-
-### Docker Compose Setup
+### Docker Compose
 
 ```yaml
 version: '3.8'
 services:
-  agentflow-storage:
-    image: node:18-alpine
-    command: >
-      sh -c "npm install -g agentflow-storage &&
-             agentflow-query ingest --traces /traces --db /data/agentflow.db"
-    volumes:
-      - ./traces:/traces
-      - ./data:/data
-    restart: unless-stopped
-
   agentflow-dashboard:
     image: node:18-alpine
     command: >
@@ -323,175 +279,80 @@ services:
       - "3000:3000"
     volumes:
       - ./traces:/traces
-    depends_on:
-      - agentflow-storage
+
+  agentflow-storage:
+    image: node:18-alpine
+    command: >
+      sh -c "npm install -g agentflow-storage &&
+             agentflow-query ingest --traces /traces --db /data/agentflow.db"
+    volumes:
+      - ./traces:/traces
+      - ./data:/data
+    restart: unless-stopped
 ```
 
-### Kubernetes Deployment
+### Systemd Service
 
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: agentflow-dashboard
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: agentflow-dashboard
-  template:
-    metadata:
-      labels:
-        app: agentflow-dashboard
-    spec:
-      containers:
-      - name: dashboard
-        image: node:18-alpine
-        ports:
-        - containerPort: 3000
-        command:
-        - sh
-        - -c
-        - "npm install -g agentflow-dashboard && agentflow-dashboard --host 0.0.0.0"
-        volumeMounts:
-        - name: traces
-          mountPath: /traces
-      volumes:
-      - name: traces
-        persistentVolumeClaim:
-          claimName: agentflow-traces
+```ini
+# /etc/systemd/system/agentflow-monitor.service
+[Unit]
+Description=AgentFlow Monitor
+After=network.target
+
+[Service]
+Type=simple
+User=agentflow
+WorkingDirectory=/opt/agentflow
+ExecStart=/usr/local/bin/node monitor.js
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
 ```
 
-## 📚 Examples & Use Cases
-
-### AI Chat Agent Monitoring
-
-```python
-from agentflow_python import AgentFlowTracer
-
-class ChatAgent:
-    def __init__(self):
-        self.tracer = AgentFlowTracer("chat-agent")
-
-    def handle_message(self, message):
-        with traced_execution(self.tracer, "process_message", message) as trace:
-            intent = self.classify_intent(message)
-            context = self.retrieve_context(intent)
-            response = self.generate_response(intent, context)
-            return response
-```
-
-### Multi-Agent Workflow
-
-```typescript
-// Coordinator agent
-const coordinator = createGraphBuilder({ agentId: 'coordinator', trigger: 'workflow' });
-const root = coordinator.startNode({ type: 'agent', name: 'coordinator' });
-
-// Spawn sub-agents
-const analyst = coordinator.startNode({ type: 'subagent', name: 'analyst', parentId: root });
-const researcher = coordinator.startNode({ type: 'subagent', name: 'researcher', parentId: root });
-
-// Each sub-agent creates their own traces
-// AgentFlow automatically correlates the execution hierarchy
-```
-
-### Scheduled Agent Monitoring
-
-```bash
-#!/bin/bash
-# scheduled_agent.sh - Cron job wrapper
-
-# Start trace ingestion if not running
-pgrep -f "agentflow-query ingest" || agentflow-query ingest --traces ./traces &
-
-# Run your agent with tracing
-python my_scheduled_agent.py
-
-# Generate daily report
-agentflow-query analyze --type trends --days 1 > daily_report.txt
-```
-
-## 🔧 Architecture
-
-AgentFlow is designed as a modular monitoring platform:
+## Architecture
 
 ```
 agentflow/
 ├── packages/
-│   ├── core/           # Zero-dep core: graph builder & query engine
-│   ├── python/         # Python integration package
-│   ├── dashboard/      # Real-time web monitoring interface
-│   └── storage/        # SQLite storage & analytics engine
-├── examples/           # Usage examples and tutorials
-├── tests/             # Comprehensive test suite
-└── docs/              # Architecture and design documentation
+│   ├── core/           # Graph builder, query engine, distributed tracing
+│   ├── python/         # Python integration (subprocess bridge)
+│   ├── dashboard/      # Web monitoring interface
+│   └── storage/        # SQLite persistence & analytics
+├── tests/              # Test suite
+└── examples/           # Usage examples
 ```
 
-### Design Principles
+### Design Decisions
 
-- **Zero lock-in** — All data exportable, fully self-hosted
-- **Language agnostic** — Support any language via subprocess bridges
-- **Real-time capable** — Built for live monitoring and alerts
-- **Production ready** — Designed for enterprise agent systems
-- **Developer friendly** — Rich APIs, CLI tools, comprehensive docs
+- **Zero dependencies in core** — `Map<string, ExecutionNode>` for nodes, `crypto.randomUUID()` for trace IDs
+- **Environment variable propagation** — Works across any process spawning method (subprocess, exec, Docker, SSH)
+- **Stitching at read time** — Each process writes independently; correlation happens when reading traces
+- **Deep freeze on build** — `build()` returns a deeply frozen, immutable `ExecutionGraph`
+- **Backward compatible** — All distributed tracing fields are optional; existing traces work unchanged
 
-## 🤝 Contributing
-
-We welcome contributions! AgentFlow is designed to be extensible and community-driven.
-
-### Development Setup
+## Development
 
 ```bash
-# Clone repository
 git clone https://github.com/ClemenceChee/AgentFlow.git
 cd AgentFlow
 
-# Install dependencies
-npm install
-
-# Run tests
-npm test
-
-# Build all packages
-npm run build
-
-# Start development dashboard
-npm run dev --workspace=agentflow-dashboard
+npm install          # Install dependencies
+npm run build        # Build all packages
+npm test             # Run tests
+npm run typecheck    # Type-check
+npm run lint         # Lint
 ```
 
-### Package Structure
+## npm Packages
 
-- **Core** (`packages/core/`) — TypeScript, zero dependencies, extensive tests
-- **Python** (`packages/python/`) — Python package with subprocess bridge
-- **Dashboard** (`packages/dashboard/`) — React/TypeScript web interface
-- **Storage** (`packages/storage/`) — Node.js with SQLite, CLI tools
+| Package | Version | Description |
+|---------|---------|-------------|
+| [`agentflow-core`](https://www.npmjs.com/package/agentflow-core) | 0.1.2 | Graph builder, query engine, distributed tracing |
+| [`agentflow-python`](https://www.npmjs.com/package/agentflow-python) | 0.1.2 | Python integration |
+| [`agentflow-dashboard`](https://www.npmjs.com/package/agentflow-dashboard) | 0.1.2 | Web monitoring dashboard |
+| [`agentflow-storage`](https://www.npmjs.com/package/agentflow-storage) | 0.1.2 | SQLite persistence & analytics |
 
-## 📋 Roadmap
+## License
 
-### Version 0.3.0 (Next)
-- [ ] LangChain adapter package
-- [ ] CrewAI integration
-- [ ] Advanced visualization components
-- [ ] Alerting and notification system
-
-### Version 0.4.0 (Future)
-- [ ] Distributed tracing across multiple machines
-- [ ] Integration with observability platforms (Datadog, Grafana)
-- [ ] AI-powered performance optimization suggestions
-- [ ] Visual agent workflow designer
-
-## 📄 License
-
-MIT License - see [LICENSE](LICENSE) for details.
-
----
-
-**Ready to monitor your AI agents?**
-
-```bash
-npm install agentflow-core agentflow-dashboard agentflow-storage
-pip install agentflow-python
-```
-
-Start building more reliable, observable AI systems today! 🚀
+MIT
