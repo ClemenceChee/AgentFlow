@@ -113,7 +113,20 @@ async function traceShow(argv: string[]): Promise<void> {
     process.exit(1);
   }
 
-  const graph = await store.get(graphId);
+  let graph = await store.get(graphId);
+  // Also try as a filename (with or without .json)
+  if (!graph) {
+    const { readFile } = await import('node:fs/promises');
+    const { join } = await import('node:path');
+    const fname = graphId.endsWith('.json') ? graphId : `${graphId}.json`;
+    try {
+      const { loadGraph } = await import('./loader.js');
+      const content = await readFile(join(dir, fname), 'utf-8');
+      graph = loadGraph(content);
+    } catch {
+      // not found
+    }
+  }
   if (!graph) {
     console.error(`Trace "${graphId}" not found in ${dir}`);
     process.exit(1);
@@ -138,7 +151,19 @@ async function traceTimeline(argv: string[]): Promise<void> {
     process.exit(1);
   }
 
-  const graph = await store.get(graphId);
+  let graph = await store.get(graphId);
+  if (!graph) {
+    const { readFile } = await import('node:fs/promises');
+    const { join } = await import('node:path');
+    const fname = graphId.endsWith('.json') ? graphId : `${graphId}.json`;
+    try {
+      const { loadGraph } = await import('./loader.js');
+      const content = await readFile(join(dir, fname), 'utf-8');
+      graph = loadGraph(content);
+    } catch {
+      // not found
+    }
+  }
   if (!graph) {
     console.error(`Trace "${graphId}" not found in ${dir}`);
     process.exit(1);

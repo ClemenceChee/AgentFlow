@@ -82,13 +82,17 @@ export function createTraceStore(dir: string): TraceStore {
 
     async get(graphId: string): Promise<ExecutionGraph | null> {
       await ensureDir();
+      // Try exact filename first
       const filePath = join(dir, `${graphId}.json`);
       try {
         const content = await readFile(filePath, 'utf-8');
         return loadGraph(content);
       } catch {
-        return null;
+        // Fall back to scanning all files for matching graph ID
       }
+      // Search by graph ID or filename prefix across all files
+      const all = await loadAll();
+      return all.find((g) => g.id === graphId) ?? null;
     },
 
     async list(opts?: { status?: GraphStatus; limit?: number }): Promise<ExecutionGraph[]> {
