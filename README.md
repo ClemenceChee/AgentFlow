@@ -37,7 +37,7 @@ AgentFlow auto-detects the format of every JSON/JSONL file it finds:
 
 It works with **any** agent framework — LangChain, CrewAI, AutoGen, custom Python/Node agents, cron-based pipelines, Docker services — as long as they write JSON state files somewhere.
 
-## Three commands
+## Five commands
 
 ### `agentflow watch` — Alerts (run as a background service)
 
@@ -111,6 +111,67 @@ agentflow run --watch-dir ./data -- python -m myagent process
 
 Creates structured JSON trace files that `agentflow live` and `agentflow watch` can read.
 
+### `agentflow trace` — Inspect saved traces
+
+```bash
+# List all saved traces
+agentflow trace list --traces-dir ./traces
+
+# Filter by status
+agentflow trace list --status failed --limit 10
+
+# Show a trace as an ASCII tree
+agentflow trace show <trace-id-or-filename> --traces-dir ./traces
+# ✓ alfred-supervisor (agent) 232ms
+# ├─ ✓ dispatch-command (tool) 232ms
+# └─ ✓ state-monitor (tool) 232ms
+
+# Show a trace as a timeline waterfall
+agentflow trace timeline <trace-id-or-filename> --traces-dir ./traces
+# 0ms         50ms        100ms       150ms       200ms
+# ┼───────────┼───────────┼───────────┼───────────┤
+# ██████████████████████████████████████████████████ ✓ main (232ms)
+#  ████████████████████                              ✓ search (100ms)
+
+# Find all stuck/hung spans across traces
+agentflow trace stuck --traces-dir ./traces
+
+# Detect reasoning loops
+agentflow trace loops --traces-dir ./traces
+```
+
+Accepts both graph IDs and filenames (with or without `.json`).
+
+### Runtime guards (programmatic)
+
+Guards detect stuck agents, reasoning loops, and spawn explosions in real-time:
+
+```typescript
+import { createGraphBuilder, withGuards, checkGuards } from 'agentflow-core';
+
+// Wrap any builder with guards
+const raw = createGraphBuilder({ agentId: 'my-agent' });
+const builder = withGuards(raw, {
+  maxDepth: 10,            // Max nesting depth
+  maxAgentSpawns: 50,      // Max agent/subagent count
+  maxReasoningSteps: 25,   // Consecutive same-type node limit
+  onViolation: 'warn',     // 'warn' | 'error' | 'abort'
+});
+
+// Use exactly like a normal builder — guards check automatically
+const root = builder.startNode({ type: 'agent', name: 'main' });
+builder.endNode(root);
+const graph = builder.build();
+
+// Or check any graph after the fact
+const violations = checkGuards(graph, { maxDepth: 5 });
+```
+
+Guard violation types:
+- **Timeout**: Node running longer than threshold (configurable per type: tool 30s, agent 5m, wait 10m)
+- **Reasoning loop**: Consecutive same-type nodes exceeding limit (catches infinite loops)
+- **Spawn explosion**: Graph depth or agent count exceeding limits
+
 ## How auto-detection works
 
 AgentFlow doesn't need to know your agent framework. It reads JSON files and looks for patterns:
@@ -138,17 +199,29 @@ Status values are normalized automatically: `ok`/`success`/`completed`/`healthy`
 ## Programmatic API
 
 ```typescript
-import { createGraphBuilder, graphToJson, loadGraph, getStats } from 'agentflow-core';
+import {
+  createGraphBuilder, withGuards, checkGuards,
+  createTraceStore, toAsciiTree, toTimeline,
+  graphToJson, loadGraph, getStats
+} from 'agentflow-core';
 
-// Build execution traces in your agent code
-const builder = createGraphBuilder({ agentId: 'my-agent', trigger: 'cron' });
+// Build execution traces with runtime guards
+const raw = createGraphBuilder({ agentId: 'my-agent', trigger: 'cron' });
+const builder = withGuards(raw, { maxDepth: 10, onViolation: 'warn' });
 const root = builder.startNode({ type: 'agent', name: 'main' });
 // ... your agent logic ...
 builder.endNode(root);
 const graph = builder.build();
 
-// Save to disk (agentflow watch/live will pick it up)
-writeFileSync('traces/my-agent.json', JSON.stringify(graphToJson(graph), null, 2));
+// Visualize
+console.log(toAsciiTree(graph));    // ASCII tree with status icons
+console.log(toTimeline(graph));     // Horizontal waterfall
+
+// Persist and query
+const store = createTraceStore('./traces');
+await store.save(graph);
+const stuck = await store.getStuckSpans();
+const loops = await store.getReasoningLoops();
 
 // Load and analyze any trace
 const loaded = loadGraph(readFileSync('trace.json', 'utf8'));
@@ -189,6 +262,11 @@ systemctl --user enable --now agentflow-watch
 | `agentflow watch [dir...] [options]` | Headless alert system |
 | `agentflow live [dir...] [options]` | Real-time terminal dashboard |
 | `agentflow run [options] -- <cmd>` | Wrap a command with tracing |
+| `agentflow trace list [--status] [--limit]` | List saved traces |
+| `agentflow trace show <id>` | Show trace as ASCII tree |
+| `agentflow trace timeline <id>` | Show trace as timeline waterfall |
+| `agentflow trace stuck` | Find stuck/hung/timeout spans |
+| `agentflow trace loops` | Detect reasoning loops |
 
 ### Graph construction
 
@@ -199,6 +277,31 @@ systemctl --user enable --now agentflow-watch
 | `builder.endNode(nodeId)` | Mark node completed |
 | `builder.failNode(nodeId, error)` | Mark node failed |
 | `builder.build()` | Finalize and return frozen `ExecutionGraph` |
+
+### Runtime guards
+
+| Function | Description |
+|---|---|
+| `withGuards(builder, config?)` | Wrap a builder with guard detection |
+| `checkGuards(graph, config?)` | Check a graph for violations |
+
+### Visualization
+
+| Function | Description |
+|---|---|
+| `toAsciiTree(graph)` | Render as ASCII tree with status icons |
+| `toTimeline(graph)` | Render as horizontal timeline waterfall |
+
+### Trace storage
+
+| Function | Description |
+|---|---|
+| `createTraceStore(dir)` | Create a JSON file-based trace store |
+| `store.save(graph)` | Save a graph to disk |
+| `store.get(id)` | Load a graph by ID |
+| `store.list({ status?, limit? })` | List stored graphs |
+| `store.getStuckSpans()` | Find stuck nodes across all traces |
+| `store.getReasoningLoops(threshold?)` | Detect reasoning loops |
 
 ### Graph querying
 
@@ -230,7 +333,7 @@ Trace context propagates automatically via `AGENTFLOW_TRACE_ID` and `AGENTFLOW_P
 
 | Package | Description |
 |---|---|
-| [`agentflow-core`](https://www.npmjs.com/package/agentflow-core) | CLI, graph engine, live monitor, watch alerts |
+| [`agentflow-core`](https://www.npmjs.com/package/agentflow-core) | CLI, graph engine, guards, visualization, trace store |
 | [`agentflow-dashboard`](https://www.npmjs.com/package/agentflow-dashboard) | Web dashboard with WebSocket |
 | [`agentflow-storage`](https://www.npmjs.com/package/agentflow-storage) | SQLite persistence & analytics |
 
@@ -241,7 +344,7 @@ git clone https://github.com/ClemenceChee/AgentFlow.git
 cd AgentFlow
 npm install
 npm run build
-npm test            # 85 tests
+npm test            # 125 tests
 ```
 
 ## License

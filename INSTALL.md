@@ -8,10 +8,27 @@
 ## Install from npm
 
 ```bash
-npm install agentflow
+npm install -g agentflow-core
 ```
 
 That's it. The core package has **zero runtime dependencies**.
+
+## Quick start
+
+```bash
+# Monitor your agent data directory
+agentflow live ./data
+
+# Set up alerts
+agentflow watch ./data --alert-on error --alert-on stale:15m --notify telegram
+
+# Inspect saved traces
+agentflow trace list --traces-dir ./traces
+agentflow trace show <trace-id> --traces-dir ./traces
+
+# Wrap any command with tracing
+agentflow run -- python my_agent.py
+```
 
 ## Install from source
 
@@ -33,7 +50,7 @@ This installs dev dependencies (TypeScript, Vitest, Biome, tsup) at the workspac
 ### 3. Verify the installation
 
 ```bash
-# Run the test suite (60 tests)
+# Run the test suite (125 tests)
 npm test
 
 # Type-check the project
@@ -55,19 +72,28 @@ This produces `packages/core/dist/` with:
 - `index.js` — ESM bundle
 - `index.cjs` — CommonJS bundle
 - `index.d.ts` — TypeScript declarations
+- `cli.js` — CLI entry point
 
 ## Usage in your project
 
 ### ESM (recommended)
 
 ```typescript
-import { createGraphBuilder, getStats } from 'agentflow-core';
+import {
+  createGraphBuilder, withGuards, checkGuards,
+  createTraceStore, toAsciiTree, toTimeline,
+  getStats, loadGraph, graphToJson
+} from 'agentflow-core';
 ```
 
 ### CommonJS
 
 ```javascript
-const { createGraphBuilder, getStats } = require('agentflow-core');
+const {
+  createGraphBuilder, withGuards, checkGuards,
+  createTraceStore, toAsciiTree, toTimeline,
+  getStats, loadGraph, graphToJson
+} = require('agentflow-core');
 ```
 
 ## Troubleshooting
