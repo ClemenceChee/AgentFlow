@@ -325,12 +325,32 @@ function processJsonlFile(file: ScannedFile): AgentRecord[] {
 }
 
 // ---------------------------------------------------------------------------
+// Flicker-free rendering: buffer lines, cursor-home, overwrite, clear tail
+// ---------------------------------------------------------------------------
+
+const K = '\x1b[K'; // clear to end of line
+
+function writeLine(lines: string[], text: string): void {
+  lines.push(text + K);
+}
+
+function flushLines(lines: string[]): void {
+  // Move cursor home (no screen clear)
+  process.stdout.write('\x1b[H');
+  // Write all lines, each ending with clear-to-EOL
+  process.stdout.write(lines.join('\n') + '\n');
+  // Clear everything below the last line
+  process.stdout.write('\x1b[J');
+}
+
+// ---------------------------------------------------------------------------
 // Render
 // ---------------------------------------------------------------------------
 
 let prevFileCount = 0;
 let newExecCount = 0;
 const sessionStart = Date.now();
+let firstRender = true;
 
 function render(config: LiveConfig): void {
   const files = scanFiles(config.dirs, config.recursive);
@@ -352,28 +372,68 @@ function render(config: LiveConfig): void {
     }
   }
 
-  // Aggregate by agent id
-  const agents: Record<string, { name: string; total: number; ok: number; fail: number; running: number; lastTs: number; source: SourceType; detail: string }> = {};
-
+  // Group records by source file for nesting
+  const byFile = new Map<string, AgentRecord[]>();
   for (const r of allRecords) {
-    if (!agents[r.id]) {
-      agents[r.id] = { name: r.id, total: 0, ok: 0, fail: 0, running: 0, lastTs: 0, source: r.source, detail: '' };
-    }
-    const ag = agents[r.id]!;
-    ag.total++;
-    if (r.status === 'ok') ag.ok++;
-    else if (r.status === 'error') ag.fail++;
-    else if (r.status === 'running') ag.running++;
-    if (r.lastActive > ag.lastTs) { ag.lastTs = r.lastActive; ag.detail = r.detail; ag.source = r.source; }
+    const arr = byFile.get(r.file) ?? [];
+    arr.push(r);
+    byFile.set(r.file, arr);
   }
 
-  const agentList = Object.values(agents).sort((a, b) => b.lastTs - a.lastTs);
-  const totExec = agentList.reduce((s, a) => s + a.total, 0);
-  const totFail = agentList.reduce((s, a) => s + a.fail, 0);
-  const totRunning = agentList.reduce((s, a) => s + a.running, 0);
+  // Build grouped agent list: single-record files are top-level,
+  // multi-record files become a group with children
+  interface AgentGroup {
+    name: string;
+    source: SourceType;
+    status: 'ok' | 'error' | 'running' | 'unknown';
+    lastTs: number;
+    detail: string;
+    children: AgentRecord[];
+    ok: number;
+    fail: number;
+    running: number;
+    total: number;
+  }
+
+  const groups: AgentGroup[] = [];
+
+  for (const [file, records] of byFile) {
+    if (records.length === 1) {
+      const r = records[0]!;
+      groups.push({
+        name: r.id, source: r.source, status: r.status, lastTs: r.lastActive,
+        detail: r.detail, children: [], ok: r.status === 'ok' ? 1 : 0,
+        fail: r.status === 'error' ? 1 : 0, running: r.status === 'running' ? 1 : 0, total: 1,
+      });
+    } else {
+      // Multi-record file: group name from filename, children are the records
+      const groupName = nameFromFile(file);
+      let lastTs = 0;
+      let ok = 0, fail = 0, running = 0;
+      for (const r of records) {
+        if (r.lastActive > lastTs) lastTs = r.lastActive;
+        if (r.status === 'ok') ok++;
+        else if (r.status === 'error') fail++;
+        else if (r.status === 'running') running++;
+      }
+      const status: AgentGroup['status'] = fail > 0 ? 'error' : running > 0 ? 'running' : ok > 0 ? 'ok' : 'unknown';
+      groups.push({
+        name: groupName, source: records[0]!.source, status, lastTs,
+        detail: `${records.length} agents`, children: records.sort((a, b) => b.lastActive - a.lastActive),
+        ok, fail, running, total: records.length,
+      });
+    }
+  }
+
+  groups.sort((a, b) => b.lastTs - a.lastTs);
+
+  const totExec = allRecords.length;
+  const totFail = allRecords.filter(r => r.status === 'error').length;
+  const totRunning = allRecords.filter(r => r.status === 'running').length;
+  const uniqueAgents = new Set(allRecords.map(r => r.id)).size;
   const sysRate = totExec > 0 ? (((totExec - totFail) / totExec) * 100).toFixed(1) : '100.0';
 
-  // Sparkline (1 hour, 12 buckets of 5 min) — based on file mtimes
+  // Sparkline
   const now = Date.now();
   const buckets = new Array(12).fill(0) as number[];
   const failBuckets = new Array(12).fill(0) as number[];
@@ -393,7 +453,7 @@ function render(config: LiveConfig): void {
     return (failBuckets[i]! > 0 ? C.red : C.green) + sparkChars[level] + C.reset;
   }).join('');
 
-  // Distributed traces (agentflow traces only)
+  // Distributed traces
   const distributedTraces: DistributedTrace[] = [];
   if (allTraces.length > 1) {
     const traceGroups = groupByTraceId(allTraces);
@@ -411,8 +471,24 @@ function render(config: LiveConfig): void {
   const upStr = upMin > 0 ? `${upMin}m ${upSec % 60}s` : `${upSec}s`;
   const time = new Date().toLocaleTimeString();
 
-  // Source tag
-  const sourceTag = (s: SourceType): string => {
+  // Status helpers
+  function statusIcon(s: string, recent: boolean): string {
+    if (s === 'error') return `${C.red}\u25cf${C.reset}`;
+    if (s === 'running') return `${C.green}\u25cf${C.reset}`;
+    if (s === 'ok' && recent) return `${C.green}\u25cf${C.reset}`;
+    if (s === 'ok') return `${C.dim}\u25cb${C.reset}`;
+    return `${C.dim}\u25cb${C.reset}`;
+  }
+
+  function statusText(g: AgentGroup): string {
+    if (g.fail > 0 && g.ok === 0 && g.running === 0) return `${C.red}error${C.reset}`;
+    if (g.running > 0) return `${C.green}running${C.reset}`;
+    if (g.fail > 0) return `${C.yellow}${g.ok}ok/${g.fail}err${C.reset}`;
+    if (g.ok > 0) return g.total > 1 ? `${C.green}${g.ok}/${g.total} ok${C.reset}` : `${C.green}ok${C.reset}`;
+    return `${C.dim}idle${C.reset}`;
+  }
+
+  function sourceTag(s: SourceType): string {
     switch (s) {
       case 'trace': return `${C.cyan}trace${C.reset}`;
       case 'jobs': return `${C.blue}job${C.reset}`;
@@ -420,122 +496,150 @@ function render(config: LiveConfig): void {
       case 'session': return `${C.yellow}session${C.reset}`;
       case 'state': return `${C.dim}state${C.reset}`;
     }
-  };
+  }
 
-  // === RENDER ===
-  process.stdout.write('\x1b[2J\x1b[H');
+  function timeStr(ts: number): string {
+    if (ts <= 0) return 'n/a';
+    return new Date(ts).toLocaleTimeString();
+  }
+
+  function truncate(s: string, max: number): string {
+    return s.length > max ? s.slice(0, max - 1) + '\u2026' : s;
+  }
+
+  // === BUILD OUTPUT ===
+  if (firstRender) {
+    process.stdout.write('\x1b[2J'); // clear screen only on first render
+    firstRender = false;
+  }
+
+  const L: string[] = [];
 
   // Header
-  console.log(`${C.bold}${C.cyan}\u2554${'═'.repeat(70)}\u2557${C.reset}`);
-  console.log(`${C.bold}${C.cyan}\u2551${C.reset}  ${C.bold}${C.white}AGENTFLOW LIVE${C.reset}                               ${C.green}\u25cf LIVE${C.reset}  ${C.dim}${time}${C.reset}  ${C.bold}${C.cyan}\u2551${C.reset}`);
+  writeLine(L, `${C.bold}${C.cyan}\u2554${'═'.repeat(70)}\u2557${C.reset}`);
+  writeLine(L, `${C.bold}${C.cyan}\u2551${C.reset}  ${C.bold}${C.white}AGENTFLOW LIVE${C.reset}                               ${C.green}\u25cf LIVE${C.reset}  ${C.dim}${time}${C.reset}  ${C.bold}${C.cyan}\u2551${C.reset}`);
   const metaLine = `Refresh: ${config.refreshMs / 1000}s \u00b7 Up: ${upStr} \u00b7 Files: ${files.length}`;
   const pad1 = Math.max(0, 64 - metaLine.length);
-  console.log(`${C.bold}${C.cyan}\u2551${C.reset}  ${C.dim}${metaLine}${C.reset}${' '.repeat(pad1)}${C.bold}${C.cyan}\u2551${C.reset}`);
-  console.log(`${C.bold}${C.cyan}\u255a${'═'.repeat(70)}\u255d${C.reset}`);
+  writeLine(L, `${C.bold}${C.cyan}\u2551${C.reset}  ${C.dim}${metaLine}${C.reset}${' '.repeat(pad1)}${C.bold}${C.cyan}\u2551${C.reset}`);
+  writeLine(L, `${C.bold}${C.cyan}\u255a${'═'.repeat(70)}\u255d${C.reset}`);
 
   // Summary
   const sc = totFail === 0 ? C.green : C.yellow;
-  console.log('');
-  console.log(`  ${C.bold}Agents${C.reset} ${sc}${agentList.length}${C.reset}    ${C.bold}Records${C.reset} ${sc}${totExec}${C.reset}    ${C.bold}Success${C.reset} ${sc}${sysRate}%${C.reset}    ${C.bold}Running${C.reset} ${C.green}${totRunning}${C.reset}    ${C.bold}Errors${C.reset} ${totFail > 0 ? C.red : C.dim}${totFail}${C.reset}    ${C.bold}New${C.reset} ${C.yellow}+${newExecCount}${C.reset}`);
+  writeLine(L, '');
+  writeLine(L, `  ${C.bold}Agents${C.reset} ${sc}${uniqueAgents}${C.reset}    ${C.bold}Records${C.reset} ${sc}${totExec}${C.reset}    ${C.bold}Success${C.reset} ${sc}${sysRate}%${C.reset}    ${C.bold}Running${C.reset} ${C.green}${totRunning}${C.reset}    ${C.bold}Errors${C.reset} ${totFail > 0 ? C.red : C.dim}${totFail}${C.reset}    ${C.bold}New${C.reset} ${C.yellow}+${newExecCount}${C.reset}`);
 
   // Sparkline
-  console.log('');
-  console.log(`  ${C.bold}Activity (1h)${C.reset}  ${spark}  ${C.dim}\u2190 now${C.reset}`);
+  writeLine(L, '');
+  writeLine(L, `  ${C.bold}Activity (1h)${C.reset}  ${spark}  ${C.dim}\u2190 now${C.reset}`);
 
-  // Agent table
-  console.log('');
-  console.log(`  ${C.bold}${C.under}Agent                     Type     Status   Last Active  Detail${C.reset}`);
+  // Grouped agent table
+  writeLine(L, '');
+  writeLine(L, `  ${C.bold}${C.under}Agent                        Status      Last Active  Detail${C.reset}`);
 
-  for (const ag of agentList.slice(0, 30)) {
-    const lastTime = ag.lastTs > 0 ? new Date(ag.lastTs).toLocaleTimeString() : 'n/a';
-    const isRecent = (Date.now() - ag.lastTs) < 300000;
+  let lineCount = 0;
+  for (const g of groups) {
+    if (lineCount > 35) break;
+    const isRecent = (Date.now() - g.lastTs) < 300000;
+    const icon = statusIcon(g.status, isRecent);
+    const active = isRecent ? `${C.green}${timeStr(g.lastTs)}${C.reset}` : `${C.dim}${timeStr(g.lastTs)}${C.reset}`;
 
-    let statusIcon: string;
-    let statusText: string;
-    if (ag.fail > 0 && ag.ok === 0 && ag.running === 0) {
-      statusIcon = `${C.red}\u25cf${C.reset}`;
-      statusText = `${C.red}error${C.reset}`;
-    } else if (ag.running > 0) {
-      statusIcon = `${C.green}\u25cf${C.reset}`;
-      statusText = `${C.green}running${C.reset}`;
-    } else if (ag.fail > 0) {
-      statusIcon = `${C.yellow}\u25cf${C.reset}`;
-      statusText = `${C.yellow}${ag.ok}ok/${ag.fail}err${C.reset}`;
-    } else if (ag.ok > 0) {
-      statusIcon = isRecent ? `${C.green}\u25cf${C.reset}` : `${C.dim}\u25cb${C.reset}`;
-      statusText = ag.total > 1 ? `${C.green}${ag.ok}/${ag.total}${C.reset}` : `${C.green}ok${C.reset}`;
+    if (g.children.length === 0) {
+      // Single agent — flat row
+      const name = truncate(g.name, 26).padEnd(26);
+      const st = statusText(g);
+      const det = truncate(g.detail, 30);
+      writeLine(L, `  ${icon} ${name}  ${st.padEnd(20)}  ${active.padEnd(20)}  ${C.dim}${det}${C.reset}`);
+      lineCount++;
     } else {
-      statusIcon = `${C.dim}\u25cb${C.reset}`;
-      statusText = `${C.dim}idle${C.reset}`;
-    }
+      // Group header
+      const name = truncate(g.name, 24).padEnd(24);
+      const st = statusText(g);
+      const tag = sourceTag(g.source);
+      writeLine(L, `  ${icon} ${C.bold}${name}${C.reset}  ${st.padEnd(20)}  ${active.padEnd(20)}  ${tag} ${C.dim}(${g.children.length} agents)${C.reset}`);
+      lineCount++;
 
-    const name = ag.name.length > 23 ? ag.name.slice(0, 22) + '\u2026' : ag.name.padEnd(23);
-    const src = sourceTag(ag.source).padEnd(16); // includes ANSI
-    const active = isRecent ? `${C.green}${lastTime}${C.reset}` : `${C.dim}${lastTime}${C.reset}`;
-    const detail = ag.detail.length > 30 ? ag.detail.slice(0, 29) + '\u2026' : ag.detail;
-
-    console.log(`  ${statusIcon} ${name}  ${src}  ${statusText.padEnd(18)}  ${active.padEnd(20)}  ${C.dim}${detail}${C.reset}`);
-  }
-
-  // Distributed traces
-  if (distributedTraces.length > 0) {
-    console.log('');
-    console.log(`  ${C.bold}${C.under}Distributed Traces${C.reset}`);
-    for (const dt of distributedTraces.slice(0, 3)) {
-      const traceTime = new Date(dt.startTime).toLocaleTimeString();
-      const statusIcon = dt.status === 'completed' ? `${C.green}\u2713${C.reset}` :
-                        dt.status === 'failed' ? `${C.red}\u2717${C.reset}` : `${C.yellow}\u23f3${C.reset}`;
-      const dur = dt.endTime ? `${dt.endTime - dt.startTime}ms` : 'running';
-      const tid = dt.traceId.slice(0, 8);
-      console.log(`  ${statusIcon}  ${C.magenta}trace:${tid}${C.reset}  ${C.dim}${traceTime}  ${dur}  (${dt.graphs.size} agents)${C.reset}`);
-
-      const tree = getTraceTree(dt);
-      for (let i = 0; i < Math.min(tree.length, 6); i++) {
-        const g = tree[i]!;
-        const depth = getDistDepth(dt, g.spanId);
-        const indent = '     ' + '\u2502  '.repeat(Math.max(0, depth - 1));
-        const isLast = i === tree.length - 1 || getDistDepth(dt, tree[i + 1]?.spanId) <= depth;
-        const conn = depth === 0 ? '  ' : (isLast ? '\u2514\u2500 ' : '\u251c\u2500 ');
-        const gs = g.status === 'completed' ? `${C.green}\u2713${C.reset}` :
-                   g.status === 'failed' ? `${C.red}\u2717${C.reset}` : `${C.yellow}\u23f3${C.reset}`;
-        const gd = g.endTime ? `${g.endTime - g.startTime}ms` : 'running';
-        console.log(`${indent}${conn}${gs} ${C.bold}${g.agentId}${C.reset} ${C.dim}[${g.trigger}] ${gd}${C.reset}`);
+      // Children (indented with tree connectors)
+      const kids = g.children.slice(0, 12);
+      for (let i = 0; i < kids.length; i++) {
+        if (lineCount > 35) break;
+        const child = kids[i]!;
+        const isLast = i === kids.length - 1;
+        const connector = isLast ? '\u2514\u2500' : '\u251c\u2500';
+        const cIcon = statusIcon(child.status, (Date.now() - child.lastActive) < 300000);
+        const cName = truncate(child.id, 22).padEnd(22);
+        const cActive = `${C.dim}${timeStr(child.lastActive)}${C.reset}`;
+        const cDet = truncate(child.detail, 25);
+        writeLine(L, `     ${C.dim}${connector}${C.reset} ${cIcon} ${cName}  ${cActive.padEnd(20)}  ${C.dim}${cDet}${C.reset}`);
+        lineCount++;
+      }
+      if (g.children.length > 12) {
+        writeLine(L, `     ${C.dim}   ... +${g.children.length - 12} more${C.reset}`);
+        lineCount++;
       }
     }
   }
 
-  // Recent activity (all sources, sorted by time)
+  // Distributed traces
+  if (distributedTraces.length > 0) {
+    writeLine(L, '');
+    writeLine(L, `  ${C.bold}${C.under}Distributed Traces${C.reset}`);
+    for (const dt of distributedTraces.slice(0, 3)) {
+      const traceTime = new Date(dt.startTime).toLocaleTimeString();
+      const si = dt.status === 'completed' ? `${C.green}\u2713${C.reset}` :
+                 dt.status === 'failed' ? `${C.red}\u2717${C.reset}` : `${C.yellow}\u23f3${C.reset}`;
+      const dur = dt.endTime ? `${dt.endTime - dt.startTime}ms` : 'running';
+      const tid = dt.traceId.slice(0, 8);
+      writeLine(L, `  ${si}  ${C.magenta}trace:${tid}${C.reset}  ${C.dim}${traceTime}  ${dur}  (${dt.graphs.size} agents)${C.reset}`);
+
+      const tree = getTraceTree(dt);
+      for (let i = 0; i < Math.min(tree.length, 6); i++) {
+        const tg = tree[i]!;
+        const depth = getDistDepth(dt, tg.spanId);
+        const indent = '     ' + '\u2502  '.repeat(Math.max(0, depth - 1));
+        const isLast = i === tree.length - 1 || getDistDepth(dt, tree[i + 1]?.spanId) <= depth;
+        const conn = depth === 0 ? '  ' : (isLast ? '\u2514\u2500 ' : '\u251c\u2500 ');
+        const gs = tg.status === 'completed' ? `${C.green}\u2713${C.reset}` :
+                   tg.status === 'failed' ? `${C.red}\u2717${C.reset}` : `${C.yellow}\u23f3${C.reset}`;
+        const gd = tg.endTime ? `${tg.endTime - tg.startTime}ms` : 'running';
+        writeLine(L, `${indent}${conn}${gs} ${C.bold}${tg.agentId}${C.reset} ${C.dim}[${tg.trigger}] ${gd}${C.reset}`);
+      }
+    }
+  }
+
+  // Recent activity
   const recentRecords = allRecords
     .filter(r => r.lastActive > 0)
     .sort((a, b) => b.lastActive - a.lastActive)
-    .slice(0, 8);
+    .slice(0, 6);
 
   if (recentRecords.length > 0) {
-    console.log('');
-    console.log(`  ${C.bold}${C.under}Recent Activity${C.reset}`);
+    writeLine(L, '');
+    writeLine(L, `  ${C.bold}${C.under}Recent Activity${C.reset}`);
     for (const r of recentRecords) {
       const icon = r.status === 'ok' ? `${C.green}\u2713${C.reset}` :
                    r.status === 'error' ? `${C.red}\u2717${C.reset}` :
                    r.status === 'running' ? `${C.green}\u25b6${C.reset}` : `${C.dim}\u25cb${C.reset}`;
       const t = new Date(r.lastActive).toLocaleTimeString();
-      const agent = r.id.length > 26 ? r.id.slice(0, 25) + '\u2026' : r.id.padEnd(26);
+      const agent = truncate(r.id, 26).padEnd(26);
       const age = Math.floor((Date.now() - r.lastActive) / 1000);
       const ageStr = age < 60 ? age + 's ago' : age < 3600 ? Math.floor(age / 60) + 'm ago' : Math.floor(age / 3600) + 'h ago';
-      const detail = r.detail.length > 25 ? r.detail.slice(0, 24) + '\u2026' : r.detail;
-      console.log(`  ${icon}  ${agent} ${C.dim}${t}  ${ageStr.padStart(8)}${C.reset}  ${C.dim}${detail}${C.reset}`);
+      const det = truncate(r.detail, 25);
+      writeLine(L, `  ${icon}  ${agent} ${C.dim}${t}  ${ageStr.padStart(8)}${C.reset}  ${C.dim}${det}${C.reset}`);
     }
   }
 
   if (files.length === 0) {
-    console.log('');
-    console.log(`  ${C.dim}No JSON/JSONL files found. Waiting for data in:${C.reset}`);
-    for (const d of config.dirs) console.log(`  ${C.dim}  ${d}${C.reset}`);
+    writeLine(L, '');
+    writeLine(L, `  ${C.dim}No JSON/JSONL files found. Waiting for data in:${C.reset}`);
+    for (const d of config.dirs) writeLine(L, `  ${C.dim}  ${d}${C.reset}`);
   }
 
-  console.log('');
+  writeLine(L, '');
   const dirLabel = config.dirs.length === 1 ? config.dirs[0]! : `${config.dirs.length} directories`;
-  console.log(`  ${C.dim}Watching: ${dirLabel}${C.reset}`);
-  console.log(`  ${C.dim}Press Ctrl+C to exit${C.reset}`);
+  writeLine(L, `  ${C.dim}Watching: ${dirLabel}${C.reset}`);
+  writeLine(L, `  ${C.dim}Press Ctrl+C to exit${C.reset}`);
+
+  flushLines(L);
 }
 
 function getDistDepth(dt: DistributedTrace, spanId: string | undefined): number {
