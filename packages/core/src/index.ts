@@ -16,18 +16,6 @@
 
 // Graph construction
 export { createGraphBuilder } from './graph-builder.js';
-// Serialization / deserialization
-export { graphToJson, loadGraph } from './loader.js';
-// CLI runner
-export { runTraced } from './runner.js';
-export type { RunConfig, RunResult } from './runner.js';
-// Live monitor
-export { startLive } from './live.js';
-// Watch (headless alerts)
-export { startWatch } from './watch.js';
-export type { AlertCondition, AlertPayload, NotifyChannel, WatchConfig } from './watch-types.js';
-// Distributed tracing
-export { stitchTrace, groupByTraceId, getTraceTree } from './graph-stitch.js';
 // Graph querying
 export {
   findWaitingOn,
@@ -42,6 +30,21 @@ export {
   getStats,
   getSubtree,
 } from './graph-query.js';
+// Distributed tracing
+export { getTraceTree, groupByTraceId, stitchTrace } from './graph-stitch.js';
+export type { GuardConfig, GuardViolation } from './guards.js';
+// Runtime guards
+export { checkGuards, withGuards } from './guards.js';
+// Live monitor
+export { startLive } from './live.js';
+// Serialization / deserialization
+export { graphToJson, loadGraph } from './loader.js';
+export type { RunConfig, RunResult } from './runner.js';
+// CLI runner
+export { runTraced } from './runner.js';
+export type { TraceStore } from './trace-store.js';
+// Trace storage
+export { createTraceStore } from './trace-store.js';
 // Types
 export type {
   Adapter,
@@ -62,3 +65,8 @@ export type {
   TraceEventType,
   Writer,
 } from './types.js';
+// Trace visualization
+export { toAsciiTree, toTimeline } from './visualize.js';
+// Watch (headless alerts)
+export { startWatch } from './watch.js';
+export type { AlertCondition, AlertPayload, NotifyChannel, WatchConfig } from './watch-types.js';

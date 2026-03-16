@@ -30,12 +30,12 @@ npm run lint
 ```
 ## Usage
 ```typescript
-import { createGraphBuilder, getStats, getFailures } from 'agentflow-core';
+import { createGraphBuilder, getStats, withGuards, checkGuards,
+         createTraceStore, toAsciiTree, toTimeline } from 'agentflow-core';
 
-const builder = createGraphBuilder({
-  agentId: 'my-agent',
-  trigger: 'user-request',
-});
+// Build a graph with runtime guards
+const raw = createGraphBuilder({ agentId: 'my-agent', trigger: 'user-request' });
+const builder = withGuards(raw, { maxDepth: 10, onViolation: 'warn' });
 
 const root = builder.startNode({ type: 'agent', name: 'main' });
 const tool = builder.startNode({ type: 'tool', name: 'search', parentId: root });
@@ -45,6 +45,18 @@ builder.endNode(root);
 const graph = builder.build();
 const stats = getStats(graph);
 // { totalNodes: 2, failureCount: 0, depth: 1, ... }
+
+// Check for guard violations
+const violations = checkGuards(graph);
+
+// Visualize
+console.log(toAsciiTree(graph));   // ASCII tree with status icons
+console.log(toTimeline(graph));    // Horizontal waterfall
+
+// Persist and query
+const store = createTraceStore('./traces');
+await store.save(graph);
+const stuck = await store.getStuckSpans();
 ```
 ## Tech Stack
 - **Language**: TypeScript (strict mode)
@@ -72,6 +84,10 @@ agentflow/
 │       │   ├── types.ts           # All interfaces and union types
 │       │   ├── graph-builder.ts   # createGraphBuilder() factory
 │       │   ├── graph-query.ts     # Pure query functions
+│       │   ├── guards.ts          # Runtime guards: checkGuards(), withGuards()
+│       │   ├── visualize.ts       # toAsciiTree(), toTimeline()
+│       │   ├── trace-store.ts     # createTraceStore() — JSON file storage
+│       │   ├── trace-cli.ts       # CLI handlers for `agentflow trace`
 │       │   └── index.ts           # Public API barrel
 │       ├── package.json           # "agentflow", zero deps
 │       ├── tsconfig.json          # Extends root base
@@ -80,7 +96,12 @@ agentflow/
 │   └── core/
 │       ├── types.test.ts
 │       ├── graph-builder.test.ts
-│       └── graph-query.test.ts
+│       ├── graph-query.test.ts
+│       ├── guards.test.ts
+│       ├── visualize.test.ts
+│       ├── trace-store.test.ts
+│       ├── trace-cli.test.ts
+│       └── trace-integration.test.ts
 ├── examples/
 │   └── demo.ts
 ├── package.json                   # Workspace root

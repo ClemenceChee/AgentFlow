@@ -10,10 +10,10 @@
  */
 
 import { basename, resolve } from 'path';
-
+import { startLive } from './live.js';
 import type { RunConfig } from './runner.js';
 import { runTraced } from './runner.js';
-import { startLive } from './live.js';
+import { handleTrace } from './trace-cli.js';
 import { startWatch } from './watch.js';
 
 // ---------------------------------------------------------------------------
@@ -21,7 +21,8 @@ import { startWatch } from './watch.js';
 // ---------------------------------------------------------------------------
 
 function printHelp(): void {
-  console.log(`
+  console.log(
+    `
 AgentFlow CLI — execution tracing and live monitoring for AI agent systems.
 
 Usage:
@@ -31,6 +32,7 @@ Commands:
   run    [options] -- <cmd>       Wrap a command with automatic execution tracing
   live   [dir...] [options]      Real-time terminal monitor (auto-detects any JSON/JSONL)
   watch  [dir...] [options]      Headless alert system — detects failures, sends notifications
+  trace  <command> [options]     Inspect saved execution traces (list, show, timeline, stuck, loops)
 
 Run \`agentflow <command> --help\` for command-specific options.
 
@@ -40,7 +42,8 @@ Examples:
   agentflow live ./traces ./cron ./workers -R
   agentflow watch ./data --alert-on error --notify telegram
   agentflow watch ./data ./cron --alert-on stale:15m --notify webhook:https://...
-`.trim());
+`.trim(),
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -120,7 +123,8 @@ function parseRunArgs(argv: string[]): ParsedRunArgs {
 }
 
 function printRunUsage(): void {
-  console.log(`
+  console.log(
+    `
 AgentFlow Run — wrap any command with automatic execution tracing.
 
 Usage:
@@ -138,7 +142,8 @@ Examples:
   agentflow run -- python -m myagent process
   agentflow run --watch-dir ./data -- python worker.py
   agentflow run --traces-dir ./my-traces --agent-id recon -- node agent.js
-`.trim());
+`.trim(),
+  );
 }
 
 async function runCommand(argv: string[]): Promise<void> {
@@ -150,15 +155,18 @@ async function runCommand(argv: string[]): Promise<void> {
   const parsed = parseRunArgs(argv);
 
   if (parsed.command.length === 0) {
-    console.error('Error: No command specified. Use -- to separate agentflow flags from the command.');
+    console.error(
+      'Error: No command specified. Use -- to separate agentflow flags from the command.',
+    );
     console.error('Example: agentflow run -- python -m myagent process');
     process.exit(1);
   }
 
   const commandStr = parsed.command.join(' ');
-  const watchSummary = parsed.watchDirs.length > 0
-    ? parsed.watchDirs.map((d) => `${d} (${parsed.watchPatterns.join(', ')})`).join(', ')
-    : '(none)';
+  const watchSummary =
+    parsed.watchDirs.length > 0
+      ? parsed.watchDirs.map((d) => `${d} (${parsed.watchPatterns.join(', ')})`).join(', ')
+      : '(none)';
 
   console.log(`\n\uD83D\uDD0D AgentFlow: Tracing command: ${commandStr}`);
   console.log(`\uD83D\uDCC1 Traces: ${parsed.tracesDir}`);
@@ -180,7 +188,9 @@ async function runCommand(argv: string[]): Promise<void> {
     const result = await runTraced(config);
 
     console.log('');
-    console.log(`\u2705 Command completed (exit code ${result.exitCode}, ${result.duration.toFixed(1)}s)`);
+    console.log(
+      `\u2705 Command completed (exit code ${result.exitCode}, ${result.duration.toFixed(1)}s)`,
+    );
 
     if (result.tracePaths.length > 0) {
       console.log('\uD83D\uDCDD Traces saved:');
@@ -216,8 +226,11 @@ async function runCommand(argv: string[]): Promise<void> {
 async function main(): Promise<void> {
   const argv = process.argv.slice(2);
 
-  const knownCommands = ['run', 'live', 'watch'];
-  if (argv.length === 0 || (!knownCommands.includes(argv[0]!) && (argv.includes('--help') || argv.includes('-h')))) {
+  const knownCommands = ['run', 'live', 'watch', 'trace'];
+  if (
+    argv.length === 0 ||
+    (!knownCommands.includes(argv[0]!) && (argv.includes('--help') || argv.includes('-h')))
+  ) {
     printHelp();
     process.exit(0);
   }
@@ -233,6 +246,9 @@ async function main(): Promise<void> {
       break;
     case 'watch':
       startWatch(argv);
+      break;
+    case 'trace':
+      await handleTrace(argv);
       break;
     default:
       // If no subcommand, check if it looks like a path (for `agentflow ./traces` shortcut)

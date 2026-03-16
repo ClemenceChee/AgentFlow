@@ -65,10 +65,7 @@ function globToRegex(pattern: string): RegExp {
 }
 
 /** Snapshot mtimes of matching files in a directory. */
-function snapshotDir(
-  dir: string,
-  patterns: RegExp[],
-): Map<string, number> {
+function snapshotDir(dir: string, patterns: RegExp[]): Map<string, number> {
   const result = new Map<string, number>();
   if (!existsSync(dir)) return result;
 
@@ -103,7 +100,10 @@ function deriveAgentId(command: string[]): string {
 
 /** Build a timestamp string suitable for filenames. */
 function fileTimestamp(): string {
-  return new Date().toISOString().replace(/:/g, '-').replace(/\.\d+Z$/, '');
+  return new Date()
+    .toISOString()
+    .replace(/:/g, '-')
+    .replace(/\.\d+Z$/, '');
 }
 
 // graphToJson is imported from ./loader.js
@@ -256,6 +256,11 @@ export async function runTraced(config: RunConfig): Promise<RunResult> {
     const outPath = join(resolvedTracesDir, filename);
     writeFileSync(outPath, JSON.stringify(graphToJson(graph), null, 2), 'utf-8');
     tracePaths.push(outPath);
+  }
+
+  // Hint for trace inspection
+  if (tracePaths.length > 0) {
+    console.log(`\uD83D\uDD0D Run "agentflow trace show ${orchestratorGraph.id} --traces-dir ${resolvedTracesDir}" to inspect`);
   }
 
   return {
