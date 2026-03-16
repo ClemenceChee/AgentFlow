@@ -39,13 +39,13 @@ const C = {
 // ---------------------------------------------------------------------------
 
 interface LiveConfig {
-  tracesDir: string;
+  dirs: string[];
   refreshMs: number;
   recursive: boolean;
 }
 
 function parseArgs(argv: string[]): LiveConfig {
-  const config: LiveConfig = { tracesDir: '.', refreshMs: 3000, recursive: false };
+  const config: LiveConfig = { dirs: [], refreshMs: 3000, recursive: false };
   const args = argv.slice(0);
   if (args[0] === 'live') args.shift();
 
@@ -57,11 +57,10 @@ function parseArgs(argv: string[]): LiveConfig {
       i++; const v = parseInt(args[i] ?? '', 10);
       if (!isNaN(v) && v > 0) config.refreshMs = v * 1000; i++;
     } else if (arg === '--recursive' || arg === '-R') { config.recursive = true; i++; }
-    else if (arg === '--traces-dir' || arg === '-t') { i++; config.tracesDir = args[i] ?? config.tracesDir; i++; }
-    else if (!arg.startsWith('-')) { config.tracesDir = arg; i++; }
+    else if (!arg.startsWith('-')) { config.dirs.push(resolve(arg)); i++; }
     else { i++; }
   }
-  config.tracesDir = resolve(config.tracesDir);
+  if (config.dirs.length === 0) config.dirs.push(resolve('.'));
   return config;
 }
 
@@ -70,13 +69,13 @@ function printUsage(): void {
 AgentFlow Live Monitor — real-time terminal dashboard for agent systems.
 
 Auto-detects agent traces, state files, job schedulers, and session logs
-from any JSON/JSONL files in the watched directory.
+from any JSON/JSONL files in the watched directories.
 
 Usage:
-  agentflow live [directory] [options]
+  agentflow live [dir...] [options]
 
 Arguments:
-  directory               Directory to watch (default: current directory)
+  dir                     One or more directories to watch (default: .)
 
 Options:
   -r, --refresh <secs>    Refresh interval in seconds (default: 3)
@@ -85,7 +84,7 @@ Options:
 
 Examples:
   agentflow live ./data
-  agentflow live ./traces --refresh 5
+  agentflow live ./traces ./cron ./workers --refresh 5
   agentflow live /var/lib/myagent -R
 `.trim());
 }
@@ -118,33 +117,37 @@ interface ScannedFile {
   ext: '.json' | '.jsonl';
 }
 
-function scanFiles(dir: string, recursive: boolean): ScannedFile[] {
+function scanFiles(dirs: string[], recursive: boolean): ScannedFile[] {
   const results: ScannedFile[] = [];
+  const seen = new Set<string>();
 
-  function scanDir(d: string) {
+  function scanDir(d: string, topLevel: boolean) {
     try {
       for (const f of readdirSync(d)) {
         if (f.startsWith('.')) continue;
         const fp = join(d, f);
+        if (seen.has(fp)) continue;
         let stat;
         try { stat = statSync(fp); } catch { continue; }
 
-        if (stat.isDirectory() && recursive && d === dir) {
-          scanDir(fp);
+        if (stat.isDirectory() && recursive && topLevel) {
+          scanDir(fp, false);
           continue;
         }
         if (!stat.isFile()) continue;
 
         if (f.endsWith('.json')) {
+          seen.add(fp);
           results.push({ filename: f, path: fp, mtime: stat.mtime.getTime(), ext: '.json' });
         } else if (f.endsWith('.jsonl')) {
+          seen.add(fp);
           results.push({ filename: f, path: fp, mtime: stat.mtime.getTime(), ext: '.jsonl' });
         }
       }
     } catch { /* dir not readable */ }
   }
 
-  scanDir(dir);
+  for (const dir of dirs) scanDir(dir, true);
   results.sort((a, b) => b.mtime - a.mtime);
   return results;
 }
@@ -330,7 +333,7 @@ let newExecCount = 0;
 const sessionStart = Date.now();
 
 function render(config: LiveConfig): void {
-  const files = scanFiles(config.tracesDir, config.recursive);
+  const files = scanFiles(config.dirs, config.recursive);
 
   if (files.length > prevFileCount && prevFileCount > 0) {
     newExecCount += files.length - prevFileCount;
@@ -526,11 +529,12 @@ function render(config: LiveConfig): void {
   if (files.length === 0) {
     console.log('');
     console.log(`  ${C.dim}No JSON/JSONL files found. Waiting for data in:${C.reset}`);
-    console.log(`  ${C.dim}${config.tracesDir}${C.reset}`);
+    for (const d of config.dirs) console.log(`  ${C.dim}  ${d}${C.reset}`);
   }
 
   console.log('');
-  console.log(`  ${C.dim}Watching: ${config.tracesDir}${C.reset}`);
+  const dirLabel = config.dirs.length === 1 ? config.dirs[0]! : `${config.dirs.length} directories`;
+  console.log(`  ${C.dim}Watching: ${dirLabel}${C.reset}`);
   console.log(`  ${C.dim}Press Ctrl+C to exit${C.reset}`);
 }
 
@@ -548,21 +552,31 @@ function getDistDepth(dt: DistributedTrace, spanId: string | undefined): number 
 export function startLive(argv: string[]): void {
   const config = parseArgs(argv);
 
-  if (!existsSync(config.tracesDir)) {
-    console.error(`Directory does not exist: ${config.tracesDir}`);
-    console.error('Specify a directory containing JSON/JSONL files: agentflow live <dir>');
+  // Validate directories
+  const valid = config.dirs.filter(d => existsSync(d));
+  if (valid.length === 0) {
+    console.error(`No valid directories found: ${config.dirs.join(', ')}`);
+    console.error('Specify directories containing JSON/JSONL files: agentflow live <dir> [dir...]');
     process.exit(1);
   }
+  const invalid = config.dirs.filter(d => !existsSync(d));
+  if (invalid.length > 0) {
+    console.warn(`Skipping non-existent: ${invalid.join(', ')}`);
+  }
+  config.dirs = valid;
 
   render(config);
 
+  // Watch all directories for changes
   let debounce: ReturnType<typeof setTimeout> | null = null;
-  try {
-    watch(config.tracesDir, { recursive: config.recursive }, () => {
-      if (debounce) clearTimeout(debounce);
-      debounce = setTimeout(() => render(config), 500);
-    });
-  } catch { /* fallback to interval */ }
+  for (const dir of config.dirs) {
+    try {
+      watch(dir, { recursive: config.recursive }, () => {
+        if (debounce) clearTimeout(debounce);
+        debounce = setTimeout(() => render(config), 500);
+      });
+    } catch { /* fs.watch may not work on all platforms */ }
+  }
 
   setInterval(() => render(config), config.refreshMs);
 

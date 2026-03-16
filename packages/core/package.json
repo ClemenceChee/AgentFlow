@@ -1,6 +1,6 @@
 {
   "name": "agentflow-core",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Universal execution tracing for AI agent systems",
   "type": "module",
   "main": "./dist/index.cjs",

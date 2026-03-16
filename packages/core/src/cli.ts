@@ -27,15 +27,16 @@ Usage:
   agentflow <command> [options]
 
 Commands:
-  run   [options] -- <cmd>    Wrap a command with automatic execution tracing
-  live  [dir] [options]      Real-time terminal monitor (auto-detects any JSON/JSONL)
+  run   [options] -- <cmd>       Wrap a command with automatic execution tracing
+  live  [dir...] [options]      Real-time terminal monitor (auto-detects any JSON/JSONL)
 
 Run \`agentflow <command> --help\` for command-specific options.
 
 Examples:
   agentflow run --traces-dir ./traces -- python -m myagent process
   agentflow live ./data
-  agentflow live ./data -R --refresh 5
+  agentflow live ./traces ./cron ./workers -R
+  agentflow live ./data --refresh 5
 `.trim());
 }
 
