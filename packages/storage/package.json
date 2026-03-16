@@ -1,5 +1,5 @@
 {
-  "name": "@agentflow/storage",
+  "name": "@clemencechee/agentflow-storage",
   "version": "0.1.0",
   "description": "Persistent storage and querying for AgentFlow - Store and analyze agent execution history",
   "type": "module",

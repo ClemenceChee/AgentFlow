@@ -1,5 +1,5 @@
 {
-  "name": "@agentflow/python",
+  "name": "@clemencechee/agentflow-python",
   "version": "0.1.0",
   "description": "Python integration package for AgentFlow - Universal execution tracing for AI agent systems",
   "type": "module",

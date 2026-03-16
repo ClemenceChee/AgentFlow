@@ -1,5 +1,5 @@
 {
-  "name": "@agentflow/dashboard",
+  "name": "@clemencechee/agentflow-dashboard",
   "version": "0.1.0",
   "description": "Real-time monitoring dashboard for AgentFlow - Visualize agent execution graphs and performance",
   "type": "module",
