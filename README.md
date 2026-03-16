@@ -1,322 +1,238 @@
 # AgentFlow
 
-**Universal execution tracing and live monitoring for AI agent systems.**
+**Know when your AI agents break. Fix them before your users notice.**
 
-AgentFlow gives you real-time visibility into any AI agent infrastructure. Point it at a directory — it auto-detects traces, state files, job schedulers, and session logs. No configuration, no adapters, no code changes.
-
-## Installation
+AgentFlow monitors any AI agent infrastructure — cron jobs, worker daemons, task queues, LLM pipelines — and alerts you when something fails or goes silent. Point it at a directory. It figures out the rest.
 
 ```bash
 npm install -g agentflow-core
 ```
 
-Works with Node.js 20+. Gives you the `agentflow` CLI with two commands: `run` and `live`.
-
-**Optional packages:**
+## 30-second setup
 
 ```bash
-npm install agentflow-dashboard   # Web dashboard with WebSocket updates
-npm install agentflow-storage     # SQLite persistence & analytics
-pip install agentflow-python      # Python agent integration
+# Watch your agent data directory for failures
+agentflow watch ./data --notify telegram
+
+# That's it. You'll get a Telegram message when:
+# - An agent errors out
+# - A scheduled job stops running
+# - A worker goes silent
+# - An agent recovers
 ```
 
-## Live Monitor — see everything, instantly
+No config files. No adapters. No code changes. AgentFlow reads your existing JSON and JSONL state files and figures out what's healthy and what isn't.
+
+## What it monitors
+
+AgentFlow auto-detects the format of every JSON/JSONL file it finds:
+
+| What it finds | What it does |
+|---|---|
+| File with `status: "error"` | Alerts you |
+| Job scheduler with failed runs | Shows which jobs failed and why |
+| Worker registry with PIDs | Shows which workers are running |
+| File that stopped updating | Detects it's stale and alerts |
+| File that was erroring and now works | Sends a recovery notification |
+
+It works with **any** agent framework — LangChain, CrewAI, AutoGen, custom Python/Node agents, cron-based pipelines, Docker services — as long as they write JSON state files somewhere.
+
+## Three commands
+
+### `agentflow watch` — Alerts (run as a background service)
 
 ```bash
+# Alert on errors and stale agents, notify via Telegram
+agentflow watch ./data ./cron \
+  --alert-on error \
+  --alert-on stale:15m \
+  --alert-on recovery \
+  --notify telegram
+
+# Alert via webhook (Slack, Discord, PagerDuty, etc.)
+agentflow watch ./data --notify webhook:https://hooks.slack.com/services/...
+
+# Alert via shell command
+agentflow watch ./data --notify "command:curl -X POST https://my-alerting/endpoint"
+
+# Multiple directories, multiple conditions
+agentflow watch ./traces ./workers ./cron \
+  --alert-on error \
+  --alert-on stale:30m \
+  --alert-on consecutive-errors:3 \
+  --poll 60
+```
+
+**Alert conditions** (composable with multiple `--alert-on` flags):
+- `error` — agent status transitions to error
+- `recovery` — agent recovers from error to ok
+- `stale:DURATION` — file not updated within threshold (e.g. `15m`, `1h`, `2d`)
+- `consecutive-errors:N` — N consecutive error observations
+
+**Notification channels** (composable with multiple `--notify` flags):
+- `telegram` — needs `AGENTFLOW_TELEGRAM_BOT_TOKEN` and `AGENTFLOW_TELEGRAM_CHAT_ID` env vars
+- `webhook:URL` — POSTs a JSON payload to any URL
+- `command:CMD` — runs a shell command with `AGENTFLOW_ALERT_*` env vars
+- stdout — always on
+
+**Built-in deduplication**: Won't spam you. Once an alert fires, it waits for recovery (or a configurable cooldown) before alerting again.
+
+**State persistence**: Survives restarts. Remembers what was healthy and what was broken.
+
+### `agentflow live` — Terminal dashboard (interactive debugging)
+
+```bash
+# Real-time view of all agents
 agentflow live ./data
-```
 
-That's it. AgentFlow scans the directory for JSON and JSONL files, auto-detects what each file is, and renders a real-time terminal dashboard.
-
-**Watch multiple directories at once:**
-
-```bash
+# Multiple directories
 agentflow live ./traces ./cron ./workers
+
+# With subdirectory scanning
+agentflow live ./data -R --refresh 5
 ```
 
-**What it auto-detects:**
-
-| File pattern | Detection | Display |
-|---|---|---|
-| JSON with `nodes` + `agentId` | AgentFlow trace | Full graph analysis with stats |
-| JSON with `jobs`/`tasks`/`items` array | Job scheduler | Per-job status, last run, errors |
-| JSON with `tools`/`workers`/`services` | Worker registry | Per-worker pid, status, restarts |
-| JSON with `status`/`state` fields | Generic state | Status + last modified |
-| JSONL files | Session logs | Last entry status + entry count |
-
-Status values are normalized automatically: `ok`/`success`/`completed`/`healthy` → green, `error`/`failed`/`crashed` → red, `running`/`active` → blue. Timestamps are detected from `ts`, `timestamp`, `lastRunAtMs`, `started_at`, etc.
-
-**Dashboard features:**
-- Per-agent success/failure table
+Auto-refreshing terminal UI showing:
+- Per-agent status table with nested groups (workers under their registry, jobs under their scheduler)
 - Sparkline activity graph (1 hour)
 - Distributed trace tree view
 - Recent activity feed
-- Auto-refresh on file changes + configurable polling
+- Flicker-free rendering
 
-### `agentflow live` reference
-
-```
-agentflow live [dir...] [options]
-
-Arguments:
-  dir                     One or more directories to watch (default: .)
-
-Options:
-  -r, --refresh <secs>    Refresh interval in seconds (default: 3)
-  -R, --recursive         Scan subdirectories (1 level deep)
-  -h, --help              Show this help message
-```
-
-## Zero-code Tracing
-
-Wrap any command with `agentflow run` to capture execution traces automatically:
+### `agentflow run` — Execution tracing (wrap any command)
 
 ```bash
+# Trace any command — zero code changes
 agentflow run -- python my_agent.py
 
-# Watch state files to detect sub-worker activity
+# Watch state files for sub-worker activity
 agentflow run --watch-dir ./data -- python -m myagent process
-
-# Full example
-agentflow run \
-  --traces-dir ./traces \
-  --watch-dir ./worker-state \
-  --agent-id my-orchestrator \
-  --trigger cron \
-  -- python -m my_agent process
 ```
 
-**What happens:**
-1. Creates an orchestrator trace with a unique `traceId`
-2. Sets `AGENTFLOW_TRACE_ID` and `AGENTFLOW_PARENT_SPAN_ID` env vars
-3. Runs your command (stdout/stderr pass through)
-4. Detects changed files in watched directories → creates child traces
-5. Saves all traces as JSON
+Creates structured JSON trace files that `agentflow live` and `agentflow watch` can read.
 
-**Output:**
-```
-🔍 AgentFlow: Tracing command: python -m myagent process
-📁 Traces: ./traces
-👁️  Watching: ./data (*.json)
+## How auto-detection works
 
-... your command output ...
-
-✅ Command completed (exit code 0, 2.3s)
-📝 Traces saved:
-   orchestrator   → traces/orchestrator-2026-03-16T14-00-00.json
-   ├─ curator     → traces/curator-2026-03-16T14-00-00.json (state changed)
-   └─ janitor     → traces/janitor-2026-03-16T14-00-00.json (state changed)
-🔗 Trace ID: abc12345
-```
-
-### Cron integration
-
-```bash
-# Before:
-*/30 * * * * python -m myagent process
-
-# After:
-*/30 * * * * npx agentflow run --watch-dir ./data --traces-dir ./traces -- python -m myagent process
-```
-
-### `agentflow run` reference
+AgentFlow doesn't need to know your agent framework. It reads JSON files and looks for patterns:
 
 ```
-agentflow run [options] -- <command>
+# A file like this:
+{"status": "error", "lastError": "connection timeout", "ts": 1710000000}
+→ Detected as: agent in error state
 
-Options:
-  --traces-dir <path>     Where to save trace files (default: ./traces)
-  --watch-dir <path>      Directory to monitor for state changes (repeatable)
-  --watch-pattern <glob>  File pattern to watch (default: *.json)
-  --agent-id <name>       Agent name (default: derived from command)
-  --trigger <name>        Trigger label (default: cli)
+# A file like this:
+{"jobs": [{"name": "digest", "state": {"lastRunStatus": "ok", "lastRunAtMs": 1710000000}}]}
+→ Detected as: job scheduler with per-job status
+
+# A file like this:
+{"tools": {"curator": {"pid": 1234, "status": "running"}, "janitor": {"pid": 1235, "status": "running"}}}
+→ Detected as: worker registry with 2 running workers
+
+# A JSONL file like this:
+{"ts": 1710000000, "action": "finished", "status": "ok"}
+→ Detected as: session log, last run successful
 ```
 
-## Serialization
+Status values are normalized automatically: `ok`/`success`/`completed`/`healthy`/`done`/`passed` → ok. `error`/`failed`/`crashed`/`timeout` → error. `running`/`active`/`processing` → running.
 
-AgentFlow traces are plain JSON files. The library handles all serialization formats automatically:
+## Programmatic API
 
 ```typescript
-import { loadGraph, graphToJson, getStats } from 'agentflow-core';
-import { readFileSync, writeFileSync } from 'fs';
+import { createGraphBuilder, graphToJson, loadGraph, getStats } from 'agentflow-core';
 
-// Load any trace file (handles all node formats: object, array, Map)
-const graph = loadGraph(readFileSync('trace.json', 'utf8'));
-console.log(getStats(graph));
-
-// Save a graph to disk
-writeFileSync('trace.json', JSON.stringify(graphToJson(graph), null, 2));
-```
-
-## Code-level Instrumentation
-
-For deeper tracing inside your agent code:
-
-### JavaScript / TypeScript
-
-```typescript
-import { createGraphBuilder, graphToJson, getStats } from 'agentflow-core';
-import { writeFileSync } from 'fs';
-
-const builder = createGraphBuilder({
-  agentId: 'my-agent',
-  trigger: 'api-request',
-});
-
+// Build execution traces in your agent code
+const builder = createGraphBuilder({ agentId: 'my-agent', trigger: 'cron' });
 const root = builder.startNode({ type: 'agent', name: 'main' });
-const tool = builder.startNode({ type: 'tool', name: 'search', parentId: root });
-builder.endNode(tool);
+// ... your agent logic ...
 builder.endNode(root);
-
 const graph = builder.build();
-writeFileSync(`traces/${graph.agentId}-${Date.now()}.json`,
-  JSON.stringify(graphToJson(graph), null, 2));
 
-console.log(getStats(graph)); // { totalNodes: 2, failureCount: 0, ... }
+// Save to disk (agentflow watch/live will pick it up)
+writeFileSync('traces/my-agent.json', JSON.stringify(graphToJson(graph), null, 2));
+
+// Load and analyze any trace
+const loaded = loadGraph(readFileSync('trace.json', 'utf8'));
+console.log(getStats(loaded));
+// { totalNodes: 5, failureCount: 0, depth: 2, duration: 1234, ... }
 ```
 
-### Python
+## Run as a systemd service
+
+```ini
+# /etc/systemd/user/agentflow-watch.service
+[Unit]
+Description=AgentFlow Watch
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/agentflow watch /path/to/data /path/to/cron --alert-on error --alert-on stale:15m --alert-on recovery --notify telegram --poll 60
+Restart=always
+RestartSec=10
+Environment=AGENTFLOW_TELEGRAM_BOT_TOKEN=your-bot-token
+Environment=AGENTFLOW_TELEGRAM_CHAT_ID=your-chat-id
+
+[Install]
+WantedBy=default.target
+```
 
 ```bash
-pip install agentflow-python
+systemctl --user enable --now agentflow-watch
 ```
 
-```python
-from agentflow_python import AgentFlowTracer, traced_execution
-
-tracer = AgentFlowTracer("my-agent")
-
-# Trace a function
-result = tracer.trace_execution("process", data, {"batch_size": 100})
-
-# Context manager
-with traced_execution(tracer, "train_model", config) as trace:
-    model = train(config)
-```
-
-## Distributed Tracing
-
-AgentFlow links execution graphs across processes via trace IDs:
-
-```
-✓  trace:75629bc2  1:56 PM  (4 agents)
-     ✓ orchestrator [cron] 1ms
-   ├─ ✓ curator [spawned] 12ms
-   │  └─ ✓ sub-worker [spawned] 3ms
-   └─ ✓ janitor [spawned] 8ms
-```
-
-**Parent creates context:**
-```typescript
-const builder = createGraphBuilder({ agentId: 'orchestrator' });
-const { traceId, spanId } = builder.traceContext;
-```
-
-**Child picks it up automatically:**
-```bash
-AGENTFLOW_TRACE_ID=<traceId> AGENTFLOW_PARENT_SPAN_ID=<spanId> node child.js
-```
-
-```typescript
-// child.js — traceId and parentSpanId read from env automatically
-const builder = createGraphBuilder({ agentId: 'worker', trigger: 'spawned' });
-```
-
-**Stitch and visualize:**
-```typescript
-import { groupByTraceId, stitchTrace, getTraceTree } from 'agentflow-core';
-
-const groups = groupByTraceId(allGraphs);
-for (const [traceId, graphs] of groups) {
-  const trace = stitchTrace(graphs);
-  const tree = getTraceTree(trace);
-  for (const g of tree) console.log(`${g.agentId} [${g.status}]`);
-}
-```
-
-## API Reference
-
-### Graph Construction
-
-| Function | Description |
-|---|---|
-| `createGraphBuilder(config?)` | Create a new graph builder |
-| `builder.startNode(options)` | Start an execution node, returns node ID |
-| `builder.endNode(nodeId)` | Mark a node as completed |
-| `builder.failNode(nodeId, error)` | Mark a node as failed |
-| `builder.withParent(id, fn)` | Auto-parent all nodes created inside `fn` |
-| `builder.build()` | Finalize and return a frozen `ExecutionGraph` |
-| `builder.getSnapshot()` | Get a frozen snapshot without finalizing |
-| `builder.traceContext` | Get `{ traceId, spanId }` for propagation |
-
-### Graph Querying
-
-| Function | Description |
-|---|---|
-| `getStats(graph)` | Aggregate statistics (nodes, depth, duration, failures) |
-| `getFailures(graph)` | All failed/hung/timeout nodes |
-| `getHungNodes(graph)` | Nodes still in `running` status |
-| `getCriticalPath(graph)` | Longest execution path |
-| `getNode(graph, id)` | Get a single node by ID |
-| `getChildren(graph, id)` | Direct children of a node |
-| `getSubtree(graph, id)` | All descendants in BFS order |
-| `getDepth(graph)` | Maximum nesting depth |
-| `getDuration(graph)` | Total duration in ms |
-
-### Serialization
-
-| Function | Description |
-|---|---|
-| `loadGraph(input)` | Deserialize JSON (string or object) into `ExecutionGraph` |
-| `graphToJson(graph)` | Serialize `ExecutionGraph` to a plain JSON-safe object |
-
-### Distributed Tracing
-
-| Function | Description |
-|---|---|
-| `groupByTraceId(graphs)` | Group graphs by shared `traceId` |
-| `stitchTrace(graphs)` | Combine into a `DistributedTrace` tree |
-| `getTraceTree(trace)` | Depth-first ordered list of graphs |
+## Full API reference
 
 ### CLI
 
 | Command | Description |
 |---|---|
-| `agentflow live [dir...]` | Real-time terminal monitor (auto-detects any JSON/JSONL) |
-| `agentflow run -- <cmd>` | Trace any command without code changes |
-| `startLive(argv)` | Programmatic API for the live monitor |
-| `runTraced(config)` | Programmatic API for the runner |
+| `agentflow watch [dir...] [options]` | Headless alert system |
+| `agentflow live [dir...] [options]` | Real-time terminal dashboard |
+| `agentflow run [options] -- <cmd>` | Wrap a command with tracing |
 
-### Environment Variables
+### Graph construction
 
-| Variable | Description |
+| Function | Description |
 |---|---|
-| `AGENTFLOW_TRACE_ID` | Trace ID to join (read automatically) |
-| `AGENTFLOW_PARENT_SPAN_ID` | Parent span ID (read automatically) |
+| `createGraphBuilder(config?)` | Create a new graph builder |
+| `builder.startNode(options)` | Start an execution node |
+| `builder.endNode(nodeId)` | Mark node completed |
+| `builder.failNode(nodeId, error)` | Mark node failed |
+| `builder.build()` | Finalize and return frozen `ExecutionGraph` |
 
-## Node Types
+### Graph querying
 
-| Type | Use for |
+| Function | Description |
 |---|---|
-| `agent` | Top-level agent execution |
-| `subagent` | Agent spawned by another agent |
-| `tool` | Tool call (API, database, file I/O) |
-| `decision` | Branching logic or routing |
-| `wait` | Waiting for external input |
-| `custom` | Anything else |
+| `getStats(graph)` | Aggregate statistics |
+| `getFailures(graph)` | All failed/hung/timeout nodes |
+| `getHungNodes(graph)` | Nodes still running |
+| `getCriticalPath(graph)` | Longest execution path |
 
-## Architecture
+### Serialization
 
-```
-agentflow/
-├── packages/
-│   ├── core/           # Graph builder, query engine, live monitor, CLI
-│   ├── python/         # Python integration
-│   ├── dashboard/      # Web monitoring with WebSocket
-│   └── storage/        # SQLite persistence & analytics
-├── tests/
-└── examples/
-```
+| Function | Description |
+|---|---|
+| `loadGraph(input)` | JSON (string or object) → `ExecutionGraph` |
+| `graphToJson(graph)` | `ExecutionGraph` → plain JSON object |
+
+### Distributed tracing
+
+| Function | Description |
+|---|---|
+| `groupByTraceId(graphs)` | Group by shared trace ID |
+| `stitchTrace(graphs)` | Combine into a trace tree |
+| `getTraceTree(trace)` | Depth-first ordered list |
+
+Trace context propagates automatically via `AGENTFLOW_TRACE_ID` and `AGENTFLOW_PARENT_SPAN_ID` environment variables.
+
+## Packages
+
+| Package | Description |
+|---|---|
+| [`agentflow-core`](https://www.npmjs.com/package/agentflow-core) | CLI, graph engine, live monitor, watch alerts |
+| [`agentflow-dashboard`](https://www.npmjs.com/package/agentflow-dashboard) | Web dashboard with WebSocket |
+| [`agentflow-storage`](https://www.npmjs.com/package/agentflow-storage) | SQLite persistence & analytics |
 
 ## Development
 
@@ -325,17 +241,8 @@ git clone https://github.com/ClemenceChee/AgentFlow.git
 cd AgentFlow
 npm install
 npm run build
-npm test
+npm test            # 85 tests
 ```
-
-## npm Packages
-
-| Package | Version | Description |
-|---|---|---|
-| [`agentflow-core`](https://www.npmjs.com/package/agentflow-core) | 0.2.1 | Graph builder, query engine, live monitor, CLI |
-| [`agentflow-dashboard`](https://www.npmjs.com/package/agentflow-dashboard) | 0.1.4 | Web monitoring dashboard |
-| [`agentflow-storage`](https://www.npmjs.com/package/agentflow-storage) | 0.1.4 | SQLite persistence & analytics |
-| [`agentflow-python`](https://www.npmjs.com/package/agentflow-python) | 0.1.3 | Python integration |
 
 ## License
 

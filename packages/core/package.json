@@ -1,7 +1,7 @@
 {
   "name": "agentflow-core",
   "version": "0.3.0",
-  "description": "Universal execution tracing for AI agent systems",
+  "description": "Monitor any AI agent system. Auto-detects failures, sends alerts. Zero config, zero dependencies.",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -23,11 +23,32 @@
   "keywords": [
     "ai",
     "agent",
+    "monitoring",
+    "alerting",
+    "observability",
     "tracing",
     "execution-graph",
-    "observability"
+    "ai-agent",
+    "llm",
+    "openai",
+    "anthropic",
+    "langchain",
+    "crewai",
+    "autogen",
+    "cron",
+    "watchdog",
+    "health-check"
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ClemenceChee/AgentFlow.git"
+  },
+  "homepage": "https://github.com/ClemenceChee/AgentFlow#readme",
+  "author": "Clemence Chee",
+  "engines": {
+    "node": ">=20"
+  },
   "bin": {
     "agentflow": "./dist/cli.js"
   }
