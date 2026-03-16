@@ -4,12 +4,12 @@
  *
  * Subcommands:
  *   agentflow run  [options] -- <command>    Wrap a command with automatic tracing
- *   agentflow live [traces-dir] [options]    Real-time terminal monitor
+ *   agentflow live [dir] [options]           Real-time terminal monitor
  *
  * @module
  */
 
-import { basename } from 'path';
+import { basename, resolve } from 'path';
 
 import type { RunConfig } from './runner.js';
 import { runTraced } from './runner.js';
@@ -27,15 +27,15 @@ Usage:
   agentflow <command> [options]
 
 Commands:
-  run   [options] -- <cmd>     Wrap a command with automatic execution tracing
-  live  [traces-dir] [options] Real-time terminal monitor for trace files
+  run   [options] -- <cmd>    Wrap a command with automatic execution tracing
+  live  [dir] [options]      Real-time terminal monitor (auto-detects any JSON/JSONL)
 
 Run \`agentflow <command> --help\` for command-specific options.
 
 Examples:
   agentflow run --traces-dir ./traces -- python -m myagent process
-  agentflow live ./traces
-  agentflow live ./traces --refresh 5
+  agentflow live ./data
+  agentflow live ./data -R --refresh 5
 `.trim());
 }
 
