@@ -9,7 +9,7 @@
  * - Interactive execution graph visualization
  *
  * Usage:
- *   npx @agentflow/dashboard [options]
+ *   npx agentflow-dashboard [options]
  *   agentflow-dashboard --port 3000 --traces ./traces
  */
 

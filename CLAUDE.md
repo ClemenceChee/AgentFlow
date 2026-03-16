@@ -30,7 +30,7 @@ npm run lint
 ```
 ## Usage
 ```typescript
-import { createGraphBuilder, getStats, getFailures } from 'agentflow';
+import { createGraphBuilder, getStats, getFailures } from 'agentflow-core';
 
 const builder = createGraphBuilder({
   agentId: 'my-agent',
@@ -86,7 +86,7 @@ agentflow/
 ├── package.json                   # Workspace root
 ├── tsconfig.json                  # Project references
 ├── tsconfig.base.json             # Shared compiler options
-├── vitest.config.ts               # @agentflow/core alias
+├── vitest.config.ts               # agentflow-core alias
 ├── biome.json
 └── CLAUDE.md
 ```

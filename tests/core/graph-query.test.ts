@@ -1,4 +1,4 @@
-import type { ExecutionGraph } from '@agentflow/core';
+import type { ExecutionGraph } from 'agentflow-core';
 import {
   createGraphBuilder,
   findWaitingOn,
@@ -12,7 +12,7 @@ import {
   getParent,
   getStats,
   getSubtree,
-} from '@agentflow/core';
+} from 'agentflow-core';
 import { describe, expect, it } from 'vitest';
 
 /** Deterministic counter-based ID generator for tests. */

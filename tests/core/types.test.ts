@@ -8,7 +8,7 @@ import type {
   NodeType,
   TraceEventType,
   Writer,
-} from '@agentflow/core';
+} from 'agentflow-core';
 import { describe, expect, it } from 'vitest';
 
 describe('types', () => {

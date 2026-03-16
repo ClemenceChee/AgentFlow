@@ -61,13 +61,13 @@ This produces `packages/core/dist/` with:
 ### ESM (recommended)
 
 ```typescript
-import { createGraphBuilder, getStats } from 'agentflow';
+import { createGraphBuilder, getStats } from 'agentflow-core';
 ```
 
 ### CommonJS
 
 ```javascript
-const { createGraphBuilder, getStats } = require('agentflow');
+const { createGraphBuilder, getStats } = require('agentflow-core');
 ```
 
 ## Troubleshooting

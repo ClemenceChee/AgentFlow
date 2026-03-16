@@ -3,8 +3,12 @@ import { WebSocketServer } from 'ws';
 import { createServer } from 'http';
 import * as path from 'path';
 import * as fs from 'fs';
+import { fileURLToPath } from 'url';
 import { TraceWatcher } from './watcher.js';
 import { AgentStats } from './stats.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export interface DashboardConfig {
     port: number;

@@ -16,7 +16,7 @@ Persistent storage and querying for AgentFlow - Store and analyze agent executio
 
 ```bash
 # Install
-npm install @agentflow/storage
+npm install agentflow-storage
 
 # Start ingesting traces
 agentflow-query ingest --traces ./traces
@@ -34,7 +34,7 @@ agentflow-query analyze --type health --agent my-agent
 ## Installation
 
 ```bash
-npm install @agentflow/storage
+npm install agentflow-storage
 ```
 
 **Requirements:**
@@ -46,7 +46,7 @@ npm install @agentflow/storage
 ### Programmatic API
 
 ```typescript
-import { AgentFlowStorage } from '@agentflow/storage';
+import { AgentFlowStorage } from 'agentflow-storage';
 
 // Initialize storage
 const storage = new AgentFlowStorage({
@@ -413,7 +413,7 @@ agentflow-query ingest --traces ./my-traces
 ```dockerfile
 FROM node:18-alpine
 
-RUN npm install -g @agentflow/storage
+RUN npm install -g agentflow-storage
 
 WORKDIR /app
 VOLUME ["/app/traces", "/app/data"]
@@ -429,7 +429,7 @@ services:
   agentflow-storage:
     image: node:18-alpine
     command: >
-      sh -c "npm install -g @agentflow/storage &&
+      sh -c "npm install -g agentflow-storage &&
              agentflow-query ingest --traces /traces --db /data/agentflow.db"
     volumes:
       - ./traces:/traces
@@ -439,7 +439,7 @@ services:
   agentflow-dashboard:
     image: node:18-alpine
     command: >
-      sh -c "npm install -g @agentflow/dashboard &&
+      sh -c "npm install -g agentflow-dashboard &&
              agentflow-dashboard --traces /traces --port 3000"
     ports:
       - "3000:3000"
@@ -468,7 +468,7 @@ spec:
             command:
             - sh
             - -c
-            - "npm install -g @agentflow/storage && agentflow-query cleanup --days 30 --db /data/agentflow.db"
+            - "npm install -g agentflow-storage && agentflow-query cleanup --days 30 --db /data/agentflow.db"
             volumeMounts:
             - name: data
               mountPath: /data

@@ -3,7 +3,7 @@
  *
  * @example
  * ```ts
- * import { createGraphBuilder, getStats } from 'agentflow';
+ * import { createGraphBuilder, getStats } from 'agentflow-core';
  *
  * const builder = createGraphBuilder({ agentId: 'my-agent' });
  * const rootId = builder.startNode({ type: 'agent', name: 'main' });

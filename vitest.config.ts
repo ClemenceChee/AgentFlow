@@ -8,7 +8,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@agentflow/core': resolve(__dirname, 'packages/core/src'),
+      'agentflow-core': resolve(__dirname, 'packages/core/src'),
     },
   },
 });

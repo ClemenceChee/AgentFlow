@@ -96,7 +96,7 @@ function printHelp() {
 
 Usage:
   agentflow-dashboard [options]
-  npx @agentflow/dashboard [options]
+  npx agentflow-dashboard [options]
 
 Options:
   -p, --port <number>     Server port (default: 3000)

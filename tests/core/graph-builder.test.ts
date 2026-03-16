@@ -1,4 +1,4 @@
-import { createGraphBuilder } from '@agentflow/core';
+import { createGraphBuilder } from 'agentflow-core';
 import { describe, expect, it } from 'vitest';
 
 /** Deterministic counter-based ID generator for tests. */

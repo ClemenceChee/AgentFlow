@@ -15,13 +15,13 @@ Real-time monitoring dashboard for AgentFlow - Visualize agent execution graphs 
 
 ```bash
 # Install globally
-npm install -g @agentflow/dashboard
+npm install -g agentflow-dashboard
 
 # Start monitoring your traces
 agentflow-dashboard --traces ./traces --port 3000
 
 # Or run with npx
-npx @agentflow/dashboard --traces ./my-agent-traces
+npx agentflow-dashboard --traces ./my-agent-traces
 ```
 
 Open http://localhost:3000 to view the dashboard.
@@ -29,7 +29,7 @@ Open http://localhost:3000 to view the dashboard.
 ## Installation
 
 ```bash
-npm install @agentflow/dashboard
+npm install agentflow-dashboard
 ```
 
 **Requirements:**
@@ -70,7 +70,7 @@ agentflow-dashboard --traces ./my-ai-agent/traces
 ### Programmatic Usage
 
 ```typescript
-import { DashboardServer } from '@agentflow/dashboard';
+import { DashboardServer } from 'agentflow-dashboard';
 
 const dashboard = new DashboardServer({
     port: 3000,
@@ -194,7 +194,7 @@ curl http://localhost:3000/api/agents
 ```dockerfile
 FROM node:18-alpine
 
-RUN npm install -g @agentflow/dashboard
+RUN npm install -g agentflow-dashboard
 
 EXPOSE 3000
 
@@ -212,7 +212,7 @@ services:
     volumes:
       - ./traces:/traces
     command: >
-      sh -c "npm install -g @agentflow/dashboard &&
+      sh -c "npm install -g agentflow-dashboard &&
              agentflow-dashboard --host 0.0.0.0 --traces /traces"
 ```
 
@@ -241,7 +241,7 @@ spec:
         command:
         - sh
         - -c
-        - "npm install -g @agentflow/dashboard && agentflow-dashboard --host 0.0.0.0"
+        - "npm install -g agentflow-dashboard && agentflow-dashboard --host 0.0.0.0"
         volumeMounts:
         - name: traces
           mountPath: /traces

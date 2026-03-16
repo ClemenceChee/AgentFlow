@@ -14,9 +14,9 @@ git status  # Review all changes
 git commit -m "feat: Add comprehensive AgentFlow enhancements
 
 🚀 Major Enhancements:
-- 🐍 Python Integration Package (@agentflow/python)
-- 📊 Real-time Monitoring Dashboard (@agentflow/dashboard)
-- 🗃️ Persistent Storage & Analytics (@agentflow/storage)
+- 🐍 Python Integration Package (agentflow-python)
+- 📊 Real-time Monitoring Dashboard (agentflow-dashboard)
+- 🗃️ Persistent Storage & Analytics (agentflow-storage)
 
 🐍 Python Package Features:
 - Zero-dependency Python integration via subprocess bridge
@@ -89,10 +89,10 @@ npm publish
 npm test
 
 # Test dashboard
-npx @agentflow/dashboard --help
+npx agentflow-dashboard --help
 
 # Test storage CLI
-npx @agentflow/storage query --help
+npx agentflow-storage query --help
 
 # Test Python package
 cd packages/python
@@ -103,7 +103,7 @@ python3 agentflow_python.py
 
 ```bash
 # Install all AgentFlow packages
-npm install agentflow @agentflow/dashboard @agentflow/storage
+npm install agentflow-core agentflow-dashboard agentflow-storage
 pip install agentflow-python
 
 # Start monitoring setup

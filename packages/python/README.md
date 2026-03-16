@@ -171,7 +171,7 @@ Traces are saved as JSON files in the `traces/` directory:
 Use AgentFlow's JavaScript query functions to analyze traces:
 
 ```javascript
-import { getStats, getFailures } from 'agentflow';
+import { getStats, getFailures } from 'agentflow-core';
 
 const graph = JSON.parse(fs.readFileSync('traces/my-agent-*.json'));
 const stats = getStats(graph);
@@ -259,7 +259,7 @@ import subprocess
 result = subprocess.run(['node', '-e', 'console.log(require("agentflow"))'],
                        capture_output=True, text=True)
 if result.returncode != 0:
-    print("AgentFlow not installed - run: npm install agentflow")
+    print("AgentFlow not installed - run: npm install agentflow-core")
 ```
 
 ### Trace Files Not Created

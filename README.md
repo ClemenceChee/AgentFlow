@@ -28,7 +28,7 @@ AgentFlow consists of four integrated packages:
 
 ```bash
 # Core + Dashboard + Storage
-npm install agentflow @agentflow/dashboard @agentflow/storage
+npm install agentflow-core agentflow-dashboard agentflow-storage
 
 # Python integration
 pip install agentflow-python
@@ -62,7 +62,7 @@ with traced_execution(tracer, "process_request", user_data) as trace:
 
 **JavaScript/Node.js agents:**
 ```typescript
-import { createGraphBuilder, getStats } from 'agentflow';
+import { createGraphBuilder, getStats } from 'agentflow-core';
 
 const builder = createGraphBuilder({
   agentId: 'my-agent',
@@ -92,7 +92,7 @@ The foundation of AgentFlow — a zero-dependency TypeScript library for buildin
 ### Basic Usage
 
 ```typescript
-import { createGraphBuilder, getStats, getFailures } from 'agentflow';
+import { createGraphBuilder, getStats, getFailures } from 'agentflow-core';
 
 // Create builder
 const builder = createGraphBuilder({
@@ -215,7 +215,7 @@ Real-time web interface for monitoring agent executions with live updates and pe
 
 ```bash
 # Start dashboard
-npx @agentflow/dashboard --port 3000 --traces ./agent-traces
+npx agentflow-dashboard --port 3000 --traces ./agent-traces
 
 # Custom configuration
 agentflow-dashboard \
@@ -273,7 +273,7 @@ agentflow-query analyze --type performance --days 30
 ### Programmatic API
 
 ```typescript
-import { AgentFlowStorage } from '@agentflow/storage';
+import { AgentFlowStorage } from 'agentflow-storage';
 
 const storage = new AgentFlowStorage({
   dbPath: './agentflow.db',
@@ -307,7 +307,7 @@ services:
   agentflow-storage:
     image: node:18-alpine
     command: >
-      sh -c "npm install -g @agentflow/storage &&
+      sh -c "npm install -g agentflow-storage &&
              agentflow-query ingest --traces /traces --db /data/agentflow.db"
     volumes:
       - ./traces:/traces
@@ -317,7 +317,7 @@ services:
   agentflow-dashboard:
     image: node:18-alpine
     command: >
-      sh -c "npm install -g @agentflow/dashboard &&
+      sh -c "npm install -g agentflow-dashboard &&
              agentflow-dashboard --traces /traces --port 3000 --host 0.0.0.0"
     ports:
       - "3000:3000"
@@ -352,7 +352,7 @@ spec:
         command:
         - sh
         - -c
-        - "npm install -g @agentflow/dashboard && agentflow-dashboard --host 0.0.0.0"
+        - "npm install -g agentflow-dashboard && agentflow-dashboard --host 0.0.0.0"
         volumeMounts:
         - name: traces
           mountPath: /traces
@@ -457,7 +457,7 @@ npm test
 npm run build
 
 # Start development dashboard
-npm run dev --workspace=@agentflow/dashboard
+npm run dev --workspace=agentflow-dashboard
 ```
 
 ### Package Structure
@@ -490,7 +490,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 **Ready to monitor your AI agents?**
 
 ```bash
-npm install agentflow @agentflow/dashboard @agentflow/storage
+npm install agentflow-core agentflow-dashboard agentflow-storage
 pip install agentflow-python
 ```
 

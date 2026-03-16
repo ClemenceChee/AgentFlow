@@ -10,7 +10,7 @@
  * - Export capabilities for external analysis
  *
  * Usage:
- *   import { AgentFlowStorage } from '@agentflow/storage';
+ *   import { AgentFlowStorage } from 'agentflow-storage';
  *   const storage = new AgentFlowStorage('./agentflow.db');
  */
 
