@@ -23,6 +23,9 @@ export { runTraced } from './runner.js';
 export type { RunConfig, RunResult } from './runner.js';
 // Live monitor
 export { startLive } from './live.js';
+// Watch (headless alerts)
+export { startWatch } from './watch.js';
+export type { AlertCondition, AlertPayload, NotifyChannel, WatchConfig } from './watch-types.js';
 // Distributed tracing
 export { stitchTrace, groupByTraceId, getTraceTree } from './graph-stitch.js';
 // Graph querying

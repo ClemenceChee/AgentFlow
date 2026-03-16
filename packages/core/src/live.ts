@@ -93,9 +93,9 @@ Examples:
 // Unified agent record (any source type)
 // ---------------------------------------------------------------------------
 
-type SourceType = 'trace' | 'state' | 'jobs' | 'session' | 'workers';
+export type SourceType = 'trace' | 'state' | 'jobs' | 'session' | 'workers';
 
-interface AgentRecord {
+export interface AgentRecord {
   id: string;
   source: SourceType;
   status: 'ok' | 'error' | 'running' | 'unknown';
@@ -110,14 +110,14 @@ interface AgentRecord {
 // File scanning
 // ---------------------------------------------------------------------------
 
-interface ScannedFile {
+export interface ScannedFile {
   filename: string;
   path: string;
   mtime: number;
   ext: '.json' | '.jsonl';
 }
 
-function scanFiles(dirs: string[], recursive: boolean): ScannedFile[] {
+export function scanFiles(dirs: string[], recursive: boolean): ScannedFile[] {
   const results: ScannedFile[] = [];
   const seen = new Set<string>();
 
@@ -231,7 +231,7 @@ function tryLoadTrace(fp: string, raw: unknown): ExecutionGraph | null {
 }
 
 /** Process a .json file into agent records */
-function processJsonFile(file: ScannedFile): AgentRecord[] {
+export function processJsonFile(file: ScannedFile): AgentRecord[] {
   const raw = safeReadJson(file.path);
   if (raw === null) return [];
   const records: AgentRecord[] = [];
@@ -305,7 +305,7 @@ function processJsonFile(file: ScannedFile): AgentRecord[] {
 }
 
 /** Process a .jsonl file — read last non-empty line */
-function processJsonlFile(file: ScannedFile): AgentRecord[] {
+export function processJsonlFile(file: ScannedFile): AgentRecord[] {
   try {
     const content = readFileSync(file.path, 'utf8').trim();
     if (!content) return [];

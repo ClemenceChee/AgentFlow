@@ -14,6 +14,7 @@ import { basename, resolve } from 'path';
 import type { RunConfig } from './runner.js';
 import { runTraced } from './runner.js';
 import { startLive } from './live.js';
+import { startWatch } from './watch.js';
 
 // ---------------------------------------------------------------------------
 // Top-level help
@@ -27,8 +28,9 @@ Usage:
   agentflow <command> [options]
 
 Commands:
-  run   [options] -- <cmd>       Wrap a command with automatic execution tracing
-  live  [dir...] [options]      Real-time terminal monitor (auto-detects any JSON/JSONL)
+  run    [options] -- <cmd>       Wrap a command with automatic execution tracing
+  live   [dir...] [options]      Real-time terminal monitor (auto-detects any JSON/JSONL)
+  watch  [dir...] [options]      Headless alert system — detects failures, sends notifications
 
 Run \`agentflow <command> --help\` for command-specific options.
 
@@ -36,7 +38,8 @@ Examples:
   agentflow run --traces-dir ./traces -- python -m myagent process
   agentflow live ./data
   agentflow live ./traces ./cron ./workers -R
-  agentflow live ./data --refresh 5
+  agentflow watch ./data --alert-on error --notify telegram
+  agentflow watch ./data ./cron --alert-on stale:15m --notify webhook:https://...
 `.trim());
 }
 
@@ -213,7 +216,8 @@ async function runCommand(argv: string[]): Promise<void> {
 async function main(): Promise<void> {
   const argv = process.argv.slice(2);
 
-  if (argv.length === 0 || (argv[0] !== 'run' && argv[0] !== 'live' && (argv.includes('--help') || argv.includes('-h')))) {
+  const knownCommands = ['run', 'live', 'watch'];
+  if (argv.length === 0 || (!knownCommands.includes(argv[0]!) && (argv.includes('--help') || argv.includes('-h')))) {
     printHelp();
     process.exit(0);
   }
@@ -226,6 +230,9 @@ async function main(): Promise<void> {
       break;
     case 'live':
       startLive(argv);
+      break;
+    case 'watch':
+      startWatch(argv);
       break;
     default:
       // If no subcommand, check if it looks like a path (for `agentflow ./traces` shortcut)
