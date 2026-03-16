@@ -21,6 +21,8 @@ export { graphToJson, loadGraph } from './loader.js';
 // CLI runner
 export { runTraced } from './runner.js';
 export type { RunConfig, RunResult } from './runner.js';
+// Live monitor
+export { startLive } from './live.js';
 // Distributed tracing
 export { stitchTrace, groupByTraceId, getTraceTree } from './graph-stitch.js';
 // Graph querying

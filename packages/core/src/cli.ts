@@ -1,14 +1,10 @@
 #!/usr/bin/env node
 /**
  * AgentFlow CLI
- * Usage: agentflow run [options] -- <command>
  *
- * Options:
- *   --traces-dir <path>     Directory to save traces (default: ./traces)
- *   --watch-dir <path>      Directory to watch for state changes (repeatable)
- *   --watch-pattern <glob>  File pattern to watch (default: *.json)
- *   --agent-id <name>       Agent ID for orchestrator (default: derived from command)
- *   --trigger <name>        Trigger label (default: cli)
+ * Subcommands:
+ *   agentflow run  [options] -- <command>    Wrap a command with automatic tracing
+ *   agentflow live [traces-dir] [options]    Real-time terminal monitor
  *
  * @module
  */
@@ -17,12 +13,37 @@ import { basename } from 'path';
 
 import type { RunConfig } from './runner.js';
 import { runTraced } from './runner.js';
+import { startLive } from './live.js';
 
 // ---------------------------------------------------------------------------
-// Argument parsing
+// Top-level help
 // ---------------------------------------------------------------------------
 
-interface ParsedArgs {
+function printHelp(): void {
+  console.log(`
+AgentFlow CLI — execution tracing and live monitoring for AI agent systems.
+
+Usage:
+  agentflow <command> [options]
+
+Commands:
+  run   [options] -- <cmd>     Wrap a command with automatic execution tracing
+  live  [traces-dir] [options] Real-time terminal monitor for trace files
+
+Run \`agentflow <command> --help\` for command-specific options.
+
+Examples:
+  agentflow run --traces-dir ./traces -- python -m myagent process
+  agentflow live ./traces
+  agentflow live ./traces --refresh 5
+`.trim());
+}
+
+// ---------------------------------------------------------------------------
+// "run" subcommand
+// ---------------------------------------------------------------------------
+
+interface ParsedRunArgs {
   tracesDir: string;
   watchDirs: string[];
   watchPatterns: string[];
@@ -31,8 +52,8 @@ interface ParsedArgs {
   command: string[];
 }
 
-function parseArgs(argv: string[]): ParsedArgs {
-  const result: ParsedArgs = {
+function parseRunArgs(argv: string[]): ParsedRunArgs {
+  const result: ParsedRunArgs = {
     tracesDir: './traces',
     watchDirs: [],
     watchPatterns: ['*.json'],
@@ -40,7 +61,6 @@ function parseArgs(argv: string[]): ParsedArgs {
     command: [],
   };
 
-  // Find the "--" separator
   const dashDashIdx = argv.indexOf('--');
   const flagArgs = dashDashIdx === -1 ? argv : argv.slice(0, dashDashIdx);
   const commandArgs = dashDashIdx === -1 ? [] : argv.slice(dashDashIdx + 1);
@@ -51,7 +71,6 @@ function parseArgs(argv: string[]): ParsedArgs {
 
     switch (arg) {
       case 'run':
-        // subcommand — skip it
         i++;
         break;
       case '--traces-dir':
@@ -69,7 +88,6 @@ function parseArgs(argv: string[]): ParsedArgs {
       case '--watch-pattern':
         i++;
         if (flagArgs[i]) {
-          // Replace defaults on first explicit pattern
           if (result.watchPatterns.length === 1 && result.watchPatterns[0] === '*.json') {
             result.watchPatterns = [];
           }
@@ -97,9 +115,9 @@ function parseArgs(argv: string[]): ParsedArgs {
   return result;
 }
 
-function printUsage(): void {
+function printRunUsage(): void {
   console.log(`
-AgentFlow CLI — Wrap any command with automatic execution tracing.
+AgentFlow Run — wrap any command with automatic execution tracing.
 
 Usage:
   agentflow run [options] -- <command>
@@ -113,30 +131,23 @@ Options:
   --help                  Show this help message
 
 Examples:
-  agentflow run -- python -m alfred process
-  agentflow run --watch-dir /home/trader/.alfred/data -- python -m alfred process
-  agentflow run --traces-dir ./my-traces --agent-id alfred -- node worker.js
+  agentflow run -- python -m myagent process
+  agentflow run --watch-dir ./data -- python worker.py
+  agentflow run --traces-dir ./my-traces --agent-id recon -- node agent.js
 `.trim());
 }
 
-// ---------------------------------------------------------------------------
-// Main
-// ---------------------------------------------------------------------------
-
-async function main(): Promise<void> {
-  // Skip node and script path
-  const argv = process.argv.slice(2);
-
-  if (argv.length === 0 || argv.includes('--help') || argv.includes('-h')) {
-    printUsage();
+async function runCommand(argv: string[]): Promise<void> {
+  if (argv.includes('--help') || argv.includes('-h')) {
+    printRunUsage();
     process.exit(0);
   }
 
-  const parsed = parseArgs(argv);
+  const parsed = parseRunArgs(argv);
 
   if (parsed.command.length === 0) {
     console.error('Error: No command specified. Use -- to separate agentflow flags from the command.');
-    console.error('Example: agentflow run -- python -m alfred process');
+    console.error('Example: agentflow run -- python -m myagent process');
     process.exit(1);
   }
 
@@ -170,12 +181,10 @@ async function main(): Promise<void> {
     if (result.tracePaths.length > 0) {
       console.log('\uD83D\uDCDD Traces saved:');
 
-      // Print the orchestrator trace (first one)
       const orchPath = result.tracePaths[0]!;
       const orchName = basename(orchPath, '.json').split('-')[0] ?? 'orchestrator';
       console.log(`   ${orchName.padEnd(14)} \u2192 ${orchPath}`);
 
-      // Print child traces with tree formatting
       for (let i = 1; i < result.tracePaths.length; i++) {
         const tPath = result.tracePaths[i]!;
         const name = basename(tPath, '.json').replace(/-\d{4}-.*$/, '');
@@ -193,6 +202,40 @@ async function main(): Promise<void> {
     const message = err instanceof Error ? err.message : String(err);
     console.error(`\u274C AgentFlow error: ${message}`);
     process.exit(1);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Main router
+// ---------------------------------------------------------------------------
+
+async function main(): Promise<void> {
+  const argv = process.argv.slice(2);
+
+  if (argv.length === 0 || (argv[0] !== 'run' && argv[0] !== 'live' && (argv.includes('--help') || argv.includes('-h')))) {
+    printHelp();
+    process.exit(0);
+  }
+
+  const subcommand = argv[0];
+
+  switch (subcommand) {
+    case 'run':
+      await runCommand(argv);
+      break;
+    case 'live':
+      startLive(argv);
+      break;
+    default:
+      // If no subcommand, check if it looks like a path (for `agentflow ./traces` shortcut)
+      if (!subcommand?.startsWith('-')) {
+        // Assume `agentflow live <dir>` shortcut
+        startLive(['live', ...argv]);
+      } else {
+        printHelp();
+        process.exit(1);
+      }
+      break;
   }
 }
 
