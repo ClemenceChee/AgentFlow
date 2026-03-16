@@ -1,6 +1,6 @@
 {
   "name": "agentflow-storage",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Persistent storage and querying for AgentFlow - Store and analyze agent execution history",
   "type": "module",
   "main": "./dist/index.js",

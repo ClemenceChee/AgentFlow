@@ -7,10 +7,10 @@ AgentFlow captures, stores, and analyzes the full execution graphs of AI agent s
 ## Installation
 
 ```bash
-npm install agentflow-core
+npm install -g agentflow-core
 ```
 
-That's it. The core library has zero dependencies and works in any Node.js 20+ environment.
+That's it. This gives you the `agentflow` CLI and the core library. Works with Node.js 20+.
 
 **Optional packages:**
 
@@ -20,9 +20,79 @@ npm install agentflow-storage     # SQLite persistence & analytics
 pip install agentflow-python      # Python agent integration
 ```
 
-## Quick Start
+## Quick Start — Zero-code tracing
 
-### 1. Instrument an agent (JavaScript)
+The fastest way to start: wrap any command with `agentflow run`. No code changes needed.
+
+```bash
+# Trace any command
+agentflow run -- python my_agent.py
+
+# Watch state files to detect sub-worker activity
+agentflow run --watch-dir ./data -- python -m alfred process
+
+# Full example with all options
+agentflow run \
+  --traces-dir ./traces \
+  --watch-dir /path/to/worker/state \
+  --agent-id my-orchestrator \
+  --trigger cron \
+  -- python -m my_agent process
+```
+
+**What happens:**
+1. AgentFlow creates an orchestrator trace with a unique `traceId`
+2. Sets `AGENTFLOW_TRACE_ID` and `AGENTFLOW_PARENT_SPAN_ID` env vars
+3. Runs your command (stdout/stderr pass through normally)
+4. After exit, checks watched directories for file changes → creates child traces for each changed file
+5. Saves all traces as JSON files
+
+**Output:**
+```
+🔍 AgentFlow: Tracing command: python -m alfred process
+📁 Traces: ./traces
+👁️  Watching: ./data (*.json)
+
+... your command output ...
+
+✅ Command completed (exit code 0, 2.3s)
+📝 Traces saved:
+   alfred         → traces/alfred-2026-03-16T14-00-00.json
+   ├─ curator     → traces/alfred-curator-2026-03-16T14-00-00.json (state changed)
+   └─ janitor     → traces/alfred-janitor-2026-03-16T14-00-00.json (state changed)
+🔗 Trace ID: abc12345
+```
+
+### `agentflow run` CLI reference
+
+```
+agentflow run [options] -- <command>
+
+Options:
+  --traces-dir <path>     Where to save trace files (default: ./traces)
+  --watch-dir <path>      Directory to monitor for state changes (repeatable)
+  --watch-pattern <glob>  File pattern to watch (default: *.json)
+  --agent-id <name>       Agent name (default: derived from command)
+  --trigger <name>        Trigger label (default: cli)
+```
+
+### Cron job integration
+
+Replace your existing cron entry:
+
+```bash
+# Before:
+*/30 * * * * python -m alfred process
+
+# After:
+*/30 * * * * npx agentflow run --watch-dir ~/.alfred/data --traces-dir ~/traces -- python -m alfred process
+```
+
+## Code-level instrumentation
+
+For deeper tracing inside your agent code:
+
+### JavaScript
 
 ```typescript
 import { createGraphBuilder, getStats, getFailures } from 'agentflow-core';
@@ -207,10 +277,12 @@ subprocess.run(["node", "worker.js"], env=child_env)
 | `getDepth(graph)` | Maximum nesting depth |
 | `getDuration(graph)` | Total execution duration in ms |
 
-### Distributed Tracing
+### Distributed Tracing & CLI Runner
 
-| Function | Description |
+| Function / CLI | Description |
 |----------|-------------|
+| `agentflow run -- <cmd>` | Trace any command without code changes |
+| `runTraced(config)` | Programmatic API for `agentflow run` |
 | `groupByTraceId(graphs)` | Group graphs by their shared `traceId` |
 | `stitchTrace(graphs)` | Combine graphs into a `DistributedTrace` tree |
 | `getTraceTree(trace)` | Depth-first ordered list of graphs in a trace |
@@ -348,10 +420,10 @@ npm run lint         # Lint
 
 | Package | Version | Description |
 |---------|---------|-------------|
-| [`agentflow-core`](https://www.npmjs.com/package/agentflow-core) | 0.1.2 | Graph builder, query engine, distributed tracing |
-| [`agentflow-python`](https://www.npmjs.com/package/agentflow-python) | 0.1.2 | Python integration |
-| [`agentflow-dashboard`](https://www.npmjs.com/package/agentflow-dashboard) | 0.1.2 | Web monitoring dashboard |
-| [`agentflow-storage`](https://www.npmjs.com/package/agentflow-storage) | 0.1.2 | SQLite persistence & analytics |
+| [`agentflow-core`](https://www.npmjs.com/package/agentflow-core) | 0.1.3 | Graph builder, query engine, distributed tracing |
+| [`agentflow-python`](https://www.npmjs.com/package/agentflow-python) | 0.1.3 | Python integration |
+| [`agentflow-dashboard`](https://www.npmjs.com/package/agentflow-dashboard) | 0.1.3 | Web monitoring dashboard |
+| [`agentflow-storage`](https://www.npmjs.com/package/agentflow-storage) | 0.1.3 | SQLite persistence & analytics |
 
 ## License
 

@@ -16,6 +16,9 @@
 
 // Graph construction
 export { createGraphBuilder } from './graph-builder.js';
+// CLI runner
+export { runTraced } from './runner.js';
+export type { RunConfig, RunResult } from './runner.js';
 // Distributed tracing
 export { stitchTrace, groupByTraceId, getTraceTree } from './graph-stitch.js';
 // Graph querying
