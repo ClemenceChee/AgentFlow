@@ -304,21 +304,165 @@ export function processJsonFile(file: ScannedFile): AgentRecord[] {
   return records;
 }
 
-/** Process a .jsonl file — read last non-empty line */
+/** Process a .jsonl file — extract activity summary from tail */
 export function processJsonlFile(file: ScannedFile): AgentRecord[] {
   try {
     const content = readFileSync(file.path, 'utf8').trim();
     if (!content) return [];
     const lines = content.split('\n');
-    // Read last line
-    const lastLine = lines[lines.length - 1]!;
-    const obj = JSON.parse(lastLine) as Record<string, unknown>;
-    const name = (obj.jobId ?? obj.agentId ?? obj.name ?? obj.id ?? nameFromFile(file.filename)) as string;
-    const status = findStatus(obj);
-    const ts = findTimestamp(obj) || file.mtime;
-    const action = obj.action as string | undefined;
-    const detail = action ? `${action} (${lines.length} entries)` : `${lines.length} entries`;
-    return [{ id: String(name), source: 'session', status, lastActive: ts, detail, file: file.filename }];
+    const lineCount = lines.length;
+
+    // Read last line for basic identity
+    const lastObj = JSON.parse(lines[lines.length - 1]!) as Record<string, unknown>;
+    const name = (lastObj.jobId ?? lastObj.agentId ?? lastObj.name ?? lastObj.id ?? nameFromFile(file.filename)) as string;
+
+    // Simple format: {ts, jobId, action, status} — cron run summaries
+    if (lastObj.action !== undefined || lastObj.jobId !== undefined) {
+      const status = findStatus(lastObj);
+      const ts = findTimestamp(lastObj) || file.mtime;
+      const action = lastObj.action as string | undefined;
+      const detail = action ? `${action} (${lineCount} entries)` : `${lineCount} entries`;
+      return [{ id: String(name), source: 'session', status, lastActive: ts, detail, file: file.filename }];
+    }
+
+    // Rich format: conversation sessions with {type, message: {role, content, usage}}
+    // Scan tail for activity summary
+    const tail = lines.slice(Math.max(0, lineCount - 30));
+    let model = '';
+    let totalTokens = 0;
+    let totalCost = 0;
+    let toolCalls: string[] = [];
+    let lastUserMsg = '';
+    let lastAssistantMsg = '';
+    let errorCount = 0;
+    let lastRole = '';
+    let sessionId = '';
+
+    for (const line of tail) {
+      let entry: Record<string, unknown>;
+      try { entry = JSON.parse(line) as Record<string, unknown>; } catch { continue; }
+
+      const entryType = entry.type as string | undefined;
+
+      // Session metadata
+      if (entryType === 'session') {
+        sessionId = (entry.id as string) ?? '';
+        continue;
+      }
+
+      // Model info
+      if (entryType === 'model_change') {
+        model = (entry.modelId as string) ?? '';
+        continue;
+      }
+
+      if (entryType !== 'message') continue;
+
+      const msg = entry.message as Record<string, unknown> | undefined;
+      if (!msg) continue;
+      const role = msg.role as string;
+      lastRole = role;
+
+      // Extract model from message
+      if (msg.model && !model) model = msg.model as string;
+
+      // Usage/cost
+      const usage = msg.usage as Record<string, unknown> | undefined;
+      if (usage) {
+        const input = (usage.input as number) ?? 0;
+        const output = (usage.output as number) ?? 0;
+        totalTokens += input + output;
+        const cost = usage.cost as Record<string, unknown> | undefined;
+        if (cost && typeof cost.total === 'number') totalCost += cost.total;
+      }
+
+      const msgContent = msg.content;
+
+      // User messages
+      if (role === 'user') {
+        if (typeof msgContent === 'string') {
+          lastUserMsg = msgContent.slice(0, 80);
+        } else if (Array.isArray(msgContent)) {
+          for (const c of msgContent as Record<string, unknown>[]) {
+            if (c.type === 'text' && typeof c.text === 'string') {
+              lastUserMsg = (c.text as string).slice(0, 80);
+              break;
+            }
+          }
+        }
+      }
+
+      // Assistant messages — extract tool calls and text
+      if (role === 'assistant' && Array.isArray(msgContent)) {
+        for (const c of msgContent as Record<string, unknown>[]) {
+          if (c.type === 'tool_use' || c.type === 'toolCall') {
+            const toolName = (c.name as string) ?? '';
+            if (toolName && !toolCalls.includes(toolName)) toolCalls.push(toolName);
+          }
+          if (c.type === 'text' && typeof c.text === 'string' && (c.text as string).length > 5) {
+            lastAssistantMsg = (c.text as string).slice(0, 80);
+          }
+        }
+      }
+
+      // Tool results — check for errors
+      if (role === 'toolResult') {
+        if (typeof msgContent === 'string' && /error|ENOENT|failed|exception/i.test(msgContent)) {
+          errorCount++;
+        } else if (Array.isArray(msgContent)) {
+          for (const c of msgContent as Record<string, unknown>[]) {
+            if (typeof c.text === 'string' && /error|ENOENT|failed|exception/i.test(c.text as string)) {
+              errorCount++;
+            }
+          }
+        }
+      }
+    }
+
+    // Build summary
+    const parts: string[] = [];
+
+    // Model (short name)
+    if (model) {
+      const shortModel = model.includes('/') ? model.split('/').pop()! : model;
+      parts.push(shortModel.slice(0, 20));
+    }
+
+    // What it's doing
+    if (toolCalls.length > 0) {
+      const recent = toolCalls.slice(-3);
+      parts.push(`tools: ${recent.join(', ')}`);
+    }
+
+    // Cost/tokens
+    if (totalCost > 0) {
+      parts.push(`$${totalCost.toFixed(3)}`);
+    } else if (totalTokens > 0) {
+      const k = (totalTokens / 1000).toFixed(1);
+      parts.push(`${k}k tok`);
+    }
+
+    // Last activity
+    if (lastAssistantMsg && lastRole === 'assistant') {
+      parts.push(lastAssistantMsg.slice(0, 40));
+    } else if (lastUserMsg && !parts.some(p => p.startsWith('tools:'))) {
+      parts.push(`user: ${lastUserMsg.slice(0, 35)}`);
+    }
+
+    // Error count
+    if (errorCount > 0) {
+      parts.push(`${errorCount} errors`);
+    }
+
+    const detail = parts.join(' | ') || `${lineCount} messages`;
+    const status = errorCount > lineCount / 4 ? 'error' as const :
+                   lastRole === 'assistant' ? 'ok' as const : 'running' as const;
+    const ts = findTimestamp(lastObj) || file.mtime;
+
+    // Use session name or derive from filename
+    const sessionName = sessionId ? sessionId.slice(0, 8) : nameFromFile(file.filename);
+
+    return [{ id: String(name !== 'unknown' ? name : sessionName), source: 'session', status, lastActive: ts, detail, file: file.filename }];
   } catch {
     return [];
   }
