@@ -1,0 +1,40 @@
+{
+  "name": "@agentflow/python",
+  "version": "0.1.0",
+  "description": "Python integration package for AgentFlow - Universal execution tracing for AI agent systems",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "agentflow_python.py",
+    "setup.py",
+    "requirements.txt"
+  ],
+  "scripts": {
+    "build": "echo 'Python package - no TypeScript build needed'",
+    "test": "python3 -m pytest tests/",
+    "test:integration": "python3 agentflow_python.py"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "tsup": "^8.4.0"
+  },
+  "keywords": [
+    "agentflow",
+    "python",
+    "ai",
+    "agent",
+    "tracing",
+    "monitoring",
+    "observability"
+  ],
+  "license": "MIT"
+}

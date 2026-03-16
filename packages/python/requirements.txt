@@ -1,0 +1,7 @@
+# AgentFlow Python Integration
+# No Python dependencies - uses subprocess to call Node.js AgentFlow core
+
+# Development dependencies (optional)
+pytest>=7.0.0
+black>=22.0.0
+flake8>=4.0.0
