@@ -651,6 +651,11 @@ function render(config: LiveConfig): void {
     return s.length > max ? s.slice(0, max - 1) + '\u2026' : s;
   }
 
+  // Dynamic detail width based on terminal
+  const termWidth = process.stdout.columns || 120;
+  // Columns before detail: "  ● " (4) + name (26) + "  " (2) + status (10) + "  " (2) + time (12) + "  " (2) = ~58
+  const detailWidth = Math.max(20, termWidth - 60);
+
   // === BUILD OUTPUT ===
   if (firstRender) {
     process.stdout.write('\x1b[2J'); // clear screen only on first render
@@ -691,7 +696,7 @@ function render(config: LiveConfig): void {
       // Single agent — flat row
       const name = truncate(g.name, 26).padEnd(26);
       const st = statusText(g);
-      const det = truncate(g.detail, 30);
+      const det = truncate(g.detail, detailWidth);
       writeLine(L, `  ${icon} ${name}  ${st.padEnd(20)}  ${active.padEnd(20)}  ${C.dim}${det}${C.reset}`);
       lineCount++;
     } else {
@@ -712,7 +717,7 @@ function render(config: LiveConfig): void {
         const cIcon = statusIcon(child.status, (Date.now() - child.lastActive) < 300000);
         const cName = truncate(child.id, 22).padEnd(22);
         const cActive = `${C.dim}${timeStr(child.lastActive)}${C.reset}`;
-        const cDet = truncate(child.detail, 25);
+        const cDet = truncate(child.detail, detailWidth - 5);
         writeLine(L, `     ${C.dim}${connector}${C.reset} ${cIcon} ${cName}  ${cActive.padEnd(20)}  ${C.dim}${cDet}${C.reset}`);
         lineCount++;
       }
@@ -767,7 +772,7 @@ function render(config: LiveConfig): void {
       const agent = truncate(r.id, 26).padEnd(26);
       const age = Math.floor((Date.now() - r.lastActive) / 1000);
       const ageStr = age < 60 ? age + 's ago' : age < 3600 ? Math.floor(age / 60) + 'm ago' : Math.floor(age / 3600) + 'h ago';
-      const det = truncate(r.detail, 25);
+      const det = truncate(r.detail, detailWidth);
       writeLine(L, `  ${icon}  ${agent} ${C.dim}${t}  ${ageStr.padStart(8)}${C.reset}  ${C.dim}${det}${C.reset}`);
     }
   }
