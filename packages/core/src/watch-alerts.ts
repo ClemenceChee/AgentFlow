@@ -4,9 +4,9 @@
  * @module
  */
 
-import { request as httpsRequest } from 'node:https';
-import { request as httpRequest } from 'node:http';
 import { exec } from 'node:child_process';
+import { request as httpRequest } from 'node:http';
+import { request as httpsRequest } from 'node:https';
 
 import type { AlertPayload, NotifyChannel } from './watch-types.js';
 
@@ -24,7 +24,9 @@ export function formatAlertMessage(payload: AlertPayload): string {
     payload.detail ? `  Detail:  ${payload.detail}` : null,
     `  File:    ${payload.file}`,
     `  Time:    ${time}`,
-  ].filter(Boolean).join('\n');
+  ]
+    .filter(Boolean)
+    .join('\n');
 }
 
 /** Format for Telegram (supports basic markdown). */
@@ -37,7 +39,9 @@ function formatTelegram(payload: AlertPayload): string {
     `Status: ${payload.previousStatus} \u2192 ${payload.currentStatus}`,
     payload.detail ? `Detail: ${payload.detail.slice(0, 200)}` : null,
     `Time: ${time}`,
-  ].filter(Boolean).join('\n');
+  ]
+    .filter(Boolean)
+    .join('\n');
 }
 
 // ---------------------------------------------------------------------------
@@ -81,7 +85,10 @@ function sendTelegram(payload: AlertPayload, botToken: string, chatId: string): 
   return new Promise<void>((resolve, reject) => {
     const req = httpsRequest(
       `https://api.telegram.org/bot${botToken}/sendMessage`,
-      { method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } },
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+      },
       (res) => {
         res.resume(); // drain
         if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) resolve();
@@ -102,7 +109,10 @@ function sendWebhook(payload: AlertPayload, url: string): Promise<void> {
   return new Promise<void>((resolve, reject) => {
     const req = doRequest(
       url,
-      { method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } },
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+      },
       (res) => {
         res.resume();
         if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) resolve();
@@ -110,7 +120,9 @@ function sendWebhook(payload: AlertPayload, url: string): Promise<void> {
       },
     );
     req.on('error', reject);
-    req.setTimeout(10_000, () => { req.destroy(new Error('Webhook timeout')); });
+    req.setTimeout(10_000, () => {
+      req.destroy(new Error('Webhook timeout'));
+    });
     req.write(body);
     req.end();
   });

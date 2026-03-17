@@ -85,8 +85,14 @@ export function createGraphBuilder(config?: AgentFlowConfig): GraphBuilder {
   const agentId = config?.agentId ?? 'unknown';
   const trigger = config?.trigger ?? 'manual';
   const spanId = randomUUID();
-  const traceId = config?.traceId ?? (typeof process !== 'undefined' ? process.env?.AGENTFLOW_TRACE_ID : undefined) ?? randomUUID();
-  const parentSpanId = config?.parentSpanId ?? (typeof process !== 'undefined' ? process.env?.AGENTFLOW_PARENT_SPAN_ID : undefined) ?? null;
+  const traceId =
+    config?.traceId ??
+    (typeof process !== 'undefined' ? process.env?.AGENTFLOW_TRACE_ID : undefined) ??
+    randomUUID();
+  const parentSpanId =
+    config?.parentSpanId ??
+    (typeof process !== 'undefined' ? process.env?.AGENTFLOW_PARENT_SPAN_ID : undefined) ??
+    null;
 
   // --- Mutable internal state (closure scope) ---
   const graphId = generateId();

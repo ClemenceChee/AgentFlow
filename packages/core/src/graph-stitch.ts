@@ -1,4 +1,4 @@
-import type { ExecutionGraph, DistributedTrace, GraphStatus } from './types.js';
+import type { DistributedTrace, ExecutionGraph, GraphStatus } from './types.js';
 
 export function groupByTraceId(graphs: ExecutionGraph[]): Map<string, ExecutionGraph[]> {
   const groups = new Map<string, ExecutionGraph[]>();

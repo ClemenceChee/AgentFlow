@@ -4,7 +4,7 @@
  * @module
  */
 
-import { existsSync, readFileSync, writeFileSync, renameSync } from 'node:fs';
+import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
 import type { AgentRecord } from './live.js';
@@ -29,11 +29,16 @@ export function parseDuration(input: string): number {
   }
   const value = parseFloat(match[1]!);
   switch (match[2]!.toLowerCase()) {
-    case 's': return value * 1000;
-    case 'm': return value * 60_000;
-    case 'h': return value * 3_600_000;
-    case 'd': return value * 86_400_000;
-    default: return value * 1000;
+    case 's':
+      return value * 1000;
+    case 'm':
+      return value * 60_000;
+    case 'h':
+      return value * 3_600_000;
+    case 'd':
+      return value * 86_400_000;
+    default:
+      return value * 1000;
   }
 }
 
@@ -65,7 +70,11 @@ export function saveWatchState(filePath: string, state: WatchStateFile): void {
     renameSync(tmp, filePath);
   } catch {
     // If rename fails (cross-device), fall back to direct write
-    try { writeFileSync(filePath, JSON.stringify(state, null, 2), 'utf8'); } catch { /* give up silently */ }
+    try {
+      writeFileSync(filePath, JSON.stringify(state, null, 2), 'utf8');
+    } catch {
+      /* give up silently */
+    }
   }
 }
 
@@ -101,10 +110,15 @@ export function detectTransitions(
   const alerts: AlertPayload[] = [];
 
   // Index conditions by type for fast lookup
-  const hasError = config.alertConditions.some(c => c.type === 'error');
-  const hasRecovery = config.alertConditions.some(c => c.type === 'recovery');
-  const staleConditions = config.alertConditions.filter(c => c.type === 'stale') as Array<{ type: 'stale'; durationMs: number }>;
-  const consecutiveConditions = config.alertConditions.filter(c => c.type === 'consecutive-errors') as Array<{ type: 'consecutive-errors'; threshold: number }>;
+  const hasError = config.alertConditions.some((c) => c.type === 'error');
+  const hasRecovery = config.alertConditions.some((c) => c.type === 'recovery');
+  const staleConditions = config.alertConditions.filter((c) => c.type === 'stale') as Array<{
+    type: 'stale';
+    durationMs: number;
+  }>;
+  const consecutiveConditions = config.alertConditions.filter(
+    (c) => c.type === 'consecutive-errors',
+  ) as Array<{ type: 'consecutive-errors'; threshold: number }>;
 
   // Deduplicate records by agent id (keep most recent)
   const byAgent = new Map<string, AgentRecord>();
@@ -138,8 +152,16 @@ export function detectTransitions(
     for (const cond of consecutiveConditions) {
       if (newConsec === cond.threshold) {
         if (canAlert(prev, `consecutive-errors:${cond.threshold}`, config.cooldownMs, now)) {
-          alerts.push(makePayload(agentId, `consecutive-errors (${cond.threshold})`, prevStatus, currStatus,
-            { ...record, detail: `${newConsec} consecutive errors. ${record.detail}` }, config.dirs));
+          alerts.push(
+            makePayload(
+              agentId,
+              `consecutive-errors (${cond.threshold})`,
+              prevStatus,
+              currStatus,
+              { ...record, detail: `${newConsec} consecutive errors. ${record.detail}` },
+              config.dirs,
+            ),
+          );
         }
       }
     }
@@ -150,8 +172,16 @@ export function detectTransitions(
       if (sinceActive > cond.durationMs && record.lastActive > 0) {
         if (canAlert(prev, 'stale', config.cooldownMs, now)) {
           const mins = Math.floor(sinceActive / 60_000);
-          alerts.push(makePayload(agentId, 'stale', prevStatus, currStatus,
-            { ...record, detail: `No update for ${mins}m. ${record.detail}` }, config.dirs));
+          alerts.push(
+            makePayload(
+              agentId,
+              'stale',
+              prevStatus,
+              currStatus,
+              { ...record, detail: `No update for ${mins}m. ${record.detail}` },
+              config.dirs,
+            ),
+          );
         }
       }
     }
@@ -162,12 +192,24 @@ export function detectTransitions(
       const expectedInterval = estimateInterval(history);
       if (expectedInterval > 0) {
         const sinceActive = now - record.lastActive;
-        if (sinceActive > expectedInterval * 3) { // 3× expected interval
+        if (sinceActive > expectedInterval * 3) {
+          // 3× expected interval
           if (canAlert(prev, 'stale-auto', config.cooldownMs, now)) {
             const mins = Math.floor(sinceActive / 60_000);
             const expectedMins = Math.floor(expectedInterval / 60_000);
-            alerts.push(makePayload(agentId, 'stale (auto)', prevStatus, currStatus,
-              { ...record, detail: `No update for ${mins}m (expected every ~${expectedMins}m). ${record.detail}` }, config.dirs));
+            alerts.push(
+              makePayload(
+                agentId,
+                'stale (auto)',
+                prevStatus,
+                currStatus,
+                {
+                  ...record,
+                  detail: `No update for ${mins}m (expected every ~${expectedMins}m). ${record.detail}`,
+                },
+                config.dirs,
+              ),
+            );
           }
         }
       }
@@ -211,9 +253,7 @@ export function updateWatchState(
     while (newHistory.length > 10) newHistory.shift();
 
     const alert = alertsByAgent.get(agentId);
-    const consecutiveErrors = record.status === 'error'
-      ? (prev?.consecutiveErrors ?? 0) + 1
-      : 0;
+    const consecutiveErrors = record.status === 'error' ? (prev?.consecutiveErrors ?? 0) + 1 : 0;
 
     agents[agentId] = {
       id: agentId,
@@ -241,7 +281,7 @@ function canAlert(
 ): boolean {
   if (!prev) return true;
   if (prev.lastAlertReason !== reason) return true;
-  return (now - prev.lastAlertTime) > cooldownMs;
+  return now - prev.lastAlertTime > cooldownMs;
 }
 
 function makePayload(

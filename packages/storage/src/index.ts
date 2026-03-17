@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+
 /**
  * AgentFlow Storage - Persistent storage and querying for agent execution history
  *
@@ -14,7 +15,7 @@
  *   const storage = new AgentFlowStorage('./agentflow.db');
  */
 
-export { AgentFlowStorage } from './storage.js';
+export { StorageAnalytics } from './analytics.js';
 export { TraceIngester } from './ingester.js';
 export { QueryBuilder } from './query.js';
-export { StorageAnalytics } from './analytics.js';
+export { AgentFlowStorage } from './storage.js';

@@ -17,9 +17,7 @@ import type { ExecutionGraph, ExecutionNode } from './types.js';
  *
  * @internal
  */
-function toNodesMap(
-  raw: unknown,
-): ReadonlyMap<string, ExecutionNode> {
+function toNodesMap(raw: unknown): ReadonlyMap<string, ExecutionNode> {
   // Already a Map (in-memory graph passed directly)
   if (raw instanceof Map) return raw;
 
@@ -59,7 +57,7 @@ function toNodesMap(
  */
 export function loadGraph(input: string | Record<string, unknown>): ExecutionGraph {
   const raw: Record<string, unknown> =
-    typeof input === 'string' ? JSON.parse(input) as Record<string, unknown> : input;
+    typeof input === 'string' ? (JSON.parse(input) as Record<string, unknown>) : input;
 
   const nodes = toNodesMap(raw.nodes);
 

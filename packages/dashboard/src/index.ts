@@ -14,6 +14,6 @@
  */
 
 export { DashboardServer } from './server.js';
-export { TraceWatcher } from './watcher.js';
-export type { WatchedTrace } from './watcher.js';
 export { AgentStats } from './stats.js';
+export type { WatchedTrace } from './watcher.js';
+export { TraceWatcher } from './watcher.js';

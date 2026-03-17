@@ -9,13 +9,18 @@
  */
 
 import { existsSync } from 'node:fs';
-import { resolve, join } from 'node:path';
 import { hostname } from 'node:os';
-
-import { scanFiles, processJsonFile, processJsonlFile } from './live.js';
+import { join, resolve } from 'node:path';
 import type { AgentRecord } from './live.js';
-import { loadWatchState, saveWatchState, detectTransitions, updateWatchState, parseDuration } from './watch-state.js';
-import { sendAlert, formatAlertMessage } from './watch-alerts.js';
+import { processJsonFile, processJsonlFile, scanFiles } from './live.js';
+import { formatAlertMessage, sendAlert } from './watch-alerts.js';
+import {
+  detectTransitions,
+  loadWatchState,
+  parseDuration,
+  saveWatchState,
+  updateWatchState,
+} from './watch-state.js';
 import type { AlertCondition, NotifyChannel, WatchConfig } from './watch-types.js';
 
 // ---------------------------------------------------------------------------
@@ -65,7 +70,9 @@ function parseWatchArgs(argv: string[]): WatchConfig {
         if (botToken && chatId) {
           notifyChannels.push({ type: 'telegram', botToken, chatId });
         } else {
-          console.error('Warning: --notify telegram requires AGENTFLOW_TELEGRAM_BOT_TOKEN and AGENTFLOW_TELEGRAM_CHAT_ID env vars');
+          console.error(
+            'Warning: --notify telegram requires AGENTFLOW_TELEGRAM_BOT_TOKEN and AGENTFLOW_TELEGRAM_CHAT_ID env vars',
+          );
         }
       } else if (val.startsWith('webhook:')) {
         notifyChannels.push({ type: 'webhook', url: val.slice(8) });
@@ -126,7 +133,8 @@ function parseWatchArgs(argv: string[]): WatchConfig {
 }
 
 function printWatchUsage(): void {
-  console.log(`
+  console.log(
+    `
 AgentFlow Watch — headless alert system for agent infrastructure.
 
 Polls directories for JSON/JSONL files, detects failures and stale
@@ -169,7 +177,8 @@ Examples:
   agentflow watch ./data ./cron --notify telegram --poll 60
   agentflow watch ./traces --notify webhook:https://hooks.slack.com/... --alert-on consecutive-errors:3
   agentflow watch ./data --notify "command:curl -X POST https://my-pagerduty/alert"
-`.trim());
+`.trim(),
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -180,12 +189,12 @@ export function startWatch(argv: string[]): void {
   const config = parseWatchArgs(argv);
 
   // Validate directories
-  const valid = config.dirs.filter(d => existsSync(d));
+  const valid = config.dirs.filter((d) => existsSync(d));
   if (valid.length === 0) {
     console.error(`No valid directories found: ${config.dirs.join(', ')}`);
     process.exit(1);
   }
-  const invalid = config.dirs.filter(d => !existsSync(d));
+  const invalid = config.dirs.filter((d) => !existsSync(d));
   if (invalid.length > 0) {
     console.warn(`Skipping non-existent: ${invalid.join(', ')}`);
   }
@@ -194,22 +203,26 @@ export function startWatch(argv: string[]): void {
   let state = loadWatchState(config.stateFilePath);
 
   // Startup banner
-  const condLabels = config.alertConditions.map(c => {
+  const condLabels = config.alertConditions.map((c) => {
     if (c.type === 'stale') return `stale:${Math.floor(c.durationMs / 60_000)}m`;
     if (c.type === 'consecutive-errors') return `consecutive-errors:${c.threshold}`;
     return c.type;
   });
-  const channelLabels = config.notifyChannels.filter(c => c.type !== 'stdout').map(c => {
-    if (c.type === 'webhook') return `webhook:${c.url.slice(0, 40)}...`;
-    if (c.type === 'command') return `command:${c.cmd.slice(0, 40)}`;
-    return c.type;
-  });
+  const channelLabels = config.notifyChannels
+    .filter((c) => c.type !== 'stdout')
+    .map((c) => {
+      if (c.type === 'webhook') return `webhook:${c.url.slice(0, 40)}...`;
+      if (c.type === 'command') return `command:${c.cmd.slice(0, 40)}`;
+      return c.type;
+    });
 
   console.log(`\nagentflow watch started`);
   console.log(`  Directories:  ${valid.join(', ')}`);
   console.log(`  Poll:         ${config.pollIntervalMs / 1000}s`);
   console.log(`  Alert on:     ${condLabels.join(', ')}`);
-  console.log(`  Notify:       stdout${channelLabels.length > 0 ? ', ' + channelLabels.join(', ') : ''}`);
+  console.log(
+    `  Notify:       stdout${channelLabels.length > 0 ? ', ' + channelLabels.join(', ') : ''}`,
+  );
   console.log(`  Cooldown:     ${Math.floor(config.cooldownMs / 60_000)}m`);
   console.log(`  State:        ${config.stateFilePath}`);
   console.log(`  Hostname:     ${hostname()}`);
@@ -245,10 +258,14 @@ export function startWatch(argv: string[]): void {
     // Periodic heartbeat (every 10 polls)
     if (pollCount % 10 === 0) {
       const agentCount = Object.keys(state.agents).length;
-      const errorCount = Object.values(state.agents).filter(a => a.lastStatus === 'error').length;
-      const runningCount = Object.values(state.agents).filter(a => a.lastStatus === 'running').length;
+      const errorCount = Object.values(state.agents).filter((a) => a.lastStatus === 'error').length;
+      const runningCount = Object.values(state.agents).filter(
+        (a) => a.lastStatus === 'running',
+      ).length;
       const time = new Date().toLocaleTimeString();
-      console.log(`[${time}] heartbeat: ${agentCount} agents, ${runningCount} running, ${errorCount} errors, ${files.length} files`);
+      console.log(
+        `[${time}] heartbeat: ${agentCount} agents, ${runningCount} running, ${errorCount} errors, ${files.length} files`,
+      );
     }
   }
 
@@ -256,7 +273,9 @@ export function startWatch(argv: string[]): void {
   poll();
 
   // Periodic
-  setInterval(() => { poll(); }, config.pollIntervalMs);
+  setInterval(() => {
+    poll();
+  }, config.pollIntervalMs);
 
   // Graceful shutdown
   function shutdown() {

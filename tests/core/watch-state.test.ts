@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { parseDuration, detectTransitions, updateWatchState } from '../../packages/core/src/watch-state.js';
 import type { AgentRecord } from '../../packages/core/src/live.js';
+import {
+  detectTransitions,
+  parseDuration,
+  updateWatchState,
+} from '../../packages/core/src/watch-state.js';
 import type { WatchConfig, WatchStateFile } from '../../packages/core/src/watch-types.js';
 
 function makeRecord(overrides: Partial<AgentRecord> = {}): AgentRecord {
@@ -64,8 +68,13 @@ describe('detectTransitions', () => {
       version: 1,
       agents: {
         'test-agent': {
-          id: 'test-agent', lastStatus: 'ok', lastActive: 1000,
-          lastAlertTime: 0, lastAlertReason: '', consecutiveErrors: 0, mtimeHistory: [],
+          id: 'test-agent',
+          lastStatus: 'ok',
+          lastActive: 1000,
+          lastAlertTime: 0,
+          lastAlertReason: '',
+          consecutiveErrors: 0,
+          mtimeHistory: [],
         },
       },
       lastPollTime: 1000,
@@ -84,8 +93,13 @@ describe('detectTransitions', () => {
       version: 1,
       agents: {
         'test-agent': {
-          id: 'test-agent', lastStatus: 'error', lastActive: 1000,
-          lastAlertTime: 0, lastAlertReason: '', consecutiveErrors: 3, mtimeHistory: [],
+          id: 'test-agent',
+          lastStatus: 'error',
+          lastActive: 1000,
+          lastAlertTime: 0,
+          lastAlertReason: '',
+          consecutiveErrors: 3,
+          mtimeHistory: [],
         },
       },
       lastPollTime: 1000,
@@ -103,8 +117,13 @@ describe('detectTransitions', () => {
       version: 1,
       agents: {
         'test-agent': {
-          id: 'test-agent', lastStatus: 'ok', lastActive: 1000,
-          lastAlertTime: 0, lastAlertReason: '', consecutiveErrors: 0, mtimeHistory: [],
+          id: 'test-agent',
+          lastStatus: 'ok',
+          lastActive: 1000,
+          lastAlertTime: 0,
+          lastAlertReason: '',
+          consecutiveErrors: 0,
+          mtimeHistory: [],
         },
       },
       lastPollTime: 1000,
@@ -122,9 +141,13 @@ describe('detectTransitions', () => {
       version: 1,
       agents: {
         'test-agent': {
-          id: 'test-agent', lastStatus: 'ok', lastActive: 1000,
+          id: 'test-agent',
+          lastStatus: 'ok',
+          lastActive: 1000,
           lastAlertTime: now - 1000, // alerted 1 second ago
-          lastAlertReason: 'error', consecutiveErrors: 0, mtimeHistory: [],
+          lastAlertReason: 'error',
+          consecutiveErrors: 0,
+          mtimeHistory: [],
         },
       },
       lastPollTime: now - 1000,
@@ -153,8 +176,13 @@ describe('detectTransitions', () => {
       version: 1,
       agents: {
         'test-agent': {
-          id: 'test-agent', lastStatus: 'error', lastActive: 1000,
-          lastAlertTime: 0, lastAlertReason: '', consecutiveErrors: 2, mtimeHistory: [],
+          id: 'test-agent',
+          lastStatus: 'error',
+          lastActive: 1000,
+          lastAlertTime: 0,
+          lastAlertReason: '',
+          consecutiveErrors: 2,
+          mtimeHistory: [],
         },
       },
       lastPollTime: 1000,
@@ -194,8 +222,13 @@ describe('updateWatchState', () => {
       version: 1,
       agents: {
         'test-agent': {
-          id: 'test-agent', lastStatus: 'error', lastActive: 1000,
-          lastAlertTime: 0, lastAlertReason: '', consecutiveErrors: 2, mtimeHistory: [1000],
+          id: 'test-agent',
+          lastStatus: 'error',
+          lastActive: 1000,
+          lastAlertTime: 0,
+          lastAlertReason: '',
+          consecutiveErrors: 2,
+          mtimeHistory: [1000],
         },
       },
       lastPollTime: 1000,
@@ -211,8 +244,13 @@ describe('updateWatchState', () => {
       version: 1,
       agents: {
         'test-agent': {
-          id: 'test-agent', lastStatus: 'error', lastActive: 1000,
-          lastAlertTime: 0, lastAlertReason: '', consecutiveErrors: 5, mtimeHistory: [1000],
+          id: 'test-agent',
+          lastStatus: 'error',
+          lastActive: 1000,
+          lastAlertTime: 0,
+          lastAlertReason: '',
+          consecutiveErrors: 5,
+          mtimeHistory: [1000],
         },
       },
       lastPollTime: 1000,
@@ -228,8 +266,12 @@ describe('updateWatchState', () => {
       version: 1,
       agents: {
         'test-agent': {
-          id: 'test-agent', lastStatus: 'ok', lastActive: 1000,
-          lastAlertTime: 0, lastAlertReason: '', consecutiveErrors: 0,
+          id: 'test-agent',
+          lastStatus: 'ok',
+          lastActive: 1000,
+          lastAlertTime: 0,
+          lastAlertReason: '',
+          consecutiveErrors: 0,
           mtimeHistory: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
         },
       },

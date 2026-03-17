@@ -16,22 +16,29 @@
  * @module
  */
 
-import { readdirSync, readFileSync, statSync, watch, existsSync } from 'node:fs';
-import { join, resolve, basename } from 'node:path';
-
+import { existsSync, readdirSync, readFileSync, statSync, watch } from 'node:fs';
+import { basename, join, resolve } from 'node:path';
+import { getFailures, getHungNodes, getStats } from './graph-query.js';
+import { getTraceTree, groupByTraceId, stitchTrace } from './graph-stitch.js';
 import { loadGraph } from './loader.js';
-import { getStats, getFailures, getHungNodes } from './graph-query.js';
-import { groupByTraceId, stitchTrace, getTraceTree } from './graph-stitch.js';
-import type { ExecutionGraph, DistributedTrace } from './types.js';
+import type { DistributedTrace, ExecutionGraph } from './types.js';
 
 // ---------------------------------------------------------------------------
 // ANSI helpers
 // ---------------------------------------------------------------------------
 
 const C = {
-  reset: '\x1b[0m', bold: '\x1b[1m', dim: '\x1b[90m', under: '\x1b[4m',
-  red: '\x1b[31m', green: '\x1b[32m', yellow: '\x1b[33m', blue: '\x1b[34m',
-  magenta: '\x1b[35m', cyan: '\x1b[36m', white: '\x1b[37m',
+  reset: '\x1b[0m',
+  bold: '\x1b[1m',
+  dim: '\x1b[90m',
+  under: '\x1b[4m',
+  red: '\x1b[31m',
+  green: '\x1b[32m',
+  yellow: '\x1b[33m',
+  blue: '\x1b[34m',
+  magenta: '\x1b[35m',
+  cyan: '\x1b[36m',
+  white: '\x1b[37m',
 };
 
 // ---------------------------------------------------------------------------
@@ -52,20 +59,31 @@ function parseArgs(argv: string[]): LiveConfig {
   let i = 0;
   while (i < args.length) {
     const arg = args[i]!;
-    if (arg === '--help' || arg === '-h') { printUsage(); process.exit(0); }
-    else if (arg === '--refresh' || arg === '-r') {
-      i++; const v = parseInt(args[i] ?? '', 10);
-      if (!isNaN(v) && v > 0) config.refreshMs = v * 1000; i++;
-    } else if (arg === '--recursive' || arg === '-R') { config.recursive = true; i++; }
-    else if (!arg.startsWith('-')) { config.dirs.push(resolve(arg)); i++; }
-    else { i++; }
+    if (arg === '--help' || arg === '-h') {
+      printUsage();
+      process.exit(0);
+    } else if (arg === '--refresh' || arg === '-r') {
+      i++;
+      const v = parseInt(args[i] ?? '', 10);
+      if (!isNaN(v) && v > 0) config.refreshMs = v * 1000;
+      i++;
+    } else if (arg === '--recursive' || arg === '-R') {
+      config.recursive = true;
+      i++;
+    } else if (!arg.startsWith('-')) {
+      config.dirs.push(resolve(arg));
+      i++;
+    } else {
+      i++;
+    }
   }
   if (config.dirs.length === 0) config.dirs.push(resolve('.'));
   return config;
 }
 
 function printUsage(): void {
-  console.log(`
+  console.log(
+    `
 AgentFlow Live Monitor — real-time terminal dashboard for agent systems.
 
 Auto-detects agent traces, state files, job schedulers, and session logs
@@ -86,7 +104,8 @@ Examples:
   agentflow live ./data
   agentflow live ./traces ./cron ./workers --refresh 5
   agentflow live /var/lib/myagent -R
-`.trim());
+`.trim(),
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -99,9 +118,9 @@ export interface AgentRecord {
   id: string;
   source: SourceType;
   status: 'ok' | 'error' | 'running' | 'unknown';
-  lastActive: number;       // epoch ms
-  detail: string;           // one-line summary
-  file: string;             // source filename
+  lastActive: number; // epoch ms
+  detail: string; // one-line summary
+  file: string; // source filename
   // trace-specific (populated only for agentflow traces)
   traceData?: ExecutionGraph;
 }
@@ -128,7 +147,11 @@ export function scanFiles(dirs: string[], recursive: boolean): ScannedFile[] {
         const fp = join(d, f);
         if (seen.has(fp)) continue;
         let stat;
-        try { stat = statSync(fp); } catch { continue; }
+        try {
+          stat = statSync(fp);
+        } catch {
+          continue;
+        }
 
         if (stat.isDirectory() && recursive && topLevel) {
           scanDir(fp, false);
@@ -144,7 +167,9 @@ export function scanFiles(dirs: string[], recursive: boolean): ScannedFile[] {
           results.push({ filename: f, path: fp, mtime: stat.mtime.getTime(), ext: '.jsonl' });
         }
       }
-    } catch { /* dir not readable */ }
+    } catch {
+      /* dir not readable */
+    }
   }
 
   for (const dir of dirs) scanDir(dir, true);
@@ -157,11 +182,17 @@ export function scanFiles(dirs: string[], recursive: boolean): ScannedFile[] {
 // ---------------------------------------------------------------------------
 
 function safeReadJson(fp: string): unknown {
-  try { return JSON.parse(readFileSync(fp, 'utf8')); } catch { return null; }
+  try {
+    return JSON.parse(readFileSync(fp, 'utf8'));
+  } catch {
+    return null;
+  }
 }
 
 function nameFromFile(filename: string): string {
-  return basename(filename).replace(/\.(json|jsonl)$/, '').replace(/-state$/, '');
+  return basename(filename)
+    .replace(/\.(json|jsonl)$/, '')
+    .replace(/-state$/, '');
 }
 
 /** Detect common status field values and normalize to ok/error/running/unknown */
@@ -169,8 +200,10 @@ function normalizeStatus(val: unknown): 'ok' | 'error' | 'running' | 'unknown' {
   if (typeof val !== 'string') return 'unknown';
   const s = val.toLowerCase();
   if (['ok', 'success', 'completed', 'done', 'passed', 'healthy', 'good'].includes(s)) return 'ok';
-  if (['error', 'failed', 'failure', 'crashed', 'unhealthy', 'bad', 'timeout'].includes(s)) return 'error';
-  if (['running', 'active', 'in_progress', 'started', 'pending', 'processing'].includes(s)) return 'running';
+  if (['error', 'failed', 'failure', 'crashed', 'unhealthy', 'bad', 'timeout'].includes(s))
+    return 'error';
+  if (['running', 'active', 'in_progress', 'started', 'pending', 'processing'].includes(s))
+    return 'running';
   return 'unknown';
 }
 
@@ -190,7 +223,17 @@ function findStatus(obj: Record<string, unknown>): 'ok' | 'error' | 'running' | 
 
 /** Search an object for a timestamp field (returns epoch ms or 0) */
 function findTimestamp(obj: Record<string, unknown>): number {
-  for (const key of ['ts', 'timestamp', 'lastRunAtMs', 'last_run', 'lastExecution', 'updated_at', 'started_at', 'endTime', 'startTime']) {
+  for (const key of [
+    'ts',
+    'timestamp',
+    'lastRunAtMs',
+    'last_run',
+    'lastExecution',
+    'updated_at',
+    'started_at',
+    'endTime',
+    'startTime',
+  ]) {
     const val = obj[key];
     if (typeof val === 'number') return val > 1e12 ? val : val * 1000; // handle seconds vs ms
     if (typeof val === 'string') {
@@ -205,7 +248,16 @@ function findTimestamp(obj: Record<string, unknown>): number {
 function extractDetail(obj: Record<string, unknown>): string {
   const parts: string[] = [];
   // Look for common informative fields
-  for (const key of ['summary', 'message', 'description', 'lastError', 'error', 'name', 'jobId', 'id']) {
+  for (const key of [
+    'summary',
+    'message',
+    'description',
+    'lastError',
+    'error',
+    'name',
+    'jobId',
+    'id',
+  ]) {
     const val = obj[key];
     if (typeof val === 'string' && val.length > 0 && val.length < 200) {
       parts.push(val.slice(0, 80));
@@ -215,7 +267,10 @@ function extractDetail(obj: Record<string, unknown>): string {
   // Add numeric stats if present
   for (const key of ['totalExecutions', 'runs', 'count', 'processed', 'consecutiveErrors']) {
     const val = obj[key];
-    if (typeof val === 'number') { parts.push(`${key}: ${val}`); break; }
+    if (typeof val === 'number') {
+      parts.push(`${key}: ${val}`);
+      break;
+    }
   }
   return parts.join(' | ') || '';
 }
@@ -227,7 +282,11 @@ function tryLoadTrace(fp: string, raw: unknown): ExecutionGraph | null {
   // Heuristic: agentflow traces have nodes + agentId (or rootNodeId)
   if (!('nodes' in obj)) return null;
   if (!('agentId' in obj) && !('rootNodeId' in obj) && !('rootId' in obj)) return null;
-  try { return loadGraph(obj); } catch { return null; }
+  try {
+    return loadGraph(obj);
+  } catch {
+    return null;
+  }
 }
 
 /** Process a .json file into agent records */
@@ -246,34 +305,50 @@ export function processJsonFile(file: ScannedFile): AgentRecord[] {
       records.push({
         id: trace.agentId,
         source: 'trace',
-        status: (fails.length === 0 && hung.length === 0) ? 'ok' : 'error',
+        status: fails.length === 0 && hung.length === 0 ? 'ok' : 'error',
         lastActive: file.mtime,
         detail: `${stats.totalNodes} nodes [${trace.trigger}]`,
         file: file.filename,
         traceData: trace,
       });
-    } catch { /* skip broken trace */ }
+    } catch {
+      /* skip broken trace */
+    }
     return records;
   }
 
   if (typeof raw !== 'object') return records;
 
   // 2. Array at top level or under a known key → job/task list
-  const arr = Array.isArray(raw) ? raw :
-    Array.isArray((raw as Record<string, unknown>).jobs) ? (raw as Record<string, unknown>).jobs as unknown[] :
-    Array.isArray((raw as Record<string, unknown>).tasks) ? (raw as Record<string, unknown>).tasks as unknown[] :
-    Array.isArray((raw as Record<string, unknown>).items) ? (raw as Record<string, unknown>).items as unknown[] :
-    null;
+  const arr = Array.isArray(raw)
+    ? raw
+    : Array.isArray((raw as Record<string, unknown>).jobs)
+      ? ((raw as Record<string, unknown>).jobs as unknown[])
+      : Array.isArray((raw as Record<string, unknown>).tasks)
+        ? ((raw as Record<string, unknown>).tasks as unknown[])
+        : Array.isArray((raw as Record<string, unknown>).items)
+          ? ((raw as Record<string, unknown>).items as unknown[])
+          : null;
 
   if (arr && arr.length > 0 && typeof arr[0] === 'object' && arr[0] !== null) {
     for (const item of arr.slice(0, 50) as Record<string, unknown>[]) {
       const name = (item.name ?? item.id ?? item.jobId ?? item.agentId) as string | undefined;
       if (!name) continue;
-      const state = (typeof item.state === 'object' && item.state !== null) ? item.state as Record<string, unknown> : item;
+      const state =
+        typeof item.state === 'object' && item.state !== null
+          ? (item.state as Record<string, unknown>)
+          : item;
       const status = findStatus(state);
       const ts = findTimestamp(state) || file.mtime;
       const detail = extractDetail(state);
-      records.push({ id: String(name), source: 'jobs', status, lastActive: ts, detail, file: file.filename });
+      records.push({
+        id: String(name),
+        source: 'jobs',
+        status,
+        lastActive: ts,
+        detail,
+        file: file.filename,
+      });
     }
     return records;
   }
@@ -290,7 +365,14 @@ export function processJsonFile(file: ScannedFile): AgentRecord[] {
         const ts = findTimestamp(w) || findTimestamp(obj) || file.mtime;
         const pid = w.pid as number | undefined;
         const detail = pid ? `pid: ${pid}` : extractDetail(w);
-        records.push({ id: name, source: 'workers', status, lastActive: ts, detail, file: file.filename });
+        records.push({
+          id: name,
+          source: 'workers',
+          status,
+          lastActive: ts,
+          detail,
+          file: file.filename,
+        });
       }
       return records;
     }
@@ -300,7 +382,14 @@ export function processJsonFile(file: ScannedFile): AgentRecord[] {
   const status = findStatus(obj);
   const ts = findTimestamp(obj) || file.mtime;
   const detail = extractDetail(obj);
-  records.push({ id: nameFromFile(file.filename), source: 'state', status, lastActive: ts, detail, file: file.filename });
+  records.push({
+    id: nameFromFile(file.filename),
+    source: 'state',
+    status,
+    lastActive: ts,
+    detail,
+    file: file.filename,
+  });
   return records;
 }
 
@@ -314,7 +403,11 @@ export function processJsonlFile(file: ScannedFile): AgentRecord[] {
 
     // Read last line for basic identity
     const lastObj = JSON.parse(lines[lines.length - 1]!) as Record<string, unknown>;
-    const name = (lastObj.jobId ?? lastObj.agentId ?? lastObj.name ?? lastObj.id ?? nameFromFile(file.filename)) as string;
+    const name = (lastObj.jobId ??
+      lastObj.agentId ??
+      lastObj.name ??
+      lastObj.id ??
+      nameFromFile(file.filename)) as string;
 
     // Simple format: {ts, jobId, action, status} — cron run summaries
     if (lastObj.action !== undefined || lastObj.jobId !== undefined) {
@@ -322,7 +415,16 @@ export function processJsonlFile(file: ScannedFile): AgentRecord[] {
       const ts = findTimestamp(lastObj) || file.mtime;
       const action = lastObj.action as string | undefined;
       const detail = action ? `${action} (${lineCount} entries)` : `${lineCount} entries`;
-      return [{ id: String(name), source: 'session', status, lastActive: ts, detail, file: file.filename }];
+      return [
+        {
+          id: String(name),
+          source: 'session',
+          status,
+          lastActive: ts,
+          detail,
+          file: file.filename,
+        },
+      ];
     }
 
     // Rich format: conversation sessions with {type, message: {role, content, usage}}
@@ -331,7 +433,7 @@ export function processJsonlFile(file: ScannedFile): AgentRecord[] {
     let model = '';
     let totalTokens = 0;
     let totalCost = 0;
-    let toolCalls: string[] = [];
+    const toolCalls: string[] = [];
     let lastUserMsg = '';
     let lastAssistantMsg = '';
     let errorCount = 0;
@@ -340,7 +442,11 @@ export function processJsonlFile(file: ScannedFile): AgentRecord[] {
 
     for (const line of tail) {
       let entry: Record<string, unknown>;
-      try { entry = JSON.parse(line) as Record<string, unknown>; } catch { continue; }
+      try {
+        entry = JSON.parse(line) as Record<string, unknown>;
+      } catch {
+        continue;
+      }
 
       const entryType = entry.type as string | undefined;
 
@@ -411,7 +517,10 @@ export function processJsonlFile(file: ScannedFile): AgentRecord[] {
           errorCount++;
         } else if (Array.isArray(msgContent)) {
           for (const c of msgContent as Record<string, unknown>[]) {
-            if (typeof c.text === 'string' && /error|ENOENT|failed|exception/i.test(c.text as string)) {
+            if (
+              typeof c.text === 'string' &&
+              /error|ENOENT|failed|exception/i.test(c.text as string)
+            ) {
               errorCount++;
             }
           }
@@ -445,7 +554,7 @@ export function processJsonlFile(file: ScannedFile): AgentRecord[] {
     // Last activity
     if (lastAssistantMsg && lastRole === 'assistant') {
       parts.push(lastAssistantMsg.slice(0, 40));
-    } else if (lastUserMsg && !parts.some(p => p.startsWith('tools:'))) {
+    } else if (lastUserMsg && !parts.some((p) => p.startsWith('tools:'))) {
       parts.push(`user: ${lastUserMsg.slice(0, 35)}`);
     }
 
@@ -455,14 +564,27 @@ export function processJsonlFile(file: ScannedFile): AgentRecord[] {
     }
 
     const detail = parts.join(' | ') || `${lineCount} messages`;
-    const status = errorCount > lineCount / 4 ? 'error' as const :
-                   lastRole === 'assistant' ? 'ok' as const : 'running' as const;
+    const status =
+      errorCount > lineCount / 4
+        ? ('error' as const)
+        : lastRole === 'assistant'
+          ? ('ok' as const)
+          : ('running' as const);
     const ts = findTimestamp(lastObj) || file.mtime;
 
     // Use session name or derive from filename
     const sessionName = sessionId ? sessionId.slice(0, 8) : nameFromFile(file.filename);
 
-    return [{ id: String(name !== 'unknown' ? name : sessionName), source: 'session', status, lastActive: ts, detail, file: file.filename }];
+    return [
+      {
+        id: String(name !== 'unknown' ? name : sessionName),
+        source: 'session',
+        status,
+        lastActive: ts,
+        detail,
+        file: file.filename,
+      },
+    ];
   } catch {
     return [];
   }
@@ -545,26 +667,43 @@ function render(config: LiveConfig): void {
     if (records.length === 1) {
       const r = records[0]!;
       groups.push({
-        name: r.id, source: r.source, status: r.status, lastTs: r.lastActive,
-        detail: r.detail, children: [], ok: r.status === 'ok' ? 1 : 0,
-        fail: r.status === 'error' ? 1 : 0, running: r.status === 'running' ? 1 : 0, total: 1,
+        name: r.id,
+        source: r.source,
+        status: r.status,
+        lastTs: r.lastActive,
+        detail: r.detail,
+        children: [],
+        ok: r.status === 'ok' ? 1 : 0,
+        fail: r.status === 'error' ? 1 : 0,
+        running: r.status === 'running' ? 1 : 0,
+        total: 1,
       });
     } else {
       // Multi-record file: group name from filename, children are the records
       const groupName = nameFromFile(file);
       let lastTs = 0;
-      let ok = 0, fail = 0, running = 0;
+      let ok = 0,
+        fail = 0,
+        running = 0;
       for (const r of records) {
         if (r.lastActive > lastTs) lastTs = r.lastActive;
         if (r.status === 'ok') ok++;
         else if (r.status === 'error') fail++;
         else if (r.status === 'running') running++;
       }
-      const status: AgentGroup['status'] = fail > 0 ? 'error' : running > 0 ? 'running' : ok > 0 ? 'ok' : 'unknown';
+      const status: AgentGroup['status'] =
+        fail > 0 ? 'error' : running > 0 ? 'running' : ok > 0 ? 'ok' : 'unknown';
       groups.push({
-        name: groupName, source: records[0]!.source, status, lastTs,
-        detail: `${records.length} agents`, children: records.sort((a, b) => b.lastActive - a.lastActive),
-        ok, fail, running, total: records.length,
+        name: groupName,
+        source: records[0]!.source,
+        status,
+        lastTs,
+        detail: `${records.length} agents`,
+        children: records.sort((a, b) => b.lastActive - a.lastActive),
+        ok,
+        fail,
+        running,
+        total: records.length,
       });
     }
   }
@@ -572,9 +711,9 @@ function render(config: LiveConfig): void {
   groups.sort((a, b) => b.lastTs - a.lastTs);
 
   const totExec = allRecords.length;
-  const totFail = allRecords.filter(r => r.status === 'error').length;
-  const totRunning = allRecords.filter(r => r.status === 'running').length;
-  const uniqueAgents = new Set(allRecords.map(r => r.id)).size;
+  const totFail = allRecords.filter((r) => r.status === 'error').length;
+  const totRunning = allRecords.filter((r) => r.status === 'running').length;
+  const uniqueAgents = new Set(allRecords.map((r) => r.id)).size;
   const sysRate = totExec > 0 ? (((totExec - totFail) / totExec) * 100).toFixed(1) : '100.0';
 
   // Sparkline
@@ -592,10 +731,12 @@ function render(config: LiveConfig): void {
   }
   const maxBucket = Math.max(...buckets, 1);
   const sparkChars = ' \u2581\u2582\u2583\u2584\u2585\u2586\u2587\u2588';
-  const spark = buckets.map((v, i) => {
-    const level = Math.round((v / maxBucket) * 8);
-    return (failBuckets[i]! > 0 ? C.red : C.green) + sparkChars[level] + C.reset;
-  }).join('');
+  const spark = buckets
+    .map((v, i) => {
+      const level = Math.round((v / maxBucket) * 8);
+      return (failBuckets[i]! > 0 ? C.red : C.green) + sparkChars[level] + C.reset;
+    })
+    .join('');
 
   // Distributed traces
   const distributedTraces: DistributedTrace[] = [];
@@ -603,7 +744,11 @@ function render(config: LiveConfig): void {
     const traceGroups = groupByTraceId(allTraces);
     for (const [_tid, graphs] of traceGroups) {
       if (graphs.length > 1) {
-        try { distributedTraces.push(stitchTrace(graphs)); } catch { /* skip */ }
+        try {
+          distributedTraces.push(stitchTrace(graphs));
+        } catch {
+          /* skip */
+        }
       }
     }
     distributedTraces.sort((a, b) => b.startTime - a.startTime);
@@ -628,17 +773,23 @@ function render(config: LiveConfig): void {
     if (g.fail > 0 && g.ok === 0 && g.running === 0) return `${C.red}error${C.reset}`;
     if (g.running > 0) return `${C.green}running${C.reset}`;
     if (g.fail > 0) return `${C.yellow}${g.ok}ok/${g.fail}err${C.reset}`;
-    if (g.ok > 0) return g.total > 1 ? `${C.green}${g.ok}/${g.total} ok${C.reset}` : `${C.green}ok${C.reset}`;
+    if (g.ok > 0)
+      return g.total > 1 ? `${C.green}${g.ok}/${g.total} ok${C.reset}` : `${C.green}ok${C.reset}`;
     return `${C.dim}idle${C.reset}`;
   }
 
   function sourceTag(s: SourceType): string {
     switch (s) {
-      case 'trace': return `${C.cyan}trace${C.reset}`;
-      case 'jobs': return `${C.blue}job${C.reset}`;
-      case 'workers': return `${C.magenta}worker${C.reset}`;
-      case 'session': return `${C.yellow}session${C.reset}`;
-      case 'state': return `${C.dim}state${C.reset}`;
+      case 'trace':
+        return `${C.cyan}trace${C.reset}`;
+      case 'jobs':
+        return `${C.blue}job${C.reset}`;
+      case 'workers':
+        return `${C.magenta}worker${C.reset}`;
+      case 'session':
+        return `${C.yellow}session${C.reset}`;
+      case 'state':
+        return `${C.dim}state${C.reset}`;
     }
   }
 
@@ -666,16 +817,25 @@ function render(config: LiveConfig): void {
 
   // Header
   writeLine(L, `${C.bold}${C.cyan}\u2554${'═'.repeat(70)}\u2557${C.reset}`);
-  writeLine(L, `${C.bold}${C.cyan}\u2551${C.reset}  ${C.bold}${C.white}AGENTFLOW LIVE${C.reset}                               ${C.green}\u25cf LIVE${C.reset}  ${C.dim}${time}${C.reset}  ${C.bold}${C.cyan}\u2551${C.reset}`);
+  writeLine(
+    L,
+    `${C.bold}${C.cyan}\u2551${C.reset}  ${C.bold}${C.white}AGENTFLOW LIVE${C.reset}                               ${C.green}\u25cf LIVE${C.reset}  ${C.dim}${time}${C.reset}  ${C.bold}${C.cyan}\u2551${C.reset}`,
+  );
   const metaLine = `Refresh: ${config.refreshMs / 1000}s \u00b7 Up: ${upStr} \u00b7 Files: ${files.length}`;
   const pad1 = Math.max(0, 64 - metaLine.length);
-  writeLine(L, `${C.bold}${C.cyan}\u2551${C.reset}  ${C.dim}${metaLine}${C.reset}${' '.repeat(pad1)}${C.bold}${C.cyan}\u2551${C.reset}`);
+  writeLine(
+    L,
+    `${C.bold}${C.cyan}\u2551${C.reset}  ${C.dim}${metaLine}${C.reset}${' '.repeat(pad1)}${C.bold}${C.cyan}\u2551${C.reset}`,
+  );
   writeLine(L, `${C.bold}${C.cyan}\u255a${'═'.repeat(70)}\u255d${C.reset}`);
 
   // Summary
   const sc = totFail === 0 ? C.green : C.yellow;
   writeLine(L, '');
-  writeLine(L, `  ${C.bold}Agents${C.reset} ${sc}${uniqueAgents}${C.reset}    ${C.bold}Records${C.reset} ${sc}${totExec}${C.reset}    ${C.bold}Success${C.reset} ${sc}${sysRate}%${C.reset}    ${C.bold}Running${C.reset} ${C.green}${totRunning}${C.reset}    ${C.bold}Errors${C.reset} ${totFail > 0 ? C.red : C.dim}${totFail}${C.reset}    ${C.bold}New${C.reset} ${C.yellow}+${newExecCount}${C.reset}`);
+  writeLine(
+    L,
+    `  ${C.bold}Agents${C.reset} ${sc}${uniqueAgents}${C.reset}    ${C.bold}Records${C.reset} ${sc}${totExec}${C.reset}    ${C.bold}Success${C.reset} ${sc}${sysRate}%${C.reset}    ${C.bold}Running${C.reset} ${C.green}${totRunning}${C.reset}    ${C.bold}Errors${C.reset} ${totFail > 0 ? C.red : C.dim}${totFail}${C.reset}    ${C.bold}New${C.reset} ${C.yellow}+${newExecCount}${C.reset}`,
+  );
 
   // Sparkline
   writeLine(L, '');
@@ -683,28 +843,39 @@ function render(config: LiveConfig): void {
 
   // Grouped agent table
   writeLine(L, '');
-  writeLine(L, `  ${C.bold}${C.under}Agent                        Status      Last Active  Detail${C.reset}`);
+  writeLine(
+    L,
+    `  ${C.bold}${C.under}Agent                        Status      Last Active  Detail${C.reset}`,
+  );
 
   let lineCount = 0;
   for (const g of groups) {
     if (lineCount > 35) break;
-    const isRecent = (Date.now() - g.lastTs) < 300000;
+    const isRecent = Date.now() - g.lastTs < 300000;
     const icon = statusIcon(g.status, isRecent);
-    const active = isRecent ? `${C.green}${timeStr(g.lastTs)}${C.reset}` : `${C.dim}${timeStr(g.lastTs)}${C.reset}`;
+    const active = isRecent
+      ? `${C.green}${timeStr(g.lastTs)}${C.reset}`
+      : `${C.dim}${timeStr(g.lastTs)}${C.reset}`;
 
     if (g.children.length === 0) {
       // Single agent — flat row
       const name = truncate(g.name, 26).padEnd(26);
       const st = statusText(g);
       const det = truncate(g.detail, detailWidth);
-      writeLine(L, `  ${icon} ${name}  ${st.padEnd(20)}  ${active.padEnd(20)}  ${C.dim}${det}${C.reset}`);
+      writeLine(
+        L,
+        `  ${icon} ${name}  ${st.padEnd(20)}  ${active.padEnd(20)}  ${C.dim}${det}${C.reset}`,
+      );
       lineCount++;
     } else {
       // Group header
       const name = truncate(g.name, 24).padEnd(24);
       const st = statusText(g);
       const tag = sourceTag(g.source);
-      writeLine(L, `  ${icon} ${C.bold}${name}${C.reset}  ${st.padEnd(20)}  ${active.padEnd(20)}  ${tag} ${C.dim}(${g.children.length} agents)${C.reset}`);
+      writeLine(
+        L,
+        `  ${icon} ${C.bold}${name}${C.reset}  ${st.padEnd(20)}  ${active.padEnd(20)}  ${tag} ${C.dim}(${g.children.length} agents)${C.reset}`,
+      );
       lineCount++;
 
       // Children (indented with tree connectors)
@@ -714,11 +885,14 @@ function render(config: LiveConfig): void {
         const child = kids[i]!;
         const isLast = i === kids.length - 1;
         const connector = isLast ? '\u2514\u2500' : '\u251c\u2500';
-        const cIcon = statusIcon(child.status, (Date.now() - child.lastActive) < 300000);
+        const cIcon = statusIcon(child.status, Date.now() - child.lastActive < 300000);
         const cName = truncate(child.id, 22).padEnd(22);
         const cActive = `${C.dim}${timeStr(child.lastActive)}${C.reset}`;
         const cDet = truncate(child.detail, detailWidth - 5);
-        writeLine(L, `     ${C.dim}${connector}${C.reset} ${cIcon} ${cName}  ${cActive.padEnd(20)}  ${C.dim}${cDet}${C.reset}`);
+        writeLine(
+          L,
+          `     ${C.dim}${connector}${C.reset} ${cIcon} ${cName}  ${cActive.padEnd(20)}  ${C.dim}${cDet}${C.reset}`,
+        );
         lineCount++;
       }
       if (g.children.length > 12) {
@@ -734,11 +908,18 @@ function render(config: LiveConfig): void {
     writeLine(L, `  ${C.bold}${C.under}Distributed Traces${C.reset}`);
     for (const dt of distributedTraces.slice(0, 3)) {
       const traceTime = new Date(dt.startTime).toLocaleTimeString();
-      const si = dt.status === 'completed' ? `${C.green}\u2713${C.reset}` :
-                 dt.status === 'failed' ? `${C.red}\u2717${C.reset}` : `${C.yellow}\u23f3${C.reset}`;
+      const si =
+        dt.status === 'completed'
+          ? `${C.green}\u2713${C.reset}`
+          : dt.status === 'failed'
+            ? `${C.red}\u2717${C.reset}`
+            : `${C.yellow}\u23f3${C.reset}`;
       const dur = dt.endTime ? `${dt.endTime - dt.startTime}ms` : 'running';
       const tid = dt.traceId.slice(0, 8);
-      writeLine(L, `  ${si}  ${C.magenta}trace:${tid}${C.reset}  ${C.dim}${traceTime}  ${dur}  (${dt.graphs.size} agents)${C.reset}`);
+      writeLine(
+        L,
+        `  ${si}  ${C.magenta}trace:${tid}${C.reset}  ${C.dim}${traceTime}  ${dur}  (${dt.graphs.size} agents)${C.reset}`,
+      );
 
       const tree = getTraceTree(dt);
       for (let i = 0; i < Math.min(tree.length, 6); i++) {
@@ -746,18 +927,25 @@ function render(config: LiveConfig): void {
         const depth = getDistDepth(dt, tg.spanId);
         const indent = '     ' + '\u2502  '.repeat(Math.max(0, depth - 1));
         const isLast = i === tree.length - 1 || getDistDepth(dt, tree[i + 1]?.spanId) <= depth;
-        const conn = depth === 0 ? '  ' : (isLast ? '\u2514\u2500 ' : '\u251c\u2500 ');
-        const gs = tg.status === 'completed' ? `${C.green}\u2713${C.reset}` :
-                   tg.status === 'failed' ? `${C.red}\u2717${C.reset}` : `${C.yellow}\u23f3${C.reset}`;
+        const conn = depth === 0 ? '  ' : isLast ? '\u2514\u2500 ' : '\u251c\u2500 ';
+        const gs =
+          tg.status === 'completed'
+            ? `${C.green}\u2713${C.reset}`
+            : tg.status === 'failed'
+              ? `${C.red}\u2717${C.reset}`
+              : `${C.yellow}\u23f3${C.reset}`;
         const gd = tg.endTime ? `${tg.endTime - tg.startTime}ms` : 'running';
-        writeLine(L, `${indent}${conn}${gs} ${C.bold}${tg.agentId}${C.reset} ${C.dim}[${tg.trigger}] ${gd}${C.reset}`);
+        writeLine(
+          L,
+          `${indent}${conn}${gs} ${C.bold}${tg.agentId}${C.reset} ${C.dim}[${tg.trigger}] ${gd}${C.reset}`,
+        );
       }
     }
   }
 
   // Recent activity
   const recentRecords = allRecords
-    .filter(r => r.lastActive > 0)
+    .filter((r) => r.lastActive > 0)
     .sort((a, b) => b.lastActive - a.lastActive)
     .slice(0, 6);
 
@@ -765,15 +953,28 @@ function render(config: LiveConfig): void {
     writeLine(L, '');
     writeLine(L, `  ${C.bold}${C.under}Recent Activity${C.reset}`);
     for (const r of recentRecords) {
-      const icon = r.status === 'ok' ? `${C.green}\u2713${C.reset}` :
-                   r.status === 'error' ? `${C.red}\u2717${C.reset}` :
-                   r.status === 'running' ? `${C.green}\u25b6${C.reset}` : `${C.dim}\u25cb${C.reset}`;
+      const icon =
+        r.status === 'ok'
+          ? `${C.green}\u2713${C.reset}`
+          : r.status === 'error'
+            ? `${C.red}\u2717${C.reset}`
+            : r.status === 'running'
+              ? `${C.green}\u25b6${C.reset}`
+              : `${C.dim}\u25cb${C.reset}`;
       const t = new Date(r.lastActive).toLocaleTimeString();
       const agent = truncate(r.id, 26).padEnd(26);
       const age = Math.floor((Date.now() - r.lastActive) / 1000);
-      const ageStr = age < 60 ? age + 's ago' : age < 3600 ? Math.floor(age / 60) + 'm ago' : Math.floor(age / 3600) + 'h ago';
+      const ageStr =
+        age < 60
+          ? age + 's ago'
+          : age < 3600
+            ? Math.floor(age / 60) + 'm ago'
+            : Math.floor(age / 3600) + 'h ago';
       const det = truncate(r.detail, detailWidth);
-      writeLine(L, `  ${icon}  ${agent} ${C.dim}${t}  ${ageStr.padStart(8)}${C.reset}  ${C.dim}${det}${C.reset}`);
+      writeLine(
+        L,
+        `  ${icon}  ${agent} ${C.dim}${t}  ${ageStr.padStart(8)}${C.reset}  ${C.dim}${det}${C.reset}`,
+      );
     }
   }
 
@@ -806,13 +1007,13 @@ export function startLive(argv: string[]): void {
   const config = parseArgs(argv);
 
   // Validate directories
-  const valid = config.dirs.filter(d => existsSync(d));
+  const valid = config.dirs.filter((d) => existsSync(d));
   if (valid.length === 0) {
     console.error(`No valid directories found: ${config.dirs.join(', ')}`);
     console.error('Specify directories containing JSON/JSONL files: agentflow live <dir> [dir...]');
     process.exit(1);
   }
-  const invalid = config.dirs.filter(d => !existsSync(d));
+  const invalid = config.dirs.filter((d) => !existsSync(d));
   if (invalid.length > 0) {
     console.warn(`Skipping non-existent: ${invalid.join(', ')}`);
   }
@@ -828,7 +1029,9 @@ export function startLive(argv: string[]): void {
         if (debounce) clearTimeout(debounce);
         debounce = setTimeout(() => render(config), 500);
       });
-    } catch { /* fs.watch may not work on all platforms */ }
+    } catch {
+      /* fs.watch may not work on all platforms */
+    }
   }
 
   setInterval(() => render(config), config.refreshMs);
