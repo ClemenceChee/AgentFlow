@@ -22,11 +22,11 @@ agentflow watch ./data --notify telegram
 ```
 
 <img width="977" height="1202" alt="Screenshot 2026-03-17 140520" src="https://github.com/user-attachments/assets/2d7556cb-82d1-4cd1-ace6-e3f8b5cac291" />
-<img width="977" height="1202" alt="Screenshot 2026-03-17 140520" src="https://github.com/user-attachments/assets/2d7556cb-82d1-4cd1-ace6-e3f8b5cac291" />
+
 
 
 <img width="2339" height="1337" alt="Screenshot 2026-03-17 113212" src="https://github.com/user-attachments/assets/f592b464-0fd8-42ee-b407-f5cf9819301e" />
-<img width="2339" height="1337" alt="Screenshot 2026-03-17 113212" src="https://github.com/user-attachments/assets/f592b464-0fd8-42ee-b407-f5cf9819301e" />
+
 
 No config files. No adapters. No code changes. AgentFlow reads your existing JSON and JSONL state files and figures out what's healthy and what isn't.
 
