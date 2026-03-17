@@ -21,8 +21,9 @@ agentflow watch ./data --notify telegram
 # - An agent recovers
 ```
 
-<img width="880" height="827" alt="Screenshot 2026-03-16 154845" src="https://github.com/user-attachments/assets/7326db2d-1136-43bd-9e83-5bfe01efce3f" />
-<img width="880" height="827" alt="Screenshot 2026-03-16 154845" src="https://github.com/user-attachments/assets/7326db2d-1136-43bd-9e83-5bfe01efce3f" />
+<img width="977" height="1202" alt="Screenshot 2026-03-17 140520" src="https://github.com/user-attachments/assets/2d7556cb-82d1-4cd1-ace6-e3f8b5cac291" />
+<img width="977" height="1202" alt="Screenshot 2026-03-17 140520" src="https://github.com/user-attachments/assets/2d7556cb-82d1-4cd1-ace6-e3f8b5cac291" />
+
 
 <img width="2339" height="1337" alt="Screenshot 2026-03-17 113212" src="https://github.com/user-attachments/assets/f592b464-0fd8-42ee-b407-f5cf9819301e" />
 <img width="2339" height="1337" alt="Screenshot 2026-03-17 113212" src="https://github.com/user-attachments/assets/f592b464-0fd8-42ee-b407-f5cf9819301e" />
