@@ -9,41 +9,49 @@ AgentFlow monitors AI agent infrastructure (LangChain, CrewAI, AutoGen, custom a
 ## Quick Start
 
 ```bash
-# Install
-npm install -g agentflow-core@latest
+# Install both CLI and web dashboard
+npm install -g agentflow-core@latest agentflow-dashboard@latest
 
-# Watch your agent directory for failures
+# Real-time terminal dashboard (alternate screen, no flicker)
+agentflow live ./data ./traces --refresh 5
+
+# Web dashboard with process health monitoring
+agentflow-dashboard --traces ./traces --data-dir ./data
+
+# Watch for failures and get alerts
 agentflow watch ./data --notify telegram
 
-# Get real-time terminal dashboard
-agentflow live ./data
+# Audit OS processes for stale PIDs, orphans, systemd issues
+agentflow audit ./data
 
-# Run and trace any command
+# Trace any command execution
 agentflow run -- python my_agent.py
 ```
 
 ## Monitoring Options
 
-### Terminal Dashboard (Recommended)
-Fast, lightweight terminal interface for daily use:
+### Web Dashboard (Recommended)
+Rich web interface with real-time WebSocket updates:
 ```bash
-agentflow live ./data --refresh 5
+agentflow-dashboard --traces ./traces --data-dir ./data --port 3000
+# Open http://localhost:3000
 ```
-- ASCII trees and tables
-- Real-time updates
-- Low resource usage
-- Perfect for SSH/remote debugging
+- Agent stats, success rates, recent executions
+- **Process health panel** — PID, systemd state, worker liveness dots, orphan detection
+- Click-to-filter by agent
+- Auto-refreshes via WebSocket — no polling, no flicker
+- Responsive dark theme (desktop + mobile)
 
-### Web Dashboard
-Rich web interface for team dashboards and presentations:
+### Terminal Dashboard
+Fast, lightweight terminal interface for SSH and headless use:
 ```bash
-agentflow-dashboard --traces ./traces --port 3000
+agentflow live ./data ./traces -R --refresh 5
 ```
-- Interactive execution graphs
-- WebSocket real-time updates
-- Multi-agent system overview
-- Responsive design (desktop + mobile)
-- Zero configuration auto-discovery
+- Alternate screen buffer — clean dedicated screen, no scrollback pollution
+- Auto-discovers PID files, worker registries, and systemd units
+- Process health with orphan details inline
+- Sparkline activity chart, distributed trace trees
+- Ctrl+C cleanly restores terminal
 
 ## Demo: Catch Agent Failures in Action
 
@@ -105,16 +113,14 @@ Essential commands for monitoring and tracing:
 agentflow watch ./data --alert-on error --notify telegram
 ```
 
-**`agentflow live`** — Real-time terminal dashboard
+**`agentflow live`** — Real-time terminal dashboard (alternate screen, no flicker)
 ```bash
-agentflow live ./data
+agentflow live ./data ./traces -R
 ```
 
-**`agentflow-dashboard`** — Web-based monitoring dashboard
+**`agentflow-dashboard`** — Web dashboard with process health
 ```bash
-npm install -g agentflow-dashboard
-agentflow-dashboard --traces ./data --port 3000
-# Opens at http://localhost:3000
+agentflow-dashboard --traces ./traces --data-dir ./data --port 3000
 ```
 
 **`agentflow run`** — Trace any command execution
@@ -124,9 +130,8 @@ agentflow run -- python my_agent.py
 
 **`agentflow audit`** — OS-level process health check
 ```bash
-# Detect stale PIDs, orphan processes, systemd crash loops
-agentflow audit --process alfred --pid-file ./data/alfred.pid --systemd alfred.service
-agentflow audit --process myagent --workers-file ./workers.json
+agentflow audit ./data                          # auto-discover from directory
+agentflow audit --process myagent --systemd myagent.service
 ```
 
 ## Process Audit
