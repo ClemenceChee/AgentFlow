@@ -242,12 +242,23 @@ export function startWatch(argv: string[]): void {
       records.push(...recs);
     }
 
-    // Detect transitions and fire alerts
+    // Detect transitions and fire alerts.
+    // On the first poll, suppress alerts — the initial scan is a baseline,
+    // not a set of new transitions. This prevents a flood of stale errors
+    // on startup.
     const alerts = detectTransitions(state, records, config, now);
+    const isBootstrap = pollCount === 1 && Object.keys(state.agents).length === 0;
 
-    for (const alert of alerts) {
-      for (const channel of config.notifyChannels) {
-        await sendAlert(alert, channel);
+    if (isBootstrap) {
+      const suppressed = alerts.length;
+      if (suppressed > 0) {
+        console.log(`[bootstrap] Suppressed ${suppressed} initial alerts (baseline scan)`);
+      }
+    } else {
+      for (const alert of alerts) {
+        for (const channel of config.notifyChannels) {
+          await sendAlert(alert, channel);
+        }
       }
     }
 
