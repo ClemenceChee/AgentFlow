@@ -137,12 +137,37 @@ export interface ScannedFile {
   ext: '.json' | '.jsonl';
 }
 
+// Directory scan cache: only re-stat files if directory mtime changed
+const dirMtimeCache = new Map<string, number>();
+const dirFileCache = new Map<string, ScannedFile[]>();
+
 export function scanFiles(dirs: string[], recursive: boolean): ScannedFile[] {
   const results: ScannedFile[] = [];
   const seen = new Set<string>();
 
   function scanDir(d: string, topLevel: boolean) {
     try {
+      // Check if directory changed since last scan
+      const dirStat = statSync(d);
+      const dirMtime = dirStat.mtime.getTime();
+      const cachedMtime = dirMtimeCache.get(d);
+
+      if (cachedMtime === dirMtime) {
+        // Directory unchanged — reuse cached file list
+        const cached = dirFileCache.get(d);
+        if (cached) {
+          for (const f of cached) {
+            if (!seen.has(f.path)) {
+              seen.add(f.path);
+              results.push(f);
+            }
+          }
+          return;
+        }
+      }
+
+      // Directory changed — rescan
+      const dirResults: ScannedFile[] = [];
       for (const f of readdirSync(d)) {
         if (f.startsWith('.')) continue;
         const fp = join(d, f);
@@ -162,12 +187,18 @@ export function scanFiles(dirs: string[], recursive: boolean): ScannedFile[] {
 
         if (f.endsWith('.json')) {
           seen.add(fp);
-          results.push({ filename: f, path: fp, mtime: stat.mtime.getTime(), ext: '.json' });
+          const entry = { filename: f, path: fp, mtime: stat.mtime.getTime(), ext: '.json' as const };
+          results.push(entry);
+          dirResults.push(entry);
         } else if (f.endsWith('.jsonl')) {
           seen.add(fp);
-          results.push({ filename: f, path: fp, mtime: stat.mtime.getTime(), ext: '.jsonl' });
+          const entry = { filename: f, path: fp, mtime: stat.mtime.getTime(), ext: '.jsonl' as const };
+          results.push(entry);
+          dirResults.push(entry);
         }
       }
+      dirMtimeCache.set(d, dirMtime);
+      dirFileCache.set(d, dirResults);
     } catch {
       /* dir not readable */
     }
@@ -631,6 +662,27 @@ let newExecCount = 0;
 const sessionStart = Date.now();
 let firstRender = true;
 
+// ---------------------------------------------------------------------------
+// File cache: only re-read/re-parse files whose mtime changed.
+// Cuts I/O from ~150 reads/cycle to only the handful that changed.
+// ---------------------------------------------------------------------------
+interface CachedFile {
+  mtime: number;
+  records: AgentRecord[];
+  traces: ExecutionGraph[];
+}
+const fileCache = new Map<string, CachedFile>();
+
+function getRecordsCached(f: ScannedFile): { records: AgentRecord[]; traces: ExecutionGraph[] } {
+  const cached = fileCache.get(f.path);
+  if (cached && cached.mtime === f.mtime) return cached;
+  const records = f.ext === '.jsonl' ? processJsonlFile(f) : processJsonFile(f);
+  const traces = records.filter((r) => r.traceData).map((r) => r.traceData!);
+  const entry = { mtime: f.mtime, records, traces };
+  fileCache.set(f.path, entry);
+  return entry;
+}
+
 function render(config: LiveConfig): void {
   const files = scanFiles(config.dirs, config.recursive);
 
@@ -639,16 +691,20 @@ function render(config: LiveConfig): void {
   }
   prevFileCount = files.length;
 
-  // Process all files into agent records
+  // Prune cache: remove entries for files that no longer exist
+  const currentPaths = new Set(files.map((f) => f.path));
+  for (const key of fileCache.keys()) {
+    if (!currentPaths.has(key)) fileCache.delete(key);
+  }
+
+  // Process all files into agent records (cached — only re-reads changed files)
   const allRecords: AgentRecord[] = [];
   const allTraces: ExecutionGraph[] = [];
 
   for (const f of files.slice(0, 300)) {
-    const records = f.ext === '.jsonl' ? processJsonlFile(f) : processJsonFile(f);
-    for (const r of records) {
-      allRecords.push(r);
-      if (r.traceData) allTraces.push(r.traceData);
-    }
+    const { records, traces } = getRecordsCached(f);
+    for (const r of records) allRecords.push(r);
+    for (const t of traces) allTraces.push(t);
   }
 
   // ---------------------------------------------------------------------------
