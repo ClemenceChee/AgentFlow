@@ -1,55 +1,67 @@
 # AgentFlow
 
-**Know when your AI agents break. Fix them before your users notice.**
+**Process mining for AI agent systems — Know when your agents break, fix them before users notice.**
 
-AgentFlow monitors any AI agent infrastructure — cron jobs, worker daemons, task queues, LLM pipelines — and alerts you when something fails or goes silent. Point it at a directory. It figures out the rest.
+## What is this?
 
-🚀 **Recent improvements in v0.5.2:**
-- Enhanced performance with file caching and optimized directory scans
-- Improved live monitor accuracy with deduplication, age filtering, and PID validation
-- Reduced alert noise during startup with bootstrap flood suppression
+AgentFlow monitors AI agent infrastructure (LangChain, CrewAI, AutoGen, custom agents) and alerts you when something fails. Point it at a directory of JSON state files and it auto-detects what's healthy and what isn't. Zero config required.
+
+## Quick Start
 
 ```bash
+# Install
 npm install -g agentflow-core@latest
-```
 
-## Requirements
-
-- Node.js 20+
-- Any OS (Linux, macOS, Windows)
-
-## 30-second setup
-
-```bash
-# Watch your agent data directory for failures
+# Watch your agent directory for failures
 agentflow watch ./data --notify telegram
 
-# That's it. You'll get a Telegram message when:
-# - An agent errors out
-# - A scheduled job stops running
-# - A worker goes silent
-# - An agent recovers
+# Get real-time terminal dashboard
+agentflow live ./data
+
+# Run and trace any command
+agentflow run -- python my_agent.py
 ```
 
-<img width="977" height="1202" alt="Screenshot 2026-03-17 140520" src="https://github.com/user-attachments/assets/2d7556cb-82d1-4cd1-ace6-e3f8b5cac291" />
+## Demo: Catch Agent Failures in Action
 
+```bash
+# Clone and run the demo
+git clone https://github.com/ClemenceChee/AgentFlow.git
+cd AgentFlow
+npm install
+npx tsx examples/demo.ts
+```
 
+The demo creates an agent that:
+1. ✅ Succeeds with normal tool calls
+2. ⚠️ Triggers runtime guards (infinite loop detection)
+3. ❌ Fails with timeout and shows recovery
+4. 📊 Generates execution graphs and visualizations
 
-<img width="2339" height="1337" alt="Screenshot 2026-03-17 113212" src="https://github.com/user-attachments/assets/f592b464-0fd8-42ee-b407-f5cf9819301e" />
+**What you'll see:**
+```
+✓ portfolio-recon (agent) 232ms
+├─ ✓ web-search (tool) 100ms
+├─ ✓ news-aggregator (tool) 120ms
+├─ ⚠ reasoning-loop detected (guard violation)
+└─ ✗ analysis-engine timeout after 30s
+```
 
+## Architecture
 
-No config files. No adapters. No code changes. AgentFlow reads your existing JSON and JSONL state files and figures out what's healthy and what isn't.
+AgentFlow works by reading JSON/JSONL state files that your agents already produce:
 
-## Key Features
+<img width="2339" height="1337" alt="AgentFlow Live Monitor" src="https://github.com/user-attachments/assets/f592b464-0fd8-42ee-b407-f5cf9819301e" />
 
-✅ **Zero-config monitoring** — Auto-detects agent patterns in any JSON/JSONL files
-✅ **Runtime guards** — Prevents infinite loops, spawn explosions, and timeouts
-✅ **Rich visualization** — ASCII trees and timeline waterfalls for execution traces
-✅ **Smart alerting** — Built-in deduplication and recovery notifications
-✅ **Universal compatibility** — Works with LangChain, CrewAI, AutoGen, custom agents
-✅ **Lightweight** — Zero dependencies in core, runs alongside your agents
+**Zero-config monitoring** — No SDKs, no code changes, no adapters. AgentFlow auto-detects:
+- Agent health patterns (`{"status": "ok"}` vs `{"status": "error"}`)
+- Job schedulers with run history
+- Worker registries with PID tracking
+- File staleness and recovery
 
-## What it monitors
+<img width="977" height="1202" alt="AgentFlow Alerts" src="https://github.com/user-attachments/assets/2d7556cb-82d1-4cd1-ace6-e3f8b5cac291" />
+
+## What AgentFlow Detects
 
 AgentFlow auto-detects the format of every JSON/JSONL file it finds:
 
@@ -61,307 +73,59 @@ AgentFlow auto-detects the format of every JSON/JSONL file it finds:
 | File that stopped updating | Detects it's stale and alerts |
 | File that was erroring and now works | Sends a recovery notification |
 
-It works with **any** agent framework — LangChain, CrewAI, AutoGen, custom Python/Node agents, cron-based pipelines, Docker services — as long as they write JSON state files somewhere.
+## Core Commands
 
-## Five commands
+Three commands cover 90% of use cases:
 
-### `agentflow watch` — Alerts (run as a background service)
-
+**`agentflow watch`** — Background monitoring with alerts
 ```bash
-# Alert on errors and stale agents, notify via Telegram
-agentflow watch ./data ./cron \
-  --alert-on error \
-  --alert-on stale:15m \
-  --alert-on recovery \
-  --notify telegram
-
-# Alert via webhook (Slack, Discord, PagerDuty, etc.)
-agentflow watch ./data --notify webhook:https://hooks.slack.com/services/...
-
-# Alert via shell command
-agentflow watch ./data --notify "command:curl -X POST https://my-alerting/endpoint"
-
-# Multiple directories, multiple conditions
-agentflow watch ./traces ./workers ./cron \
-  --alert-on error \
-  --alert-on stale:30m \
-  --alert-on consecutive-errors:3 \
-  --poll 60
+agentflow watch ./data --alert-on error --notify telegram
 ```
 
-**Alert conditions** (composable with multiple `--alert-on` flags):
-- `error` — agent status transitions to error
-- `recovery` — agent recovers from error to ok
-- `stale:DURATION` — file not updated within threshold (e.g. `15m`, `1h`, `2d`)
-- `consecutive-errors:N` — N consecutive error observations
-
-**Notification channels** (composable with multiple `--notify` flags):
-- `telegram` — needs `AGENTFLOW_TELEGRAM_BOT_TOKEN` and `AGENTFLOW_TELEGRAM_CHAT_ID` env vars
-- `webhook:URL` — POSTs a JSON payload to any URL
-- `command:CMD` — runs a shell command with `AGENTFLOW_ALERT_*` env vars
-- stdout — always on
-
-**Built-in deduplication**: Won't spam you. Once an alert fires, it waits for recovery (or a configurable cooldown) before alerting again.
-
-**State persistence**: Survives restarts. Remembers what was healthy and what was broken.
-
-### `agentflow live` — Terminal dashboard (interactive debugging)
-
+**`agentflow live`** — Real-time terminal dashboard
 ```bash
-# Real-time view of all agents
 agentflow live ./data
-
-# Multiple directories
-agentflow live ./traces ./cron ./workers
-
-# With subdirectory scanning
-agentflow live ./data -R --refresh 5
 ```
 
-Auto-refreshing terminal UI showing:
-- Per-agent status table with nested groups (workers under their registry, jobs under their scheduler)
-- Sparkline activity graph (1 hour)
-- Distributed trace tree view
-- Recent activity feed
-- Flicker-free rendering
-
-### `agentflow run` — Execution tracing (wrap any command)
-
+**`agentflow run`** — Trace any command execution
 ```bash
-# Trace any command — zero code changes
 agentflow run -- python my_agent.py
-
-# Watch state files for sub-worker activity
-agentflow run --watch-dir ./data -- python -m myagent process
 ```
 
-Creates structured JSON trace files that `agentflow live` and `agentflow watch` can read.
-
-### `agentflow trace` — Inspect saved traces
-
-```bash
-# List all saved traces
-agentflow trace list --traces-dir ./traces
-
-# Filter by status
-agentflow trace list --status failed --limit 10
-
-# Show a trace as an ASCII tree
-agentflow trace show <trace-id-or-filename> --traces-dir ./traces
-# ✓ alfred-supervisor (agent) 232ms
-# ├─ ✓ dispatch-command (tool) 232ms
-# └─ ✓ state-monitor (tool) 232ms
-
-# Show a trace as a timeline waterfall
-agentflow trace timeline <trace-id-or-filename> --traces-dir ./traces
-# 0ms         50ms        100ms       150ms       200ms
-# ┼───────────┼───────────┼───────────┼───────────┤
-# ██████████████████████████████████████████████████ ✓ main (232ms)
-#  ████████████████████                              ✓ search (100ms)
-
-# Find all stuck/hung spans across traces
-agentflow trace stuck --traces-dir ./traces
-
-# Detect reasoning loops
-agentflow trace loops --traces-dir ./traces
-```
-
-Accepts both graph IDs and filenames (with or without `.json`).
-
-### Runtime guards (programmatic)
-
-Guards detect stuck agents, reasoning loops, and spawn explosions in real-time:
+## Programmatic Usage
 
 ```typescript
-import { createGraphBuilder, withGuards, checkGuards } from 'agentflow-core';
+import { createGraphBuilder, withGuards } from 'agentflow-core';
 
-// Wrap any builder with guards
-const raw = createGraphBuilder({ agentId: 'my-agent' });
-const builder = withGuards(raw, {
-  maxDepth: 10,            // Max nesting depth
-  maxAgentSpawns: 50,      // Max agent/subagent count
-  maxReasoningSteps: 25,   // Consecutive same-type node limit
-  onViolation: 'warn',     // 'warn' | 'error' | 'abort'
+// Build execution graphs with runtime guards
+const builder = withGuards(createGraphBuilder({ agentId: 'my-agent' }), {
+  maxDepth: 10,            // Prevent infinite nesting
+  maxReasoningSteps: 25,   // Catch reasoning loops
+  onViolation: 'warn'      // 'warn' | 'error' | 'abort'
 });
 
-// Use exactly like a normal builder — guards check automatically
-const root = builder.startNode({ type: 'agent', name: 'main' });
-builder.endNode(root);
-const graph = builder.build();
-
-// Or check any graph after the fact
-const violations = checkGuards(graph, { maxDepth: 5 });
-```
-
-Guard violation types:
-- **Timeout**: Node running longer than threshold (configurable per type: tool 30s, agent 5m, wait 10m)
-- **Reasoning loop**: Consecutive same-type nodes exceeding limit (catches infinite loops)
-- **Spawn explosion**: Graph depth or agent count exceeding limits
-
-## How auto-detection works
-
-AgentFlow doesn't need to know your agent framework. It reads JSON files and looks for patterns:
-
-```
-# A file like this:
-{"status": "error", "lastError": "connection timeout", "ts": 1710000000}
-→ Detected as: agent in error state
-
-# A file like this:
-{"jobs": [{"name": "digest", "state": {"lastRunStatus": "ok", "lastRunAtMs": 1710000000}}]}
-→ Detected as: job scheduler with per-job status
-
-# A file like this:
-{"tools": {"curator": {"pid": 1234, "status": "running"}, "janitor": {"pid": 1235, "status": "running"}}}
-→ Detected as: worker registry with 2 running workers
-
-# A JSONL file like this:
-{"ts": 1710000000, "action": "finished", "status": "ok"}
-→ Detected as: session log, last run successful
-```
-
-Status values are normalized automatically: `ok`/`success`/`completed`/`healthy`/`done`/`passed` → ok. `error`/`failed`/`crashed`/`timeout` → error. `running`/`active`/`processing` → running.
-
-## Programmatic API
-
-```typescript
-import {
-  createGraphBuilder, withGuards, checkGuards,
-  createTraceStore, toAsciiTree, toTimeline,
-  graphToJson, loadGraph, getStats
-} from 'agentflow-core';
-
-// Build execution traces with runtime guards
-const raw = createGraphBuilder({ agentId: 'my-agent', trigger: 'cron' });
-const builder = withGuards(raw, { maxDepth: 10, onViolation: 'warn' });
 const root = builder.startNode({ type: 'agent', name: 'main' });
 // ... your agent logic ...
 builder.endNode(root);
 const graph = builder.build();
-
-// Visualize
-console.log(toAsciiTree(graph));    // ASCII tree with status icons
-console.log(toTimeline(graph));     // Horizontal waterfall
-
-// Persist and query
-const store = createTraceStore('./traces');
-await store.save(graph);
-const stuck = await store.getStuckSpans();
-const loops = await store.getReasoningLoops();
-
-// Load and analyze any trace
-const loaded = loadGraph(readFileSync('trace.json', 'utf8'));
-console.log(getStats(loaded));
-// { totalNodes: 5, failureCount: 0, depth: 2, duration: 1234, ... }
 ```
 
-## Run as a systemd service
+## How It Works
 
-```ini
-# /etc/systemd/user/agentflow-watch.service
-[Unit]
-Description=AgentFlow Watch
-After=network.target
+AgentFlow reads JSON files and detects patterns:
 
-[Service]
-Type=simple
-ExecStart=/usr/local/bin/agentflow watch /path/to/data /path/to/cron --alert-on error --alert-on stale:15m --alert-on recovery --notify telegram --poll 60
-Restart=always
-RestartSec=10
-Environment=AGENTFLOW_TELEGRAM_BOT_TOKEN=your-bot-token
-Environment=AGENTFLOW_TELEGRAM_CHAT_ID=your-chat-id
+```javascript
+{"status": "error", "lastError": "connection timeout"}
+// → Agent in error state
 
-[Install]
-WantedBy=default.target
+{"jobs": [{"name": "digest", "lastRunStatus": "ok"}]}
+// → Job scheduler with status
+
+{"tools": {"worker1": {"pid": 1234, "status": "running"}}}
+// → Worker registry with PIDs
 ```
 
-```bash
-systemctl --user enable --now agentflow-watch
-```
-
-## Full API reference
-
-### CLI
-
-| Command | Description |
-|---|---|
-| `agentflow watch [dir...] [options]` | Headless alert system |
-| `agentflow live [dir...] [options]` | Real-time terminal dashboard |
-| `agentflow run [options] -- <cmd>` | Wrap a command with tracing |
-| `agentflow trace list [--status] [--limit]` | List saved traces |
-| `agentflow trace show <id>` | Show trace as ASCII tree |
-| `agentflow trace timeline <id>` | Show trace as timeline waterfall |
-| `agentflow trace stuck` | Find stuck/hung/timeout spans |
-| `agentflow trace loops` | Detect reasoning loops |
-
-### Graph construction
-
-| Function | Description |
-|---|---|
-| `createGraphBuilder(config?)` | Create a new graph builder |
-| `builder.startNode(options)` | Start an execution node |
-| `builder.endNode(nodeId)` | Mark node completed |
-| `builder.failNode(nodeId, error)` | Mark node failed |
-| `builder.build()` | Finalize and return frozen `ExecutionGraph` |
-
-### Runtime guards
-
-| Function | Description |
-|---|---|
-| `withGuards(builder, config?)` | Wrap a builder with guard detection |
-| `checkGuards(graph, config?)` | Check a graph for violations |
-
-### Visualization
-
-| Function | Description |
-|---|---|
-| `toAsciiTree(graph)` | Render as ASCII tree with status icons |
-| `toTimeline(graph)` | Render as horizontal timeline waterfall |
-
-### Trace storage
-
-| Function | Description |
-|---|---|
-| `createTraceStore(dir)` | Create a JSON file-based trace store |
-| `store.save(graph)` | Save a graph to disk |
-| `store.get(id)` | Load a graph by ID |
-| `store.list({ status?, limit? })` | List stored graphs |
-| `store.getStuckSpans()` | Find stuck nodes across all traces |
-| `store.getReasoningLoops(threshold?)` | Detect reasoning loops |
-
-### Graph querying
-
-| Function | Description |
-|---|---|
-| `getStats(graph)` | Aggregate statistics |
-| `getFailures(graph)` | All failed/hung/timeout nodes |
-| `getHungNodes(graph)` | Nodes still running |
-| `getCriticalPath(graph)` | Longest execution path |
-
-### Serialization
-
-| Function | Description |
-|---|---|
-| `loadGraph(input)` | JSON (string or object) → `ExecutionGraph` |
-| `graphToJson(graph)` | `ExecutionGraph` → plain JSON object |
-
-### Distributed tracing
-
-| Function | Description |
-|---|---|
-| `groupByTraceId(graphs)` | Group by shared trace ID |
-| `stitchTrace(graphs)` | Combine into a trace tree |
-| `getTraceTree(trace)` | Depth-first ordered list |
-
-Trace context propagates automatically via `AGENTFLOW_TRACE_ID` and `AGENTFLOW_PARENT_SPAN_ID` environment variables.
-
-## Packages
-
-| Package | Description |
-|---|---|
-| [`agentflow-core`](https://www.npmjs.com/package/agentflow-core) | CLI, graph engine, guards, visualization, trace store |
-| [`agentflow-dashboard`](https://www.npmjs.com/package/agentflow-dashboard) | Web dashboard with WebSocket |
-| [`agentflow-storage`](https://www.npmjs.com/package/agentflow-storage) | SQLite persistence & analytics |
+Status normalization: `ok`/`success`/`completed` → healthy, `error`/`failed`/`crashed` → error.
 
 ## Development
 
@@ -369,9 +133,7 @@ Trace context propagates automatically via `AGENTFLOW_TRACE_ID` and `AGENTFLOW_P
 git clone https://github.com/ClemenceChee/AgentFlow.git
 cd AgentFlow
 npm install
-npm run build
 npm test            # 125+ tests passing
-npm run lint        # Zero errors with Biome
 ```
 
 ## License
