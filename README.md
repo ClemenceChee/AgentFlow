@@ -122,6 +122,48 @@ agentflow-dashboard --traces ./data --port 3000
 agentflow run -- python my_agent.py
 ```
 
+**`agentflow audit`** — OS-level process health check
+```bash
+# Detect stale PIDs, orphan processes, systemd crash loops
+agentflow audit --process alfred --pid-file ./data/alfred.pid --systemd alfred.service
+agentflow audit --process myagent --workers-file ./workers.json
+```
+
+## Process Audit
+
+AgentFlow can audit the OS-level health of your agent processes — not just their trace output, but whether the actual processes are alive, correctly tracked, and not orphaned.
+
+```typescript
+import { auditProcesses, formatAuditReport } from 'agentflow-core';
+
+const result = auditProcesses({
+  processName: 'alfred',
+  pidFile: '/home/user/.alfred/data/alfred.pid',
+  workersFile: '/home/user/.alfred/data/workers.json',
+  systemdUnit: 'alfred.service',
+});
+
+// Structured result for programmatic use
+if (result.problems.length > 0) {
+  console.error('Issues found:', result.problems);
+}
+if (result.orphans.length > 0) {
+  console.error('Orphan processes:', result.orphans);
+}
+
+// Or print a formatted terminal report
+console.log(formatAuditReport(result));
+```
+
+**What it detects:**
+| Check | What it catches |
+|---|---|
+| PID file validation | Stale PIDs, PID reuse by unrelated processes |
+| Systemd unit state | Crash loops, failed units, high restart counts |
+| Workers registry | Workers declaring "running" but actually dead |
+| PID mismatch | PID file disagrees with systemd MainPID (orphan outside systemd) |
+| Orphan detection | Processes matching your agent name but not tracked anywhere |
+
 ## Programmatic Usage
 
 ```typescript

@@ -1,7 +1,7 @@
 {
   "name": "agentflow-core",
-  "version": "0.5.2",
-  "description": "Monitor any AI agent system. Auto-detects failures, sends alerts. Zero config, zero dependencies.",
+  "version": "0.6.0",
+  "description": "Monitor any AI agent system. Auto-detects failures, sends alerts, audits OS processes. Zero config, zero dependencies.",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -37,7 +37,11 @@
     "autogen",
     "cron",
     "watchdog",
-    "health-check"
+    "health-check",
+    "process-audit",
+    "pid",
+    "orphan-detection",
+    "systemd"
   ],
   "license": "MIT",
   "repository": {

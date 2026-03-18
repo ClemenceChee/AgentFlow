@@ -11,6 +11,8 @@
 
 import { basename, resolve } from 'path';
 import { startLive } from './live.js';
+import { auditProcesses, discoverProcessConfig, formatAuditReport } from './process-audit.js';
+import type { ProcessAuditConfig } from './process-audit.js';
 import type { RunConfig } from './runner.js';
 import { runTraced } from './runner.js';
 import { handleTrace } from './trace-cli.js';
@@ -33,6 +35,7 @@ Commands:
   live   [dir...] [options]      Real-time terminal monitor (auto-detects any JSON/JSONL)
   watch  [dir...] [options]      Headless alert system — detects failures, sends notifications
   trace  <command> [options]     Inspect saved execution traces (list, show, timeline, stuck, loops)
+  audit  [options]               Audit OS processes — detect stale PIDs, orphans, systemd issues
 
 Run \`agentflow <command> --help\` for command-specific options.
 
@@ -220,13 +223,120 @@ async function runCommand(argv: string[]): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// "audit" subcommand
+// ---------------------------------------------------------------------------
+
+function parseAuditArgs(argv: string[]): ProcessAuditConfig {
+  let processName = '';
+  let pidFile: string | undefined;
+  let workersFile: string | undefined;
+  let systemdUnit: string | null | undefined;
+  const discoverDirs: string[] = [];
+
+  const args = argv.slice(0);
+  if (args[0] === 'audit') args.shift();
+
+  let i = 0;
+  while (i < args.length) {
+    const arg = args[i]!;
+    if (arg === '--help' || arg === '-h') {
+      printAuditUsage();
+      process.exit(0);
+    } else if (arg === '--process' || arg === '-p') {
+      i++;
+      processName = args[i] ?? '';
+      i++;
+    } else if (arg === '--pid-file') {
+      i++;
+      pidFile = args[i];
+      i++;
+    } else if (arg === '--workers-file') {
+      i++;
+      workersFile = args[i];
+      i++;
+    } else if (arg === '--systemd') {
+      i++;
+      systemdUnit = args[i];
+      i++;
+    } else if (arg === '--no-systemd') {
+      systemdUnit = null;
+      i++;
+    } else if (!arg.startsWith('-')) {
+      // Positional args are directories for auto-discovery
+      discoverDirs.push(resolve(arg));
+      i++;
+    } else {
+      i++;
+    }
+  }
+
+  // If no explicit config, try auto-discovery from directories
+  if (!processName && !pidFile && !workersFile && discoverDirs.length > 0) {
+    const discovered = discoverProcessConfig(discoverDirs);
+    if (discovered) {
+      console.log(`Auto-discovered: process="${discovered.processName}"${discovered.pidFile ? ` pid-file=${discovered.pidFile}` : ''}${discovered.workersFile ? ` workers=${discovered.workersFile}` : ''}`);
+      return { ...discovered, systemdUnit };
+    }
+  }
+
+  if (!processName) {
+    console.error('Error: --process <name> is required, or provide directories for auto-discovery.');
+    console.error('Examples:');
+    console.error('  agentflow audit --process alfred --pid-file ./data/alfred.pid');
+    console.error('  agentflow audit ./data    # auto-discovers *.pid and workers.json');
+    process.exit(1);
+  }
+
+  return { processName, pidFile, workersFile, systemdUnit };
+}
+
+function printAuditUsage(): void {
+  console.log(
+    `
+AgentFlow Audit — OS-level process health check for agent systems.
+
+Detects stale PID files, orphan processes, systemd crash loops, and
+mismatches between declared state and actual OS process state.
+
+Usage:
+  agentflow audit [dir...] [options]
+  agentflow audit --process <name> [options]
+
+Arguments:
+  dir                         Directories to scan for auto-discovery of *.pid and workers.json
+
+Options:
+  -p, --process <name>        Process name to search for (e.g. "alfred", "myagent")
+  --pid-file <path>           Path to PID file
+  --workers-file <path>       Path to workers.json or process registry
+  --systemd <unit>            Systemd user unit name (e.g. "alfred.service")
+  --no-systemd                Skip systemd checks
+  -h, --help                  Show this help message
+
+Examples:
+  agentflow audit ./data                          # auto-discover from data directory
+  agentflow audit --process alfred --systemd alfred.service
+  agentflow audit --process myagent --pid-file /var/run/myagent.pid --workers-file ./workers.json
+  agentflow audit --process crewai --no-systemd
+`.trim(),
+  );
+}
+
+function runAudit(argv: string[]): void {
+  const config = parseAuditArgs(argv);
+  const result = auditProcesses(config);
+  console.log(formatAuditReport(result));
+  process.exit(result.problems.length > 0 ? 1 : 0);
+}
+
+// ---------------------------------------------------------------------------
 // Main router
 // ---------------------------------------------------------------------------
 
 async function main(): Promise<void> {
   const argv = process.argv.slice(2);
 
-  const knownCommands = ['run', 'live', 'watch', 'trace'];
+  const knownCommands = ['run', 'live', 'watch', 'trace', 'audit'];
   if (
     argv.length === 0 ||
     (!knownCommands.includes(argv[0]!) && (argv.includes('--help') || argv.includes('-h')))
@@ -249,6 +359,9 @@ async function main(): Promise<void> {
       break;
     case 'trace':
       await handleTrace(argv);
+      break;
+    case 'audit':
+      runAudit(argv);
       break;
     default:
       // If no subcommand, check if it looks like a path (for `agentflow ./traces` shortcut)
