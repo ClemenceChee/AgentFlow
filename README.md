@@ -157,6 +157,34 @@ AgentFlow reads JSON files and detects patterns:
 
 Status normalization: `ok`/`success`/`completed` → healthy, `error`/`failed`/`crashed` → error.
 
+## Enterprise Integration
+
+### OpenTelemetry Export
+Export AgentFlow traces to enterprise observability stacks:
+
+```bash
+npm install agentflow-otel
+```
+
+```typescript
+import { setupAgentFlowOTel, exportGraphToOTel } from 'agentflow-otel';
+
+// Export to Datadog, Grafana, Jaeger, Honeycomb
+await setupAgentFlowOTel({
+  serviceName: 'production-agents',
+  backend: 'datadog',
+  headers: { 'DD-API-KEY': process.env.DATADOG_API_KEY }
+});
+
+await exportGraphToOTel(graph);
+```
+
+**Enterprise benefits:**
+- Follows OpenTelemetry GenAI semantic conventions
+- LLM cost and token usage metrics in your existing dashboards
+- Runtime guard violations as OTel events for alerting
+- Unified observability across your agent fleet
+
 ## Development
 
 ```bash

@@ -1,0 +1,52 @@
+{
+  "name": "agentflow-otel",
+  "version": "0.1.0",
+  "description": "OpenTelemetry exporter for AgentFlow - Export agent execution traces to OTel-compatible backends",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --dts --clean --tsconfig tsconfig.build.json",
+    "dev": "tsx src/index.ts",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "agentflow-core": "^0.5.2",
+    "@opentelemetry/api": "^1.7.0",
+    "@opentelemetry/sdk-node": "^0.45.1",
+    "@opentelemetry/exporter-jaeger": "^1.18.1",
+    "@opentelemetry/exporter-otlp-http": "^0.45.1",
+    "@opentelemetry/instrumentation": "^0.45.1",
+    "@opentelemetry/resources": "^1.18.1",
+    "@opentelemetry/semantic-conventions": "^1.18.1"
+  },
+  "devDependencies": {
+    "tsup": "^8.4.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  },
+  "keywords": [
+    "agentflow",
+    "opentelemetry",
+    "otel",
+    "observability",
+    "tracing",
+    "ai",
+    "agent",
+    "monitoring",
+    "genai",
+    "llm"
+  ],
+  "license": "MIT"
+}
