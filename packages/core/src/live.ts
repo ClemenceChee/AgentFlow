@@ -18,6 +18,7 @@
 
 import { existsSync, readdirSync, readFileSync, statSync, watch } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
+import { execSync } from 'node:child_process';
 import { getFailures, getHungNodes, getStats } from './graph-query.js';
 import { getTraceTree, groupByTraceId, stitchTrace } from './graph-stitch.js';
 import { loadGraph } from './loader.js';
@@ -364,11 +365,23 @@ export function processJsonFile(file: ScannedFile): AgentRecord[] {
         const status = findStatus(w);
         const ts = findTimestamp(w) || findTimestamp(obj) || file.mtime;
         const pid = w.pid as number | undefined;
-        const detail = pid ? `pid: ${pid}` : extractDetail(w);
+        // Validate PID: if worker reports running but PID is dead, mark as stale
+        let validatedStatus = status;
+        let pidAlive = true;
+        if (pid && (status === 'running' || status === 'ok')) {
+          try {
+            execSync(`kill -0 ${pid} 2>/dev/null`, { stdio: 'ignore' });
+          } catch {
+            pidAlive = false;
+            validatedStatus = 'error';
+          }
+        }
+        const pidLabel = pid ? (pidAlive ? `pid: ${pid}` : `pid: ${pid} (dead)`) : '';
+        const detail = pidLabel || extractDetail(w);
         records.push({
           id: name,
           source: 'workers',
-          status,
+          status: validatedStatus,
           lastActive: ts,
           detail,
           file: file.filename,
@@ -638,9 +651,47 @@ function render(config: LiveConfig): void {
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // Dedup: for trace/session sources with the same agent ID, keep only the
+  // most recent record. This prevents 89 "alfred-distiller" entries when each
+  // LLM call writes a separate trace file.
+  // ---------------------------------------------------------------------------
+  const deduped: AgentRecord[] = [];
+  const seenAgents = new Map<string, AgentRecord>();
+
+  for (const r of allRecords) {
+    // Jobs/workers/state sources are always unique (one file = one group)
+    if (r.source === 'jobs' || r.source === 'workers' || r.source === 'state') {
+      deduped.push(r);
+      continue;
+    }
+    // For traces and sessions, keep only the most recent per agent ID
+    const key = `${r.source}:${r.id}`;
+    const existing = seenAgents.get(key);
+    if (!existing || r.lastActive > existing.lastActive) {
+      seenAgents.set(key, r);
+    }
+  }
+  for (const r of seenAgents.values()) deduped.push(r);
+
+  // ---------------------------------------------------------------------------
+  // Age filter: hide records older than 2 hours (keeps display focused on
+  // current activity). Jobs/workers are always shown regardless of age.
+  // ---------------------------------------------------------------------------
+  const STALE_THRESHOLD_MS = 2 * 60 * 60 * 1000; // 2 hours
+  const now = Date.now();
+  const filtered = deduped.filter((r) => {
+    if (r.source === 'jobs' || r.source === 'workers') return true;
+    if (r.status === 'running') return true;
+    return now - r.lastActive < STALE_THRESHOLD_MS;
+  });
+
+  // Replace allRecords with filtered set for all downstream rendering
+  const activeRecords = filtered;
+
   // Group records by source file for nesting
   const byFile = new Map<string, AgentRecord[]>();
-  for (const r of allRecords) {
+  for (const r of activeRecords) {
     const arr = byFile.get(r.file) ?? [];
     arr.push(r);
     byFile.set(r.file, arr);
@@ -710,17 +761,16 @@ function render(config: LiveConfig): void {
 
   groups.sort((a, b) => b.lastTs - a.lastTs);
 
-  const totExec = allRecords.length;
-  const totFail = allRecords.filter((r) => r.status === 'error').length;
-  const totRunning = allRecords.filter((r) => r.status === 'running').length;
-  const uniqueAgents = new Set(allRecords.map((r) => r.id)).size;
+  const totExec = activeRecords.length;
+  const totFail = activeRecords.filter((r) => r.status === 'error').length;
+  const totRunning = activeRecords.filter((r) => r.status === 'running').length;
+  const uniqueAgents = new Set(activeRecords.map((r) => r.id)).size;
   const sysRate = totExec > 0 ? (((totExec - totFail) / totExec) * 100).toFixed(1) : '100.0';
 
   // Sparkline
-  const now = Date.now();
   const buckets = new Array(12).fill(0) as number[];
   const failBuckets = new Array(12).fill(0) as number[];
-  for (const r of allRecords) {
+  for (const r of activeRecords) {
     const age = now - r.lastActive;
     if (age > 3600000 || age < 0) continue;
     const idx = 11 - Math.floor(age / 300000);
@@ -944,7 +994,7 @@ function render(config: LiveConfig): void {
   }
 
   // Recent activity
-  const recentRecords = allRecords
+  const recentRecords = activeRecords
     .filter((r) => r.lastActive > 0)
     .sort((a, b) => b.lastActive - a.lastActive)
     .slice(0, 6);
