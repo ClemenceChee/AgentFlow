@@ -22,6 +22,29 @@ agentflow live ./data
 agentflow run -- python my_agent.py
 ```
 
+## Monitoring Options
+
+### Terminal Dashboard (Recommended)
+Fast, lightweight terminal interface for daily use:
+```bash
+agentflow live ./data --refresh 5
+```
+- ASCII trees and tables
+- Real-time updates
+- Low resource usage
+- Perfect for SSH/remote debugging
+
+### Web Dashboard
+Rich web interface for team dashboards and presentations:
+```bash
+agentflow-dashboard --traces ./traces --port 3000
+```
+- Interactive execution graphs
+- WebSocket real-time updates
+- Multi-agent system overview
+- Responsive design (desktop + mobile)
+- Zero configuration auto-discovery
+
 ## Demo: Catch Agent Failures in Action
 
 ```bash
@@ -75,7 +98,7 @@ AgentFlow auto-detects the format of every JSON/JSONL file it finds:
 
 ## Core Commands
 
-Three commands cover 90% of use cases:
+Essential commands for monitoring and tracing:
 
 **`agentflow watch`** — Background monitoring with alerts
 ```bash
@@ -85,6 +108,13 @@ agentflow watch ./data --alert-on error --notify telegram
 **`agentflow live`** — Real-time terminal dashboard
 ```bash
 agentflow live ./data
+```
+
+**`agentflow-dashboard`** — Web-based monitoring dashboard
+```bash
+npm install -g agentflow-dashboard
+agentflow-dashboard --traces ./data --port 3000
+# Opens at http://localhost:3000
 ```
 
 **`agentflow run`** — Trace any command execution
