@@ -664,7 +664,7 @@ function flushLines(lines: string[]): void {
 let prevFileCount = 0;
 let newExecCount = 0;
 const sessionStart = Date.now();
-let firstRender = true;
+let liveRunning = false;
 
 // Process audit cache — avoid running ps/systemctl on every render
 import type { ProcessAuditConfig } from './process-audit.js';
@@ -944,11 +944,6 @@ function render(config: LiveConfig): void {
   const detailWidth = Math.max(20, termWidth - 60);
 
   // === BUILD OUTPUT ===
-  if (firstRender) {
-    process.stdout.write('\x1b[2J'); // clear screen only on first render
-    firstRender = false;
-  }
-
   const L: string[] = [];
 
   // Header
@@ -1221,6 +1216,11 @@ export function startLive(argv: string[]): void {
   }
   config.dirs = valid;
 
+  // Enter alternate screen buffer for flicker-free rendering
+  process.stdout.write('\x1b[?1049h'); // enter alternate screen
+  process.stdout.write('\x1b[?25l');   // hide cursor
+  liveRunning = true;
+
   render(config);
 
   // Watch all directories for changes
@@ -1238,8 +1238,22 @@ export function startLive(argv: string[]): void {
 
   setInterval(() => render(config), config.refreshMs);
 
+  const cleanup = () => {
+    if (liveRunning) {
+      liveRunning = false;
+      process.stdout.write('\x1b[?25h');   // show cursor
+      process.stdout.write('\x1b[?1049l'); // leave alternate screen
+    }
+  };
+
   process.on('SIGINT', () => {
-    console.log('\n' + C.dim + 'Monitor stopped.' + C.reset);
+    cleanup();
+    console.log(C.dim + 'Monitor stopped.' + C.reset);
+    process.exit(0);
+  });
+
+  process.on('SIGTERM', () => {
+    cleanup();
     process.exit(0);
   });
 }

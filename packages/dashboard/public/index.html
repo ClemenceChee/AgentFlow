@@ -226,6 +226,119 @@
             color: #9ca3af;
         }
 
+        .process-health {
+            margin-bottom: 1.5rem;
+        }
+
+        .process-health-card {
+            background: #1a1f2e;
+            border: 1px solid #2a2f3e;
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .process-health-card h4 {
+            font-size: 0.85rem;
+            color: #9ca3af;
+            text-transform: uppercase;
+            margin-bottom: 0.75rem;
+            letter-spacing: 0.05em;
+        }
+
+        .ph-row {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 0.5rem;
+            font-size: 0.85rem;
+        }
+
+        .ph-label {
+            color: #9ca3af;
+            min-width: 100px;
+        }
+
+        .ph-value {
+            color: #e6e6e6;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+        }
+
+        .ph-value.ok { color: #10b981; }
+        .ph-value.warn { color: #f59e0b; }
+        .ph-value.bad { color: #ef4444; }
+
+        .worker-dots {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .worker-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            position: relative;
+        }
+
+        .worker-dot.alive { background: #10b981; }
+        .worker-dot.stale { background: #ef4444; }
+        .worker-dot.unknown { background: #6b7280; }
+
+        .worker-dot-label {
+            font-size: 0.75rem;
+            color: #9ca3af;
+            margin-left: 2px;
+        }
+
+        .orphan-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+        }
+
+        .orphan-table th {
+            text-align: left;
+            color: #9ca3af;
+            font-weight: 500;
+            padding: 0.4rem 0.6rem;
+            border-bottom: 1px solid #2a2f3e;
+        }
+
+        .orphan-table td {
+            padding: 0.35rem 0.6rem;
+            color: #e6e6e6;
+            border-bottom: 1px solid #1f2433;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 300px;
+        }
+
+        .orphan-table tr:hover td {
+            background: #262b3d;
+        }
+
+        .problems-list {
+            list-style: none;
+            padding: 0;
+            margin: 0.5rem 0 0 0;
+        }
+
+        .problems-list li {
+            font-size: 0.8rem;
+            color: #ef4444;
+            padding: 0.2rem 0;
+        }
+
+        .problems-list li::before {
+            content: "\2022";
+            margin-right: 0.5rem;
+        }
+
         @media (max-width: 768px) {
             .main {
                 grid-template-columns: 1fr;
@@ -256,6 +369,8 @@
         </div>
 
         <div class="content">
+            <div class="process-health" id="processHealth" style="display:none;"></div>
+
             <div class="stats-grid" id="statsGrid">
                 <div class="loading">Loading statistics...</div>
             </div>

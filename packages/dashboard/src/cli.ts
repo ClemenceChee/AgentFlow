@@ -27,6 +27,10 @@ export async function startDashboard() {
       case '-h':
         config.host = args[++i];
         break;
+      case '--data-dir':
+        if (!config.dataDirs) config.dataDirs = [];
+        config.dataDirs.push(args[++i]);
+        break;
       case '--cors':
         config.enableCors = true;
         break;
@@ -51,6 +55,9 @@ export async function startDashboard() {
   console.log(`   Host: ${config.host}`);
   console.log(`   Traces: ${config.tracesDir}`);
   console.log(`   CORS: ${config.enableCors ? 'enabled' : 'disabled'}`);
+  if (config.dataDirs?.length) {
+    console.log(`   Data dirs: ${config.dataDirs.join(', ')}`);
+  }
 
   // Start dashboard
   const dashboard = new DashboardServer(config);
@@ -101,6 +108,7 @@ Options:
   -p, --port <number>     Server port (default: 3000)
   -t, --traces <path>     Traces directory (default: ./traces)
   -h, --host <address>    Host address (default: localhost)
+  --data-dir <path>       Extra directory for process discovery (repeatable)
   --cors                  Enable CORS headers
   --help                  Show this help message
 

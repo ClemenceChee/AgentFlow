@@ -4,6 +4,8 @@ import { createServer } from 'http';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 import { WebSocketServer } from 'ws';
+import { discoverProcessConfig, auditProcesses } from 'agentflow-core';
+import type { ProcessAuditResult } from 'agentflow-core';
 import { AgentStats } from './stats.js';
 import { TraceWatcher } from './watcher.js';
 
@@ -15,6 +17,7 @@ export interface DashboardConfig {
   tracesDir: string;
   host?: string;
   enableCors?: boolean;
+  dataDirs?: string[];
 }
 
 export class DashboardServer {
@@ -23,6 +26,7 @@ export class DashboardServer {
   private wss = new WebSocketServer({ server: this.server });
   private watcher: TraceWatcher;
   private stats: AgentStats;
+  private processHealthCache: { result: ProcessAuditResult | null; ts: number } = { result: null, ts: 0 };
 
   constructor(private config: DashboardConfig) {
     this.watcher = new TraceWatcher(config.tracesDir);
@@ -99,6 +103,33 @@ export class DashboardServer {
         res.json(agentStats);
       } catch (error) {
         res.status(500).json({ error: 'Failed to load agent statistics' });
+      }
+    });
+
+    this.app.get('/api/process-health', (req, res) => {
+      try {
+        const now = Date.now();
+        if (this.processHealthCache.result && now - this.processHealthCache.ts < 10_000) {
+          return res.json(this.processHealthCache.result);
+        }
+
+        // Build discovery dirs: tracesDir, its parent, plus any extra dataDirs
+        const discoveryDirs = [
+          this.config.tracesDir,
+          path.dirname(this.config.tracesDir),
+          ...(this.config.dataDirs || []),
+        ];
+
+        const processConfig = discoverProcessConfig(discoveryDirs);
+        if (!processConfig) {
+          return res.json(null);
+        }
+
+        const result = auditProcesses(processConfig);
+        this.processHealthCache = { result, ts: now };
+        res.json(result);
+      } catch (error) {
+        res.status(500).json({ error: 'Failed to audit processes' });
       }
     });
 

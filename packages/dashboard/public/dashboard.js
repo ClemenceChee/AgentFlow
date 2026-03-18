@@ -1,3 +1,13 @@
+function escapeHtml(str) {
+  if (typeof str !== 'string') return str == null ? '' : String(str);
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 class AgentFlowDashboard {
   constructor() {
     this.ws = null;
@@ -8,6 +18,7 @@ class AgentFlowDashboard {
     this.traces = [];
     this.agents = [];
     this.stats = null;
+    this.processHealth = null;
 
     this.init();
   }
@@ -16,6 +27,8 @@ class AgentFlowDashboard {
     this.connectWebSocket();
     this.setupEventListeners();
     this.loadInitialData();
+    this.loadProcessHealth();
+    this._processHealthInterval = setInterval(() => this.loadProcessHealth(), 10000);
   }
 
   connectWebSocket() {
@@ -232,13 +245,13 @@ class AgentFlowDashboard {
                     <div class="trace-header">
                         <div class="trace-name">
                             <span class="status-indicator ${statusClass}"></span>
-                            ${trace.name || `${trace.agentId} execution`}
+                            ${escapeHtml(trace.name) || `${escapeHtml(trace.agentId)} execution`}
                         </div>
-                        <div class="trace-timestamp">${timestamp}</div>
+                        <div class="trace-timestamp">${escapeHtml(timestamp)}</div>
                     </div>
                     <div class="trace-details">
-                        <div class="trace-agent">${trace.agentId}</div>
-                        <div class="trace-trigger">${trace.trigger}</div>
+                        <div class="trace-agent">${escapeHtml(trace.agentId)}</div>
+                        <div class="trace-trigger">${escapeHtml(trace.trigger)}</div>
                     </div>
                 </div>
             `;
@@ -315,6 +328,103 @@ class AgentFlowDashboard {
     document.title = this.selectedAgent
       ? `AgentFlow Dashboard - ${this.selectedAgent}`
       : 'AgentFlow Dashboard';
+  }
+
+  async loadProcessHealth() {
+    try {
+      const res = await fetch('/api/process-health');
+      if (!res.ok) return;
+      this.processHealth = await res.json();
+      this.renderProcessHealth();
+    } catch (error) {
+      console.error('Error loading process health:', error);
+    }
+  }
+
+  renderProcessHealth() {
+    const container = document.getElementById('processHealth');
+    if (!this.processHealth) {
+      container.style.display = 'none';
+      return;
+    }
+
+    container.style.display = '';
+    const r = this.processHealth;
+    let html = '<h3 class="section-title">Process Health</h3>';
+
+    // Main status card
+    html += '<div class="process-health-card"><h4>Process Status</h4>';
+
+    // PID file info
+    if (r.pidFile) {
+      const pf = r.pidFile;
+      const cls = pf.alive && pf.matchesProcess ? 'ok' : pf.stale ? 'bad' : 'warn';
+      html += '<div class="ph-row">';
+      html += '<span class="ph-label">PID File</span>';
+      html += '<span class="ph-value ' + cls + '">';
+      html += pf.pid ? ('PID ' + pf.pid + (pf.alive ? ' (alive)' : ' (dead)')) : 'No PID';
+      html += '</span>';
+      html += '</div>';
+    }
+
+    // Systemd info
+    if (r.systemd) {
+      const sd = r.systemd;
+      const cls = sd.activeState === 'active' ? 'ok' : sd.failed ? 'bad' : 'warn';
+      html += '<div class="ph-row">';
+      html += '<span class="ph-label">Systemd</span>';
+      html += '<span class="ph-value ' + cls + '">';
+      html += escapeHtml(sd.unit) + ' \u2014 ' + escapeHtml(sd.activeState) + ' (' + escapeHtml(sd.subState) + ')';
+      if (sd.restarts > 0) html += ' [' + sd.restarts + ' restarts]';
+      html += '</span>';
+      html += '</div>';
+    }
+
+    // Workers as dots
+    if (r.workers) {
+      const w = r.workers;
+      html += '<div class="ph-row">';
+      html += '<span class="ph-label">Workers</span>';
+      html += '<div class="worker-dots">';
+      for (const worker of w.workers) {
+        const dotCls = worker.alive ? 'alive' : worker.stale ? 'stale' : 'unknown';
+        html += '<span class="worker-dot ' + dotCls + '" title="' + escapeHtml(worker.name) + ' (pid ' + (worker.pid || '-') + ') \u2014 ' + escapeHtml(worker.declaredStatus) + '"></span>';
+        html += '<span class="worker-dot-label">' + escapeHtml(worker.name) + '</span>';
+      }
+      html += '</div></div>';
+    }
+
+    // Problems
+    if (r.problems && r.problems.length > 0) {
+      html += '<ul class="problems-list">';
+      for (const p of r.problems) {
+        html += '<li>' + escapeHtml(p) + '</li>';
+      }
+      html += '</ul>';
+    }
+
+    html += '</div>';
+
+    // Orphans section
+    if (r.orphans && r.orphans.length > 0) {
+      html += '<div class="process-health-card">';
+      html += '<h4>Orphan Processes (' + r.orphans.length + ')</h4>';
+      html += '<table class="orphan-table"><thead><tr>';
+      html += '<th>PID</th><th>CPU%</th><th>MEM%</th><th>Uptime</th><th>Command</th>';
+      html += '</tr></thead><tbody>';
+      for (const o of r.orphans) {
+        html += '<tr>';
+        html += '<td>' + o.pid + '</td>';
+        html += '<td>' + escapeHtml(o.cpu) + '</td>';
+        html += '<td>' + escapeHtml(o.mem) + '</td>';
+        html += '<td>' + escapeHtml(o.elapsed) + '</td>';
+        html += '<td title="' + escapeHtml(o.cmdline || o.command) + '">' + escapeHtml(o.command) + '</td>';
+        html += '</tr>';
+      }
+      html += '</tbody></table></div>';
+    }
+
+    container.innerHTML = html;
   }
 
   // Public methods for debugging
