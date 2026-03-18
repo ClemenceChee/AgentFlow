@@ -1,98 +1,154 @@
 /**
- * AgentFlow — Quick demo.
+ * AgentFlow — Demo showing multi-level failure detection
  *
  * Run with: npx tsx examples/demo.ts
  */
 import {
   createGraphBuilder,
-  getCriticalPath,
+  withGuards,
+  toAsciiTree,
+  toTimeline,
   getFailures,
   getStats,
+  createTraceStore,
 } from '../packages/core/src/index.js';
 
-// 1. Create a builder
-const builder = createGraphBuilder({
-  agentId: 'portfolio-recon',
-  trigger: 'user-request',
+console.log('🚀 AgentFlow Demo — Multi-level Failure Detection\n');
+
+// Scenario 1: Normal successful execution
+console.log('═══ Scenario 1: Healthy Agent ═══');
+const healthyBuilder = createGraphBuilder({ agentId: 'data-pipeline', trigger: 'cron' });
+const root1 = healthyBuilder.startNode({ type: 'agent', name: 'data-pipeline' });
+
+// Simulate successful data processing
+const extract = healthyBuilder.startNode({ type: 'tool', name: 'extract-data', parentId: root1 });
+healthyBuilder.endNode(extract, 150);
+
+const transform = healthyBuilder.startNode({ type: 'tool', name: 'transform-data', parentId: root1 });
+healthyBuilder.endNode(transform, 200);
+
+const load = healthyBuilder.startNode({ type: 'tool', name: 'load-to-warehouse', parentId: root1 });
+healthyBuilder.endNode(load, 100);
+
+healthyBuilder.endNode(root1);
+const healthyGraph = healthyBuilder.build();
+
+console.log(toAsciiTree(healthyGraph));
+console.log(`✅ Status: ${healthyGraph.status} (${getStats(healthyGraph).duration}ms)\n`);
+
+// Scenario 2: Agent with failures and runtime guard violations
+console.log('═══ Scenario 2: Agent with Problems ═══');
+const problematicBuilder = withGuards(createGraphBuilder({
+  agentId: 'reasoning-agent',
+  trigger: 'user-request'
+}), {
+  maxDepth: 5,
+  maxReasoningSteps: 3,
+  maxAgentSpawns: 8,
+  onViolation: 'warn'
 });
 
-// 2. Build an execution graph
-const root = builder.startNode({ type: 'agent', name: 'portfolio-recon' });
+const root2 = problematicBuilder.startNode({ type: 'agent', name: 'reasoning-agent' });
 
-// Concurrent tool calls
-const search = builder.startNode({ type: 'tool', name: 'web-search', parentId: root });
-const news = builder.startNode({ type: 'tool', name: 'news-aggregator', parentId: root });
-builder.endNode(search);
-builder.endNode(news);
+// Start normal processing
+const analyze = problematicBuilder.startNode({ type: 'tool', name: 'analyze-input', parentId: root2 });
+problematicBuilder.endNode(analyze, 80);
 
-// Decision point
-const decision = builder.startNode({ type: 'decision', name: 'pick-analysis-strategy', parentId: root });
-builder.updateState(decision, { chosen: 'fundamental', reason: 'volatile market' });
-builder.endNode(decision);
+// Trigger reasoning loop (guard violation)
+const reason1 = problematicBuilder.startNode({ type: 'reasoning', name: 'plan-approach', parentId: root2 });
+problematicBuilder.endNode(reason1, 100);
 
-// Subagent with nested tools
-const analyst = builder.startNode({ type: 'subagent', name: 'fundamental-analyst', parentId: root });
-builder.withParent(analyst, () => {
-  const filing = builder.startNode({ type: 'tool', name: 'sec-filing-reader' });
-  builder.endNode(filing);
-  const comps = builder.startNode({ type: 'tool', name: 'comparable-analysis' });
-  builder.endNode(comps);
-});
-builder.endNode(analyst);
+const reason2 = problematicBuilder.startNode({ type: 'reasoning', name: 'refine-plan', parentId: root2 });
+problematicBuilder.endNode(reason2, 110);
 
-// A failed tool
-const broken = builder.startNode({ type: 'tool', name: 'sentiment-api', parentId: root });
-builder.failNode(broken, 'API rate limit exceeded (429)');
+const reason3 = problematicBuilder.startNode({ type: 'reasoning', name: 'rethink-approach', parentId: root2 });
+problematicBuilder.endNode(reason3, 105);
 
-// Snapshot mid-flight (builder still usable)
-const snapshot = builder.getSnapshot();
-console.log(`\n📸 Mid-flight snapshot: ${snapshot.nodes.size} nodes, status=${snapshot.status}\n`);
+// This should trigger reasoning loop guard
+const reason4 = problematicBuilder.startNode({ type: 'reasoning', name: 'overthink-plan', parentId: root2 });
+problematicBuilder.endNode(reason4, 120);
 
-// Finish
-builder.endNode(root);
-const graph = builder.build();
-
-// 3. Query the graph
-const stats = getStats(graph);
-const failures = getFailures(graph);
-const criticalPath = getCriticalPath(graph);
-
-// 4. Print results
-console.log('═══════════════════════════════════════');
-console.log('  AgentFlow — Execution Summary');
-console.log('═══════════════════════════════════════');
-console.log(`  Agent:      ${graph.agentId}`);
-console.log(`  Status:     ${graph.status}`);
-console.log(`  Nodes:      ${stats.totalNodes}`);
-console.log(`  Depth:      ${stats.depth}`);
-console.log(`  Duration:   ${stats.duration}ms`);
-console.log(`  Failures:   ${stats.failureCount}`);
-console.log();
-
-console.log('  Nodes by type:');
-for (const [type, count] of Object.entries(stats.byType)) {
-  if (count > 0) console.log(`    ${type}: ${count}`);
-}
-console.log();
-
-if (failures.length > 0) {
-  console.log('  Failures:');
-  for (const f of failures) {
-    console.log(`    ✗ ${f.name} [${f.status}] — ${f.metadata.error ?? 'unknown'}`);
-  }
-  console.log();
+// Spawn too many subagents (another guard violation)
+for (let i = 0; i < 4; i++) {
+  const subagent = problematicBuilder.startNode({
+    type: 'subagent',
+    name: `worker-${i}`,
+    parentId: root2
+  });
+  // Nested subagents (depth violation)
+  const nested = problematicBuilder.startNode({
+    type: 'subagent',
+    name: `nested-worker-${i}`,
+    parentId: subagent
+  });
+  const deepNested = problematicBuilder.startNode({
+    type: 'subagent',
+    name: `deep-nested-${i}`,
+    parentId: nested
+  });
+  problematicBuilder.endNode(deepNested, 50);
+  problematicBuilder.endNode(nested, 60);
+  problematicBuilder.endNode(subagent, 80);
 }
 
-console.log('  Critical path:');
-console.log(`    ${criticalPath.map((n) => n.name).join(' → ')}`);
-console.log();
+// Add some failures
+const failedTool = problematicBuilder.startNode({ type: 'tool', name: 'external-api', parentId: root2 });
+problematicBuilder.failNode(failedTool, 'Connection timeout after 30s');
 
-console.log('  Graph nodes (Map):');
-for (const [id, node] of graph.nodes) {
-  const dur = node.endTime !== null ? `${node.endTime - node.startTime}ms` : 'running';
-  const indent = node.parentId ? '    ' : '  ';
-  const icon = node.status === 'completed' ? '✓' : node.status === 'failed' ? '✗' : '○';
-  console.log(`${indent}${icon} ${id} [${node.type}] ${node.name} (${dur})`);
+const stuckTool = problematicBuilder.startNode({ type: 'tool', name: 'file-processor', parentId: root2 });
+// Don't end this one - it's stuck!
+
+problematicBuilder.endNode(root2);
+const problematicGraph = problematicBuilder.build();
+
+console.log(toAsciiTree(problematicGraph));
+
+const failures = getFailures(problematicGraph);
+const stats = getStats(problematicGraph);
+
+console.log('📊 Detected Issues:');
+console.log(`   ${failures.length} failures detected`);
+console.log(`   ${stats.hungNodes} nodes still running (stuck)`);
+console.log(`   Reasoning loop: 4 consecutive reasoning steps`);
+console.log(`   Max depth exceeded: ${stats.depth} levels deep`);
+console.log(`   Status: ${problematicGraph.status}\n`);
+
+// Show timeline visualization
+console.log('⏱️  Timeline View:');
+console.log(toTimeline(problematicGraph));
+
+// Scenario 3: Save and query traces
+console.log('\n═══ Scenario 3: Trace Storage & Querying ═══');
+const store = createTraceStore('./traces');
+
+try {
+  await store.save(healthyGraph);
+  await store.save(problematicGraph);
+
+  console.log('💾 Saved traces to ./traces/');
+
+  const allTraces = await store.list({});
+  console.log(`📋 Found ${allTraces.length} traces in store`);
+
+  const failedTraces = await store.list({ status: 'failed' });
+  console.log(`❌ ${failedTraces.length} failed traces`);
+
+  const stuckSpans = await store.getStuckSpans();
+  console.log(`⏳ ${stuckSpans.length} stuck operations found`);
+
+} catch (error) {
+  console.log('💡 Trace storage demo (would save to ./traces/ directory)');
 }
-console.log();
-console.log('═══════════════════════════════════════');
+
+console.log('\n🎯 Key AgentFlow Benefits Demonstrated:');
+console.log('   ✅ Automatic failure detection');
+console.log('   ⚠️  Runtime guard violations (loops, depth, spawn limits)');
+console.log('   📊 Rich execution visualization');
+console.log('   💾 Persistent trace storage and querying');
+console.log('   🔍 Stuck operation detection');
+console.log('   📈 Performance and timing analysis');
+
+console.log('\n🚀 Try it on your agents:');
+console.log('   agentflow watch ./your-agent-directory --notify telegram');
+console.log('   agentflow live ./your-agent-directory');
+console.log('   agentflow run -- python your_agent.py');
