@@ -4,9 +4,19 @@
 
 AgentFlow monitors any AI agent infrastructure — cron jobs, worker daemons, task queues, LLM pipelines — and alerts you when something fails or goes silent. Point it at a directory. It figures out the rest.
 
+🚀 **Recent improvements in v0.5.2:**
+- Enhanced performance with file caching and optimized directory scans
+- Improved live monitor accuracy with deduplication, age filtering, and PID validation
+- Reduced alert noise during startup with bootstrap flood suppression
+
 ```bash
-npm install -g agentflow-core
+npm install -g agentflow-core@latest
 ```
+
+## Requirements
+
+- Node.js 20+
+- Any OS (Linux, macOS, Windows)
 
 ## 30-second setup
 
@@ -29,6 +39,15 @@ agentflow watch ./data --notify telegram
 
 
 No config files. No adapters. No code changes. AgentFlow reads your existing JSON and JSONL state files and figures out what's healthy and what isn't.
+
+## Key Features
+
+✅ **Zero-config monitoring** — Auto-detects agent patterns in any JSON/JSONL files
+✅ **Runtime guards** — Prevents infinite loops, spawn explosions, and timeouts
+✅ **Rich visualization** — ASCII trees and timeline waterfalls for execution traces
+✅ **Smart alerting** — Built-in deduplication and recovery notifications
+✅ **Universal compatibility** — Works with LangChain, CrewAI, AutoGen, custom agents
+✅ **Lightweight** — Zero dependencies in core, runs alongside your agents
 
 ## What it monitors
 
@@ -351,7 +370,8 @@ git clone https://github.com/ClemenceChee/AgentFlow.git
 cd AgentFlow
 npm install
 npm run build
-npm test            # 125 tests
+npm test            # 125+ tests passing
+npm run lint        # Zero errors with Biome
 ```
 
 ## License
