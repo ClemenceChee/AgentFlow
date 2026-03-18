@@ -324,7 +324,22 @@ export function discoverProcessConfig(dirs: string[]): ProcessAuditConfig | null
   if (!processName && !pidFile && !workersFile) return null;
   if (!processName) processName = 'agent'; // fallback
 
-  return { processName, pidFile, workersFile };
+  // Try to discover systemd user unit: check if <processName>.service exists
+  let systemdUnit: string | undefined;
+  try {
+    const unitName = `${processName}.service`;
+    const result = execSync(
+      `systemctl --user show ${unitName} --property=LoadState --no-pager 2>/dev/null`,
+      { encoding: 'utf8', timeout: 3000 },
+    );
+    if (result.includes('LoadState=loaded')) {
+      systemdUnit = unitName;
+    }
+  } catch {
+    /* systemd not available or unit not found */
+  }
+
+  return { processName, pidFile, workersFile, systemdUnit };
 }
 
 // ---------------------------------------------------------------------------
