@@ -865,8 +865,9 @@ function render(config: LiveConfig): void {
         auditResult = auditProcesses(cachedAuditConfig);
         cachedAuditResult = auditResult;
         lastAuditTime = now;
-      } catch {
-        /* audit failed — skip */
+      } catch (err) {
+        // Log to stderr so it doesn't interfere with the TUI
+        process.stderr.write(`[agentflow] process audit error: ${err instanceof Error ? err.message : err}\n`);
       }
     }
   } else {
@@ -1024,6 +1025,17 @@ function render(config: LiveConfig): void {
     if (!healthy) {
       for (const p of ar.problems.slice(0, 3)) {
         writeLine(L, `  ${C.red}\u2022${C.reset} ${C.dim}${p}${C.reset}`);
+      }
+    }
+
+    // Show orphan details for debugging
+    if (ar.orphans.length > 0) {
+      for (const o of ar.orphans.slice(0, 5)) {
+        const cmd = (o.cmdline || o.command).substring(0, detailWidth);
+        writeLine(L, `    ${C.red}?${C.reset} ${C.dim}pid=${o.pid} cpu=${o.cpu} mem=${o.mem} up=${o.elapsed}${C.reset}  ${C.dim}${cmd}${C.reset}`);
+      }
+      if (ar.orphans.length > 5) {
+        writeLine(L, `    ${C.dim}... +${ar.orphans.length - 5} more orphans${C.reset}`);
       }
     }
   }
