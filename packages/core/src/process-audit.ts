@@ -59,7 +59,13 @@ export interface OsProcess {
   pid: number;
   cpu: string;
   mem: string;
+  /** Elapsed time since process started (e.g. "2:31:05", "03:14"). */
+  elapsed: string;
+  /** Process start time (e.g. "Mar18", "17:37"). */
+  started: string;
   command: string;
+  /** Full command line from /proc (Linux only). */
+  cmdline: string;
 }
 
 export interface ProcessAuditResult {
@@ -217,22 +223,41 @@ function auditWorkers(config: ProcessAuditConfig): WorkersResult | null {
   }
 }
 
+function readCmdline(pid: number): string {
+  try {
+    return readFileSync(`/proc/${pid}/cmdline`, 'utf8').replace(/\0/g, ' ').trim();
+  } catch {
+    return '';
+  }
+}
+
 function getOsProcesses(processName: string): OsProcess[] {
   try {
-    const raw = execSync(`ps aux`, { encoding: 'utf8', timeout: 5000 });
-    return raw
-      .split('\n')
-      .filter((line) => line.includes(processName) && !line.includes('process-audit') && !line.includes('grep'))
-      .map((line) => {
-        const parts = line.trim().split(/\s+/);
-        return {
-          pid: parseInt(parts[1] ?? '0', 10),
-          cpu: parts[2] ?? '0',
-          mem: parts[3] ?? '0',
-          command: parts.slice(10).join(' '),
-        };
-      })
-      .filter((p) => !isNaN(p.pid) && p.pid > 0);
+    // Use ps with explicit columns for reliable parsing
+    const raw = execSync(
+      `ps -eo pid,pcpu,pmem,etime,lstart,args --no-headers`,
+      { encoding: 'utf8', timeout: 5000 },
+    );
+    const results: OsProcess[] = [];
+    for (const line of raw.split('\n')) {
+      if (!line.includes(processName)) continue;
+      if (line.includes('process-audit') || line.includes(' grep ')) continue;
+      const trimmed = line.trim();
+      // pid, cpu, mem are first 3 whitespace-delimited fields
+      const parts = trimmed.split(/\s+/);
+      const pid = parseInt(parts[0] ?? '0', 10);
+      if (isNaN(pid) || pid <= 0) continue;
+      const cpu = parts[1] ?? '0';
+      const mem = parts[2] ?? '0';
+      const elapsed = parts[3] ?? '';
+      // lstart is 5 fields: "Wed Mar 18 17:37:17 2026"
+      const started = parts.slice(4, 9).join(' ');
+      const command = parts.slice(9).join(' ');
+      const cmdline = readCmdline(pid);
+
+      results.push({ pid, cpu, mem, elapsed, started, command, cmdline });
+    }
+    return results;
   } catch {
     return [];
   }
@@ -343,7 +368,12 @@ export function auditProcesses(config: ProcessAuditConfig): ProcessAuditResult {
   }
   if (systemd?.mainPid) knownPids.add(systemd.mainPid);
 
-  const orphans = osProcesses.filter((p) => !knownPids.has(p.pid));
+  // Exclude current process and its parent from orphan detection
+  const selfPid = process.pid;
+  const selfPpid = process.ppid;
+  const orphans = osProcesses.filter((p) =>
+    !knownPids.has(p.pid) && p.pid !== selfPid && p.pid !== selfPpid
+  );
 
   // Collect problems
   const problems: string[] = [];
@@ -414,15 +444,17 @@ export function formatAuditReport(result: ProcessAuditResult): string {
   if (result.osProcesses.length > 0) {
     lines.push(`\n  OS Processes (${result.osProcesses.length} total)`);
     for (const p of result.osProcesses) {
-      lines.push(`    PID ${String(p.pid).padEnd(8)} CPU=${p.cpu.padEnd(6)} MEM=${p.mem.padEnd(6)} ${p.command.substring(0, 55)}`);
+      lines.push(`    PID ${String(p.pid).padEnd(8)} CPU=${p.cpu.padEnd(6)} MEM=${p.mem.padEnd(6)} Up=${p.elapsed.padEnd(10)} ${p.command.substring(0, 50)}`);
     }
   }
 
-  // Orphans
+  // Orphans — detailed view for debugging
   if (result.orphans.length > 0) {
     lines.push(`\n  \u26A0\uFE0F  ${result.orphans.length} ORPHAN PROCESS(ES):`);
     for (const p of result.orphans) {
-      lines.push(`     PID ${p.pid} \u2014 not tracked by PID file or workers registry`);
+      lines.push(`     PID ${String(p.pid).padEnd(8)} CPU=${p.cpu.padEnd(6)} MEM=${p.mem.padEnd(6)} Up=${p.elapsed}`);
+      lines.push(`       Started: ${p.started}`);
+      lines.push(`       Command: ${p.cmdline || p.command}`);
     }
   }
 
