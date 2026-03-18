@@ -18,10 +18,12 @@
 
 import { existsSync, readdirSync, readFileSync, statSync, watch } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
-import { execSync } from 'node:child_process';
+
 import { getFailures, getHungNodes, getStats } from './graph-query.js';
 import { getTraceTree, groupByTraceId, stitchTrace } from './graph-stitch.js';
 import { loadGraph } from './loader.js';
+import type { ProcessAuditResult } from './process-audit.js';
+import { auditProcesses, discoverProcessConfig } from './process-audit.js';
 import type { DistributedTrace, ExecutionGraph } from './types.js';
 
 // ---------------------------------------------------------------------------
@@ -395,19 +397,21 @@ export function processJsonFile(file: ScannedFile): AgentRecord[] {
         const w = info as Record<string, unknown>;
         const status = findStatus(w);
         const ts = findTimestamp(w) || findTimestamp(obj) || file.mtime;
-        const pid = w.pid as number | undefined;
+        const rawPid = w.pid;
+        const pid = typeof rawPid === 'number' ? rawPid : Number(rawPid);
+        const validPid = Number.isFinite(pid) && pid > 0;
         // Validate PID: if worker reports running but PID is dead, mark as stale
         let validatedStatus = status;
         let pidAlive = true;
-        if (pid && (status === 'running' || status === 'ok')) {
+        if (validPid && (status === 'running' || status === 'ok')) {
           try {
-            execSync(`kill -0 ${pid} 2>/dev/null`, { stdio: 'ignore' });
+            process.kill(pid, 0);
           } catch {
             pidAlive = false;
             validatedStatus = 'error';
           }
         }
-        const pidLabel = pid ? (pidAlive ? `pid: ${pid}` : `pid: ${pid} (dead)`) : '';
+        const pidLabel = validPid ? (pidAlive ? `pid: ${pid}` : `pid: ${pid} (dead)`) : '';
         const detail = pidLabel || extractDetail(w);
         records.push({
           id: name,
@@ -662,6 +666,12 @@ let newExecCount = 0;
 const sessionStart = Date.now();
 let firstRender = true;
 
+// Process audit cache — avoid running ps/systemctl on every render
+import type { ProcessAuditConfig } from './process-audit.js';
+let cachedAuditConfig: ProcessAuditConfig | null = null;
+let cachedAuditResult: ProcessAuditResult | null = null;
+let lastAuditTime = 0;
+
 // ---------------------------------------------------------------------------
 // File cache: only re-read/re-parse files whose mtime changed.
 // Cuts I/O from ~150 reads/cycle to only the handful that changed.
@@ -844,6 +854,25 @@ function render(config: LiveConfig): void {
     })
     .join('');
 
+  // Process audit (throttled — runs at most every 10 seconds)
+  let auditResult: ProcessAuditResult | null = null;
+  if (now - lastAuditTime > 10_000) {
+    if (!cachedAuditConfig) {
+      cachedAuditConfig = discoverProcessConfig(config.dirs);
+    }
+    if (cachedAuditConfig) {
+      try {
+        auditResult = auditProcesses(cachedAuditConfig);
+        cachedAuditResult = auditResult;
+        lastAuditTime = now;
+      } catch {
+        /* audit failed — skip */
+      }
+    }
+  } else {
+    auditResult = cachedAuditResult;
+  }
+
   // Distributed traces
   const distributedTraces: DistributedTrace[] = [];
   if (allTraces.length > 1) {
@@ -946,6 +975,58 @@ function render(config: LiveConfig): void {
   // Sparkline
   writeLine(L, '');
   writeLine(L, `  ${C.bold}Activity (1h)${C.reset}  ${spark}  ${C.dim}\u2190 now${C.reset}`);
+
+  // Process health panel
+  if (auditResult) {
+    const ar = auditResult;
+    const healthy = ar.problems.length === 0;
+    const healthIcon = healthy ? `${C.green}\u25cf${C.reset}` : `${C.red}\u25cf${C.reset}`;
+    const healthLabel = healthy ? `${C.green}healthy${C.reset}` : `${C.red}${ar.problems.length} issue(s)${C.reset}`;
+
+    // Compact one-line summary + worker status
+    const workerParts: string[] = [];
+    if (ar.workers) {
+      for (const w of ar.workers.workers) {
+        const wIcon = w.declaredStatus === 'running' && w.alive ? `${C.green}\u25cf${C.reset}`
+                    : w.stale ? `${C.red}\u25cf${C.reset}`
+                    : `${C.dim}\u25cb${C.reset}`;
+        workerParts.push(`${wIcon} ${w.name}`);
+      }
+    }
+
+    // Systemd status
+    let sysdLabel = '';
+    if (ar.systemd) {
+      const si = ar.systemd.activeState === 'active' ? `${C.green}\u25cf${C.reset}`
+               : ar.systemd.crashLooping ? `${C.yellow}\u25cf${C.reset}`
+               : ar.systemd.failed ? `${C.red}\u25cf${C.reset}`
+               : `${C.dim}\u25cb${C.reset}`;
+      sysdLabel = `  ${C.bold}Systemd${C.reset} ${si} ${ar.systemd.activeState}`;
+      if (ar.systemd.restarts > 0) sysdLabel += ` ${C.dim}(${ar.systemd.restarts} restarts)${C.reset}`;
+    }
+
+    // PID
+    let pidLabel = '';
+    if (ar.pidFile?.pid) {
+      const pi = ar.pidFile.alive && ar.pidFile.matchesProcess ? `${C.green}\u25cf${C.reset}` : `${C.red}\u25cf${C.reset}`;
+      pidLabel = `  ${C.bold}PID${C.reset} ${pi} ${ar.pidFile.pid}`;
+    }
+
+    writeLine(L, '');
+    writeLine(L, `  ${C.bold}${C.under}Process Health${C.reset}`);
+    writeLine(L, `  ${healthIcon} ${healthLabel}${pidLabel}${sysdLabel}    ${C.bold}Procs${C.reset} ${C.dim}${ar.osProcesses.length}${C.reset}    ${ar.orphans.length > 0 ? `${C.red}Orphans ${ar.orphans.length}${C.reset}` : `${C.dim}Orphans 0${C.reset}`}`);
+
+    if (workerParts.length > 0) {
+      writeLine(L, `  ${C.dim}Workers${C.reset}  ${workerParts.join('  ')}`);
+    }
+
+    // Show problems if any
+    if (!healthy) {
+      for (const p of ar.problems.slice(0, 3)) {
+        writeLine(L, `  ${C.red}\u2022${C.reset} ${C.dim}${p}${C.reset}`);
+      }
+    }
+  }
 
   // Grouped agent table
   writeLine(L, '');
@@ -1098,11 +1179,14 @@ function render(config: LiveConfig): void {
   flushLines(L);
 }
 
-function getDistDepth(dt: DistributedTrace, spanId: string | undefined): number {
+function getDistDepth(dt: DistributedTrace, spanId: string | undefined, visited?: Set<string>): number {
   if (!spanId) return 0;
+  const seen = visited ?? new Set<string>();
+  if (seen.has(spanId)) return 0;
+  seen.add(spanId);
   const g = dt.graphs.get(spanId);
   if (!g || !g.parentSpanId) return 0;
-  return 1 + getDistDepth(dt, g.parentSpanId);
+  return 1 + getDistDepth(dt, g.parentSpanId, seen);
 }
 
 // ---------------------------------------------------------------------------
