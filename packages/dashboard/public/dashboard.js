@@ -2768,6 +2768,8 @@ class AgentFlowDashboard {
         }
         document.getElementById('processMapEmpty').style.display = 'none';
         this._buildProcessMapGraph(data);
+        this._loadVariantPanel(agentId);
+        this._loadProfileCard(agentId);
       })
       .catch(() => {
         document.getElementById('processMapEmpty').innerHTML =
@@ -2805,6 +2807,7 @@ class AgentFlowDashboard {
           frequency: node.frequency,
           avgDuration: node.avgDuration,
           failRate: node.failRate,
+          p95Duration: node.p95Duration || 0,
           isVirtual: node.isVirtual,
           size: size,
           fullData: node,
@@ -2897,6 +2900,23 @@ class AgentFlowDashboard {
           selector: 'node[failRate > 0.3]',
           style: { 'background-color': '#ef4444', 'border-color': '#f85149' },
         },
+        // Bottleneck heat: p95 duration highlighting (overrides failRate coloring when present)
+        {
+          selector: 'node[p95Duration > 0][p95Duration <= 1000]',
+          style: { 'border-color': '#22c55e', 'border-width': 3 },
+        },
+        {
+          selector: 'node[p95Duration > 1000][p95Duration <= 10000]',
+          style: { 'border-color': '#eab308', 'border-width': 3 },
+        },
+        {
+          selector: 'node[p95Duration > 10000][p95Duration <= 60000]',
+          style: { 'border-color': '#f97316', 'border-width': 4 },
+        },
+        {
+          selector: 'node[p95Duration > 60000]',
+          style: { 'border-color': '#ef4444', 'border-width': 4 },
+        },
         // Selected
         {
           selector: ':selected',
@@ -2953,6 +2973,8 @@ class AgentFlowDashboard {
       html += this.detailRow('Frequency', `${(d.frequency * 100).toFixed(1)}% of traces`);
       if (d.avgDuration > 0)
         html += this.detailRow('Avg Duration', this.computeDuration(0, d.avgDuration));
+      if (d.p95Duration > 0)
+        html += this.detailRow('p95 Duration', this.computeDuration(0, d.p95Duration));
       html += this.detailRow('Failure Rate', `${(d.failRate * 100).toFixed(1)}%`);
       body.innerHTML = html;
       panel.classList.add('active');
@@ -2971,6 +2993,83 @@ class AgentFlowDashboard {
         document.getElementById('processMapDetailPanel').classList.remove('active');
       };
     }
+  }
+
+  _loadVariantPanel(agentId) {
+    var panel = document.getElementById('variantPanel');
+    if (!panel) {
+      // Create variant panel below the process map container
+      var container = document.getElementById('cyProcessMap');
+      if (!container) return;
+      panel = document.createElement('div');
+      panel.id = 'variantPanel';
+      panel.style.cssText = 'margin-top:12px;padding:12px;background:#161b22;border:1px solid #30363d;border-radius:6px;max-height:200px;overflow-y:auto;display:none;';
+      container.parentNode.insertBefore(panel, container.nextSibling);
+    }
+
+    fetch(`/api/agents/${encodeURIComponent(agentId)}/variants`)
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (!data.variants || data.variants.length === 0) {
+          panel.innerHTML = '<div style="color:#8b949e;font-size:12px;">No variant data available</div>';
+          panel.style.display = 'block';
+          return;
+        }
+        var html = '<div style="font-size:11px;font-weight:600;color:#c9d1d9;margin-bottom:8px;">Top Variants (' + data.totalTraces + ' traces)</div>';
+        var variants = data.variants.slice(0, 5);
+        for (var i = 0; i < variants.length; i++) {
+          var v = variants[i];
+          var sig = v.pathSignature.length > 60 ? v.pathSignature.slice(0, 57) + '...' : v.pathSignature;
+          html += '<div style="margin-bottom:4px;font-size:11px;">' +
+            '<span style="color:#58a6ff;font-weight:600;">' + v.percentage.toFixed(1) + '%</span>' +
+            ' <span style="color:#8b949e;">(n=' + v.count + ')</span> ' +
+            '<code style="color:#c9d1d9;font-size:10px;">' + escapeHtml(sig) + '</code></div>';
+        }
+        panel.innerHTML = html;
+        panel.style.display = 'block';
+      })
+      .catch(function() {
+        panel.style.display = 'none';
+      });
+  }
+
+  _loadProfileCard(agentId) {
+    var card = document.getElementById('agentProfileCard');
+    if (!card) {
+      var container = document.getElementById('cyProcessMap');
+      if (!container) return;
+      card = document.createElement('div');
+      card.id = 'agentProfileCard';
+      card.style.cssText = 'margin-bottom:12px;padding:10px 14px;background:#161b22;border:1px solid #30363d;border-radius:6px;display:none;font-size:12px;';
+      container.parentNode.insertBefore(card, container);
+    }
+
+    fetch(`/api/agents/${encodeURIComponent(agentId)}/profile`)
+      .then(function(r) {
+        if (r.status === 404) return null;
+        return r.json();
+      })
+      .then(function(profile) {
+        if (!profile) {
+          card.style.display = 'none';
+          return;
+        }
+        var html = '<div style="display:flex;gap:20px;flex-wrap:wrap;align-items:center;">';
+        html += '<span style="font-weight:600;color:#c9d1d9;">' + escapeHtml(profile.agentId) + '</span>';
+        html += '<span style="color:#8b949e;">Runs: <span style="color:#c9d1d9;">' + profile.totalRuns + '</span></span>';
+        html += '<span style="color:#8b949e;">Success: <span style="color:#3fb950;">' + profile.successCount + '</span></span>';
+        html += '<span style="color:#8b949e;">Failed: <span style="color:' + (profile.failureCount > 0 ? '#f85149' : '#8b949e') + ';">' + profile.failureCount + '</span></span>';
+        html += '<span style="color:#8b949e;">Failure Rate: <span style="color:' + (profile.failureRate > 0.3 ? '#f85149' : '#c9d1d9') + ';">' + (profile.failureRate * 100).toFixed(1) + '%</span></span>';
+        if (profile.knownBottlenecks && profile.knownBottlenecks.length > 0) {
+          html += '<span style="color:#8b949e;">Bottlenecks: <span style="color:#f97316;">' + profile.knownBottlenecks.slice(0, 3).join(', ') + '</span></span>';
+        }
+        html += '</div>';
+        card.innerHTML = html;
+        card.style.display = 'block';
+      })
+      .catch(function() {
+        card.style.display = 'none';
+      });
   }
 }
 
