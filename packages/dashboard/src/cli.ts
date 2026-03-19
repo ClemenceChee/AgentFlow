@@ -3,7 +3,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { type DashboardConfig, DashboardServer } from './server.js';
 
-const VERSION = '0.2.2';
+const VERSION = '0.3.0';
 
 function getLanAddress(): string | null {
   const interfaces = os.networkInterfaces();

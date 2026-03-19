@@ -1,15 +1,32 @@
-# AgentFlow Dashboard
+# AgentFlow Dashboard v0.3.0
 
-Real-time monitoring dashboard for AgentFlow - Visualize agent execution graphs and performance metrics in a beautiful web interface.
+Real-time monitoring dashboard for AgentFlow - Visualize agent execution graphs and performance metrics with comprehensive agent infrastructure monitoring.
 
 ## Features
 
-- **Real-time Monitoring** - Live updates via WebSocket connections
-- **Agent Performance Metrics** - Success rates, execution times, and activity tracking
-- **Execution Graph Visualization** - Interactive display of agent execution flows
-- **Multi-Agent System Overview** - Monitor entire agent ecosystems at once
+### **🎯 Universal Agent Monitoring**
+- **Alfred Integration** - Full Alfred worker and conversation monitoring
+- **OpenClaw Support** - OpenClaw gateway and agent trace ingestion
+- **Multi-Framework** - Supports LangChain, CrewAI, AutoGen, Mastra, and more
+- **Real-time Updates** - Live WebSocket connections with instant trace updates
+
+### **🛠️ Enhanced Process Health**
+- **Process Tagging** - Smart categorization (`main`, `agents`, `browser`, `context`, `exec`, `read`, `tool`, `think`, `user`, `write`)
+- **Tree View Structure** - Hierarchical process relationships with parent-child visualization
+- **Infrastructure Detection** - Automatic detection of Milvus, Redis, PostgreSQL, and vector databases
+- **Resource Monitoring** - CPU, memory, and uptime tracking for all processes
+
+### **💬 LLM Conversation Tracking**
+- **Session Parsing** - Full Alfred and OpenClaw conversation logs
+- **Token Usage** - OpenRouter, Claude, and other provider usage statistics
+- **Model Interactions** - Complete LLM request/response chains with metadata
+- **Activity Filtering** - Filter traces by agent activity type and behavior
+
+### **📊 Performance & Visualization**
+- **Interactive Graphs** - Cytoscape.js execution flow visualization
+- **Timeline View** - Waterfall execution timeline with duration metrics
+- **Success Metrics** - Agent performance, failure rates, and health monitoring
 - **Responsive Design** - Works on desktop and mobile devices
-- **Zero Configuration** - Auto-discovers trace files and starts monitoring
 
 ## Quick Start
 

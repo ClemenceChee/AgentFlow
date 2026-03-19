@@ -30,6 +30,7 @@ class AgentFlowDashboard {
     this.searchFilter = '';
     this.statusFilter = 'all';
     this.timeRangeFilter = 'all';
+    this.activityFilter = 'all';
     this.isLive = true;
 
     this.cy = null;
@@ -239,6 +240,15 @@ class AgentFlowDashboard {
       self.renderTraceList();
     });
 
+    // Activity filter dropdown (if exists)
+    var activityFilter = document.getElementById('activityFilter');
+    if (activityFilter) {
+      activityFilter.addEventListener('change', function(e) {
+        self.activityFilter = e.target.value;
+        self.renderTraceList();
+      });
+    }
+
     // Toolbar buttons
     document.getElementById('btnFit').addEventListener('click', function() {
       if (self.cy) self.cy.fit(50);
@@ -339,7 +349,8 @@ class AgentFlowDashboard {
     }
 
     var r = this.processHealth;
-    var hasContent = r.pidFile || r.systemd || r.workers || (r.orphans && r.orphans.length > 0) || (r.problems && r.problems.length > 0);
+    var hasContent = r.pidFile || r.systemd || r.workers || (r.orphans && r.orphans.length > 0) ||
+                     (r.osProcesses && r.osProcesses.length > 0) || (r.problems && r.problems.length > 0);
     if (!hasContent) {
       section.style.display = 'none';
       return;
@@ -348,6 +359,7 @@ class AgentFlowDashboard {
     section.style.display = '';
     var html = '<h4>Process Health</h4>';
 
+    // PID File section
     if (r.pidFile) {
       var pf = r.pidFile;
       var cls = pf.alive && pf.matchesProcess ? 'ok' : pf.stale ? 'bad' : 'warn';
@@ -358,6 +370,7 @@ class AgentFlowDashboard {
       html += '</span></div>';
     }
 
+    // Systemd section
     if (r.systemd) {
       var sd = r.systemd;
       var sdCls = sd.activeState === 'active' ? 'ok' : sd.failed ? 'bad' : 'warn';
@@ -369,47 +382,296 @@ class AgentFlowDashboard {
       html += '</span></div>';
     }
 
+    // Workers detailed view
     if (r.workers && r.workers.workers) {
-      html += '<div class="ph-row">';
+      html += '<div class="ph-section">';
       html += '<span class="ph-label">Workers</span>';
-      html += '<div class="worker-dots">';
+      html += '<div class="process-grid">';
       for (var i = 0; i < r.workers.workers.length; i++) {
         var worker = r.workers.workers[i];
-        var dotCls = worker.alive ? 'alive' : worker.stale ? 'stale' : 'unknown';
-        html += '<span class="worker-dot ' + dotCls + '" title="' + escapeHtml(worker.name) + ' (pid ' + (worker.pid || '-') + ') \u2014 ' + escapeHtml(worker.declaredStatus) + '"></span>';
-        html += '<span class="worker-dot-label">' + escapeHtml(worker.name) + '</span>';
+        var statusCls = worker.alive ? 'ok' : worker.stale ? 'bad' : 'warn';
+        html += '<div class="worker-card ' + statusCls + '">';
+        html += '<div class="worker-name">' + escapeHtml(worker.name) + '</div>';
+        html += '<div class="worker-details">';
+        html += '<span>PID: ' + (worker.pid || '-') + '</span>';
+        html += '<span>' + escapeHtml(worker.declaredStatus) + '</span>';
+        html += '</div></div>';
       }
       html += '</div></div>';
     }
 
-    if (r.orphans && r.orphans.length > 0) {
-      html += '<div class="ph-row" style="flex-direction:column;align-items:flex-start;gap:0.3rem;">';
-      html += '<span class="ph-label">Orphans (' + r.orphans.length + ')</span>';
-      html += '<table class="orphan-table"><thead><tr>';
-      html += '<th>PID</th><th>CPU%</th><th>MEM%</th><th>Uptime</th><th>Command</th>';
-      html += '</tr></thead><tbody>';
-      for (var j = 0; j < r.orphans.length; j++) {
-        var o = r.orphans[j];
-        html += '<tr>';
-        html += '<td>' + o.pid + '</td>';
-        html += '<td>' + escapeHtml(o.cpu) + '</td>';
-        html += '<td>' + escapeHtml(o.mem) + '</td>';
-        html += '<td>' + escapeHtml(o.elapsed) + '</td>';
-        html += '<td title="' + escapeHtml(o.cmdline || o.command) + '">' + escapeHtml(o.command) + '</td>';
-        html += '</tr>';
-      }
-      html += '</tbody></table></div>';
+    // Agent Services - categorize processes and build tree
+    var categorized = this.categorizeProcesses(r.osProcesses || []);
+
+    if (categorized.agents.length > 0) {
+      html += '<div class="ph-section">';
+      html += '<span class="ph-label">Agent Services (' + categorized.agents.length + ')</span>';
+
+      // Build process tree for agents
+      var agentTree = this.buildProcessTree(categorized.agents);
+      html += this.renderProcessTree(agentTree, 'agent');
+      html += '</div>';
     }
 
-    if (r.problems && r.problems.length > 0) {
-      html += '<ul class="problems-list">';
-      for (var k = 0; k < r.problems.length; k++) {
-        html += '<li>' + escapeHtml(r.problems[k]) + '</li>';
+    // Infrastructure processes
+    if (categorized.infrastructure.length > 0) {
+      html += '<div class="ph-section">';
+      html += '<span class="ph-label">Infrastructure (' + categorized.infrastructure.length + ')</span>';
+
+      // Build process tree for infrastructure
+      var infraTree = this.buildProcessTree(categorized.infrastructure);
+      html += this.renderProcessTree(infraTree, 'infrastructure');
+      html += '</div>';
+    }
+
+    // Orphaned processes (uncategorized)
+    var uncategorized = this.getUncategorizedOrphans(r.orphans || [], categorized);
+    if (uncategorized.length > 0) {
+      html += '<div class="ph-section">';
+      html += '<span class="ph-label">Orphans (' + uncategorized.length + ')</span>';
+      html += '<div class="orphan-list">';
+      for (var j = 0; j < uncategorized.length; j++) {
+        var o = uncategorized[j];
+        html += '<div class="orphan-row">';
+        html += '<span class="orphan-pid">PID ' + o.pid + '</span>';
+        html += '<span class="orphan-resources">CPU: ' + escapeHtml(o.cpu) + '% | MEM: ' + escapeHtml(o.mem) + '%</span>';
+        html += '<span class="orphan-cmd" title="' + escapeHtml(o.cmdline || o.command) + '">' +
+                escapeHtml((o.command || '').substring(0, 60)) + (o.command && o.command.length > 60 ? '...' : '') + '</span>';
+        html += '</div>';
       }
-      html += '</ul>';
+      html += '</div></div>';
+    }
+
+    // Problems section
+    if (r.problems && r.problems.length > 0) {
+      html += '<div class="ph-section problems-section">';
+      html += '<span class="ph-label problems">Issues</span>';
+      html += '<div class="problems-list">';
+      for (var k = 0; k < r.problems.length; k++) {
+        html += '<div class="problem-item">⚠️ ' + escapeHtml(r.problems[k]) + '</div>';
+      }
+      html += '</div></div>';
     }
 
     section.innerHTML = html;
+  }
+
+  // Helper to categorize processes with enhanced detection and tagging
+  categorizeProcesses(processes) {
+    var agents = [];
+    var infrastructure = [];
+
+    console.log('Categorizing', processes.length, 'processes');
+
+    for (var i = 0; i < processes.length; i++) {
+      var proc = processes[i];
+      var cmd = proc.command.toLowerCase();
+      var cmdline = (proc.cmdline || '').toLowerCase();
+      var service = this.detectAgentService(cmd, cmdline);
+      var component = this.detectInfrastructureComponent(cmd, cmdline);
+      var activityTag = this.getProcessActivityTag(cmd, cmdline, proc.pid);
+
+      if (component) {
+        infrastructure.push({
+          component: component,
+          pid: proc.pid,
+          cpu: proc.cpu,
+          mem: proc.mem,
+          elapsed: proc.elapsed,
+          ppid: proc.ppid,
+          cmdline: proc.cmdline || proc.command,
+          tag: activityTag
+        });
+        console.log('Detected infrastructure:', proc.pid, component, 'tag:', activityTag);
+      }
+      else if (service) {
+        agents.push({
+          service: service,
+          pid: proc.pid,
+          cpu: proc.cpu,
+          mem: proc.mem,
+          elapsed: proc.elapsed,
+          ppid: proc.ppid,
+          cmdline: proc.cmdline || proc.command,
+          tag: activityTag
+        });
+        console.log('Detected agent:', proc.pid, service, 'tag:', activityTag);
+      }
+    }
+
+    console.log('Categorization result:', {agents: agents.length, infrastructure: infrastructure.length});
+    return { agents: agents, infrastructure: infrastructure };
+  }
+
+  // Enhanced agent service detection
+  detectAgentService(cmd, cmdline) {
+    // AgentFlow processes
+    if (cmdline.includes('agentflow-dashboard')) return 'AgentFlow Dashboard';
+    if (cmdline.includes('agentflow live')) return 'AgentFlow Live';
+    if (cmdline.includes('agentflow') && cmdline.includes('server')) return 'AgentFlow Server';
+
+    // OpenClaw ecosystem
+    if (cmdline.includes('openclaw-gateway')) return 'OpenClaw Gateway';
+    if (cmdline.includes('openclaw-agent')) return 'OpenClaw Agent';
+    if (cmdline.includes('openclaw') && cmdline.includes('worker')) return 'OpenClaw Worker';
+    if (cmdline.includes('claw-gateway')) return 'Claw Gateway';
+
+    // Alfred workers and processes
+    if (cmdline.includes('alfred') && cmdline.includes('curator')) return 'Alfred Curator';
+    if (cmdline.includes('alfred') && cmdline.includes('janitor')) return 'Alfred Janitor';
+    if (cmdline.includes('alfred') && cmdline.includes('distiller')) return 'Alfred Distiller';
+    if (cmdline.includes('alfred') && cmdline.includes('surveyor')) return 'Alfred Surveyor';
+    if (cmdline.includes('alfred') && (cmdline.includes('worker') || cmdline.includes('daemon'))) return 'Alfred Worker';
+    if (cmdline.includes('.alfred')) return 'Alfred Process';
+
+    // AI/ML agent frameworks
+    if (cmdline.includes('langchain') && cmdline.includes('agent')) return 'LangChain Agent';
+    if (cmdline.includes('crewai')) return 'CrewAI Agent';
+    if (cmdline.includes('autogen')) return 'AutoGen Agent';
+    if (cmdline.includes('mastra')) return 'Mastra Agent';
+
+    // Node.js/Python AI processes
+    if ((cmd.includes('node') || cmd.includes('python')) &&
+        (cmdline.includes('agent') || cmdline.includes('ai') || cmdline.includes('llm'))) {
+      return 'AI Agent Process';
+    }
+
+    // Temporal workflow processes
+    if (cmdline.includes('temporal') && (cmdline.includes('worker') || cmdline.includes('agent'))) {
+      return 'Temporal Agent';
+    }
+
+    // Generic agent indicators
+    if (cmdline.includes('agent') &&
+        (cmdline.includes('server') || cmdline.includes('worker') || cmdline.includes('daemon'))) {
+      return 'Agent Service';
+    }
+
+    return null;
+  }
+
+  // Enhanced infrastructure component detection
+  detectInfrastructureComponent(cmd, cmdline) {
+    // Debug logging
+    if (cmdline.includes('milvus')) {
+      console.log('Found Milvus process:', cmdline.substring(0, 100));
+    }
+
+    // Vector databases
+    if (cmd.includes('milvus') || cmdline.includes('milvus')) return 'Milvus Vector DB';
+    if (cmd.includes('weaviate') || cmdline.includes('weaviate')) return 'Weaviate Vector DB';
+    if (cmd.includes('pinecone') || cmdline.includes('pinecone')) return 'Pinecone Vector DB';
+    if (cmd.includes('qdrant') || cmdline.includes('qdrant')) return 'Qdrant Vector DB';
+
+    // Traditional databases
+    if (cmd.includes('redis') || cmdline.includes('redis')) return 'Redis Cache';
+    if (cmd.includes('postgres') || cmdline.includes('postgres')) return 'PostgreSQL';
+    if (cmd.includes('mongodb') || cmdline.includes('mongo')) return 'MongoDB';
+
+    // Message queues and workflows
+    if (cmdline.includes('temporal') && cmdline.includes('server')) return 'Temporal Server';
+    if (cmd.includes('rabbitmq') || cmdline.includes('rabbitmq')) return 'RabbitMQ';
+    if (cmd.includes('kafka') || cmdline.includes('kafka')) return 'Apache Kafka';
+
+    // Observability
+    if (cmdline.includes('prometheus')) return 'Prometheus';
+    if (cmdline.includes('grafana')) return 'Grafana';
+    if (cmdline.includes('jaeger')) return 'Jaeger Tracing';
+
+    // Container/orchestration
+    if (cmd.includes('docker') && !cmdline.includes('agent')) return 'Docker';
+    if (cmd.includes('k3s') || cmd.includes('kubectl')) return 'Kubernetes';
+
+    return null;
+  }
+
+  // Get orphans that weren't categorized
+  getUncategorizedOrphans(orphans, categorized) {
+    var allCategorizedPids = categorized.agents.concat(categorized.infrastructure).map(function(p) { return p.pid; });
+    return orphans.filter(function(o) { return allCategorizedPids.indexOf(o.pid) === -1; });
+  }
+
+  // Build hierarchical process tree from flat process list
+  buildProcessTree(processes) {
+    var tree = [];
+    var processMap = {};
+
+    // Create a map of all processes
+    for (var i = 0; i < processes.length; i++) {
+      var proc = processes[i];
+      processMap[proc.pid] = {
+        process: proc,
+        children: []
+      };
+    }
+
+    // Build parent-child relationships
+    for (var j = 0; j < processes.length; j++) {
+      var proc = processes[j];
+      if (proc.ppid && processMap[proc.ppid]) {
+        // This process has a parent in our categorized list
+        processMap[proc.ppid].children.push(processMap[proc.pid]);
+      } else {
+        // This is a root process (no parent in our list)
+        tree.push(processMap[proc.pid]);
+      }
+    }
+
+    return tree;
+  }
+
+  // Render process tree with indentation
+  renderProcessTree(tree, type) {
+    var html = '<div class="process-tree">';
+
+    for (var i = 0; i < tree.length; i++) {
+      html += this.renderProcessNode(tree[i], type, 0);
+    }
+
+    html += '</div>';
+    return html;
+  }
+
+  // Render individual process node recursively
+  renderProcessNode(node, type, depth) {
+    var proc = node.process;
+    var indent = 'padding-left: ' + (depth * 20) + 'px;';
+    var cpuNum = parseFloat(proc.cpu) || 0;
+    var cpuCls = type === 'agent'
+      ? (cpuNum > 50 ? 'high' : cpuNum > 10 ? 'medium' : 'low')
+      : (cpuNum > 20 ? 'high' : cpuNum > 5 ? 'medium' : 'low');
+
+    var serviceName = type === 'agent' ? proc.service : proc.component;
+
+    var html = '<div class="process-node ' + type + '-node ' + cpuCls + '" style="' + indent + '">';
+
+    // Process icon and name
+    if (depth > 0) {
+      html += '<span class="tree-connector">└─ </span>';
+    }
+    html += '<div class="process-main">';
+    html += '<div class="process-name" title="' + escapeHtml(proc.cmdline) + '">' + escapeHtml(serviceName) + '</div>';
+
+    // Add activity tag
+    if (proc.tag && proc.tag !== 'other') {
+      html += '<span class="activity-tag tag-' + proc.tag + '">' + proc.tag + '</span>';
+    }
+
+    html += '<div class="process-metrics">';
+    html += '<span class="pid-badge">PID: ' + proc.pid + '</span>';
+    html += '<span class="cpu-badge">CPU: ' + escapeHtml(proc.cpu) + '%</span>';
+    html += '<span class="mem-badge">MEM: ' + escapeHtml(proc.mem) + '%</span>';
+    html += '<span class="time-badge">Up: ' + escapeHtml(proc.elapsed) + '</span>';
+    html += '</div>';
+    html += '</div>';
+    html += '</div>';
+
+    // Render children recursively
+    for (var i = 0; i < node.children.length; i++) {
+      html += this.renderProcessNode(node.children[i], type, depth + 1);
+    }
+
+    return html;
   }
 
   // ---------------------------------------------------------------------------
@@ -453,6 +715,14 @@ class AgentFlowDashboard {
       var statusTarget = this.statusFilter;
       filtered = filtered.filter(function(t) {
         return self.getTraceStatus(t) === statusTarget;
+      });
+    }
+
+    // Activity filter
+    if (this.activityFilter && this.activityFilter !== 'all') {
+      var activityTarget = this.activityFilter;
+      filtered = filtered.filter(function(t) {
+        return self.getTraceActivity(t) === activityTarget;
       });
     }
 
@@ -1529,6 +1799,112 @@ class AgentFlowDashboard {
     if (this.ws) this.ws.close();
     this.reconnectAttempts = 0;
     this.connectWebSocket();
+  }
+
+  // Categorize traces by activity type
+  getTraceActivity(trace) {
+    if (!trace) return 'unknown';
+
+    var agentId = (trace.agentId || '').toLowerCase();
+    var name = (trace.name || '').toLowerCase();
+    var filename = (trace.filename || '').toLowerCase();
+
+    // Check for specific agent types
+    if (agentId.includes('main') || name.includes('main')) return 'main';
+    if (agentId.includes('agent') || name.includes('agent')) return 'agents';
+
+    // Check filename patterns
+    if (filename.includes('browser') || name.includes('browser')) return 'browser';
+    if (filename.includes('context') || name.includes('context')) return 'context';
+
+    // Check for activity types in trace content
+    var nodes = trace.nodes || {};
+    var nodeTypes = [];
+
+    if (nodes instanceof Map) {
+      nodes.forEach(function(node) {
+        if (node.type) nodeTypes.push(node.type);
+      });
+    } else if (typeof nodes === 'object') {
+      for (var nodeId in nodes) {
+        var node = nodes[nodeId];
+        if (node && node.type) nodeTypes.push(node.type);
+      }
+    }
+
+    // Categorize based on node types and content
+    if (nodeTypes.includes('tool') || nodeTypes.includes('exec')) return 'exec';
+    if (nodeTypes.includes('read') || name.includes('read')) return 'read';
+    if (nodeTypes.includes('write') || name.includes('write')) return 'write';
+    if (nodeTypes.includes('think') || name.includes('think')) return 'think';
+    if (nodeTypes.includes('user') || name.includes('user')) return 'user';
+    if (nodeTypes.includes('tool')) return 'tool';
+
+    return 'other';
+  }
+
+  // Tag processes by activity type
+  getProcessActivityTag(cmd, cmdline, pid) {
+    // Main processes (primary orchestrators)
+    if (cmdline.includes('main') || cmdline.includes('orchestrator') ||
+        cmdline.includes('coordinator') || cmdline.includes('master')) {
+      return 'main';
+    }
+
+    // Agent processes
+    if (cmdline.includes('agent') && !cmdline.includes('browser')) {
+      return 'agents';
+    }
+
+    // Browser/UI processes
+    if (cmdline.includes('browser') || cmdline.includes('chrome') ||
+        cmdline.includes('firefox') || cmdline.includes('dashboard')) {
+      return 'browser';
+    }
+
+    // Context/memory processes
+    if (cmdline.includes('context') || cmdline.includes('memory') ||
+        cmdline.includes('cache') || cmdline.includes('embedding')) {
+      return 'context';
+    }
+
+    // Execution processes
+    if (cmdline.includes('exec') || cmdline.includes('runner') ||
+        cmdline.includes('executor') || cmdline.includes('worker')) {
+      return 'exec';
+    }
+
+    // Read operations
+    if (cmdline.includes('read') || cmdline.includes('scanner') ||
+        cmdline.includes('parser') || cmdline.includes('loader')) {
+      return 'read';
+    }
+
+    // Tool processes
+    if (cmdline.includes('tool') || cmdline.includes('utility') ||
+        cmdline.includes('helper') || cmdline.includes('script')) {
+      return 'tool';
+    }
+
+    // Thinking/AI processes
+    if (cmdline.includes('think') || cmdline.includes('reason') ||
+        cmdline.includes('llm') || cmdline.includes('model')) {
+      return 'think';
+    }
+
+    // User interface processes
+    if (cmdline.includes('ui') || cmdline.includes('frontend') ||
+        cmdline.includes('interface') || cmdline.includes('client')) {
+      return 'user';
+    }
+
+    // Write/output processes
+    if (cmdline.includes('write') || cmdline.includes('output') ||
+        cmdline.includes('export') || cmdline.includes('save')) {
+      return 'write';
+    }
+
+    return 'other';
   }
 }
 
