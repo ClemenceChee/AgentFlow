@@ -33,14 +33,18 @@ agentflow run -- python my_agent.py
 ### Web Dashboard (Recommended)
 Rich web interface with real-time WebSocket updates:
 ```bash
-agentflow-dashboard --traces ./traces --data-dir ./data --port 3000
+agentflow-dashboard --traces ./traces --data-dir ./data --host 0.0.0.0 --port 3000
 # Open http://localhost:3000
 ```
-- Agent stats, success rates, recent executions
-- **Process health panel** — PID, systemd state, worker liveness dots, orphan detection
-- Click-to-filter by agent
-- Auto-refreshes via WebSocket — no polling, no flicker
-- Responsive dark theme (desktop + mobile)
+- **7 tabs**: Timeline, Metrics, Dependency Graph, Error Heatmap, State Machine, Summary, Transcript
+- **Cytoscape.js interactive graph** — execution trees with nodes colored by status, shaped by type, clickable for details
+- **Session timeline** — color-coded event stream with type badges, duration bars, token counts
+- **Transcript view** — chat-bubble UI for session conversations (user/assistant/tool/thinking)
+- **Token & cost tracking** — per-session token usage and USD cost from LLM API calls
+- **Multi-directory scanning** — watches JSON traces + JSONL session logs across multiple directories
+- **Process health panel** — PID files, systemd state, worker liveness dots, orphan detection (excludes child processes)
+- **Auto-refreshes via WebSocket** — no polling, no flicker
+- **Dark GitHub theme** — responsive (desktop + mobile)
 
 ### Terminal Dashboard
 Fast, lightweight terminal interface for SSH and headless use:

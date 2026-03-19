@@ -91,12 +91,350 @@ export class TraceWatcher extends EventEmitter {
     console.log(`Scanned ${this.allWatchDirs.length} directories, loaded ${this.traces.size} items from ${totalFiles} files`);
   }
 
-  /** Load a .json trace or .jsonl session file. */
+  /** Load a .json trace, .jsonl session file, or .log file. */
   private loadFile(filePath: string): boolean {
     if (filePath.endsWith('.jsonl')) {
       return this.loadSessionFile(filePath);
     }
+    if (filePath.endsWith('.log') || filePath.endsWith('.trace')) {
+      return this.loadLogFile(filePath);
+    }
     return this.loadTraceFile(filePath);
+  }
+
+  private loadLogFile(filePath: string): boolean {
+    try {
+      const content = fs.readFileSync(filePath, 'utf8');
+      const filename = path.basename(filePath);
+      const stats = fs.statSync(filePath);
+
+      // Universal log parsing - detect any agent activities
+      const traces = this.parseUniversalLog(content, filename, filePath);
+
+      for (let i = 0; i < traces.length; i++) {
+        const trace = traces[i];
+        trace.filename = filename;
+        trace.lastModified = stats.mtime.getTime();
+        trace.sourceType = 'trace';
+        trace.sourceDir = path.dirname(filePath);
+
+        // Create unique key for each trace from the same file
+        const key = traces.length === 1 ? this.traceKey(filePath) : `${this.traceKey(filePath)}-${i}`;
+        this.traces.set(key, trace as WatchedTrace);
+      }
+
+      return traces.length > 0;
+    } catch (error) {
+      console.error(`Error loading log file ${filePath}:`, error);
+      return false;
+    }
+  }
+
+  /** Universal log parser - detects agent activities from any system */
+  private parseUniversalLog(content: string, filename: string, filePath: string): WatchedTrace[] {
+    const lines = content.split('\n').filter(line => line.trim());
+    const activities = new Map<string, any>();
+
+    // Pattern detection - identify structured entries
+    for (const line of lines) {
+      const activity = this.detectActivityPattern(line);
+      if (!activity) continue;
+
+      const sessionId = this.extractSessionIdentifier(activity);
+
+      if (!activities.has(sessionId)) {
+        activities.set(sessionId, {
+          id: sessionId,
+          rootNodeId: '',
+          agentId: this.detectAgentIdentifier(activity, filename, filePath),
+          name: this.generateActivityName(activity, sessionId),
+          trigger: this.detectTrigger(activity),
+          startTime: activity.timestamp,
+          endTime: activity.timestamp,
+          status: 'completed',
+          nodes: {},
+          edges: [],
+          events: [],
+          metadata: { sessionId, source: filename }
+        });
+      }
+
+      const session = activities.get(sessionId);
+      this.addActivityNode(session, activity);
+
+      // Update session end time
+      if (activity.timestamp > session.endTime) {
+        session.endTime = activity.timestamp;
+      }
+    }
+
+    const traces = Array.from(activities.values()).filter(session =>
+      Object.keys(session.nodes).length > 0
+    );
+
+    // If no structured activities found, create a basic file trace
+    if (traces.length === 0) {
+      const stats = fs.statSync(filePath);
+      traces.push({
+        id: '',
+        rootNodeId: 'root',
+        nodes: {
+          'root': {
+            id: 'root',
+            type: 'log-file',
+            name: filename,
+            status: 'completed',
+            startTime: stats.mtime.getTime(),
+            endTime: stats.mtime.getTime(),
+            metadata: { lineCount: lines.length, path: filePath }
+          }
+        },
+        edges: [],
+        startTime: stats.mtime.getTime(),
+        endTime: stats.mtime.getTime(),
+        status: 'completed',
+        trigger: 'file',
+        agentId: this.extractAgentFromPath(filePath),
+        events: [],
+        metadata: { type: 'file-trace' }
+      });
+    }
+
+    return traces;
+  }
+
+  /** Detect activity patterns in log lines using universal heuristics */
+  private detectActivityPattern(line: string): any | null {
+    // Try different structured log formats
+
+    // 1. Colored/formatted logs (like Alfred/systemd)
+    let timestamp = this.extractTimestamp(line);
+    let level = this.extractLogLevel(line);
+    let action = this.extractAction(line);
+    let kvPairs = this.extractKeyValuePairs(line);
+
+    // 2. JSON logs
+    if (!timestamp) {
+      const jsonMatch = line.match(/\{.*\}/);
+      if (jsonMatch) {
+        try {
+          const parsed = JSON.parse(jsonMatch[0]);
+          timestamp = this.parseTimestamp(parsed.timestamp || parsed.time || parsed.ts) || Date.now();
+          level = parsed.level || parsed.severity || 'info';
+          action = parsed.action || parsed.event || parsed.message || '';
+          kvPairs = parsed;
+        } catch {}
+      }
+    }
+
+    // 3. Key=value format
+    if (!timestamp) {
+      const kvMatches = line.match(/(\w+)=([^\s]+)/g);
+      if (kvMatches && kvMatches.length >= 2) {
+        const pairs: any = {};
+        kvMatches.forEach(match => {
+          const [key, value] = match.split('=', 2);
+          pairs[key] = this.parseValue(value);
+        });
+        timestamp = this.parseTimestamp(pairs.timestamp || pairs.time) || Date.now();
+        level = pairs.level || 'info';
+        action = pairs.action || pairs.event || '';
+        kvPairs = pairs;
+      }
+    }
+
+    // 4. Standard syslog/application logs
+    if (!timestamp) {
+      const logMatch = line.match(/^(\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}:\d{2}[.\d]*Z?)\s+(\w+)?\s*:?\s*(.+)/);
+      if (logMatch) {
+        timestamp = new Date(logMatch[1]).getTime();
+        level = logMatch[2] || 'info';
+        action = logMatch[3] || '';
+      }
+    }
+
+    if (!timestamp) return null;
+
+    return {
+      timestamp,
+      level: level?.toLowerCase() || 'info',
+      action,
+      component: this.detectComponent(action, kvPairs),
+      operation: this.detectOperation(action, kvPairs),
+      ...kvPairs
+    };
+  }
+
+  private extractTimestamp(line: string): number | null {
+    // Colored timestamp format (Alfred-style)
+    const coloredMatch = line.match(/^\[2m(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z)\[0m/);
+    if (coloredMatch) return new Date(coloredMatch[1]).getTime();
+
+    // ISO timestamp
+    const isoMatch = line.match(/(\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}:\d{2}[.\d]*Z?)/);
+    if (isoMatch) return new Date(isoMatch[1]).getTime();
+
+    return null;
+  }
+
+  private extractLogLevel(line: string): string | null {
+    // Colored level format
+    const coloredMatch = line.match(/\[\[(\d+)m\[\[1m(\w+)\s*\[0m\]/);
+    if (coloredMatch) return coloredMatch[2].toLowerCase();
+
+    // Standard level formats
+    const levelMatch = line.match(/\b(debug|info|warn|warning|error|fatal|trace)\b/i);
+    return levelMatch ? levelMatch[1].toLowerCase() : null;
+  }
+
+  private extractAction(line: string): string {
+    // Colored action format
+    const coloredMatch = line.match(/\[1m([^\[]+?)\s*\[0m/);
+    if (coloredMatch) return coloredMatch[1].trim();
+
+    // After level, extract the main message
+    const afterLevel = line.replace(/^.*?(debug|info|warn|warning|error|fatal|trace)\s*:?\s*/i, '');
+    return afterLevel.split(' ')[0] || '';
+  }
+
+  private extractKeyValuePairs(line: string): any {
+    const pairs: any = {};
+
+    // Colored key-value format
+    const coloredRegex = /\[36m(\w+)\[0m=\[35m([^\[]+?)\[0m/g;
+    let match;
+    while ((match = coloredRegex.exec(line)) !== null) {
+      pairs[match[1]] = this.parseValue(match[2]);
+    }
+
+    // Standard key=value format
+    if (Object.keys(pairs).length === 0) {
+      const kvRegex = /(\w+)=([^\s]+)/g;
+      while ((match = kvRegex.exec(line)) !== null) {
+        pairs[match[1]] = this.parseValue(match[2]);
+      }
+    }
+
+    return pairs;
+  }
+
+  private parseValue(value: string): any {
+    if (value.match(/^\d+$/)) return parseInt(value);
+    if (value.match(/^\d+\.\d+$/)) return parseFloat(value);
+    if (value.startsWith("'") && value.endsWith("'")) return value.slice(1, -1);
+    if (value.startsWith('"') && value.endsWith('"')) return value.slice(1, -1);
+    return value;
+  }
+
+  private parseTimestamp(value: any): number | null {
+    if (!value) return null;
+    if (typeof value === 'number') return value;
+    try {
+      return new Date(value).getTime();
+    } catch {
+      return null;
+    }
+  }
+
+  private detectComponent(action: string, kvPairs: any): string {
+    // Extract component from action (e.g., 'daemon.starting' -> 'daemon')
+    if (action.includes('.')) return action.split('.')[0];
+
+    // Look in key-value pairs
+    if (kvPairs.component) return kvPairs.component;
+    if (kvPairs.service) return kvPairs.service;
+    if (kvPairs.module) return kvPairs.module;
+
+    return 'unknown';
+  }
+
+  private detectOperation(action: string, kvPairs: any): string {
+    // Extract operation from action (e.g., 'daemon.starting' -> 'starting')
+    if (action.includes('.')) return action.split('.').slice(1).join('.');
+
+    // Look for operation indicators
+    if (kvPairs.operation) return kvPairs.operation;
+    if (kvPairs.method) return kvPairs.method;
+
+    return action || 'activity';
+  }
+
+  private extractSessionIdentifier(activity: any): string {
+    // Look for session/run/transaction IDs
+    return activity.run_id || activity.session_id || activity.request_id ||
+           activity.trace_id || activity.sweep_id || activity.transaction_id ||
+           'default';
+  }
+
+  private detectAgentIdentifier(activity: any, filename: string, filePath: string): string {
+    // Component-based agent ID
+    if (activity.component !== 'unknown') {
+      // If it looks like a sub-component, create agent-component format
+      const pathAgent = this.extractAgentFromPath(filePath);
+      if (pathAgent !== activity.component) {
+        return `${pathAgent}-${activity.component}`;
+      }
+      return activity.component;
+    }
+
+    return this.extractAgentFromPath(filePath);
+  }
+
+  private extractAgentFromPath(filePath: string): string {
+    const filename = path.basename(filePath, path.extname(filePath));
+    const pathParts = filePath.split(path.sep);
+
+    // Look for agent-related terms in path
+    for (const part of pathParts.reverse()) {
+      if (part.match(/agent|worker|service|daemon|bot|ai|llm/i)) {
+        return part;
+      }
+    }
+
+    return filename;
+  }
+
+  private generateActivityName(activity: any, sessionId: string): string {
+    const component = activity.component !== 'unknown' ? activity.component : 'Activity';
+    const operation = activity.operation !== 'activity' ? `: ${activity.operation}` : '';
+    return `${component}${operation} (${sessionId})`;
+  }
+
+  private detectTrigger(activity: any): string {
+    if (activity.trigger) return activity.trigger;
+    if (activity.method && activity.url) return 'api-call';
+    if (activity.operation?.includes('start')) return 'startup';
+    if (activity.operation?.includes('invoke')) return 'invocation';
+    return 'event';
+  }
+
+  private addActivityNode(session: any, activity: any): void {
+    const nodeId = `${activity.component}-${activity.operation}-${activity.timestamp}`;
+
+    const node = {
+      id: nodeId,
+      type: activity.component,
+      name: `${activity.component}: ${activity.operation}`,
+      status: this.getUniversalNodeStatus(activity),
+      startTime: activity.timestamp,
+      endTime: activity.timestamp,
+      metadata: activity
+    };
+
+    session.nodes[nodeId] = node;
+
+    // Set root node if not set
+    if (!session.rootNodeId) {
+      session.rootNodeId = nodeId;
+    }
+  }
+
+  private getUniversalNodeStatus(activity: any): string {
+    if (activity.level === 'error' || activity.level === 'fatal') return 'failed';
+    if (activity.level === 'warn' || activity.level === 'warning') return 'warning';
+    if (activity.operation?.match(/start|begin|init/i)) return 'running';
+    if (activity.operation?.match(/complete|finish|end|done/i)) return 'completed';
+    return 'completed';
   }
 
   private loadTraceFile(filePath: string): boolean {
@@ -545,7 +883,7 @@ export class TraceWatcher extends EventEmitter {
       });
 
       watcher.on('add', (filePath) => {
-        if (filePath.endsWith('.json') || filePath.endsWith('.jsonl')) {
+        if (filePath.endsWith('.json') || filePath.endsWith('.jsonl') || filePath.endsWith('.log') || filePath.endsWith('.trace')) {
           console.log(`New file: ${path.basename(filePath)}`);
           if (this.loadFile(filePath)) {
             const key = this.traceKey(filePath);
@@ -558,7 +896,7 @@ export class TraceWatcher extends EventEmitter {
       });
 
       watcher.on('change', (filePath) => {
-        if (filePath.endsWith('.json') || filePath.endsWith('.jsonl')) {
+        if (filePath.endsWith('.json') || filePath.endsWith('.jsonl') || filePath.endsWith('.log') || filePath.endsWith('.trace')) {
           if (this.loadFile(filePath)) {
             const key = this.traceKey(filePath);
             const trace = this.traces.get(key);
@@ -570,7 +908,7 @@ export class TraceWatcher extends EventEmitter {
       });
 
       watcher.on('unlink', (filePath) => {
-        if (filePath.endsWith('.json') || filePath.endsWith('.jsonl')) {
+        if (filePath.endsWith('.json') || filePath.endsWith('.jsonl') || filePath.endsWith('.log') || filePath.endsWith('.trace')) {
           const key = this.traceKey(filePath);
           this.traces.delete(key);
           this.emit('trace-removed', key);
