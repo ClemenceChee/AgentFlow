@@ -1,4 +1,4 @@
-# AgentFlow Dashboard v0.4.0
+# AgentFlow Dashboard v0.5.0
 
 Real-time monitoring dashboard for AI agent systems. Visualize execution graphs, session transcripts, and performance metrics from any agent framework.
 
@@ -9,7 +9,7 @@ Real-time monitoring dashboard for AI agent systems. Visualize execution graphs,
 - **Auto-Discovery** - Recursively scans directories for trace files, watches for new files in real-time
 - **Framework Agnostic** - Works with any agent system that produces JSON traces or JSONL session logs
 
-### 7 Interactive Tabs
+### 9 Interactive Tabs
 - **Timeline** - Waterfall execution timeline with duration bars and status icons
 - **Transcript** - Full conversation view: user messages, assistant responses, thinking blocks, tool calls
 - **Graph** - Interactive Cytoscape.js execution flow visualization
@@ -17,6 +17,22 @@ Real-time monitoring dashboard for AI agent systems. Visualize execution graphs,
 - **Heatmap** - Error distribution across recent traces
 - **State Machine** - Execution state flow diagram with node counts
 - **Summary** - Auto-generated text summary with recommendations
+- **Agent Timeline** - Gantt chart of all executions for an agent with expandable sub-activities
+- **Process Map** - Process mining graph showing activity flows, transition frequencies, and failure rates
+
+### Agent Timeline (Gantt Chart)
+- All executions for an agent on a shared time axis
+- Click any execution row to expand and see nested sub-activities
+- Color-coded bars by type: user, assistant, thinking, tool call, tool result
+- Trigger badges (cron, message, worker) and status indicators
+- Up to 50 most recent executions per agent
+
+### Process Map (Process Mining)
+- Directed graph of activity flows aggregated across all executions
+- Node size proportional to frequency, edge width proportional to transition count
+- Color-coded by failure rate (green → yellow → red)
+- Click nodes for occurrence count, frequency, avg duration, fail rate
+- Filters rare activities to keep the graph readable
 
 ### Session Transcripts
 - Chat-bubble UI for JSONL sessions
@@ -134,6 +150,8 @@ await dashboard.start();
 | GET | `/api/traces/:filename` | Full trace detail (nodes, events, token usage) |
 | GET | `/api/traces/:filename/events` | Session events and token usage |
 | GET | `/api/agents` | All discovered agents with metrics |
+| GET | `/api/agents/:agentId/timeline` | Gantt data: executions with nested activities |
+| GET | `/api/agents/:agentId/process-graph` | Process mining graph: activity transitions |
 | GET | `/api/stats` | Global performance statistics |
 | GET | `/api/stats/:agentId` | Per-agent statistics |
 | GET | `/api/process-health` | Running process audit |
