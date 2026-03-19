@@ -4,6 +4,16 @@ import * as path from 'node:path';
 import type { ExecutionGraph, ExecutionNode } from 'agentflow-core';
 import { loadGraph } from 'agentflow-core';
 import chokidar from 'chokidar';
+import {
+  detectActivityPattern,
+  detectTrigger,
+  extractSessionIdentifier,
+  getUniversalNodeStatus,
+  openClawSessionIdToAgent,
+  parseTimestamp,
+  parseValue,
+  stripAnsi,
+} from './parsers/index.js';
 
 /** Parsed event from a JSONL session for rich timeline rendering. */
 export interface SessionEvent {
@@ -236,10 +246,10 @@ export class TraceWatcher extends EventEmitter {
 
     // Pattern detection - identify structured entries
     for (const line of lines) {
-      const activity = this.detectActivityPattern(line);
+      const activity = detectActivityPattern(line);
       if (!activity) continue;
 
-      const sessionId = this.extractSessionIdentifier(activity);
+      const sessionId = extractSessionIdentifier(activity);
 
       if (!activities.has(sessionId)) {
         activities.set(sessionId, {
@@ -247,7 +257,7 @@ export class TraceWatcher extends EventEmitter {
           rootNodeId: '',
           agentId: this.detectAgentIdentifier(activity, filename, filePath),
           name: this.generateActivityName(activity, sessionId),
-          trigger: this.detectTrigger(activity),
+          trigger: detectTrigger(activity),
           startTime: activity.timestamp,
           endTime: activity.timestamp,
           status: 'completed',
@@ -329,183 +339,6 @@ export class TraceWatcher extends EventEmitter {
     return traces;
   }
 
-  /** Detect activity patterns in log lines using universal heuristics */
-  private detectActivityPattern(line: string): any | null {
-    // Try different structured log formats
-
-    // 1. Colored/formatted logs (like Alfred/systemd)
-    let timestamp = this.extractTimestamp(line);
-    let level = this.extractLogLevel(line);
-    let action = this.extractAction(line);
-    let kvPairs = this.extractKeyValuePairs(line);
-
-    // 2. JSON logs
-    if (!timestamp) {
-      const jsonMatch = line.match(/\{.*\}/);
-      if (jsonMatch) {
-        try {
-          const parsed = JSON.parse(jsonMatch[0]);
-          timestamp =
-            this.parseTimestamp(parsed.timestamp || parsed.time || parsed.ts) || Date.now();
-          level = parsed.level || parsed.severity || 'info';
-          action = parsed.action || parsed.event || parsed.message || '';
-          kvPairs = parsed;
-        } catch {}
-      }
-    }
-
-    // 3. Key=value format
-    if (!timestamp) {
-      const kvMatches = line.match(/(\w+)=([^\s]+)/g);
-      if (kvMatches && kvMatches.length >= 2) {
-        const pairs: any = {};
-        kvMatches.forEach((match) => {
-          const [key, value] = match.split('=', 2);
-          pairs[key] = this.parseValue(value);
-        });
-        timestamp = this.parseTimestamp(pairs.timestamp || pairs.time) || Date.now();
-        level = pairs.level || 'info';
-        action = pairs.action || pairs.event || '';
-        kvPairs = pairs;
-      }
-    }
-
-    // 4. Standard syslog/application logs
-    if (!timestamp) {
-      const logMatch = line.match(
-        /^(\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}:\d{2}[.\d]*Z?)\s+(\w+)?\s*:?\s*(.+)/,
-      );
-      if (logMatch) {
-        timestamp = new Date(logMatch[1]).getTime();
-        level = logMatch[2] || 'info';
-        action = logMatch[3] || '';
-      }
-    }
-
-    if (!timestamp) return null;
-
-    return {
-      timestamp,
-      level: level?.toLowerCase() || 'info',
-      action,
-      component: this.detectComponent(action, kvPairs),
-      operation: this.detectOperation(action, kvPairs),
-      ...kvPairs,
-    };
-  }
-
-  /** Strip ANSI escape codes from a string. */
-  private stripAnsi(str: string): string {
-    return str.replace(/\x1b\[[0-9;]*m/g, '');
-  }
-
-  private extractTimestamp(line: string): number | null {
-    // Strip ANSI codes first for reliable matching
-    const clean = this.stripAnsi(line);
-
-    // ISO timestamp
-    const isoMatch = clean.match(/(\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}:\d{2}[.\d]*Z?)/);
-    if (isoMatch) return new Date(isoMatch[1]).getTime();
-
-    return null;
-  }
-
-  private extractLogLevel(line: string): string | null {
-    const clean = this.stripAnsi(line);
-
-    // Standard level formats (match word boundaries)
-    const levelMatch = clean.match(/\b(debug|info|warn|warning|error|fatal|trace)\b/i);
-    return levelMatch ? levelMatch[1].trim().toLowerCase() : null;
-  }
-
-  private extractAction(line: string): string {
-    const clean = this.stripAnsi(line);
-
-    // Alfred structlog format: "TIMESTAMP [level] action.name  key=val key=val"
-    // After stripping: "2026-03-18T... [info     ] autofix.infer_name  field=name ..."
-    const actionMatch = clean.match(/\]\s+(\S+)/);
-    if (actionMatch) return actionMatch[1].trim();
-
-    // After level, extract the main message
-    const afterLevel = clean.replace(
-      /^.*?(debug|info|warn|warning|error|fatal|trace)\s*\]?\s*/i,
-      '',
-    );
-    return afterLevel.split(/\s+/)[0] || '';
-  }
-
-  private extractKeyValuePairs(line: string): any {
-    const pairs: any = {};
-    const clean = this.stripAnsi(line);
-
-    // key=value or key='quoted value' format
-    const kvRegex = /(\w+)=('(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|\S+)/g;
-    let match: RegExpExecArray | null;
-    while ((match = kvRegex.exec(clean)) !== null) {
-      // Skip timestamp and level fields
-      if (match[1] === 'Z' || match[1] === 'm') continue;
-      pairs[match[1]] = this.parseValue(match[2]);
-    }
-
-    return pairs;
-  }
-
-  private parseValue(value: string): any {
-    if (value.match(/^\d+$/)) return parseInt(value, 10);
-    if (value.match(/^\d+\.\d+$/)) return parseFloat(value);
-    if (value.startsWith("'") && value.endsWith("'")) return value.slice(1, -1);
-    if (value.startsWith('"') && value.endsWith('"')) return value.slice(1, -1);
-    return value;
-  }
-
-  private parseTimestamp(value: any): number | null {
-    if (!value) return null;
-    if (typeof value === 'number') return value;
-    try {
-      return new Date(value).getTime();
-    } catch {
-      return null;
-    }
-  }
-
-  private detectComponent(action: string, kvPairs: any): string {
-    // Extract component from action (e.g., 'autofix.infer_name' -> 'autofix')
-    if (action.includes('.')) return action.split('.')[0];
-
-    // Look in key-value pairs
-    if (kvPairs.component) return kvPairs.component;
-    if (kvPairs.service) return kvPairs.service;
-    if (kvPairs.module) return kvPairs.module;
-    if (kvPairs.worker) return kvPairs.worker;
-
-    return action || 'unknown';
-  }
-
-  private detectOperation(action: string, kvPairs: any): string {
-    // Extract operation from action (e.g., 'autofix.infer_name' -> 'infer_name')
-    if (action.includes('.')) return action.split('.').slice(1).join('.');
-
-    // Look for operation indicators
-    if (kvPairs.operation) return kvPairs.operation;
-    if (kvPairs.method) return kvPairs.method;
-    if (kvPairs.action) return kvPairs.action;
-
-    return action || 'activity';
-  }
-
-  private extractSessionIdentifier(activity: any): string {
-    // Look for session/run/transaction IDs (prefer more specific ones)
-    return (
-      activity.session_id ||
-      activity.run_id ||
-      activity.request_id ||
-      activity.trace_id ||
-      activity.sweep_id ||
-      activity.transaction_id ||
-      'default'
-    );
-  }
-
   private detectAgentIdentifier(activity: any, _filename: string, filePath: string): string {
     // Use agent_id from log fields if available (Alfred pipeline.llm_call has this)
     if (activity.agent_id) {
@@ -569,14 +402,6 @@ export class TraceWatcher extends EventEmitter {
     return `${component}${operation} (${sessionId})`;
   }
 
-  private detectTrigger(activity: any): string {
-    if (activity.trigger) return activity.trigger;
-    if (activity.method && activity.url) return 'api-call';
-    if (activity.operation?.includes('start')) return 'startup';
-    if (activity.operation?.includes('invoke')) return 'invocation';
-    return 'event';
-  }
-
   private addActivityNode(session: any, activity: any): void {
     // Group by component.operation to avoid creating thousands of nodes per log file
     const nodeId = `${activity.component}-${activity.operation}`;
@@ -599,7 +424,7 @@ export class TraceWatcher extends EventEmitter {
       id: nodeId,
       type: activity.component,
       name: `${activity.component}: ${activity.operation}`,
-      status: this.getUniversalNodeStatus(activity),
+      status: getUniversalNodeStatus(activity),
       startTime: activity.timestamp,
       endTime: activity.timestamp,
       children: [],
@@ -612,14 +437,6 @@ export class TraceWatcher extends EventEmitter {
     if (!session.rootNodeId) {
       session.rootNodeId = nodeId;
     }
-  }
-
-  private getUniversalNodeStatus(activity: any): string {
-    if (activity.level === 'error' || activity.level === 'fatal') return 'failed';
-    if (activity.level === 'warn' || activity.level === 'warning') return 'warning';
-    if (activity.operation?.match(/start|begin|init/i)) return 'running';
-    if (activity.operation?.match(/complete|finish|end|done/i)) return 'completed';
-    return 'completed';
   }
 
   /** Parse OpenClaw tslog-format log files with session run results. */
@@ -661,7 +478,7 @@ export class TraceWatcher extends EventEmitter {
             if (inner?.payloads && inner?.meta?.agentMeta) {
               const agentMeta = inner.meta.agentMeta;
               const sessionId = agentMeta.sessionId || 'unknown';
-              const agentName = this.openClawSessionIdToAgent(sessionId);
+              const agentName = openClawSessionIdToAgent(sessionId);
               const timestamp = parsed.time
                 ? new Date(parsed.time).getTime()
                 : parsed._meta?.date
@@ -693,7 +510,7 @@ export class TraceWatcher extends EventEmitter {
         if (parsed.payloads && parsed.meta?.agentMeta) {
           const agentMeta = parsed.meta.agentMeta;
           const sessionId = agentMeta.sessionId || 'unknown';
-          const agentName = this.openClawSessionIdToAgent(sessionId);
+          const agentName = openClawSessionIdToAgent(sessionId);
           const timestamp = parsed.time
             ? new Date(parsed.time).getTime()
             : parsed._meta?.date
@@ -845,18 +662,6 @@ export class TraceWatcher extends EventEmitter {
     }
 
     return traceIndex > 0;
-  }
-
-  /** Map OpenClaw sessionId prefix to agent name. */
-  private openClawSessionIdToAgent(sessionId: string): string {
-    if (sessionId.startsWith('janitor-')) return 'vault-janitor';
-    if (sessionId.startsWith('curator-')) return 'vault-curator';
-    if (sessionId.startsWith('distiller-')) return 'vault-distiller';
-    if (sessionId.startsWith('main-')) return 'main';
-    // Try to extract from first segment
-    const firstSegment = sessionId.split('-')[0];
-    if (firstSegment) return firstSegment;
-    return 'openclaw';
   }
 
   private loadTraceFile(filePath: string): boolean {
