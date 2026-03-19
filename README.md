@@ -110,6 +110,9 @@ AgentFlow auto-detects the format of every JSON/JSONL file it finds:
 | File that stopped updating | Detects it's stale and alerts |
 | File that was erroring and now works | Sends a recovery notification |
 
+
+<img width="2882" height="783" alt="Screenshot 2026-03-19 114555" src="https://github.com/user-attachments/assets/7f62e3cf-ca63-4ca7-ba33-8f64688c18c5" />
+
 ## Core Commands
 
 Essential commands for monitoring and tracing:
