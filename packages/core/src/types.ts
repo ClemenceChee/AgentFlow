@@ -287,6 +287,342 @@ export interface DistributedTrace {
 }
 
 // ---------------------------------------------------------------------------
+// Process mining types
+// ---------------------------------------------------------------------------
+
+/** A transition between two steps in a discovered process model. */
+export interface ProcessTransition {
+  /** Source step identifier (`type:name`). */
+  readonly from: string;
+  /** Target step identifier (`type:name`). */
+  readonly to: string;
+  /** Absolute frequency: how many times this transition was observed. */
+  readonly count: number;
+  /** Relative frequency from the source step (0.0–1.0). */
+  readonly probability: number;
+}
+
+/** A process model discovered from multiple execution graphs. */
+export interface ProcessModel {
+  /** All observed step identifiers (`type:name`). */
+  readonly steps: readonly string[];
+  /** All observed transitions with frequencies. */
+  readonly transitions: readonly ProcessTransition[];
+  /** Number of graphs used to build this model. */
+  readonly totalGraphs: number;
+  /** Agent ID from the input graphs. */
+  readonly agentId: string;
+}
+
+/** A group of execution graphs that share the same structural path. */
+export interface Variant {
+  /** Canonical path signature for this variant. */
+  readonly pathSignature: string;
+  /** Number of graphs in this variant. */
+  readonly count: number;
+  /** Percentage of total graphs (0–100). */
+  readonly percentage: number;
+  /** IDs of graphs belonging to this variant. */
+  readonly graphIds: readonly string[];
+  /** First graph in the group (representative example). */
+  readonly exampleGraph: ExecutionGraph;
+}
+
+/** Duration statistics for a node across multiple execution graphs. */
+export interface Bottleneck {
+  /** Node name (e.g. `"fetch-data"`). */
+  readonly nodeName: string;
+  /** Node type (e.g. `"tool"`). */
+  readonly nodeType: NodeType;
+  /** How many graphs contain this node. */
+  readonly occurrences: number;
+  /** Duration statistics in milliseconds. */
+  readonly durations: {
+    readonly median: number;
+    readonly p95: number;
+    readonly p99: number;
+    readonly min: number;
+    readonly max: number;
+  };
+  /** Fraction of input graphs that include this node (0–100). */
+  readonly percentOfGraphs: number;
+}
+
+/** Category of deviation detected during conformance checking. */
+export type DeviationType = 'unexpected-transition' | 'missing-transition' | 'low-frequency-path';
+
+/** A specific deviation between a graph and a process model. */
+export interface Deviation {
+  /** Category of deviation. */
+  readonly type: DeviationType;
+  /** Source step identifier. */
+  readonly from: string;
+  /** Target step identifier. */
+  readonly to: string;
+  /** Human-readable description of the deviation. */
+  readonly message: string;
+  /** Model probability of this transition (if applicable). */
+  readonly modelProbability?: number;
+}
+
+/** Result of comparing a single graph against a process model. */
+export interface ConformanceReport {
+  /** Ratio of conforming transitions to total transitions (0.0–1.0). */
+  readonly conformanceScore: number;
+  /** True when conformanceScore is 1.0 (no deviations). */
+  readonly isConforming: boolean;
+  /** List of specific deviations found. */
+  readonly deviations: readonly Deviation[];
+}
+
+// ---------------------------------------------------------------------------
+// Guard types
+// ---------------------------------------------------------------------------
+
+/**
+ * A detected guard violation.
+ */
+export interface GuardViolation {
+  readonly type: 'timeout' | 'reasoning-loop' | 'spawn-explosion' | 'high-failure-rate' | 'conformance-drift' | 'known-bottleneck';
+  readonly nodeId: string;
+  readonly message: string;
+  readonly timestamp: number;
+}
+
+// ---------------------------------------------------------------------------
+// Event emission types
+// ---------------------------------------------------------------------------
+
+/** Event type discriminator for AgentFlow events. */
+export type AgentFlowEventType =
+  | 'execution.completed'
+  | 'execution.failed'
+  | 'pattern.discovered'
+  | 'pattern.updated';
+
+/** Optional semantic context attached to an execution event by adapters. */
+export interface SemanticContext {
+  readonly intent?: string;
+  readonly trigger?: string;
+  readonly inputSummary?: string;
+  readonly outputSummary?: string;
+  readonly tokenCost?: number;
+  readonly modelId?: string;
+}
+
+/** Process mining context for an execution event. */
+export interface ProcessContext {
+  readonly variant: string;
+  readonly conformanceScore: number;
+  readonly isAnomaly: boolean;
+}
+
+/** The point at which an execution failed. */
+export interface FailurePoint {
+  readonly nodeId: string;
+  readonly nodeName: string;
+  readonly nodeType: NodeType;
+  readonly error?: string;
+}
+
+/** A structured event emitted after an agent execution completes or fails. */
+export interface ExecutionEvent {
+  readonly eventType: 'execution.completed' | 'execution.failed';
+  readonly graphId: string;
+  readonly agentId: string;
+  readonly timestamp: number;
+  readonly schemaVersion: number;
+  readonly status: GraphStatus;
+  readonly duration: number;
+  readonly nodeCount: number;
+  readonly pathSignature: string;
+  readonly failurePoint?: FailurePoint;
+  readonly processContext?: ProcessContext;
+  readonly semantic?: SemanticContext;
+  readonly violations: readonly GuardViolation[];
+}
+
+/** A structured event emitted when process mining discovers a pattern. */
+export interface PatternEvent {
+  readonly eventType: 'pattern.discovered' | 'pattern.updated';
+  readonly agentId: string;
+  readonly timestamp: number;
+  readonly schemaVersion: number;
+  readonly pattern: {
+    readonly totalGraphs: number;
+    readonly variantCount: number;
+    readonly topVariants: readonly {
+      readonly pathSignature: string;
+      readonly count: number;
+      readonly percentage: number;
+    }[];
+    readonly topBottlenecks: readonly {
+      readonly nodeName: string;
+      readonly nodeType: NodeType;
+      readonly p95: number;
+    }[];
+    readonly processModel: ProcessModel;
+  };
+}
+
+/** Options for creating an ExecutionEvent from a graph. */
+export interface ExecutionEventOptions {
+  readonly processContext?: ProcessContext;
+  readonly semantic?: SemanticContext;
+  readonly violations?: readonly GuardViolation[];
+}
+
+/** Configuration for the event emitter. */
+export interface EventEmitterConfig {
+  readonly writers?: readonly EventWriter[];
+  readonly onError?: (error: unknown) => void;
+  /** Optional knowledge store for automatic event persistence. */
+  readonly knowledgeStore?: KnowledgeStore;
+}
+
+/**
+ * Extended Writer interface that can handle structured events.
+ * Backward-compatible — existing Writers are unaffected.
+ */
+export interface EventWriter extends Writer {
+  /** Write a structured event to the output target. */
+  writeEvent(event: ExecutionEvent | PatternEvent): Promise<void>;
+}
+
+/** Event emitter for routing AgentFlow events to writers and subscribers. */
+export interface EventEmitter {
+  /** Emit an event to all writers and subscribers. */
+  emit(event: ExecutionEvent | PatternEvent): Promise<void>;
+  /** Subscribe to events. Returns an unsubscribe function. */
+  subscribe(listener: (event: ExecutionEvent | PatternEvent) => void): () => void;
+}
+
+// ---------------------------------------------------------------------------
+// Knowledge store & policy source
+// ---------------------------------------------------------------------------
+
+/** Derived per-agent profile accumulated from execution and pattern events. */
+export interface AgentProfile {
+  readonly agentId: string;
+  readonly totalRuns: number;
+  readonly successCount: number;
+  readonly failureCount: number;
+  readonly failureRate: number;
+  readonly recentDurations: readonly number[];
+  readonly lastConformanceScore: number | null;
+  readonly knownBottlenecks: readonly string[];
+  readonly lastPatternTimestamp: number | null;
+  readonly updatedAt: string;
+}
+
+/** Configuration for the knowledge store. */
+export interface KnowledgeStoreConfig {
+  /** Base directory for knowledge storage. Defaults to `.agentflow/knowledge`. */
+  readonly baseDir?: string;
+}
+
+/**
+ * Filesystem-based knowledge store that accumulates execution and pattern events.
+ * Implements EventWriter so it can be used directly with createEventEmitter.
+ */
+export interface KnowledgeStore extends EventWriter {
+  /** Base directory of the knowledge store. */
+  readonly baseDir: string;
+  /** Persist an event and update the agent profile. */
+  append(event: ExecutionEvent | PatternEvent): void;
+  /** Query recent execution events for an agent. */
+  getRecentEvents(agentId: string, options?: { limit?: number; since?: number }): ExecutionEvent[];
+  /** Get the derived profile for an agent, or null if no history. */
+  getAgentProfile(agentId: string): AgentProfile | null;
+  /** Query pattern event history for an agent. */
+  getPatternHistory(agentId: string, options?: { limit?: number }): PatternEvent[];
+  /** Remove event files older than the given timestamp. Profiles are preserved. */
+  compact(options: { olderThan: number }): { removed: number };
+  /** Persist an insight event generated by the insight engine. */
+  appendInsight(event: InsightEvent): void;
+  /** Query recent insight events for an agent. */
+  getRecentInsights(agentId: string, options?: { type?: string; limit?: number }): InsightEvent[];
+}
+
+/**
+ * Read-only interface for querying accumulated knowledge.
+ * Used by guards to make adaptive decisions based on execution history.
+ */
+export interface PolicySource {
+  /** Recent failure rate for an agent (0.0–1.0). Returns 0 if no history. */
+  recentFailureRate(agentId: string): number;
+  /** Whether a node name appears as a known bottleneck across any agent. */
+  isKnownBottleneck(nodeName: string): boolean;
+  /** Most recent conformance score for an agent, or null if none recorded. */
+  lastConformanceScore(agentId: string): number | null;
+  /** Full derived profile for an agent, or null if no history. */
+  getAgentProfile(agentId: string): AgentProfile | null;
+}
+
+// ---------------------------------------------------------------------------
+// Insight engine (Tier 2 — semantic analysis)
+// ---------------------------------------------------------------------------
+
+/**
+ * User-provided LLM function. AgentFlow constructs prompts and delegates
+ * the actual LLM call to this function. Any provider can be wrapped as an AnalysisFn.
+ */
+export type AnalysisFn = (prompt: string) => Promise<string>;
+
+/** A structured event emitted when the insight engine generates an LLM-powered analysis. */
+export interface InsightEvent {
+  readonly eventType: 'insight.generated';
+  readonly agentId: string;
+  readonly timestamp: number;
+  readonly schemaVersion: number;
+  readonly insightType: 'failure-analysis' | 'anomaly-explanation' | 'agent-summary' | 'fix-suggestion';
+  /** The prompt that was sent to the AnalysisFn (for auditing). */
+  readonly prompt: string;
+  /** The LLM response. */
+  readonly response: string;
+  /** Hash of input data — used for cache identity. */
+  readonly dataHash: string;
+}
+
+/** Result returned by InsightEngine methods. */
+export interface InsightResult {
+  readonly agentId: string;
+  readonly insightType: InsightEvent['insightType'];
+  /** The LLM response or pre-computed message. */
+  readonly content: string;
+  /** Whether this result came from cache. */
+  readonly cached: boolean;
+  /** When the insight was generated (epoch ms). */
+  readonly timestamp: number;
+}
+
+/** Configuration for the insight engine. */
+export interface InsightEngineConfig {
+  /** How long cached insights remain valid (ms). Default: 3600000 (1 hour). */
+  readonly cacheTtlMs?: number;
+}
+
+/** LLM-powered semantic analysis engine for agent execution data. */
+export interface InsightEngine {
+  /** Explain recent failures for an agent in natural language. */
+  explainFailures(agentId: string): Promise<InsightResult>;
+  /** Explain why a specific execution was anomalous. */
+  explainAnomaly(agentId: string, event: ExecutionEvent): Promise<InsightResult>;
+  /** Generate a natural language health summary for an agent. */
+  summarizeAgent(agentId: string): Promise<InsightResult>;
+  /** Suggest actionable fixes based on failure patterns and bottlenecks. */
+  suggestFixes(agentId: string): Promise<InsightResult>;
+}
+
+/** Thresholds for policy-derived guard violations. */
+export interface PolicyThresholds {
+  /** Maximum acceptable failure rate before triggering a violation (default 0.5). */
+  readonly maxFailureRate?: number;
+  /** Minimum acceptable conformance score before triggering a violation (default 0.7). */
+  readonly minConformance?: number;
+}
+
+// ---------------------------------------------------------------------------
 // Internal mutable types (used only by graph-builder)
 // ---------------------------------------------------------------------------
 
