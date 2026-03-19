@@ -22,6 +22,20 @@ export interface DashboardConfig {
 
 import { startDashboard } from './cli.js';
 
+/** Convert a WatchedTrace for JSON serialization (Map → Object). */
+function serializeTrace(trace: any): any {
+  if (!trace) return trace;
+  const obj = { ...trace };
+  if (obj.nodes instanceof Map) {
+    const nodesObj: Record<string, any> = {};
+    for (const [key, value] of obj.nodes) {
+      nodesObj[key] = value;
+    }
+    obj.nodes = nodesObj;
+  }
+  return obj;
+}
+
 export class DashboardServer {
   private app = express();
   private server = createServer(this.app);
@@ -39,6 +53,12 @@ export class DashboardServer {
     this.setupExpress();
     this.setupWebSocket();
     this.setupTraceWatcher();
+
+    // Process all existing traces for stats (initial load happens before event listeners)
+    for (const trace of this.watcher.getAllTraces()) {
+      this.stats.processTrace(trace);
+    }
+    console.log(`Processed ${this.watcher.getTraceCount()} existing traces for stats`);
   }
 
   private setupExpress() {
@@ -62,7 +82,7 @@ export class DashboardServer {
     // API endpoints
     this.app.get('/api/traces', (req, res) => {
       try {
-        const traces = this.watcher.getAllTraces();
+        const traces = this.watcher.getAllTraces().map(serializeTrace);
         res.json(traces);
       } catch (error) {
         res.status(500).json({ error: 'Failed to load traces' });
@@ -75,7 +95,7 @@ export class DashboardServer {
         if (!trace) {
           return res.status(404).json({ error: 'Trace not found' });
         }
-        res.json(trace);
+        res.json(serializeTrace(trace));
       } catch (error) {
         res.status(500).json({ error: 'Failed to load trace' });
       }
@@ -146,7 +166,73 @@ export class DashboardServer {
           return res.json(null);
         }
 
-        const result = auditProcesses(processConfig);
+        // Get Alfred processes
+        const alfredResult = auditProcesses(processConfig);
+
+        // Also get OpenClaw processes explicitly
+        const openclawConfig = {
+          processName: 'openclaw',
+          pidFile: undefined,
+          workersFile: undefined,
+          systemdUnit: null,
+        };
+        const openclawResult = auditProcesses(openclawConfig);
+
+        // Get clawmetry processes
+        const clawmetryConfig = {
+          processName: 'clawmetry',
+          pidFile: undefined,
+          workersFile: undefined,
+          systemdUnit: null,
+        };
+        const clawmetryResult = auditProcesses(clawmetryConfig);
+
+        // Combine all OS processes
+        const allOsProcesses = [
+          ...alfredResult.osProcesses,
+          ...openclawResult.osProcesses,
+          ...clawmetryResult.osProcesses,
+        ];
+
+        // Remove duplicates by PID
+        const uniqueProcesses = allOsProcesses.filter((proc, index, arr) =>
+          arr.findIndex(p => p.pid === proc.pid) === index
+        );
+
+        // Build combined result using Alfred as the base (since it has PID file and workers)
+        const result = {
+          ...alfredResult,
+          osProcesses: uniqueProcesses,
+          // Recalculate orphans based on all processes
+          orphans: uniqueProcesses.filter(p => {
+            // Known PIDs from Alfred system
+            const alfredKnownPids = new Set<number>();
+            if (alfredResult.pidFile?.pid && !alfredResult.pidFile.stale) alfredKnownPids.add(alfredResult.pidFile.pid);
+            if (alfredResult.workers) {
+              if (alfredResult.workers.orchestratorPid) alfredKnownPids.add(alfredResult.workers.orchestratorPid);
+              for (const w of alfredResult.workers.workers) {
+                if (w.pid) alfredKnownPids.add(w.pid);
+              }
+            }
+
+            // Don't consider OpenClaw processes as orphans
+            const isOpenClawProcess = p.cmdline.includes('openclaw') || p.cmdline.includes('clawmetry');
+
+            return !alfredKnownPids.has(p.pid) && !isOpenClawProcess && p.pid !== process.pid && p.pid !== process.ppid;
+          }),
+        };
+
+        // Update problems to include OpenClaw status
+        const openclawProblems = [];
+        if (openclawResult.osProcesses.length === 0) {
+          openclawProblems.push('No OpenClaw gateway processes detected');
+        }
+        if (clawmetryResult.osProcesses.length === 0) {
+          openclawProblems.push('No clawmetry processes detected');
+        }
+
+        result.problems = [...(alfredResult.problems || []), ...openclawProblems];
+
         this.processHealthCache = { result, ts: now };
         res.json(result);
       } catch (error) {
@@ -174,7 +260,7 @@ export class DashboardServer {
         JSON.stringify({
           type: 'init',
           data: {
-            traces: this.watcher.getAllTraces(),
+            traces: this.watcher.getAllTraces().map(serializeTrace),
             stats: this.stats.getGlobalStats(),
           },
         }),
@@ -195,7 +281,7 @@ export class DashboardServer {
       this.stats.processTrace(trace);
       this.broadcast({
         type: 'trace-added',
-        data: trace,
+        data: serializeTrace(trace),
       });
     });
 
@@ -203,7 +289,7 @@ export class DashboardServer {
       this.stats.processTrace(trace);
       this.broadcast({
         type: 'trace-updated',
-        data: trace,
+        data: serializeTrace(trace),
       });
     });
 

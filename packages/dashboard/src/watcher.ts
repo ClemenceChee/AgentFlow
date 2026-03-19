@@ -76,23 +76,78 @@ export class TraceWatcher extends EventEmitter {
 
   private loadExistingFiles() {
     let totalFiles = 0;
+    let totalDirectories = 0;
+
     for (const dir of this.allWatchDirs) {
       if (!fs.existsSync(dir)) continue;
+
       try {
-        const files = fs.readdirSync(dir).filter((f) => f.endsWith('.json') || f.endsWith('.jsonl'));
-        totalFiles += files.length;
-        for (const file of files) {
-          this.loadFile(path.join(dir, file));
-        }
+        totalDirectories++;
+        const loadedFiles = this.scanDirectoryRecursive(dir);
+        totalFiles += loadedFiles;
       } catch (error) {
         console.error(`Error scanning directory ${dir}:`, error);
       }
     }
-    console.log(`Scanned ${this.allWatchDirs.length} directories, loaded ${this.traces.size} items from ${totalFiles} files`);
+
+    console.log(`Scanned ${totalDirectories} directories (recursive), loaded ${this.traces.size} items from ${totalFiles} files`);
   }
+
+  /** Recursively scan directory for supported file types */
+  private scanDirectoryRecursive(dir: string, depth: number = 0): number {
+    if (depth > 10) return 0; // Prevent infinite recursion
+
+    let fileCount = 0;
+
+    try {
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+
+      for (const entry of entries) {
+        if (entry.name.startsWith('.')) continue; // Skip hidden files/dirs
+
+        const fullPath = path.join(dir, entry.name);
+
+        if (entry.isFile()) {
+          if (this.isSupportedFile(entry.name)) {
+            if (this.loadFile(fullPath)) {
+              fileCount++;
+            }
+          }
+        } else if (entry.isDirectory()) {
+          // Recurse into subdirectories
+          fileCount += this.scanDirectoryRecursive(fullPath, depth + 1);
+        }
+      }
+    } catch (error) {
+      console.warn(`Cannot read directory ${dir}:`, error.message);
+    }
+
+    return fileCount;
+  }
+
+  /** Check if file type is supported */
+  private isSupportedFile(filename: string): boolean {
+    return filename.endsWith('.json') ||
+           filename.endsWith('.jsonl') ||
+           filename.endsWith('.log') ||
+           filename.endsWith('.trace');
+  }
+
+  /** File names that are config/state, not traces — skip them. */
+  private static SKIP_FILES = new Set([
+    'workers.json', 'package.json', 'package-lock.json', 'tsconfig.json',
+    'biome.json', 'jobs.json', 'auth.json', 'models.json', 'config.json',
+  ]);
+  private static SKIP_SUFFIXES = ['-state.json', '-config.json', '-watch-state.json', '.tmp', '.bak', '.backup'];
 
   /** Load a .json trace, .jsonl session file, or .log file. */
   private loadFile(filePath: string): boolean {
+    const filename = path.basename(filePath);
+
+    // Skip known non-trace files
+    if (TraceWatcher.SKIP_FILES.has(filename)) return false;
+    if (TraceWatcher.SKIP_SUFFIXES.some(s => filename.endsWith(s))) return false;
+
     if (filePath.endsWith('.jsonl')) {
       return this.loadSessionFile(filePath);
     }
@@ -108,14 +163,31 @@ export class TraceWatcher extends EventEmitter {
       const filename = path.basename(filePath);
       const stats = fs.statSync(filePath);
 
+      // Try OpenClaw log format first
+      if (filename.startsWith('openclaw-') || filePath.includes('openclaw')) {
+        const result = this.loadOpenClawLogFile(content, filename, filePath, stats);
+        if (result) return true;
+        // Fall through to universal parser if OpenClaw parsing found nothing
+      }
+
       // Universal log parsing - detect any agent activities
       const traces = this.parseUniversalLog(content, filename, filePath);
 
       for (let i = 0; i < traces.length; i++) {
         const trace = traces[i];
+
+        // Ensure nodes is a Map (parseUniversalLog creates plain objects)
+        if (trace.nodes && !(trace.nodes instanceof Map)) {
+          const nodeMap = new Map<string, any>();
+          for (const [key, value] of Object.entries(trace.nodes)) {
+            nodeMap.set(key, value);
+          }
+          trace.nodes = nodeMap;
+        }
+
         trace.filename = filename;
         trace.lastModified = stats.mtime.getTime();
-        trace.sourceType = 'trace';
+        trace.sourceType = trace.sourceType || 'trace';
         trace.sourceDir = path.dirname(filePath);
 
         // Create unique key for each trace from the same file
@@ -166,11 +238,33 @@ export class TraceWatcher extends EventEmitter {
       if (activity.timestamp > session.endTime) {
         session.endTime = activity.timestamp;
       }
+
+      // Update status from errors
+      if (activity.level === 'error' || activity.level === 'fatal') {
+        session.status = 'failed';
+      }
     }
 
     const traces = Array.from(activities.values()).filter(session =>
       Object.keys(session.nodes).length > 0
     );
+
+    // Convert log entries to sessionEvents for transcript tab
+    for (const trace of traces) {
+      const sortedNodes = Object.values(trace.nodes).sort((a: any, b: any) => a.startTime - b.startTime);
+      trace.sessionEvents = sortedNodes.map((node: any) => ({
+        type: node.status === 'failed' ? 'tool_result' : 'system' as const,
+        timestamp: node.startTime,
+        name: node.name,
+        content: node.metadata.count > 1
+          ? `${node.name} (${node.metadata.count} occurrences, ${node.metadata.errorCount || 0} errors)`
+          : node.name,
+        duration: node.endTime - node.startTime,
+        toolError: node.status === 'failed' ? `${node.metadata.errorCount || 1} error(s)` : undefined,
+        id: node.id,
+      }));
+      trace.sourceType = 'session'; // Enable transcript/timeline tabs
+    }
 
     // If no structured activities found, create a basic file trace
     if (traces.length === 0) {
@@ -186,6 +280,7 @@ export class TraceWatcher extends EventEmitter {
             status: 'completed',
             startTime: stats.mtime.getTime(),
             endTime: stats.mtime.getTime(),
+            children: [],
             metadata: { lineCount: lines.length, path: filePath }
           }
         },
@@ -265,54 +360,54 @@ export class TraceWatcher extends EventEmitter {
     };
   }
 
+  /** Strip ANSI escape codes from a string. */
+  private stripAnsi(str: string): string {
+    return str.replace(/\x1b\[[0-9;]*m/g, '');
+  }
+
   private extractTimestamp(line: string): number | null {
-    // Colored timestamp format (Alfred-style)
-    const coloredMatch = line.match(/^\[2m(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z)\[0m/);
-    if (coloredMatch) return new Date(coloredMatch[1]).getTime();
+    // Strip ANSI codes first for reliable matching
+    const clean = this.stripAnsi(line);
 
     // ISO timestamp
-    const isoMatch = line.match(/(\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}:\d{2}[.\d]*Z?)/);
+    const isoMatch = clean.match(/(\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}:\d{2}[.\d]*Z?)/);
     if (isoMatch) return new Date(isoMatch[1]).getTime();
 
     return null;
   }
 
   private extractLogLevel(line: string): string | null {
-    // Colored level format
-    const coloredMatch = line.match(/\[\[(\d+)m\[\[1m(\w+)\s*\[0m\]/);
-    if (coloredMatch) return coloredMatch[2].toLowerCase();
+    const clean = this.stripAnsi(line);
 
-    // Standard level formats
-    const levelMatch = line.match(/\b(debug|info|warn|warning|error|fatal|trace)\b/i);
-    return levelMatch ? levelMatch[1].toLowerCase() : null;
+    // Standard level formats (match word boundaries)
+    const levelMatch = clean.match(/\b(debug|info|warn|warning|error|fatal|trace)\b/i);
+    return levelMatch ? levelMatch[1].trim().toLowerCase() : null;
   }
 
   private extractAction(line: string): string {
-    // Colored action format
-    const coloredMatch = line.match(/\[1m([^\[]+?)\s*\[0m/);
-    if (coloredMatch) return coloredMatch[1].trim();
+    const clean = this.stripAnsi(line);
+
+    // Alfred structlog format: "TIMESTAMP [level] action.name  key=val key=val"
+    // After stripping: "2026-03-18T... [info     ] autofix.infer_name  field=name ..."
+    const actionMatch = clean.match(/\]\s+(\S+)/);
+    if (actionMatch) return actionMatch[1].trim();
 
     // After level, extract the main message
-    const afterLevel = line.replace(/^.*?(debug|info|warn|warning|error|fatal|trace)\s*:?\s*/i, '');
-    return afterLevel.split(' ')[0] || '';
+    const afterLevel = clean.replace(/^.*?(debug|info|warn|warning|error|fatal|trace)\s*\]?\s*/i, '');
+    return afterLevel.split(/\s+/)[0] || '';
   }
 
   private extractKeyValuePairs(line: string): any {
     const pairs: any = {};
+    const clean = this.stripAnsi(line);
 
-    // Colored key-value format
-    const coloredRegex = /\[36m(\w+)\[0m=\[35m([^\[]+?)\[0m/g;
+    // key=value or key='quoted value' format
+    const kvRegex = /(\w+)=('(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|\S+)/g;
     let match;
-    while ((match = coloredRegex.exec(line)) !== null) {
+    while ((match = kvRegex.exec(clean)) !== null) {
+      // Skip timestamp and level fields
+      if (match[1] === 'Z' || match[1] === 'm') continue;
       pairs[match[1]] = this.parseValue(match[2]);
-    }
-
-    // Standard key=value format
-    if (Object.keys(pairs).length === 0) {
-      const kvRegex = /(\w+)=([^\s]+)/g;
-      while ((match = kvRegex.exec(line)) !== null) {
-        pairs[match[1]] = this.parseValue(match[2]);
-      }
     }
 
     return pairs;
@@ -337,54 +432,85 @@ export class TraceWatcher extends EventEmitter {
   }
 
   private detectComponent(action: string, kvPairs: any): string {
-    // Extract component from action (e.g., 'daemon.starting' -> 'daemon')
+    // Extract component from action (e.g., 'autofix.infer_name' -> 'autofix')
     if (action.includes('.')) return action.split('.')[0];
 
     // Look in key-value pairs
     if (kvPairs.component) return kvPairs.component;
     if (kvPairs.service) return kvPairs.service;
     if (kvPairs.module) return kvPairs.module;
+    if (kvPairs.worker) return kvPairs.worker;
 
-    return 'unknown';
+    return action || 'unknown';
   }
 
   private detectOperation(action: string, kvPairs: any): string {
-    // Extract operation from action (e.g., 'daemon.starting' -> 'starting')
+    // Extract operation from action (e.g., 'autofix.infer_name' -> 'infer_name')
     if (action.includes('.')) return action.split('.').slice(1).join('.');
 
     // Look for operation indicators
     if (kvPairs.operation) return kvPairs.operation;
     if (kvPairs.method) return kvPairs.method;
+    if (kvPairs.action) return kvPairs.action;
 
     return action || 'activity';
   }
 
   private extractSessionIdentifier(activity: any): string {
-    // Look for session/run/transaction IDs
-    return activity.run_id || activity.session_id || activity.request_id ||
+    // Look for session/run/transaction IDs (prefer more specific ones)
+    return activity.session_id || activity.run_id || activity.request_id ||
            activity.trace_id || activity.sweep_id || activity.transaction_id ||
            'default';
   }
 
   private detectAgentIdentifier(activity: any, filename: string, filePath: string): string {
-    // Component-based agent ID
-    if (activity.component !== 'unknown') {
-      // If it looks like a sub-component, create agent-component format
-      const pathAgent = this.extractAgentFromPath(filePath);
-      if (pathAgent !== activity.component) {
-        return `${pathAgent}-${activity.component}`;
-      }
-      return activity.component;
+    // Use agent_id from log fields if available (Alfred pipeline.llm_call has this)
+    if (activity.agent_id) {
+      const agentId = activity.agent_id;
+      // Ensure proper prefixing for known agent types
+      if (agentId.startsWith('vault-')) return agentId;
+      if (agentId === 'main' && filePath.includes('.alfred/')) return 'alfred-main';
+      return agentId;
     }
 
-    return this.extractAgentFromPath(filePath);
+    // Use path-based detection as primary
+    const pathAgent = this.extractAgentFromPath(filePath);
+
+    // For log files named like "janitor.log" → "alfred-janitor"
+    if (filePath.includes('.alfred/') && !pathAgent.startsWith('alfred-')) {
+      const basename = path.basename(filePath, path.extname(filePath));
+      if (basename.match(/^(janitor|curator|distiller|surveyor|alfred)$/)) {
+        return basename === 'alfred' ? 'alfred' : `alfred-${basename}`;
+      }
+    }
+
+    return pathAgent;
   }
 
   private extractAgentFromPath(filePath: string): string {
     const filename = path.basename(filePath, path.extname(filePath));
     const pathParts = filePath.split(path.sep);
 
-    // Look for agent-related terms in path
+    // OpenClaw-specific detection
+    if (filePath.includes('.openclaw/')) {
+      // OpenClaw agent sessions: /home/trader/.openclaw/agents/AGENT_NAME/sessions/
+      const agentsIndex = pathParts.lastIndexOf('agents');
+      if (agentsIndex !== -1 && agentsIndex + 1 < pathParts.length) {
+        return `openclaw-${pathParts[agentsIndex + 1]}`;
+      }
+      // OpenClaw logs: /tmp/openclaw/openclaw-*.log
+      if (filename.startsWith('openclaw-')) {
+        return 'openclaw-gateway';
+      }
+      return 'openclaw';
+    }
+
+    // Alfred-specific detection
+    if (filePath.includes('.alfred/') || filename.includes('alfred')) {
+      return 'alfred';
+    }
+
+    // Look for agent-related terms in path (reversed for inner-most first)
     for (const part of pathParts.reverse()) {
       if (part.match(/agent|worker|service|daemon|bot|ai|llm/i)) {
         return part;
@@ -409,7 +535,22 @@ export class TraceWatcher extends EventEmitter {
   }
 
   private addActivityNode(session: any, activity: any): void {
-    const nodeId = `${activity.component}-${activity.operation}-${activity.timestamp}`;
+    // Group by component.operation to avoid creating thousands of nodes per log file
+    const nodeId = `${activity.component}-${activity.operation}`;
+
+    if (session.nodes[nodeId]) {
+      // Update existing node — extend time range and count
+      const node = session.nodes[nodeId];
+      node.endTime = Math.max(node.endTime, activity.timestamp);
+      node.startTime = Math.min(node.startTime, activity.timestamp);
+      node.metadata.count = (node.metadata.count || 1) + 1;
+      // Track errors
+      if (activity.level === 'error' || activity.level === 'fatal') {
+        node.status = 'failed';
+        node.metadata.errorCount = (node.metadata.errorCount || 0) + 1;
+      }
+      return;
+    }
 
     const node = {
       id: nodeId,
@@ -418,7 +559,8 @@ export class TraceWatcher extends EventEmitter {
       status: this.getUniversalNodeStatus(activity),
       startTime: activity.timestamp,
       endTime: activity.timestamp,
-      metadata: activity
+      children: [],
+      metadata: { ...activity, count: 1 }
     };
 
     session.nodes[nodeId] = node;
@@ -437,12 +579,212 @@ export class TraceWatcher extends EventEmitter {
     return 'completed';
   }
 
+  /** Parse OpenClaw tslog-format log files with session run results. */
+  private loadOpenClawLogFile(content: string, filename: string, filePath: string, stats: fs.Stats): boolean {
+    const lines = content.split('\n').filter(l => l.trim());
+    const sessions = new Map<string, {
+      entries: Array<{ text: string; timestamp: number; sessionId: string; provider: string; model: string; usage: any; durationMs: number; agentName: string }>;
+    }>();
+
+    for (const line of lines) {
+      try {
+        const parsed = JSON.parse(line);
+        // Detect entries with payloads + agentMeta (session run results)
+        if (parsed['0'] && typeof parsed['0'] === 'string') {
+          // tslog format - the "0" field contains the logged object as a string or the actual content
+          // Check if it's a JSON string containing payloads/agentMeta
+          try {
+            const inner = typeof parsed['0'] === 'string' && parsed['0'].startsWith('{')
+              ? JSON.parse(parsed['0'])
+              : null;
+            if (inner?.payloads && inner?.meta?.agentMeta) {
+              const agentMeta = inner.meta.agentMeta;
+              const sessionId = agentMeta.sessionId || 'unknown';
+              const agentName = this.openClawSessionIdToAgent(sessionId);
+              const timestamp = parsed.time ? new Date(parsed.time).getTime() : (parsed._meta?.date ? new Date(parsed._meta.date).getTime() : stats.mtime.getTime());
+              const texts = (inner.payloads || []).map((p: any) => p.text || '').filter(Boolean);
+
+              if (!sessions.has(sessionId)) {
+                sessions.set(sessionId, { entries: [] });
+              }
+              sessions.get(sessionId)!.entries.push({
+                text: texts.join('\n'),
+                timestamp,
+                sessionId,
+                provider: agentMeta.provider || '',
+                model: agentMeta.model || '',
+                usage: agentMeta.usage || {},
+                durationMs: inner.meta.durationMs || 0,
+                agentName,
+              });
+              continue;
+            }
+          } catch { /* not a JSON string in "0" field */ }
+        }
+
+        // Direct payloads/agentMeta format (non-tslog wrapped)
+        if (parsed.payloads && parsed.meta?.agentMeta) {
+          const agentMeta = parsed.meta.agentMeta;
+          const sessionId = agentMeta.sessionId || 'unknown';
+          const agentName = this.openClawSessionIdToAgent(sessionId);
+          const timestamp = parsed.time ? new Date(parsed.time).getTime() : (parsed._meta?.date ? new Date(parsed._meta.date).getTime() : stats.mtime.getTime());
+          const texts = (parsed.payloads || []).map((p: any) => p.text || '').filter(Boolean);
+
+          if (!sessions.has(sessionId)) {
+            sessions.set(sessionId, { entries: [] });
+          }
+          sessions.get(sessionId)!.entries.push({
+            text: texts.join('\n'),
+            timestamp,
+            sessionId,
+            provider: agentMeta.provider || '',
+            model: agentMeta.model || '',
+            usage: agentMeta.usage || {},
+            durationMs: parsed.meta.durationMs || 0,
+            agentName,
+          });
+        }
+      } catch { /* skip unparseable lines */ }
+    }
+
+    if (sessions.size === 0) return false;
+
+    let traceIndex = 0;
+    for (const [sessionId, session] of sessions) {
+      const entries = session.entries;
+      if (entries.length === 0) continue;
+
+      const firstEntry = entries[0];
+      const lastEntry = entries[entries.length - 1];
+      const agentId = firstEntry.agentName;
+
+      // Aggregate usage
+      let totalInput = 0, totalOutput = 0, totalTokens = 0;
+      let totalDuration = 0;
+      for (const entry of entries) {
+        totalInput += entry.usage.input || 0;
+        totalOutput += entry.usage.output || 0;
+        totalTokens += entry.usage.total || 0;
+        totalDuration += entry.durationMs;
+      }
+
+      const nodes = new Map<string, any>();
+      const rootId = `openclaw-${sessionId.slice(0, 12)}`;
+
+      // Create nodes for each entry
+      for (let j = 0; j < entries.length; j++) {
+        const e = entries[j];
+        const nodeId = `entry-${j}`;
+        nodes.set(nodeId, {
+          id: nodeId,
+          type: 'tool',
+          name: `${e.model}: ${e.sessionId}`,
+          startTime: e.timestamp - e.durationMs,
+          endTime: e.timestamp,
+          status: 'completed',
+          parentId: rootId,
+          children: [],
+          metadata: {
+            provider: e.provider,
+            model: e.model,
+            durationMs: e.durationMs,
+            usage: e.usage,
+            preview: e.text.slice(0, 200),
+          },
+        });
+      }
+
+      // Root node
+      nodes.set(rootId, {
+        id: rootId,
+        type: 'agent',
+        name: sessionId,
+        startTime: firstEntry.timestamp - (firstEntry.durationMs || 0),
+        endTime: lastEntry.timestamp,
+        status: 'completed',
+        parentId: undefined,
+        children: Array.from(nodes.keys()).filter(k => k !== rootId),
+        metadata: {
+          provider: firstEntry.provider,
+          model: firstEntry.model,
+          sessionId,
+          totalTokens,
+          inputTokens: totalInput,
+          outputTokens: totalOutput,
+          durationMs: totalDuration,
+        },
+      });
+
+      // Build session events for timeline
+      const sessionEvents: SessionEvent[] = entries.map((e, idx) => ({
+        type: 'assistant' as const,
+        timestamp: e.timestamp,
+        name: e.model,
+        content: e.text,
+        model: e.model,
+        provider: e.provider,
+        tokens: { input: e.usage.input || 0, output: e.usage.output || 0, total: e.usage.total || 0 },
+        duration: e.durationMs,
+        id: `entry-${idx}`,
+      }));
+
+      const trace: WatchedTrace = {
+        id: sessionId,
+        nodes,
+        edges: [],
+        events: [],
+        startTime: firstEntry.timestamp - (firstEntry.durationMs || 0),
+        endTime: lastEntry.timestamp,
+        agentId,
+        trigger: 'cron',
+        name: sessionId,
+        traceId: sessionId,
+        spanId: sessionId,
+        filename,
+        lastModified: stats.mtime.getTime(),
+        sourceType: 'session',
+        sourceDir: path.dirname(filePath),
+        sessionEvents,
+        tokenUsage: { input: totalInput, output: totalOutput, total: totalTokens || (totalInput + totalOutput), cost: 0 },
+        metadata: {
+          provider: firstEntry.provider,
+          model: firstEntry.model,
+          durationMs: totalDuration,
+          source: 'openclaw-log',
+        },
+      } as WatchedTrace;
+
+      const key = sessions.size === 1 ? this.traceKey(filePath) : `${this.traceKey(filePath)}-${traceIndex}`;
+      this.traces.set(key, trace);
+      traceIndex++;
+    }
+
+    return traceIndex > 0;
+  }
+
+  /** Map OpenClaw sessionId prefix to agent name. */
+  private openClawSessionIdToAgent(sessionId: string): string {
+    if (sessionId.startsWith('janitor-')) return 'vault-janitor';
+    if (sessionId.startsWith('curator-')) return 'vault-curator';
+    if (sessionId.startsWith('distiller-')) return 'vault-distiller';
+    if (sessionId.startsWith('main-')) return 'main';
+    // Try to extract from first segment
+    const firstSegment = sessionId.split('-')[0];
+    if (firstSegment) return firstSegment;
+    return 'openclaw';
+  }
+
   private loadTraceFile(filePath: string): boolean {
     try {
       const content = fs.readFileSync(filePath, 'utf8');
-      const graph = loadGraph(content) as WatchedTrace;
-
       const filename = path.basename(filePath);
+
+      // Skip sessions.json index files — parse them separately for agent discovery
+      if (filename === 'sessions.json') {
+        return this.loadSessionsIndex(filePath, content);
+      }
+
+      const graph = loadGraph(content) as WatchedTrace;
       const stats = fs.statSync(filePath);
 
       graph.filename = filename;
@@ -450,10 +792,107 @@ export class TraceWatcher extends EventEmitter {
       graph.sourceType = 'trace';
       graph.sourceDir = path.dirname(filePath);
 
+      // Ensure all nodes have children arrays (prevents getStats() crash)
+      if (graph.nodes instanceof Map) {
+        for (const node of graph.nodes.values()) {
+          if (!node.children) (node as any).children = [];
+        }
+      }
+
       this.traces.set(this.traceKey(filePath), graph);
       return true;
     } catch {
       // Silently skip malformed trace files
+      return false;
+    }
+  }
+
+  /** Parse sessions.json index to discover agents and their sessions. */
+  private loadSessionsIndex(filePath: string, content: string): boolean {
+    try {
+      const data = JSON.parse(content);
+      if (typeof data !== 'object' || data === null) return false;
+
+      const stats = fs.statSync(filePath);
+      const pathParts = filePath.split(path.sep);
+
+      // Detect agent name from path: .../agents/{agentName}/sessions/sessions.json
+      const agentsIndex = pathParts.lastIndexOf('agents');
+      if (agentsIndex === -1 || agentsIndex + 1 >= pathParts.length) return false;
+      const agentName = pathParts[agentsIndex + 1];
+      const agentId = filePath.includes('.openclaw/') ? `openclaw-${agentName}` : agentName;
+
+      let loaded = 0;
+      for (const [sessionKey, sessionData] of Object.entries(data)) {
+        if (!sessionData || typeof sessionData !== 'object') continue;
+        const session = sessionData as Record<string, any>;
+        const sessionId = session.sessionId;
+        if (!sessionId) continue;
+
+        // Check if we already have a JSONL file for this session
+        const existingKey = Array.from(this.traces.keys()).find(k => {
+          const t = this.traces.get(k);
+          return t?.id === sessionId || t?.traceId === sessionId;
+        });
+        if (existingKey) continue;
+
+        // Create a lightweight trace entry from the index metadata
+        const updatedAt = session.updatedAt || stats.mtime.getTime();
+        const label = session.label || sessionKey.split(':').pop() || sessionId;
+        const chatType = session.chatType || (sessionKey.includes('cron') ? 'cron' : 'direct');
+        const trigger = sessionKey.includes('cron') ? 'cron' : 'message';
+
+        const rootId = `idx-${sessionId.slice(0, 12)}`;
+        const nodes = new Map<string, any>();
+        nodes.set(rootId, {
+          id: rootId,
+          type: 'agent',
+          name: label,
+          startTime: updatedAt,
+          endTime: updatedAt,
+          status: 'completed',
+          parentId: undefined,
+          children: [],
+          metadata: {
+            sessionId,
+            sessionKey,
+            chatType,
+            source: 'sessions-index',
+          },
+        });
+
+        const trace: WatchedTrace = {
+          id: sessionId,
+          nodes,
+          edges: [],
+          events: [],
+          startTime: updatedAt,
+          agentId,
+          trigger,
+          name: label,
+          traceId: sessionId,
+          spanId: sessionId,
+          filename: `${agentName}-${sessionId.slice(0, 8)}.index`,
+          lastModified: updatedAt,
+          sourceType: 'session',
+          sourceDir: path.dirname(filePath),
+          sessionEvents: [],
+          tokenUsage: { input: 0, output: 0, total: 0, cost: 0 },
+          metadata: {
+            sessionKey,
+            chatType,
+            source: 'sessions-index',
+            agentName,
+          },
+        } as WatchedTrace;
+
+        const key = `${this.traceKey(filePath)}-${sessionId.slice(0, 12)}`;
+        this.traces.set(key, trace);
+        loaded++;
+      }
+
+      return loaded > 0;
+    } catch {
       return false;
     }
   }
@@ -475,16 +914,47 @@ export class TraceWatcher extends EventEmitter {
       }
       if (rawEvents.length === 0) return false;
 
+      // Detect cron run JSONL format (has ts, jobId, action fields instead of type: 'session')
+      const firstEvent = rawEvents[0];
+      if (firstEvent?.jobId && firstEvent?.action && !firstEvent?.type) {
+        return this.loadCronRunFile(rawEvents, filePath);
+      }
+
       const sessionEvent = rawEvents.find((e) => e.type === 'session');
       const sessionId = sessionEvent?.id || path.basename(filePath, '.jsonl');
       const sessionTimestamp = sessionEvent?.timestamp || rawEvents[0]?.timestamp;
       const startTime = sessionTimestamp ? new Date(sessionTimestamp).getTime() : 0;
       if (!startTime) return false;
 
-      // Extract agent ID from directory name or cwd
+      // Extract agent ID from directory structure
       const parentDir = path.basename(path.dirname(filePath));
       const grandParentDir = path.basename(path.dirname(path.dirname(filePath)));
-      const agentId = grandParentDir === 'agents' ? parentDir : parentDir;
+      const greatGrandParentDir = path.basename(path.dirname(path.dirname(path.dirname(filePath))));
+
+      let agentId: string;
+      if (parentDir === 'sessions' && greatGrandParentDir === 'agents') {
+        // Path: .../agents/{agentName}/sessions/file.jsonl
+        agentId = grandParentDir;
+      } else if (grandParentDir === 'agents') {
+        agentId = parentDir;
+      } else if (parentDir === 'runs' && grandParentDir === 'cron') {
+        // Path: .../cron/runs/file.jsonl — use job ID from filename
+        agentId = 'openclaw-cron';
+      } else {
+        agentId = parentDir;
+      }
+
+      // Prefix OpenClaw agents properly
+      if (filePath.includes('.openclaw/') && !agentId.startsWith('openclaw-')) {
+        agentId = `openclaw-${agentId}`;
+      }
+
+      // Detect Alfred sessions (different structure)
+      if (filePath.includes('.alfred/') || filePath.includes('alfred')) {
+        if (!agentId.startsWith('alfred-')) {
+          agentId = `alfred-${agentId}`;
+        }
+      }
 
       // Extract model info from model_change events
       const modelEvent = rawEvents.find((e) => e.type === 'model_change');
@@ -860,12 +1330,86 @@ export class TraceWatcher extends EventEmitter {
     }
   }
 
+  /** Parse cron run JSONL files (ts, jobId, action, status format). */
+  private loadCronRunFile(rawEvents: Array<Record<string, any>>, filePath: string): boolean {
+    try {
+      const filename = path.basename(filePath);
+      const jobId = rawEvents[0]?.jobId || path.basename(filePath, '.jsonl');
+      const fileStat = fs.statSync(filePath);
+
+      const sessionEvents: SessionEvent[] = [];
+      let lastStatus = 'completed';
+
+      for (const evt of rawEvents) {
+        const ts = evt.ts || Date.now();
+        const action = evt.action || 'unknown';
+        const status = evt.status || 'ok';
+
+        if (status !== 'ok') lastStatus = 'failed';
+
+        sessionEvents.push({
+          type: action === 'finished' ? 'assistant' : 'system',
+          timestamp: ts,
+          name: `${jobId}: ${action}`,
+          content: evt.summary || evt.error || `${action} (${status})`,
+          id: `cron-${ts}`,
+        });
+      }
+
+      const firstTs = rawEvents[0]?.ts || fileStat.mtime.getTime();
+      const lastTs = rawEvents[rawEvents.length - 1]?.ts || fileStat.mtime.getTime();
+      const rootId = `cron-${jobId.slice(0, 12)}`;
+      const nodes = new Map<string, any>();
+
+      nodes.set(rootId, {
+        id: rootId,
+        type: 'agent',
+        name: jobId,
+        startTime: firstTs,
+        endTime: lastTs,
+        status: lastStatus,
+        parentId: undefined,
+        children: [],
+        metadata: { jobId, runs: rawEvents.length },
+      });
+
+      const trace: WatchedTrace = {
+        id: jobId,
+        nodes,
+        edges: [],
+        events: [],
+        startTime: firstTs,
+        agentId: 'openclaw-cron',
+        trigger: 'cron',
+        name: jobId,
+        traceId: jobId,
+        spanId: jobId,
+        filename,
+        lastModified: fileStat.mtime.getTime(),
+        sourceType: 'session',
+        sourceDir: path.dirname(filePath),
+        sessionEvents,
+        tokenUsage: { input: 0, output: 0, total: 0, cost: 0 },
+        metadata: { jobId, source: 'cron-run' },
+      } as WatchedTrace;
+
+      this.traces.set(this.traceKey(filePath), trace);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   /** Unique key for a file across directories. */
   private traceKey(filePath: string): string {
     // Use relative path from any watched dir, or absolute path as fallback
     for (const dir of this.allWatchDirs) {
       if (filePath.startsWith(dir)) {
-        return path.relative(dir, filePath).replace(/\\/g, '/') + '@' + path.basename(dir);
+        // Use last 2 path segments of dir to avoid collisions
+        // e.g., agents/main/sessions → "main/sessions" instead of just "sessions"
+        const dirParts = dir.split(path.sep).filter(Boolean);
+        const dirSuffix = dirParts.slice(-2).join('/');
+        return path.relative(dir, filePath).replace(/\\/g, '/') + '@' + dirSuffix;
       }
     }
     return filePath;
@@ -875,16 +1419,32 @@ export class TraceWatcher extends EventEmitter {
     for (const dir of this.allWatchDirs) {
       if (!fs.existsSync(dir)) continue;
 
-      const watcher = chokidar.watch(dir, {
-        ignored: /^\./,
+      // Use glob patterns to watch specific file types recursively
+      const patterns = [
+        path.join(dir, '**/*.json'),
+        path.join(dir, '**/*.jsonl'),
+        path.join(dir, '**/*.log'),
+        path.join(dir, '**/*.trace'),
+      ];
+
+      const watcher = chokidar.watch(patterns, {
+        ignored: [
+          /^\./,              // Ignore hidden files
+          /node_modules/,     // Ignore node_modules
+          /\.git/,            // Ignore git directories
+          /\.vscode/,         // Ignore vscode
+          /\.idea/,           // Ignore idea
+        ],
         persistent: true,
         ignoreInitial: true,
-        depth: 0, // don't recurse into subdirectories
+        followSymlinks: false,
+        depth: 10,            // Allow deep nesting for OpenClaw agents/*/sessions/
       });
 
       watcher.on('add', (filePath) => {
-        if (filePath.endsWith('.json') || filePath.endsWith('.jsonl') || filePath.endsWith('.log') || filePath.endsWith('.trace')) {
-          console.log(`New file: ${path.basename(filePath)}`);
+        if (this.isSupportedFile(path.basename(filePath))) {
+          const relativePath = path.relative(dir, filePath);
+          console.log(`New file: ${relativePath} (in ${path.basename(dir)})`);
           if (this.loadFile(filePath)) {
             const key = this.traceKey(filePath);
             const trace = this.traces.get(key);
@@ -896,7 +1456,7 @@ export class TraceWatcher extends EventEmitter {
       });
 
       watcher.on('change', (filePath) => {
-        if (filePath.endsWith('.json') || filePath.endsWith('.jsonl') || filePath.endsWith('.log') || filePath.endsWith('.trace')) {
+        if (this.isSupportedFile(path.basename(filePath))) {
           if (this.loadFile(filePath)) {
             const key = this.traceKey(filePath);
             const trace = this.traces.get(key);
@@ -908,7 +1468,7 @@ export class TraceWatcher extends EventEmitter {
       });
 
       watcher.on('unlink', (filePath) => {
-        if (filePath.endsWith('.json') || filePath.endsWith('.jsonl') || filePath.endsWith('.log') || filePath.endsWith('.trace')) {
+        if (this.isSupportedFile(path.basename(filePath))) {
           const key = this.traceKey(filePath);
           this.traces.delete(key);
           this.emit('trace-removed', key);
@@ -922,7 +1482,7 @@ export class TraceWatcher extends EventEmitter {
       this.watchers.push(watcher);
     }
 
-    console.log(`Watching ${this.allWatchDirs.length} directories for JSON/JSONL files`);
+    console.log(`Watching ${this.allWatchDirs.length} directories recursively for JSON/JSONL/LOG/TRACE files`);
   }
 
   public getAllTraces(): WatchedTrace[] {
