@@ -135,6 +135,119 @@ export class DashboardServer {
       }
     });
 
+    // Process mining graph: aggregate all traces for an agent into a transition graph
+    this.app.get('/api/agents/:agentId/process-graph', (req, res) => {
+      try {
+        const agentId = req.params.agentId;
+        const traces = this.watcher.getTracesByAgent(agentId).map(serializeTrace);
+        if (traces.length === 0) {
+          return res.status(404).json({ error: 'No traces for agent' });
+        }
+
+        // Build transition counts: activity → activity
+        const activityCounts = new Map<string, number>();
+        const transitionCounts = new Map<string, number>();
+        const activityDurations = new Map<string, number[]>();
+        const activityStatuses = new Map<string, { ok: number; fail: number }>();
+        let totalTraces = 0;
+
+        for (const trace of traces) {
+          totalTraces++;
+          // Extract activity sequence from this trace
+          const activities: Array<{ name: string; type: string; status: string; duration: number }> = [];
+
+          if (trace.sessionEvents && trace.sessionEvents.length > 0) {
+            // Session-based: use event types as activities
+            for (const evt of trace.sessionEvents) {
+              const name = evt.toolName || evt.name || evt.type;
+              if (!name) continue;
+              activities.push({
+                name,
+                type: evt.type,
+                status: evt.toolError ? 'failed' : 'completed',
+                duration: evt.duration || 0,
+              });
+            }
+          } else {
+            // Graph-based: use nodes sorted by startTime
+            const nodes = trace.nodes || {};
+            const sorted = Object.values(nodes).sort((a: any, b: any) => (a.startTime || 0) - (b.startTime || 0));
+            for (const node of sorted as any[]) {
+              activities.push({
+                name: node.name || node.type || node.id,
+                type: node.type || 'unknown',
+                status: node.status || 'completed',
+                duration: (node.endTime || node.startTime || 0) - (node.startTime || 0),
+              });
+            }
+          }
+
+          // Count activities and transitions
+          // Add virtual START and END nodes
+          const seq = ['[START]', ...activities.map(a => a.name), '[END]'];
+          for (let i = 0; i < seq.length; i++) {
+            const act = seq[i];
+            activityCounts.set(act, (activityCounts.get(act) || 0) + 1);
+
+            if (i < seq.length - 1) {
+              const key = act + ' → ' + seq[i + 1];
+              transitionCounts.set(key, (transitionCounts.get(key) || 0) + 1);
+            }
+          }
+
+          // Track durations and statuses per activity
+          for (const act of activities) {
+            if (act.duration > 0) {
+              const durs = activityDurations.get(act.name) || [];
+              durs.push(act.duration);
+              activityDurations.set(act.name, durs);
+            }
+            const st = activityStatuses.get(act.name) || { ok: 0, fail: 0 };
+            if (act.status === 'failed') st.fail++;
+            else st.ok++;
+            activityStatuses.set(act.name, st);
+          }
+        }
+
+        // Build response
+        const nodes = Array.from(activityCounts.entries()).map(([name, count]) => {
+          const durs = activityDurations.get(name) || [];
+          const st = activityStatuses.get(name) || { ok: 0, fail: 0 };
+          const avgDuration = durs.length > 0 ? durs.reduce((a, b) => a + b, 0) / durs.length : 0;
+          return {
+            id: name,
+            label: name,
+            count,
+            frequency: count / totalTraces,
+            avgDuration,
+            failRate: st.ok + st.fail > 0 ? st.fail / (st.ok + st.fail) : 0,
+            isVirtual: name === '[START]' || name === '[END]',
+          };
+        });
+
+        const edges = Array.from(transitionCounts.entries()).map(([key, count]) => {
+          const [source, target] = key.split(' → ');
+          return { source, target, count, frequency: count / totalTraces };
+        });
+
+        // Compute max edge count for relative sizing
+        const maxEdgeCount = Math.max(...edges.map(e => e.count), 1);
+        const maxNodeCount = Math.max(...nodes.filter(n => !n.isVirtual).map(n => n.count), 1);
+
+        res.json({
+          agentId,
+          totalTraces,
+          nodes,
+          edges,
+          maxEdgeCount,
+          maxNodeCount,
+        });
+      } catch (error) {
+        console.error('Process graph error:', error);
+        res.status(500).json({ error: 'Failed to build process graph' });
+      }
+    });
+
     this.app.get('/api/stats/:agentId', (req, res) => {
       try {
         const agentStats = this.stats.getAgentStats(req.params.agentId);

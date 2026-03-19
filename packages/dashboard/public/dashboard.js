@@ -307,6 +307,12 @@ class AgentFlowDashboard {
     this.selectedTrace = trace;
     this.selectedTraceData = trace;
 
+    // Reset process map cache when agent changes
+    if (this._processMapAgent !== trace.agentId) {
+      this._processMapAgent = null;
+      if (this._cyProcessMap) { this._cyProcessMap.destroy(); this._cyProcessMap = null; }
+    }
+
     // Update sidebar selection
     document.querySelectorAll('.session-item').forEach(function(el) { el.classList.remove('active'); });
     var activeEl = document.querySelector('.session-item[data-filename="' + CSS.escape(filename) + '"]');
@@ -850,6 +856,7 @@ class AgentFlowDashboard {
       case 'state': this.renderStateMachine(); break;
       case 'summary': this.renderSummary(); break;
       case 'transcript': this.renderTranscript(); break;
+      case 'processmap': this.renderProcessMap(); break;
     }
     this.updateToolbarInfo();
   }
@@ -1905,6 +1912,216 @@ class AgentFlowDashboard {
     }
 
     return 'other';
+  }
+
+  // ---------------------------------------------------------------------------
+  // Tab 8: Process Map (Process Mining Graph)
+  // ---------------------------------------------------------------------------
+  renderProcessMap() {
+    var trace = this.selectedTraceData || this.selectedTrace;
+    if (!trace || !trace.agentId) {
+      document.getElementById('processMapEmpty').style.display = '';
+      return;
+    }
+
+    var agentId = trace.agentId;
+    var self = this;
+
+    // Avoid re-fetching for same agent
+    if (this._processMapAgent === agentId && this._cyProcessMap) return;
+    this._processMapAgent = agentId;
+
+    document.getElementById('processMapEmpty').innerHTML =
+      '<div class="empty-state-icon" style="animation:spin 1s linear infinite">&#9881;</div>' +
+      '<div class="empty-state-text">Building process map for ' + escapeHtml(agentId) + '...</div>';
+    document.getElementById('processMapEmpty').style.display = '';
+
+    fetch('/api/agents/' + encodeURIComponent(agentId) + '/process-graph')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.error || !data.nodes || data.nodes.length === 0) {
+          document.getElementById('processMapEmpty').innerHTML =
+            '<div class="empty-state-icon">&#9881;</div>' +
+            '<div class="empty-state-text">No process data for ' + escapeHtml(agentId) + '</div>';
+          return;
+        }
+        document.getElementById('processMapEmpty').style.display = 'none';
+        self._buildProcessMapGraph(data);
+      })
+      .catch(function() {
+        document.getElementById('processMapEmpty').innerHTML =
+          '<div class="empty-state-icon">&#9881;</div>' +
+          '<div class="empty-state-text">Failed to load process map.</div>';
+      });
+  }
+
+  _buildProcessMapGraph(data) {
+    if (this._cyProcessMap) { this._cyProcessMap.destroy(); this._cyProcessMap = null; }
+
+    var elements = [];
+    var maxNode = data.maxNodeCount || 1;
+    var maxEdge = data.maxEdgeCount || 1;
+
+    // Add nodes
+    for (var i = 0; i < data.nodes.length; i++) {
+      var node = data.nodes[i];
+      // Skip very rare activities (< 2% frequency) to reduce clutter, but keep virtual nodes
+      if (!node.isVirtual && node.frequency < 0.02 && data.nodes.length > 15) continue;
+
+      var size = node.isVirtual ? 30 : Math.max(25, Math.min(70, 25 + 45 * (node.count / maxNode)));
+      var label = node.label;
+      if (!node.isVirtual && node.count > 1) label += ' (' + node.count + ')';
+
+      elements.push({
+        group: 'nodes',
+        data: {
+          id: node.id,
+          label: label,
+          count: node.count,
+          frequency: node.frequency,
+          avgDuration: node.avgDuration,
+          failRate: node.failRate,
+          isVirtual: node.isVirtual,
+          size: size,
+          fullData: node
+        }
+      });
+    }
+
+    // Collect valid node IDs
+    var validIds = new Set(elements.map(function(e) { return e.data.id; }));
+
+    // Add edges (only between valid nodes)
+    for (var j = 0; j < data.edges.length; j++) {
+      var edge = data.edges[j];
+      if (!validIds.has(edge.source) || !validIds.has(edge.target)) continue;
+      // Skip very rare transitions
+      if (edge.frequency < 0.02 && data.edges.length > 30) continue;
+
+      var width = Math.max(1, Math.min(8, 1 + 7 * (edge.count / maxEdge)));
+      var opacity = Math.max(0.3, Math.min(1.0, 0.3 + 0.7 * (edge.count / maxEdge)));
+
+      elements.push({
+        group: 'edges',
+        data: {
+          id: 'pe-' + edge.source + '-' + edge.target,
+          source: edge.source,
+          target: edge.target,
+          count: edge.count,
+          frequency: edge.frequency,
+          width: width,
+          opacity: opacity,
+          label: edge.count > 1 ? String(edge.count) : ''
+        }
+      });
+    }
+
+    var container = document.getElementById('cyProcessMap');
+    var self = this;
+
+    this._cyProcessMap = cytoscape({
+      container: container,
+      elements: elements,
+      style: [
+        {
+          selector: 'node',
+          style: {
+            'label': 'data(label)',
+            'width': 'data(size)',
+            'height': 'data(size)',
+            'font-size': '9px',
+            'text-valign': 'bottom',
+            'text-halign': 'center',
+            'text-margin-y': 6,
+            'color': '#c9d1d9',
+            'text-outline-color': '#0d1117',
+            'text-outline-width': 2,
+            'text-wrap': 'ellipsis',
+            'text-max-width': '100px',
+            'border-width': 2,
+            'border-color': '#30363d',
+            'background-color': '#3b82f6',
+            'shape': 'round-rectangle'
+          }
+        },
+        // Virtual START/END nodes
+        { selector: 'node[?isVirtual]', style: {
+          'background-color': '#6b7280', 'shape': 'ellipse', 'border-color': '#4b5563',
+          'font-size': '8px', 'font-weight': 'bold', 'text-valign': 'center', 'text-margin-y': 0
+        }},
+        // Color by fail rate: green → yellow → red
+        { selector: 'node[failRate <= 0]', style: { 'background-color': '#10b981', 'border-color': '#2ea043' }},
+        { selector: 'node[failRate > 0][failRate <= 0.1]', style: { 'background-color': '#22c55e', 'border-color': '#3fb950' }},
+        { selector: 'node[failRate > 0.1][failRate <= 0.3]', style: { 'background-color': '#eab308', 'border-color': '#d29922' }},
+        { selector: 'node[failRate > 0.3]', style: { 'background-color': '#ef4444', 'border-color': '#f85149' }},
+        // Selected
+        { selector: ':selected', style: { 'border-width': 4, 'border-color': '#f59e0b', 'overlay-opacity': 0.08 }},
+        // Edges
+        {
+          selector: 'edge',
+          style: {
+            'width': 'data(width)',
+            'opacity': 'data(opacity)',
+            'line-color': '#6b7280',
+            'target-arrow-color': '#6b7280',
+            'target-arrow-shape': 'triangle',
+            'curve-style': 'bezier',
+            'arrow-scale': 0.7,
+            'label': 'data(label)',
+            'font-size': '8px',
+            'color': '#8b949e',
+            'text-outline-color': '#0d1117',
+            'text-outline-width': 1.5,
+            'text-rotation': 'autorotate'
+          }
+        }
+      ],
+      layout: {
+        name: 'breadthfirst',
+        directed: true,
+        padding: 50,
+        spacingFactor: 1.6,
+        animate: true,
+        animationDuration: 400,
+        roots: elements.filter(function(e) { return e.data && e.data.id === '[START]'; }).length > 0
+          ? ['[START]'] : undefined
+      },
+      minZoom: 0.15,
+      maxZoom: 4,
+      wheelSensitivity: 0.3
+    });
+
+    // Click node → show detail
+    this._cyProcessMap.on('tap', 'node', function(e) {
+      var d = e.target.data().fullData;
+      if (!d || d.isVirtual) return;
+      var panel = document.getElementById('processMapDetailPanel');
+      var title = document.getElementById('processMapDetailTitle');
+      var body = document.getElementById('processMapDetailBody');
+
+      title.textContent = d.label;
+      var html = '';
+      html += self.detailRow('Occurrences', d.count);
+      html += self.detailRow('Frequency', (d.frequency * 100).toFixed(1) + '% of traces');
+      if (d.avgDuration > 0) html += self.detailRow('Avg Duration', self.computeDuration(0, d.avgDuration));
+      html += self.detailRow('Failure Rate', (d.failRate * 100).toFixed(1) + '%');
+      body.innerHTML = html;
+      panel.classList.add('active');
+    });
+
+    this._cyProcessMap.on('tap', function(e) {
+      if (e.target === self._cyProcessMap) {
+        document.getElementById('processMapDetailPanel').classList.remove('active');
+      }
+    });
+
+    // Close button
+    var closeBtn = document.getElementById('processMapDetailClose');
+    if (closeBtn) {
+      closeBtn.onclick = function() {
+        document.getElementById('processMapDetailPanel').classList.remove('active');
+      };
+    }
   }
 }
 
