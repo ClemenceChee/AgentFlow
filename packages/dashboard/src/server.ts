@@ -469,6 +469,20 @@ export class DashboardServer {
       }
     });
 
+    // Health check endpoints
+    this.app.get('/health', (_req, res) => {
+      res.json({
+        status: 'ok',
+        uptime: process.uptime(),
+        traceCount: this.watcher.getTraceCount(),
+        agentCount: this.watcher.getAgentIds().length,
+      });
+    });
+
+    this.app.get('/ready', (_req, res) => {
+      res.json({ status: 'ready' });
+    });
+
     // Fallback to serve index.html for SPA routing
     this.app.get('*', (_req, res) => {
       const indexPath = path.join(__dirname, '../public/index.html');
