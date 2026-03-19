@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest';
-import { groupByTraceId, stitchTrace, getTraceTree } from 'agentflow-core';
 import type { ExecutionGraph } from 'agentflow-core';
+import { getTraceTree, groupByTraceId, stitchTrace } from 'agentflow-core';
+import { describe, expect, it } from 'vitest';
 
 function makeGraph(overrides: Partial<ExecutionGraph> = {}): ExecutionGraph {
   return {

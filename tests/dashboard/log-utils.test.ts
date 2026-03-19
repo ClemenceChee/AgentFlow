@@ -1,19 +1,19 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
-  stripAnsi,
-  parseValue,
-  parseTimestamp,
-  extractTimestamp,
-  extractLogLevel,
-  extractAction,
-  extractKeyValuePairs,
+  detectActivityPattern,
   detectComponent,
   detectOperation,
-  detectActivityPattern,
-  extractSessionIdentifier,
   detectTrigger,
+  extractAction,
+  extractKeyValuePairs,
+  extractLogLevel,
+  extractSessionIdentifier,
+  extractTimestamp,
   getUniversalNodeStatus,
   openClawSessionIdToAgent,
+  parseTimestamp,
+  parseValue,
+  stripAnsi,
 } from '../../packages/dashboard/src/parsers/log-utils.js';
 
 describe('Log Utils', () => {
@@ -156,9 +156,7 @@ describe('Log Utils', () => {
 
   describe('detectActivityPattern', () => {
     it('detects ISO-timestamped log lines', () => {
-      const activity = detectActivityPattern(
-        '2026-03-19T10:00:00Z [info] autofix.run field=name',
-      );
+      const activity = detectActivityPattern('2026-03-19T10:00:00Z [info] autofix.run field=name');
       expect(activity).not.toBeNull();
       expect(activity!.component).toBe('autofix');
       expect(activity!.operation).toBe('run');
