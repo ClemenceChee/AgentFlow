@@ -13,7 +13,7 @@ import { hostname } from 'node:os';
 import { join, resolve } from 'node:path';
 import type { AgentRecord } from './live.js';
 import { processJsonFile, processJsonlFile, scanFiles } from './live.js';
-import { formatAlertMessage, sendAlert } from './watch-alerts.js';
+import { sendAlert } from './watch-alerts.js';
 import {
   detectTransitions,
   loadWatchState,
@@ -65,8 +65,8 @@ function parseWatchArgs(argv: string[]): WatchConfig {
       i++;
       const val = args[i] ?? '';
       if (val === 'telegram') {
-        const botToken = process.env['AGENTFLOW_TELEGRAM_BOT_TOKEN'] ?? '';
-        const chatId = process.env['AGENTFLOW_TELEGRAM_CHAT_ID'] ?? '';
+        const botToken = process.env.AGENTFLOW_TELEGRAM_BOT_TOKEN ?? '';
+        const chatId = process.env.AGENTFLOW_TELEGRAM_CHAT_ID ?? '';
         if (botToken && chatId) {
           notifyChannels.push({ type: 'telegram', botToken, chatId });
         } else {
@@ -83,7 +83,7 @@ function parseWatchArgs(argv: string[]): WatchConfig {
     } else if (arg === '--poll') {
       i++;
       const v = parseInt(args[i] ?? '', 10);
-      if (!isNaN(v) && v > 0) pollIntervalMs = v * 1000;
+      if (!Number.isNaN(v) && v > 0) pollIntervalMs = v * 1000;
       i++;
     } else if (arg === '--cooldown') {
       i++;
@@ -221,7 +221,7 @@ export function startWatch(argv: string[]): void {
   console.log(`  Poll:         ${config.pollIntervalMs / 1000}s`);
   console.log(`  Alert on:     ${condLabels.join(', ')}`);
   console.log(
-    `  Notify:       stdout${channelLabels.length > 0 ? ', ' + channelLabels.join(', ') : ''}`,
+    `  Notify:       stdout${channelLabels.length > 0 ? `, ${channelLabels.join(', ')}` : ''}`,
   );
   console.log(`  Cooldown:     ${Math.floor(config.cooldownMs / 60_000)}m`);
   console.log(`  State:        ${config.stateFilePath}`);

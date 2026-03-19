@@ -1,6 +1,6 @@
-import * as fs from 'fs';
-import * as os from 'os';
-import * as path from 'path';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
 import { type DashboardConfig, DashboardServer } from './server.js';
 
 const VERSION = '0.4.0';
@@ -17,7 +17,16 @@ function getLanAddress(): string | null {
   return null;
 }
 
-function printBanner(config: DashboardConfig, traceCount: number, stats: { totalAgents: number; totalExecutions: number; globalSuccessRate: number; activeAgents: number }) {
+function printBanner(
+  config: DashboardConfig,
+  traceCount: number,
+  stats: {
+    totalAgents: number;
+    totalExecutions: number;
+    globalSuccessRate: number;
+    activeAgents: number;
+  },
+) {
   const lan = getLanAddress();
   const host = config.host || 'localhost';
   const port = config.port;
@@ -44,7 +53,7 @@ function printBanner(config: DashboardConfig, traceCount: number, stats: { total
 
   Tabs: \ud83c\udfaf Graph \u00b7 \u23f1\ufe0f  Timeline \u00b7 \ud83d\udcca Metrics \u00b7 \ud83d\udee0\ufe0f  Process Health \u00b7 \u26a0\ufe0f  Errors
 
-  Traces:     ${config.tracesDir}${config.dataDirs?.length ? '\n  Data dirs:  ' + config.dataDirs.join('\n              ') : ''}
+  Traces:     ${config.tracesDir}${config.dataDirs?.length ? `\n  Data dirs:  ${config.dataDirs.join('\n              ')}` : ''}
   Loaded:     ${traceCount} traces \u00b7 ${stats.totalAgents} agents \u00b7 ${stats.totalExecutions} executions
   Success:    ${stats.globalSuccessRate.toFixed(1)}%${stats.activeAgents > 0 ? ` \u00b7 ${stats.activeAgents} active now` : ''}
   CORS:       ${config.enableCors ? 'enabled' : 'disabled'}
@@ -68,7 +77,7 @@ export async function startDashboard() {
     switch (args[i]) {
       case '--port':
       case '-p':
-        config.port = parseInt(args[++i]) || 3000;
+        config.port = parseInt(args[++i], 10) || 3000;
         break;
       case '--traces':
       case '-t':

@@ -113,7 +113,7 @@ function pidMatchesName(pid: number, name: string): boolean {
 function readPidFile(path: string): number | null {
   try {
     const pid = parseInt(readFileSync(path, 'utf8').trim(), 10);
-    return isNaN(pid) ? null : pid;
+    return Number.isNaN(pid) ? null : pid;
   } catch {
     return null;
   }
@@ -134,7 +134,9 @@ function auditPidFile(config: ProcessAuditConfig): PidFileResult | null {
       alive: false,
       matchesProcess: false,
       stale: !existsSync(config.pidFile),
-      reason: existsSync(config.pidFile) ? 'PID file exists but content is invalid' : 'No PID file found',
+      reason: existsSync(config.pidFile)
+        ? 'PID file exists but content is invalid'
+        : 'No PID file found',
     };
   }
 
@@ -169,11 +171,11 @@ function auditSystemd(config: ProcessAuditConfig): SystemdUnitResult | null {
       if (k) props[k.trim()] = v.join('=').trim();
     }
 
-    const activeState = props['ActiveState'] ?? 'unknown';
-    const subState = props['SubState'] ?? 'unknown';
-    const mainPid = parseInt(props['MainPID'] ?? '0', 10);
-    const restarts = parseInt(props['NRestarts'] ?? '0', 10);
-    const result = props['Result'] ?? 'unknown';
+    const activeState = props.ActiveState ?? 'unknown';
+    const subState = props.SubState ?? 'unknown';
+    const mainPid = parseInt(props.MainPID ?? '0', 10);
+    const restarts = parseInt(props.NRestarts ?? '0', 10);
+    const result = props.Result ?? 'unknown';
 
     return {
       unit,
@@ -234,10 +236,10 @@ function readCmdline(pid: number): string {
 function getOsProcesses(processName: string): OsProcess[] {
   try {
     // Use ps with explicit columns for reliable parsing
-    const raw = execSync(
-      `ps -eo pid,pcpu,pmem,etime,lstart,args --no-headers`,
-      { encoding: 'utf8', timeout: 5000 },
-    );
+    const raw = execSync(`ps -eo pid,pcpu,pmem,etime,lstart,args --no-headers`, {
+      encoding: 'utf8',
+      timeout: 5000,
+    });
     const results: OsProcess[] = [];
     for (const line of raw.split('\n')) {
       if (!line.includes(processName)) continue;
@@ -246,7 +248,7 @@ function getOsProcesses(processName: string): OsProcess[] {
       // pid, cpu, mem are first 3 whitespace-delimited fields
       const parts = trimmed.split(/\s+/);
       const pid = parseInt(parts[0] ?? '0', 10);
-      if (isNaN(pid) || pid <= 0) continue;
+      if (Number.isNaN(pid) || pid <= 0) continue;
       const cpu = parts[1] ?? '0';
       const mem = parts[2] ?? '0';
       const elapsed = parts[3] ?? '';
@@ -389,11 +391,14 @@ export function auditProcesses(config: ProcessAuditConfig): ProcessAuditResult {
   const childPids = new Set<number>();
   for (const knownPid of knownPids) {
     try {
-      const childrenRaw = readFileSync(`/proc/${knownPid}/task/${knownPid}/children`, 'utf8').trim();
+      const childrenRaw = readFileSync(
+        `/proc/${knownPid}/task/${knownPid}/children`,
+        'utf8',
+      ).trim();
       if (childrenRaw) {
         for (const c of childrenRaw.split(/\s+/)) {
           const cp = parseInt(c, 10);
-          if (!isNaN(cp)) childPids.add(cp);
+          if (!Number.isNaN(cp)) childPids.add(cp);
         }
       }
     } catch {
@@ -407,7 +412,7 @@ export function auditProcesses(config: ProcessAuditConfig): ProcessAuditResult {
       const statusContent = readFileSync(`/proc/${p.pid}/status`, 'utf8');
       const ppidMatch = statusContent.match(/^PPid:\s+(\d+)/m);
       if (ppidMatch) {
-        const ppid = parseInt(ppidMatch[1], 10);
+        const ppid = parseInt(ppidMatch[1] ?? '0', 10);
         if (knownPids.has(ppid)) childPids.add(p.pid);
       }
     } catch {
@@ -418,8 +423,9 @@ export function auditProcesses(config: ProcessAuditConfig): ProcessAuditResult {
   // Exclude current process and its parent from orphan detection
   const selfPid = process.pid;
   const selfPpid = process.ppid;
-  const orphans = osProcesses.filter((p) =>
-    !knownPids.has(p.pid) && !childPids.has(p.pid) && p.pid !== selfPid && p.pid !== selfPpid
+  const orphans = osProcesses.filter(
+    (p) =>
+      !knownPids.has(p.pid) && !childPids.has(p.pid) && p.pid !== selfPid && p.pid !== selfPpid,
   );
 
   // Collect problems
@@ -427,7 +433,8 @@ export function auditProcesses(config: ProcessAuditConfig): ProcessAuditResult {
   if (pidFile?.stale) problems.push(`Stale PID file: ${pidFile.reason}`);
   if (systemd?.crashLooping) problems.push('Systemd unit is crash-looping (auto-restart)');
   if (systemd?.failed) problems.push('Systemd unit has failed');
-  if (systemd && systemd.restarts > 10) problems.push(`High systemd restart count: ${systemd.restarts}`);
+  if (systemd && systemd.restarts > 10)
+    problems.push(`High systemd restart count: ${systemd.restarts}`);
   if (pidFile?.pid && systemd?.mainPid && pidFile.pid !== systemd.mainPid) {
     problems.push(`PID mismatch: file says ${pidFile.pid}, systemd says ${systemd.mainPid}`);
   }
@@ -436,7 +443,10 @@ export function auditProcesses(config: ProcessAuditConfig): ProcessAuditResult {
       if (w.stale) problems.push(`Worker "${w.name}" (pid ${w.pid}) declares running but is dead`);
     }
   }
-  if (orphans.length > 0) problems.push(`${orphans.length} orphan process(es) not tracked by PID file or workers registry`);
+  if (orphans.length > 0)
+    problems.push(
+      `${orphans.length} orphan process(es) not tracked by PID file or workers registry`,
+    );
 
   return { pidFile, systemd, workers, osProcesses, orphans, problems };
 }
@@ -453,14 +463,25 @@ export function formatAuditReport(result: ProcessAuditResult): string {
   const lines: string[] = [];
 
   lines.push('');
-  lines.push('\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557');
-  lines.push('\u2551            \uD83D\uDD0D  P R O C E S S   A U D I T                      \u2551');
-  lines.push('\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D');
+  lines.push(
+    '\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557',
+  );
+  lines.push(
+    '\u2551            \uD83D\uDD0D  P R O C E S S   A U D I T                      \u2551',
+  );
+  lines.push(
+    '\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D',
+  );
 
   // PID file
   if (result.pidFile) {
     const pf = result.pidFile;
-    const icon = pf.pid && pf.alive && pf.matchesProcess ? '\u2705' : pf.stale ? '\u26A0\uFE0F ' : '\u2139\uFE0F ';
+    const icon =
+      pf.pid && pf.alive && pf.matchesProcess
+        ? '\u2705'
+        : pf.stale
+          ? '\u26A0\uFE0F '
+          : '\u2139\uFE0F ';
     lines.push(`\n  PID File: ${pf.path}`);
     lines.push(`  ${icon} ${pf.reason}`);
   }
@@ -468,9 +489,14 @@ export function formatAuditReport(result: ProcessAuditResult): string {
   // Systemd
   if (result.systemd) {
     const sd = result.systemd;
-    const icon = sd.activeState === 'active' ? '\uD83D\uDFE2' :
-                 sd.crashLooping ? '\uD83D\uDFE1' :
-                 sd.failed ? '\uD83D\uDD34' : '\u26AA';
+    const icon =
+      sd.activeState === 'active'
+        ? '\uD83D\uDFE2'
+        : sd.crashLooping
+          ? '\uD83D\uDFE1'
+          : sd.failed
+            ? '\uD83D\uDD34'
+            : '\u26AA';
     lines.push(`\n  Systemd: ${sd.unit}`);
     lines.push(`  ${icon} State: ${sd.activeState} (${sd.subState})  Result: ${sd.result}`);
     lines.push(`     Main PID: ${sd.mainPid || 'none'}  Restarts: ${sd.restarts}`);
@@ -479,11 +505,19 @@ export function formatAuditReport(result: ProcessAuditResult): string {
   // Workers
   if (result.workers) {
     const w = result.workers;
-    lines.push(`\n  Workers (orchestrator pid ${w.orchestratorPid ?? 'unknown'} ${w.orchestratorAlive ? '\u2705' : '\u274C'})`);
+    lines.push(
+      `\n  Workers (orchestrator pid ${w.orchestratorPid ?? 'unknown'} ${w.orchestratorAlive ? '\u2705' : '\u274C'})`,
+    );
     for (const worker of w.workers) {
-      const icon = worker.declaredStatus === 'running' && worker.alive ? '\uD83D\uDFE2' :
-                   worker.stale ? '\uD83D\uDD34 STALE' : '\u26AA';
-      lines.push(`  ${icon}  ${worker.name.padEnd(14)} pid=${String(worker.pid ?? '-').padEnd(8)} status=${worker.declaredStatus}`);
+      const icon =
+        worker.declaredStatus === 'running' && worker.alive
+          ? '\uD83D\uDFE2'
+          : worker.stale
+            ? '\uD83D\uDD34 STALE'
+            : '\u26AA';
+      lines.push(
+        `  ${icon}  ${worker.name.padEnd(14)} pid=${String(worker.pid ?? '-').padEnd(8)} status=${worker.declaredStatus}`,
+      );
     }
   }
 
@@ -491,7 +525,9 @@ export function formatAuditReport(result: ProcessAuditResult): string {
   if (result.osProcesses.length > 0) {
     lines.push(`\n  OS Processes (${result.osProcesses.length} total)`);
     for (const p of result.osProcesses) {
-      lines.push(`    PID ${String(p.pid).padEnd(8)} CPU=${p.cpu.padEnd(6)} MEM=${p.mem.padEnd(6)} Up=${p.elapsed.padEnd(10)} ${p.command.substring(0, 50)}`);
+      lines.push(
+        `    PID ${String(p.pid).padEnd(8)} CPU=${p.cpu.padEnd(6)} MEM=${p.mem.padEnd(6)} Up=${p.elapsed.padEnd(10)} ${p.command.substring(0, 50)}`,
+      );
     }
   }
 
@@ -499,7 +535,9 @@ export function formatAuditReport(result: ProcessAuditResult): string {
   if (result.orphans.length > 0) {
     lines.push(`\n  \u26A0\uFE0F  ${result.orphans.length} ORPHAN PROCESS(ES):`);
     for (const p of result.orphans) {
-      lines.push(`     PID ${String(p.pid).padEnd(8)} CPU=${p.cpu.padEnd(6)} MEM=${p.mem.padEnd(6)} Up=${p.elapsed}`);
+      lines.push(
+        `     PID ${String(p.pid).padEnd(8)} CPU=${p.cpu.padEnd(6)} MEM=${p.mem.padEnd(6)} Up=${p.elapsed}`,
+      );
       lines.push(`       Started: ${p.started}`);
       lines.push(`       Command: ${p.cmdline || p.command}`);
     }

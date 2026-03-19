@@ -90,8 +90,8 @@ describe('loadGraph', () => {
     const graph = loadGraph(json);
     expect(graph.nodes).toBeInstanceOf(Map);
     expect(graph.nodes.size).toBe(2);
-    expect(graph.nodes.get('n1')!.name).toBe('root');
-    expect(graph.nodes.get('n2')!.name).toBe('fetch');
+    expect(graph.nodes.get('n1')?.name).toBe('root');
+    expect(graph.nodes.get('n2')?.name).toBe('fetch');
 
     const stats = getStats(graph);
     expect(stats.totalNodes).toBe(2);
@@ -132,7 +132,7 @@ describe('loadGraph', () => {
     const graph = loadGraph(json);
     expect(graph.nodes).toBeInstanceOf(Map);
     expect(graph.nodes.size).toBe(1);
-    expect(graph.nodes.get('n1')!.name).toBe('root');
+    expect(graph.nodes.get('n1')?.name).toBe('root');
   });
 
   it('handles rootId alias for rootNodeId', () => {

@@ -25,3 +25,6 @@ Thumbs.db
 # Coverage
 coverage/
 .claude/
+
+# Temp / validation data
+tmp/

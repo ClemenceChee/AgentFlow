@@ -14,7 +14,7 @@ export function groupByTraceId(graphs: ExecutionGraph[]): Map<string, ExecutionG
 export function stitchTrace(graphs: ExecutionGraph[]): DistributedTrace {
   if (graphs.length === 0) throw new Error('No graphs to stitch');
 
-  const traceId = graphs[0]!.traceId ?? '';
+  const traceId = graphs[0]?.traceId ?? '';
   const graphsBySpan = new Map<string, ExecutionGraph>();
   const childMap = new Map<string, string[]>();
   let rootGraph: ExecutionGraph | null = null;

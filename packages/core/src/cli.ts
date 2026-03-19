@@ -9,10 +9,10 @@
  * @module
  */
 
-import { basename, resolve } from 'path';
+import { basename, resolve } from 'node:path';
 import { startLive } from './live.js';
-import { auditProcesses, discoverProcessConfig, formatAuditReport } from './process-audit.js';
 import type { ProcessAuditConfig } from './process-audit.js';
+import { auditProcesses, discoverProcessConfig, formatAuditReport } from './process-audit.js';
 import type { RunConfig } from './runner.js';
 import { runTraced } from './runner.js';
 import { handleTrace } from './trace-cli.js';
@@ -274,13 +274,17 @@ function parseAuditArgs(argv: string[]): ProcessAuditConfig {
   if (!processName && !pidFile && !workersFile && discoverDirs.length > 0) {
     const discovered = discoverProcessConfig(discoverDirs);
     if (discovered) {
-      console.log(`Auto-discovered: process="${discovered.processName}"${discovered.pidFile ? ` pid-file=${discovered.pidFile}` : ''}${discovered.workersFile ? ` workers=${discovered.workersFile}` : ''}`);
+      console.log(
+        `Auto-discovered: process="${discovered.processName}"${discovered.pidFile ? ` pid-file=${discovered.pidFile}` : ''}${discovered.workersFile ? ` workers=${discovered.workersFile}` : ''}`,
+      );
       return { ...discovered, systemdUnit };
     }
   }
 
   if (!processName) {
-    console.error('Error: --process <name> is required, or provide directories for auto-discovery.');
+    console.error(
+      'Error: --process <name> is required, or provide directories for auto-discovery.',
+    );
     console.error('Examples:');
     console.error('  agentflow audit --process alfred --pid-file ./data/alfred.pid');
     console.error('  agentflow audit ./data    # auto-discovers *.pid and workers.json');

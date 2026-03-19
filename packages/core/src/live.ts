@@ -68,7 +68,7 @@ function parseArgs(argv: string[]): LiveConfig {
     } else if (arg === '--refresh' || arg === '-r') {
       i++;
       const v = parseInt(args[i] ?? '', 10);
-      if (!isNaN(v) && v > 0) config.refreshMs = v * 1000;
+      if (!Number.isNaN(v) && v > 0) config.refreshMs = v * 1000;
       i++;
     } else if (arg === '--recursive' || arg === '-R') {
       config.recursive = true;
@@ -174,7 +174,7 @@ export function scanFiles(dirs: string[], recursive: boolean): ScannedFile[] {
         if (f.startsWith('.')) continue;
         const fp = join(d, f);
         if (seen.has(fp)) continue;
-        let stat;
+        let stat: ReturnType<typeof statSync> | undefined;
         try {
           stat = statSync(fp);
         } catch {
@@ -189,12 +189,22 @@ export function scanFiles(dirs: string[], recursive: boolean): ScannedFile[] {
 
         if (f.endsWith('.json')) {
           seen.add(fp);
-          const entry = { filename: f, path: fp, mtime: stat.mtime.getTime(), ext: '.json' as const };
+          const entry = {
+            filename: f,
+            path: fp,
+            mtime: stat.mtime.getTime(),
+            ext: '.json' as const,
+          };
           results.push(entry);
           dirResults.push(entry);
         } else if (f.endsWith('.jsonl')) {
           seen.add(fp);
-          const entry = { filename: f, path: fp, mtime: stat.mtime.getTime(), ext: '.jsonl' as const };
+          const entry = {
+            filename: f,
+            path: fp,
+            mtime: stat.mtime.getTime(),
+            ext: '.jsonl' as const,
+          };
           results.push(entry);
           dirResults.push(entry);
         }
@@ -272,7 +282,7 @@ function findTimestamp(obj: Record<string, unknown>): number {
     if (typeof val === 'number') return val > 1e12 ? val : val * 1000; // handle seconds vs ms
     if (typeof val === 'string') {
       const d = Date.parse(val);
-      if (!isNaN(d)) return d;
+      if (!Number.isNaN(d)) return d;
     }
   }
   return 0;
@@ -310,7 +320,7 @@ function extractDetail(obj: Record<string, unknown>): string {
 }
 
 /** Try to load as an agentflow trace */
-function tryLoadTrace(fp: string, raw: unknown): ExecutionGraph | null {
+function tryLoadTrace(_fp: string, raw: unknown): ExecutionGraph | null {
   if (typeof raw !== 'object' || raw === null) return null;
   const obj = raw as Record<string, unknown>;
   // Heuristic: agentflow traces have nodes + agentId (or rootNodeId)
@@ -652,7 +662,7 @@ function flushLines(lines: string[]): void {
   // Move cursor home (no screen clear)
   process.stdout.write('\x1b[H');
   // Write all lines, each ending with clear-to-EOL
-  process.stdout.write(lines.join('\n') + '\n');
+  process.stdout.write(`${lines.join('\n')}\n`);
   // Clear everything below the last line
   process.stdout.write('\x1b[J');
 }
@@ -668,6 +678,7 @@ let liveRunning = false;
 
 // Process audit cache — avoid running ps/systemctl on every render
 import type { ProcessAuditConfig } from './process-audit.js';
+
 let cachedAuditConfig: ProcessAuditConfig | null = null;
 let cachedAuditResult: ProcessAuditResult | null = null;
 let lastAuditTime = 0;
@@ -812,7 +823,7 @@ function render(config: LiveConfig): void {
         fail > 0 ? 'error' : running > 0 ? 'running' : ok > 0 ? 'ok' : 'unknown';
       groups.push({
         name: groupName,
-        source: records[0]!.source,
+        source: records[0]?.source ?? 'trace',
         status,
         lastTs,
         detail: `${records.length} agents`,
@@ -867,7 +878,9 @@ function render(config: LiveConfig): void {
         lastAuditTime = now;
       } catch (err) {
         // Log to stderr so it doesn't interfere with the TUI
-        process.stderr.write(`[agentflow] process audit error: ${err instanceof Error ? err.message : err}\n`);
+        process.stderr.write(
+          `[agentflow] process audit error: ${err instanceof Error ? err.message : err}\n`,
+        );
       }
     }
   } else {
@@ -935,7 +948,7 @@ function render(config: LiveConfig): void {
   }
 
   function truncate(s: string, max: number): string {
-    return s.length > max ? s.slice(0, max - 1) + '\u2026' : s;
+    return s.length > max ? `${s.slice(0, max - 1)}\u2026` : s;
   }
 
   // Dynamic detail width based on terminal
@@ -977,15 +990,20 @@ function render(config: LiveConfig): void {
     const ar = auditResult;
     const healthy = ar.problems.length === 0;
     const healthIcon = healthy ? `${C.green}\u25cf${C.reset}` : `${C.red}\u25cf${C.reset}`;
-    const healthLabel = healthy ? `${C.green}healthy${C.reset}` : `${C.red}${ar.problems.length} issue(s)${C.reset}`;
+    const healthLabel = healthy
+      ? `${C.green}healthy${C.reset}`
+      : `${C.red}${ar.problems.length} issue(s)${C.reset}`;
 
     // Compact one-line summary + worker status
     const workerParts: string[] = [];
     if (ar.workers) {
       for (const w of ar.workers.workers) {
-        const wIcon = w.declaredStatus === 'running' && w.alive ? `${C.green}\u25cf${C.reset}`
-                    : w.stale ? `${C.red}\u25cf${C.reset}`
-                    : `${C.dim}\u25cb${C.reset}`;
+        const wIcon =
+          w.declaredStatus === 'running' && w.alive
+            ? `${C.green}\u25cf${C.reset}`
+            : w.stale
+              ? `${C.red}\u25cf${C.reset}`
+              : `${C.dim}\u25cb${C.reset}`;
         workerParts.push(`${wIcon} ${w.name}`);
       }
     }
@@ -993,24 +1011,35 @@ function render(config: LiveConfig): void {
     // Systemd status
     let sysdLabel = '';
     if (ar.systemd) {
-      const si = ar.systemd.activeState === 'active' ? `${C.green}\u25cf${C.reset}`
-               : ar.systemd.crashLooping ? `${C.yellow}\u25cf${C.reset}`
-               : ar.systemd.failed ? `${C.red}\u25cf${C.reset}`
-               : `${C.dim}\u25cb${C.reset}`;
+      const si =
+        ar.systemd.activeState === 'active'
+          ? `${C.green}\u25cf${C.reset}`
+          : ar.systemd.crashLooping
+            ? `${C.yellow}\u25cf${C.reset}`
+            : ar.systemd.failed
+              ? `${C.red}\u25cf${C.reset}`
+              : `${C.dim}\u25cb${C.reset}`;
       sysdLabel = `  ${C.bold}Systemd${C.reset} ${si} ${ar.systemd.activeState}`;
-      if (ar.systemd.restarts > 0) sysdLabel += ` ${C.dim}(${ar.systemd.restarts} restarts)${C.reset}`;
+      if (ar.systemd.restarts > 0)
+        sysdLabel += ` ${C.dim}(${ar.systemd.restarts} restarts)${C.reset}`;
     }
 
     // PID
     let pidLabel = '';
     if (ar.pidFile?.pid) {
-      const pi = ar.pidFile.alive && ar.pidFile.matchesProcess ? `${C.green}\u25cf${C.reset}` : `${C.red}\u25cf${C.reset}`;
+      const pi =
+        ar.pidFile.alive && ar.pidFile.matchesProcess
+          ? `${C.green}\u25cf${C.reset}`
+          : `${C.red}\u25cf${C.reset}`;
       pidLabel = `  ${C.bold}PID${C.reset} ${pi} ${ar.pidFile.pid}`;
     }
 
     writeLine(L, '');
     writeLine(L, `  ${C.bold}${C.under}Process Health${C.reset}`);
-    writeLine(L, `  ${healthIcon} ${healthLabel}${pidLabel}${sysdLabel}    ${C.bold}Procs${C.reset} ${C.dim}${ar.osProcesses.length}${C.reset}    ${ar.orphans.length > 0 ? `${C.red}Orphans ${ar.orphans.length}${C.reset}` : `${C.dim}Orphans 0${C.reset}`}`);
+    writeLine(
+      L,
+      `  ${healthIcon} ${healthLabel}${pidLabel}${sysdLabel}    ${C.bold}Procs${C.reset} ${C.dim}${ar.osProcesses.length}${C.reset}    ${ar.orphans.length > 0 ? `${C.red}Orphans ${ar.orphans.length}${C.reset}` : `${C.dim}Orphans 0${C.reset}`}`,
+    );
 
     if (workerParts.length > 0) {
       writeLine(L, `  ${C.dim}Workers${C.reset}  ${workerParts.join('  ')}`);
@@ -1027,7 +1056,10 @@ function render(config: LiveConfig): void {
     if (ar.orphans.length > 0) {
       for (const o of ar.orphans.slice(0, 5)) {
         const cmd = (o.cmdline || o.command).substring(0, detailWidth);
-        writeLine(L, `    ${C.red}?${C.reset} ${C.dim}pid=${o.pid} cpu=${o.cpu} mem=${o.mem} up=${o.elapsed}${C.reset}  ${C.dim}${cmd}${C.reset}`);
+        writeLine(
+          L,
+          `    ${C.red}?${C.reset} ${C.dim}pid=${o.pid} cpu=${o.cpu} mem=${o.mem} up=${o.elapsed}${C.reset}  ${C.dim}${cmd}${C.reset}`,
+        );
       }
       if (ar.orphans.length > 5) {
         writeLine(L, `    ${C.dim}... +${ar.orphans.length - 5} more orphans${C.reset}`);
@@ -1119,7 +1151,7 @@ function render(config: LiveConfig): void {
       for (let i = 0; i < Math.min(tree.length, 6); i++) {
         const tg = tree[i]!;
         const depth = getDistDepth(dt, tg.spanId);
-        const indent = '     ' + '\u2502  '.repeat(Math.max(0, depth - 1));
+        const indent = `     ${'\u2502  '.repeat(Math.max(0, depth - 1))}`;
         const isLast = i === tree.length - 1 || getDistDepth(dt, tree[i + 1]?.spanId) <= depth;
         const conn = depth === 0 ? '  ' : isLast ? '\u2514\u2500 ' : '\u251c\u2500 ';
         const gs =
@@ -1160,10 +1192,10 @@ function render(config: LiveConfig): void {
       const age = Math.floor((Date.now() - r.lastActive) / 1000);
       const ageStr =
         age < 60
-          ? age + 's ago'
+          ? `${age}s ago`
           : age < 3600
-            ? Math.floor(age / 60) + 'm ago'
-            : Math.floor(age / 3600) + 'h ago';
+            ? `${Math.floor(age / 60)}m ago`
+            : `${Math.floor(age / 3600)}h ago`;
       const det = truncate(r.detail, detailWidth);
       writeLine(
         L,
@@ -1186,7 +1218,11 @@ function render(config: LiveConfig): void {
   flushLines(L);
 }
 
-function getDistDepth(dt: DistributedTrace, spanId: string | undefined, visited?: Set<string>): number {
+function getDistDepth(
+  dt: DistributedTrace,
+  spanId: string | undefined,
+  visited?: Set<string>,
+): number {
   if (!spanId) return 0;
   const seen = visited ?? new Set<string>();
   if (seen.has(spanId)) return 0;
@@ -1218,7 +1254,7 @@ export function startLive(argv: string[]): void {
 
   // Enter alternate screen buffer for flicker-free rendering
   process.stdout.write('\x1b[?1049h'); // enter alternate screen
-  process.stdout.write('\x1b[?25l');   // hide cursor
+  process.stdout.write('\x1b[?25l'); // hide cursor
   liveRunning = true;
 
   render(config);
@@ -1241,14 +1277,14 @@ export function startLive(argv: string[]): void {
   const cleanup = () => {
     if (liveRunning) {
       liveRunning = false;
-      process.stdout.write('\x1b[?25h');   // show cursor
+      process.stdout.write('\x1b[?25h'); // show cursor
       process.stdout.write('\x1b[?1049l'); // leave alternate screen
     }
   };
 
   process.on('SIGINT', () => {
     cleanup();
-    console.log(C.dim + 'Monitor stopped.' + C.reset);
+    console.log(`${C.dim}Monitor stopped.${C.reset}`);
     process.exit(0);
   });
 

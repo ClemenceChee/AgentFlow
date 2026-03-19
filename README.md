@@ -203,6 +203,41 @@ builder.endNode(root);
 const graph = builder.build();
 ```
 
+## Knowledge Engine
+
+AgentFlow includes a multi-tier knowledge engine that compounds intelligence over time:
+
+| Tier | Name | Description | LLM Required |
+|------|------|-------------|:---:|
+| 0 | System of Record | Log traces, visualize trees, export JSON | No |
+| 1 | Statistical | Process mining, variant analysis, bottleneck detection, conformance checking, adaptive guards | No |
+| 2 | Semantic | LLM-powered pattern analysis, natural language insights, anomaly explanation | Yes (user-provided) |
+
+**Tier 1** ships out of the box — statistical intelligence with zero dependencies and no LLM cost.
+
+**Tier 2** adds an LLM-powered insight engine. You provide the LLM function, AgentFlow provides the prompts and knowledge structure:
+
+```typescript
+import { createKnowledgeStore, createInsightEngine } from 'agentflow-core';
+
+const store = createKnowledgeStore({ baseDir: '.agentflow/knowledge' });
+
+// Wrap any LLM as a simple function
+const engine = createInsightEngine(store, async (prompt) => {
+  return await myLlm.complete(prompt);
+});
+
+// Natural language analysis from accumulated execution data
+const failures = await engine.explainFailures('my-agent');
+console.log(failures.content);  // "The 3 recent failures share a common root cause..."
+
+const summary = await engine.summarizeAgent('my-agent');
+const fixes   = await engine.suggestFixes('my-agent');
+const anomaly = await engine.explainAnomaly('my-agent', event);
+```
+
+Results are cached automatically — same underlying data won't trigger redundant LLM calls.
+
 ## How It Works
 
 AgentFlow reads JSON files and detects patterns:
@@ -254,7 +289,7 @@ await exportGraphToOTel(graph);
 git clone https://github.com/ClemenceChee/AgentFlow.git
 cd AgentFlow
 npm install
-npm test            # 125+ tests passing
+npm test            # 400+ tests passing
 ```
 
 ## License

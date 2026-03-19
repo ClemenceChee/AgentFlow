@@ -10,7 +10,7 @@
  */
 
 import { getChildren, getDepth, getNode } from './graph-query.js';
-import type { ExecutionGraph, ExecutionNode, GraphBuilder, NodeType } from './types.js';
+import type { ExecutionGraph, GraphBuilder, GuardViolation, NodeType, PolicySource, PolicyThresholds } from './types.js';
 
 /**
  * Configuration for runtime guard detection.
@@ -28,17 +28,14 @@ export interface GuardConfig {
   readonly onViolation?: 'warn' | 'error' | 'abort';
   /** Custom logger for warnings (defaults to console.warn). */
   readonly logger?: (message: string) => void;
+  /** Optional policy source for adaptive guard behavior based on accumulated knowledge. */
+  readonly policySource?: PolicySource;
+  /** Thresholds for policy-derived violations (only used when policySource is set). */
+  readonly policyThresholds?: PolicyThresholds;
 }
 
-/**
- * A detected guard violation.
- */
-export interface GuardViolation {
-  readonly type: 'timeout' | 'reasoning-loop' | 'spawn-explosion';
-  readonly nodeId: string;
-  readonly message: string;
-  readonly timestamp: number;
-}
+// GuardViolation is defined in types.ts and re-exported here for backward compatibility.
+export type { GuardViolation } from './types.js';
 
 /** Default timeout values in milliseconds per node type. */
 const DEFAULT_TIMEOUTS: Record<NodeType, number> = {
@@ -127,6 +124,11 @@ export function checkGuards(
   // Check for reasoning loops
   violations.push(...detectReasoningLoops(graph, maxReasoningSteps, now));
 
+  // Policy-derived violations (only when policySource is configured)
+  if (config?.policySource) {
+    violations.push(...checkPolicyViolations(graph, config.policySource, config.policyThresholds, now));
+  }
+
   return violations;
 }
 
@@ -176,6 +178,56 @@ function detectReasoningLoops(
   }
 
   walk(graph.rootNodeId, 0, null);
+  return violations;
+}
+
+/**
+ * Check for policy-derived violations using the PolicySource.
+ */
+function checkPolicyViolations(
+  graph: ExecutionGraph,
+  policySource: PolicySource,
+  thresholds: PolicyThresholds | undefined,
+  timestamp: number,
+): GuardViolation[] {
+  const violations: GuardViolation[] = [];
+  const maxFailureRate = thresholds?.maxFailureRate ?? 0.5;
+  const minConformance = thresholds?.minConformance ?? 0.7;
+
+  // High failure rate
+  const failureRate = policySource.recentFailureRate(graph.agentId);
+  if (failureRate > maxFailureRate) {
+    violations.push({
+      type: 'high-failure-rate',
+      nodeId: graph.rootNodeId,
+      message: `Agent ${graph.agentId} has a recent failure rate of ${(failureRate * 100).toFixed(0)}% (threshold: ${(maxFailureRate * 100).toFixed(0)}%)`,
+      timestamp,
+    });
+  }
+
+  // Conformance drift
+  const conformanceScore = policySource.lastConformanceScore(graph.agentId);
+  if (conformanceScore !== null && conformanceScore < minConformance) {
+    violations.push({
+      type: 'conformance-drift',
+      nodeId: graph.rootNodeId,
+      message: `Agent ${graph.agentId} conformance score ${(conformanceScore * 100).toFixed(0)}% is below threshold ${(minConformance * 100).toFixed(0)}%`,
+      timestamp,
+    });
+  }
+
+  // Known bottleneck (informational, for running nodes)
+  for (const node of graph.nodes.values()) {
+    if (node.status === 'running' && policySource.isKnownBottleneck(node.name)) {
+      violations.push({
+        type: 'known-bottleneck',
+        nodeId: node.id,
+        message: `Node ${node.name} (${node.type}) is a known bottleneck`,
+        timestamp,
+      });
+    }
+  }
+
   return violations;
 }
 

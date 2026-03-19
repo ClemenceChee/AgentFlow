@@ -125,8 +125,12 @@ export class QueryBuilder {
     // Order by — allowlist to prevent SQL injection via runtime bypass of TypeScript types
     const VALID_ORDER_COLUMNS = ['timestamp', 'executionTime', 'agentId'] as const;
     const VALID_DIRECTIONS = ['ASC', 'DESC'] as const;
-    const orderBy = VALID_ORDER_COLUMNS.includes(filters.orderBy as any) ? filters.orderBy! : 'timestamp';
-    const direction = VALID_DIRECTIONS.includes(filters.orderDirection as any) ? filters.orderDirection! : 'DESC';
+    const orderBy = VALID_ORDER_COLUMNS.includes(filters.orderBy as any)
+      ? filters.orderBy!
+      : 'timestamp';
+    const direction = VALID_DIRECTIONS.includes(filters.orderDirection as any)
+      ? filters.orderDirection!
+      : 'DESC';
     sql += ` ORDER BY ${orderBy} ${direction}`;
 
     // Limit and offset
