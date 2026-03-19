@@ -93,7 +93,7 @@ function agentIdFromFilename(filePath: string): string {
 }
 
 /** Derive a default agent ID from the command array. */
-function deriveAgentId(command: string[]): string {
+function deriveAgentId(_command: string[]): string {
   // e.g. ['python', '-m', 'alfred', 'process'] → 'orchestrator'
   return 'orchestrator';
 }

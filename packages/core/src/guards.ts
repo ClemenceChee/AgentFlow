@@ -10,7 +10,7 @@
  */
 
 import { getChildren, getDepth, getNode } from './graph-query.js';
-import type { ExecutionGraph, ExecutionNode, GraphBuilder, NodeType } from './types.js';
+import type { ExecutionGraph, GraphBuilder, NodeType } from './types.js';
 
 /**
  * Configuration for runtime guard detection.

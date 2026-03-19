@@ -5,12 +5,10 @@
  */
 
 import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
 
 import type { AgentRecord } from './live.js';
 import type {
   AgentWatchState,
-  AlertCondition,
   AlertPayload,
   WatchConfig,
   WatchStateFile,
