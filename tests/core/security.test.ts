@@ -2,13 +2,13 @@
  * Security hardening tests for untrusted input handling.
  */
 
-import { mkdtemp, rm, writeFile } from 'fs/promises';
-import { tmpdir } from 'os';
-import { join, resolve } from 'path';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createGraphBuilder } from '../../packages/core/src/graph-builder.js';
 import { processJsonFile, type ScannedFile } from '../../packages/core/src/live.js';
 import { createTraceStore } from '../../packages/core/src/trace-store.js';
-import { createGraphBuilder } from '../../packages/core/src/graph-builder.js';
 
 describe('PID validation (command injection prevention)', () => {
   let tmpDir: string;
@@ -22,16 +22,24 @@ describe('PID validation (command injection prevention)', () => {
   });
 
   function makeScannedFile(filePath: string): ScannedFile {
-    return { filename: filePath.split('/').pop()!, path: filePath, mtime: Date.now(), ext: '.json' };
+    return {
+      filename: filePath.split('/').pop()!,
+      path: filePath,
+      mtime: Date.now(),
+      ext: '.json',
+    };
   }
 
   it('should handle valid numeric PID without shell execution', async () => {
     const filePath = join(tmpDir, 'worker.json');
-    await writeFile(filePath, JSON.stringify({
-      workers: {
-        'test-worker': { pid: 99999999, status: 'running' },
-      },
-    }));
+    await writeFile(
+      filePath,
+      JSON.stringify({
+        workers: {
+          'test-worker': { pid: 99999999, status: 'running' },
+        },
+      }),
+    );
 
     const killSpy = vi.spyOn(process, 'kill').mockImplementation(() => true);
     try {
@@ -49,11 +57,14 @@ describe('PID validation (command injection prevention)', () => {
 
   it('should safely handle non-numeric PID string (injection payload)', async () => {
     const filePath = join(tmpDir, 'malicious.json');
-    await writeFile(filePath, JSON.stringify({
-      workers: {
-        'evil-worker': { pid: '1; touch /tmp/pwned', status: 'running' },
-      },
-    }));
+    await writeFile(
+      filePath,
+      JSON.stringify({
+        workers: {
+          'evil-worker': { pid: '1; touch /tmp/pwned', status: 'running' },
+        },
+      }),
+    );
 
     const killSpy = vi.spyOn(process, 'kill').mockImplementation(() => true);
     try {

@@ -84,8 +84,8 @@ describe('detectTransitions', () => {
 
     const alerts = detectTransitions(state, records, config, Date.now());
     expect(alerts).toHaveLength(1);
-    expect(alerts[0]!.condition).toBe('error');
-    expect(alerts[0]!.agentId).toBe('test-agent');
+    expect(alerts[0]?.condition).toBe('error');
+    expect(alerts[0]?.agentId).toBe('test-agent');
   });
 
   it('detects error-to-ok recovery', () => {
@@ -109,7 +109,7 @@ describe('detectTransitions', () => {
 
     const alerts = detectTransitions(state, records, config, Date.now());
     expect(alerts).toHaveLength(1);
-    expect(alerts[0]!.condition).toBe('recovery');
+    expect(alerts[0]?.condition).toBe('recovery');
   });
 
   it('does not alert when status unchanged', () => {
@@ -168,7 +168,7 @@ describe('detectTransitions', () => {
 
     const alerts = detectTransitions(emptyState(), records, config, now);
     expect(alerts).toHaveLength(1);
-    expect(alerts[0]!.condition).toBe('stale');
+    expect(alerts[0]?.condition).toBe('stale');
   });
 
   it('detects consecutive errors', () => {
@@ -194,7 +194,7 @@ describe('detectTransitions', () => {
 
     const alerts = detectTransitions(state, records, config, Date.now());
     expect(alerts).toHaveLength(1);
-    expect(alerts[0]!.condition).toContain('consecutive-errors');
+    expect(alerts[0]?.condition).toContain('consecutive-errors');
   });
 
   it('alerts on first observation if error (no previous state)', () => {
@@ -203,7 +203,7 @@ describe('detectTransitions', () => {
 
     const alerts = detectTransitions(emptyState(), records, config, Date.now());
     expect(alerts).toHaveLength(1);
-    expect(alerts[0]!.condition).toBe('error');
+    expect(alerts[0]?.condition).toBe('error');
   });
 });
 
@@ -213,8 +213,8 @@ describe('updateWatchState', () => {
     const result = updateWatchState(emptyState(), records, [], Date.now());
 
     expect(result.agents['new-agent']).toBeDefined();
-    expect(result.agents['new-agent']!.lastStatus).toBe('ok');
-    expect(result.agents['new-agent']!.lastActive).toBe(5000);
+    expect(result.agents['new-agent']?.lastStatus).toBe('ok');
+    expect(result.agents['new-agent']?.lastActive).toBe(5000);
   });
 
   it('tracks consecutive errors', () => {
@@ -236,7 +236,7 @@ describe('updateWatchState', () => {
     const records = [makeRecord({ status: 'error', lastActive: 2000 })];
     const result = updateWatchState(state, records, [], Date.now());
 
-    expect(result.agents['test-agent']!.consecutiveErrors).toBe(3);
+    expect(result.agents['test-agent']?.consecutiveErrors).toBe(3);
   });
 
   it('resets consecutive errors on ok', () => {
@@ -258,7 +258,7 @@ describe('updateWatchState', () => {
     const records = [makeRecord({ status: 'ok', lastActive: 2000 })];
     const result = updateWatchState(state, records, [], Date.now());
 
-    expect(result.agents['test-agent']!.consecutiveErrors).toBe(0);
+    expect(result.agents['test-agent']?.consecutiveErrors).toBe(0);
   });
 
   it('keeps mtime history trimmed to 10', () => {
@@ -280,6 +280,6 @@ describe('updateWatchState', () => {
     const records = [makeRecord({ status: 'ok', lastActive: 11 })];
     const result = updateWatchState(state, records, [], Date.now());
 
-    expect(result.agents['test-agent']!.mtimeHistory.length).toBeLessThanOrEqual(10);
+    expect(result.agents['test-agent']?.mtimeHistory.length).toBeLessThanOrEqual(10);
   });
 });

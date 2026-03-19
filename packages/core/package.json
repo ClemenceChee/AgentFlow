@@ -1,6 +1,6 @@
 {
   "name": "agentflow-core",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Monitor any AI agent system. Auto-detects failures, sends alerts, audits OS processes. Zero config, zero dependencies.",
   "type": "module",
   "main": "./dist/index.cjs",

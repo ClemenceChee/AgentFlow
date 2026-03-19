@@ -75,9 +75,9 @@ describe('trace-integration', () => {
     // 4. Load from store
     const loaded = await store.get(graph.id);
     expect(loaded).not.toBeNull();
-    expect(loaded!.id).toBe(graph.id);
-    expect(loaded!.nodes.size).toBe(graph.nodes.size);
-    expect(loaded!.agentId).toBe('research');
+    expect(loaded?.id).toBe(graph.id);
+    expect(loaded?.nodes.size).toBe(graph.nodes.size);
+    expect(loaded?.agentId).toBe('research');
 
     // 5. Visualize
     const tree = toAsciiTree(loaded!);
@@ -94,7 +94,7 @@ describe('trace-integration', () => {
       startTime: now - 5000,
       endTime: now,
       nodes: new Map(
-        [...loaded!.nodes.entries()].map(([id, node]) => [
+        [...(loaded?.nodes.entries() ?? [])].map(([id, node]) => [
           id,
           { ...node, startTime: now - 5000, endTime: now },
         ]),

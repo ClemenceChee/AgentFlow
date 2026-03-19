@@ -2,9 +2,9 @@
  * Tests for JSON trace store.
  */
 
-import { mkdtemp, readFile, rm } from 'fs/promises';
-import { tmpdir } from 'os';
-import { join } from 'path';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createGraphBuilder } from '../../packages/core/src/graph-builder.js';
 import { loadGraph } from '../../packages/core/src/loader.js';
@@ -44,9 +44,9 @@ describe('trace-store', () => {
 
     const loaded = await store.get(graph.id);
     expect(loaded).not.toBeNull();
-    expect(loaded!.id).toBe(graph.id);
-    expect(loaded!.nodes.size).toBe(graph.nodes.size);
-    expect(loaded!.status).toBe(graph.status);
+    expect(loaded?.id).toBe(graph.id);
+    expect(loaded?.nodes.size).toBe(graph.nodes.size);
+    expect(loaded?.status).toBe(graph.status);
   });
 
   it('should return null for non-existent graph', async () => {
@@ -119,7 +119,7 @@ describe('trace-store', () => {
       idGenerator: createTestIdGenerator(),
     });
     const root = builder.startNode({ type: 'agent', name: 'main' });
-    const tool = builder.startNode({ type: 'tool', name: 'stuck-tool', parentId: root });
+    const _tool = builder.startNode({ type: 'tool', name: 'stuck-tool', parentId: root });
     // Don't end the tool — graph will be 'running'
     builder.endNode(root);
     const graph = builder.build();
