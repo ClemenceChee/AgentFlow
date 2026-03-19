@@ -31,7 +31,7 @@ export class AgentFlowStorage {
   private ingester?: TraceIngester;
   private analytics: StorageAnalytics;
 
-  constructor(private config: StorageConfig) {
+  constructor(config: StorageConfig) {
     this.db = new Database(config.dbPath);
     this.setupDatabase();
     this.analytics = new StorageAnalytics(this.db);
@@ -166,7 +166,7 @@ export class AgentFlowStorage {
         nodeCount: stats.totalNodes || 0,
         failureCount: failures.length,
       };
-    } catch (error) {
+    } catch (_error) {
       // Fallback analysis
       const nodes = this.extractNodes(trace);
       const failures = nodes.filter((node) => this.isFailedNode(node));
@@ -194,7 +194,7 @@ export class AgentFlowStorage {
   }
 
   private isFailedNode(node: any): boolean {
-    return node.status === 'failed' || !!node.error || (node.metadata && node.metadata.error);
+    return node.status === 'failed' || !!node.error || node.metadata?.error;
   }
 
   private estimateExecutionTime(nodes: any[]): number {

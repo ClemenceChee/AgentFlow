@@ -313,7 +313,7 @@ export class StorageAnalytics {
         affectedAgents: Object.keys(byAgent).length,
         mostFailedAgent: this.getMaxKey(byAgent),
         mostFailedTrigger: this.getMaxKey(byTrigger),
-        peakFailureHour: parseInt(this.getMaxKey(byHour)),
+        peakFailureHour: parseInt(this.getMaxKey(byHour), 10),
       },
       patterns: {
         byAgent: Object.entries(byAgent)
@@ -324,7 +324,7 @@ export class StorageAnalytics {
           .map(([trigger, count]) => ({ trigger, count }))
           .sort((a, b) => b.count - a.count),
         byHour: Object.entries(byHour)
-          .map(([hour, count]) => ({ hour: parseInt(hour), count }))
+          .map(([hour, count]) => ({ hour: parseInt(hour, 10), count }))
           .sort((a, b) => a.hour - b.hour),
       },
     };

@@ -1,4 +1,3 @@
-import * as path from 'path';
 import { AgentFlowStorage } from './storage.js';
 
 export async function startCLI() {
@@ -44,7 +43,7 @@ export async function startCLI() {
 }
 
 function getDbPath(args: string[]): string {
-  const dbIndex = args.findIndex((arg) => arg === '--db');
+  const dbIndex = args.indexOf('--db');
   return dbIndex >= 0 && args[dbIndex + 1] ? args[dbIndex + 1] : './agentflow.db';
 }
 
@@ -54,7 +53,7 @@ async function handleQuery(dbPath: string, args: string[]) {
   const agentId = getArgValue(args, '--agent');
   const trigger = getArgValue(args, '--trigger');
   const since = getArgValue(args, '--since');
-  const limit = parseInt(getArgValue(args, '--limit') || '50');
+  const limit = parseInt(getArgValue(args, '--limit') || '50', 10);
   const success = getArgValue(args, '--success');
 
   const filters: any = { limit };
@@ -112,7 +111,7 @@ async function handleIngest(dbPath: string, args: string[]) {
 async function handleStats(dbPath: string, args: string[]) {
   const storage = new AgentFlowStorage({ dbPath });
   const agentId = getArgValue(args, '--agent');
-  const days = parseInt(getArgValue(args, '--days') || '7');
+  const days = parseInt(getArgValue(args, '--days') || '7', 10);
 
   if (agentId) {
     // Agent-specific stats
@@ -171,7 +170,7 @@ async function handleAnalyze(dbPath: string, args: string[]) {
 
   const agentId = getArgValue(args, '--agent');
   const type = getArgValue(args, '--type') || 'health';
-  const days = parseInt(getArgValue(args, '--days') || '7');
+  const days = parseInt(getArgValue(args, '--days') || '7', 10);
 
   console.log(`\\n🔍 Analysis: ${type.toUpperCase()}`);
   console.log('=' * 50);
@@ -262,7 +261,7 @@ async function handleExport(dbPath: string, args: string[]) {
   const output = getArgValue(args, '--output') || `export-${Date.now()}.${format}`;
   const agentId = getArgValue(args, '--agent');
   const since = getArgValue(args, '--since');
-  const limit = parseInt(getArgValue(args, '--limit') || '1000');
+  const limit = parseInt(getArgValue(args, '--limit') || '1000', 10);
 
   const filters: any = { limit };
   if (agentId) filters.agentId = agentId;
@@ -272,7 +271,7 @@ async function handleExport(dbPath: string, args: string[]) {
 
   const data = storage.export(format as any, filters);
 
-  const fs = await import('fs');
+  const fs = await import('node:fs');
   fs.writeFileSync(output, data);
 
   console.log(`✅ Exported to ${output} (${data.length} bytes)`);
@@ -283,7 +282,7 @@ async function handleExport(dbPath: string, args: string[]) {
 async function handleCleanup(dbPath: string, args: string[]) {
   const storage = new AgentFlowStorage({ dbPath });
 
-  const days = parseInt(getArgValue(args, '--days') || '30');
+  const days = parseInt(getArgValue(args, '--days') || '30', 10);
   const dryRun = args.includes('--dry-run');
 
   console.log(`🧹 ${dryRun ? 'Simulating' : 'Running'} cleanup (retention: ${days} days)`);
@@ -307,7 +306,7 @@ async function handleCleanup(dbPath: string, args: string[]) {
 }
 
 function getArgValue(args: string[], flag: string): string | null {
-  const index = args.findIndex((arg) => arg === flag);
+  const index = args.indexOf(flag);
   return index >= 0 && args[index + 1] ? args[index + 1] : null;
 }
 

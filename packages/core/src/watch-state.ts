@@ -7,12 +7,7 @@
 import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 
 import type { AgentRecord } from './live.js';
-import type {
-  AgentWatchState,
-  AlertPayload,
-  WatchConfig,
-  WatchStateFile,
-} from './watch-types.js';
+import type { AgentWatchState, AlertPayload, WatchConfig, WatchStateFile } from './watch-types.js';
 
 // ---------------------------------------------------------------------------
 // Duration parsing
@@ -23,10 +18,10 @@ export function parseDuration(input: string): number {
   const match = input.match(/^(\d+(?:\.\d+)?)\s*(s|m|h|d)$/i);
   if (!match) {
     const n = parseInt(input, 10);
-    return isNaN(n) ? 0 : n * 1000; // bare number = seconds
+    return Number.isNaN(n) ? 0 : n * 1000; // bare number = seconds
   }
   const value = parseFloat(match[1]!);
-  switch (match[2]!.toLowerCase()) {
+  switch (match[2]?.toLowerCase()) {
     case 's':
       return value * 1000;
     case 'm':
@@ -62,7 +57,7 @@ export function loadWatchState(filePath: string): WatchStateFile {
 
 /** Save watch state atomically (write tmp + rename). */
 export function saveWatchState(filePath: string, state: WatchStateFile): void {
-  const tmp = filePath + '.tmp';
+  const tmp = `${filePath}.tmp`;
   try {
     writeFileSync(tmp, JSON.stringify(state, null, 2), 'utf8');
     renameSync(tmp, filePath);

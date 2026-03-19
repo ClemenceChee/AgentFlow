@@ -1,4 +1,4 @@
-import { trace, type Span, type Tracer, SpanStatusCode, SpanKind } from '@opentelemetry/api';
+import { type Span, SpanKind, SpanStatusCode, type Tracer, trace } from '@opentelemetry/api';
 import type { ExecutionGraph, ExecutionNode } from 'agentflow-core';
 
 /**
@@ -8,7 +8,7 @@ import type { ExecutionGraph, ExecutionNode } from 'agentflow-core';
 export class AgentFlowOTelExporter {
   private tracer: Tracer;
 
-  constructor(serviceName: string = 'agentflow') {
+  constructor(_serviceName: string = 'agentflow') {
     this.tracer = trace.getTracer('agentflow-otel', '0.1.0');
   }
 
@@ -29,7 +29,7 @@ export class AgentFlowOTelExporter {
     nodeId: string,
     graph: ExecutionGraph,
     parentSpan: Span | null,
-    processed: Set<string>
+    processed: Set<string>,
   ): Promise<void> {
     if (processed.has(nodeId)) return;
     processed.add(nodeId);
@@ -70,14 +70,14 @@ export class AgentFlowOTelExporter {
     return span;
   }
 
-  private createChildSpan(node: ExecutionNode, graph: ExecutionGraph, parent: Span): Span {
+  private createChildSpan(node: ExecutionNode, _graph: ExecutionGraph, parent: Span): Span {
     return this.tracer.startSpan(
       this.getOTelSpanName(node),
       {
         kind: this.getSpanKind(node),
         startTime: node.startTime,
       },
-      trace.setSpan(trace.active(), parent)
+      trace.setSpan(trace.active(), parent),
     );
   }
 
@@ -236,7 +236,7 @@ export class AgentFlowOTelExporter {
       case 'failed':
         span.setStatus({
           code: SpanStatusCode.ERROR,
-          message: node.metadata?.error || 'Node execution failed'
+          message: node.metadata?.error || 'Node execution failed',
         });
         break;
       case 'running':
@@ -245,7 +245,7 @@ export class AgentFlowOTelExporter {
       case 'timeout':
         span.setStatus({
           code: SpanStatusCode.ERROR,
-          message: 'Node execution timed out'
+          message: 'Node execution timed out',
         });
         break;
     }

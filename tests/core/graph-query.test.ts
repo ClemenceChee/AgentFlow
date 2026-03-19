@@ -76,7 +76,7 @@ describe('graph-query', () => {
     it('finds an existing node', () => {
       const node = getNode(graph, 't_002');
       expect(node).toBeDefined();
-      expect(node!.name).toBe('root-agent');
+      expect(node?.name).toBe('root-agent');
     });
 
     it('returns undefined for non-existent node', () => {
@@ -112,7 +112,7 @@ describe('graph-query', () => {
     it('returns parent of a child node', () => {
       const parent = getParent(graph, 't_005');
       expect(parent).toBeDefined();
-      expect(parent!.name).toBe('subagent-b');
+      expect(parent?.name).toBe('subagent-b');
     });
 
     it('returns undefined for root node', () => {
@@ -155,7 +155,7 @@ describe('graph-query', () => {
     it('returns the longest path from root to leaf', () => {
       const path = getCriticalPath(graph);
       expect(path.length).toBeGreaterThanOrEqual(1);
-      expect(path[0]!.name).toBe('root-agent');
+      expect(path[0]?.name).toBe('root-agent');
     });
 
     it('returns single node for single-node graph', () => {
@@ -166,7 +166,7 @@ describe('graph-query', () => {
 
       const path = getCriticalPath(solo);
       expect(path).toHaveLength(1);
-      expect(path[0]!.name).toBe('solo');
+      expect(path[0]?.name).toBe('solo');
     });
   });
 
@@ -174,7 +174,7 @@ describe('graph-query', () => {
     it('finds waited_on dependencies', () => {
       const waiting = findWaitingOn(graph, 't_007'); // wait-c
       expect(waiting).toHaveLength(1);
-      expect(waiting[0]!.name).toBe('tool-a');
+      expect(waiting[0]?.name).toBe('tool-a');
     });
 
     it('returns empty when no waited_on edges', () => {

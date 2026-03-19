@@ -255,8 +255,10 @@ export async function runTraced(config: RunConfig): Promise<RunResult> {
     const filename = `${graph.agentId}-${ts}.json`;
     const outPath = join(resolvedTracesDir, filename);
     const resolvedOut = resolve(outPath);
-    if (!resolvedOut.startsWith(resolvedTracesDir + '/') && resolvedOut !== resolvedTracesDir) {
-      throw new Error(`Path traversal detected: agentId "${graph.agentId}" escapes traces directory`);
+    if (!resolvedOut.startsWith(`${resolvedTracesDir}/`) && resolvedOut !== resolvedTracesDir) {
+      throw new Error(
+        `Path traversal detected: agentId "${graph.agentId}" escapes traces directory`,
+      );
     }
     writeFileSync(outPath, JSON.stringify(graphToJson(graph), null, 2), 'utf-8');
     tracePaths.push(outPath);
@@ -264,7 +266,9 @@ export async function runTraced(config: RunConfig): Promise<RunResult> {
 
   // Hint for trace inspection
   if (tracePaths.length > 0) {
-    console.log(`\uD83D\uDD0D Run "agentflow trace show ${orchestratorGraph.id} --traces-dir ${resolvedTracesDir}" to inspect`);
+    console.log(
+      `\uD83D\uDD0D Run "agentflow trace show ${orchestratorGraph.id} --traces-dir ${resolvedTracesDir}" to inspect`,
+    );
   }
 
   return {

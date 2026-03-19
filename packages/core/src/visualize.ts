@@ -112,7 +112,8 @@ export function toAsciiTree(graph: ExecutionGraph): string {
     const children = getChildren(graph, nodeId);
     const childPrefix = isRoot ? '' : prefix + (isLast ? '   ' : '\u2502  ');
     for (let i = 0; i < children.length; i++) {
-      renderNode(children[i]!.id, childPrefix, i === children.length - 1, false);
+      const childId = children[i]?.id;
+      if (childId) renderNode(childId, childPrefix, i === children.length - 1, false);
     }
   }
 

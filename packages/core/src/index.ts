@@ -37,8 +37,8 @@ export type { GuardConfig, GuardViolation } from './guards.js';
 export { checkGuards, withGuards } from './guards.js';
 // Live monitor
 export { startLive } from './live.js';
-// Process audit
-export { auditProcesses, discoverProcessConfig, formatAuditReport } from './process-audit.js';
+// Serialization / deserialization
+export { graphToJson, loadGraph } from './loader.js';
 export type {
   OsProcess,
   PidFileResult,
@@ -48,8 +48,8 @@ export type {
   WorkerEntry,
   WorkersResult,
 } from './process-audit.js';
-// Serialization / deserialization
-export { graphToJson, loadGraph } from './loader.js';
+// Process audit
+export { auditProcesses, discoverProcessConfig, formatAuditReport } from './process-audit.js';
 export type { RunConfig, RunResult } from './runner.js';
 // CLI runner
 export { runTraced } from './runner.js';
