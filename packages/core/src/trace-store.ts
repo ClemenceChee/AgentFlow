@@ -8,7 +8,7 @@
  */
 
 import { mkdir, readdir, readFile, writeFile } from 'fs/promises';
-import { join } from 'path';
+import { join, resolve } from 'path';
 import { graphToJson, loadGraph } from './loader.js';
 import type { ExecutionGraph, ExecutionNode, GraphStatus, NodeType } from './types.js';
 
@@ -76,6 +76,11 @@ export function createTraceStore(dir: string): TraceStore {
       await ensureDir();
       const json = graphToJson(graph);
       const filePath = join(dir, `${graph.id}.json`);
+      const resolvedBase = resolve(dir);
+      const resolvedPath = resolve(filePath);
+      if (!resolvedPath.startsWith(resolvedBase + '/') && resolvedPath !== resolvedBase) {
+        throw new Error(`Path traversal detected: "${graph.id}" escapes base directory`);
+      }
       await writeFile(filePath, JSON.stringify(json, null, 2), 'utf-8');
       return filePath;
     },
