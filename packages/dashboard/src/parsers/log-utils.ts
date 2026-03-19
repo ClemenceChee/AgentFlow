@@ -54,10 +54,7 @@ export function extractAction(line: string): string {
   if (actionMatch) return actionMatch[1].trim();
 
   // After level, extract the main message
-  const afterLevel = clean.replace(
-    /^.*?(debug|info|warn|warning|error|fatal|trace)\s*\]?\s*/i,
-    '',
-  );
+  const afterLevel = clean.replace(/^.*?(debug|info|warn|warning|error|fatal|trace)\s*\]?\s*/i, '');
   return afterLevel.split(/\s+/)[0] || '';
 }
 
@@ -118,8 +115,7 @@ export function detectActivityPattern(line: string): LogActivity | null {
     if (jsonMatch) {
       try {
         const parsed = JSON.parse(jsonMatch[0]);
-        timestamp =
-          parseTimestamp(parsed.timestamp || parsed.time || parsed.ts) || Date.now();
+        timestamp = parseTimestamp(parsed.timestamp || parsed.time || parsed.ts) || Date.now();
         level = parsed.level || parsed.severity || 'info';
         action = parsed.action || parsed.event || parsed.message || '';
         kvPairs = parsed;
@@ -186,8 +182,10 @@ export function extractSessionIdentifier(activity: Record<string, unknown>): str
 export function detectTrigger(activity: Record<string, unknown>): string {
   if (activity.trigger) return String(activity.trigger);
   if (activity.method && activity.url) return 'api-call';
-  if (typeof activity.operation === 'string' && activity.operation.includes('start')) return 'startup';
-  if (typeof activity.operation === 'string' && activity.operation.includes('invoke')) return 'invocation';
+  if (typeof activity.operation === 'string' && activity.operation.includes('start'))
+    return 'startup';
+  if (typeof activity.operation === 'string' && activity.operation.includes('invoke'))
+    return 'invocation';
   return 'event';
 }
 

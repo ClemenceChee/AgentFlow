@@ -1,18 +1,17 @@
+export type { LogActivity } from './log-utils.js';
 export {
-  stripAnsi,
-  parseValue,
-  parseTimestamp,
-  extractTimestamp,
-  extractLogLevel,
-  extractAction,
-  extractKeyValuePairs,
+  detectActivityPattern,
   detectComponent,
   detectOperation,
-  detectActivityPattern,
-  extractSessionIdentifier,
   detectTrigger,
+  extractAction,
+  extractKeyValuePairs,
+  extractLogLevel,
+  extractSessionIdentifier,
+  extractTimestamp,
   getUniversalNodeStatus,
   openClawSessionIdToAgent,
+  parseTimestamp,
+  parseValue,
+  stripAnsi,
 } from './log-utils.js';
-
-export type { LogActivity } from './log-utils.js';
