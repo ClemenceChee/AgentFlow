@@ -407,7 +407,7 @@ export function auditProcesses(config: ProcessAuditConfig): ProcessAuditResult {
       const statusContent = readFileSync(`/proc/${p.pid}/status`, 'utf8');
       const ppidMatch = statusContent.match(/^PPid:\s+(\d+)/m);
       if (ppidMatch) {
-        const ppid = parseInt(ppidMatch[1], 10);
+        const ppid = parseInt(ppidMatch[1] ?? '0', 10);
         if (knownPids.has(ppid)) childPids.add(p.pid);
       }
     } catch {

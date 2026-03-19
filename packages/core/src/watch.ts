@@ -13,7 +13,7 @@ import { hostname } from 'node:os';
 import { join, resolve } from 'node:path';
 import type { AgentRecord } from './live.js';
 import { processJsonFile, processJsonlFile, scanFiles } from './live.js';
-import { formatAlertMessage, sendAlert } from './watch-alerts.js';
+import { sendAlert } from './watch-alerts.js';
 import {
   detectTransitions,
   loadWatchState,

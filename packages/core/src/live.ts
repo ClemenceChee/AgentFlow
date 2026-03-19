@@ -310,7 +310,7 @@ function extractDetail(obj: Record<string, unknown>): string {
 }
 
 /** Try to load as an agentflow trace */
-function tryLoadTrace(fp: string, raw: unknown): ExecutionGraph | null {
+function tryLoadTrace(_fp: string, raw: unknown): ExecutionGraph | null {
   if (typeof raw !== 'object' || raw === null) return null;
   const obj = raw as Record<string, unknown>;
   // Heuristic: agentflow traces have nodes + agentId (or rootNodeId)

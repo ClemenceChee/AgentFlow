@@ -944,10 +944,8 @@ export class TraceWatcher extends EventEmitter {
         agentId = parentDir;
       }
 
-      // Prefix OpenClaw agents properly
-      if (filePath.includes('.openclaw/') && !agentId.startsWith('openclaw-')) {
-        agentId = `openclaw-${agentId}`;
-      }
+      // Note: openclaw- prefix is NOT added in loadSessionFile
+      // (only in extractAgentFromPath for log files)
 
       // Detect Alfred sessions (different structure)
       if (filePath.includes('.alfred/') || filePath.includes('alfred')) {
