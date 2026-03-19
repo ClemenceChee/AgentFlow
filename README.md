@@ -81,6 +81,8 @@ The demo creates an agent that:
 ├─ ⚠ reasoning-loop detected (guard violation)
 └─ ✗ analysis-engine timeout after 30s
 ```
+<img width="2889" height="864" alt="Screenshot 2026-03-19 110029" src="https://github.com/user-attachments/assets/acd199cd-5064-44be-8deb-94bd2d101c63" />
+<img width="2879" height="974" alt="Screenshot 2026-03-19 110037" src="https://github.com/user-attachments/assets/fa1fd4f1-41bf-4506-9a5d-342ed84243de" />
 
 ## Architecture
 
