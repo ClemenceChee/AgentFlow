@@ -1,5 +1,12 @@
 # AgentFlow
 
+[![GitHub stars](https://img.shields.io/github/stars/ClemenceChee/AgentFlow)](https://github.com/ClemenceChee/AgentFlow/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/ClemenceChee/AgentFlow)](https://github.com/ClemenceChee/AgentFlow/network/members)
+[![npm downloads](https://img.shields.io/npm/dm/agentflow)](https://www.npmjs.com/package/agentflow)
+[![GitHub App Installs](https://img.shields.io/github/downloads/ClemenceChee/AgentFlow/total)](https://github.com/ClemenceChee/AgentFlow/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![TypeScript](https://img.shields.io/badge/Language-TypeScript-blue.svg)](https://www.typescriptlang.org/)
+
 **Process mining for AI agent systems — Know when your agents break, fix them before users notice.**
 
 ## What is this?
