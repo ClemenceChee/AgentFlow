@@ -55,7 +55,8 @@ export class TraceIngester {
   }
 
   private isTraceFile(filePath: string): boolean {
-    return filePath.endsWith('.json');
+    const supportedExtensions = ['.json', '.jsonl', '.log', '.trace'];
+    return supportedExtensions.some(ext => filePath.endsWith(ext));
   }
 
   private queueFile(filePath: string) {
@@ -128,27 +129,244 @@ export class TraceIngester {
 
     try {
       const content = fs.readFileSync(filePath, 'utf8');
-      const trace = JSON.parse(content);
+      const traces = this.parseFileContent(content, filePath);
 
       // Add file metadata
       const stats = fs.statSync(filePath);
-      trace.filename = filename;
-      trace.fileSize = stats.size;
-      trace.lastModified = stats.mtime.getTime();
 
-      // Normalize trace format
-      const normalizedTrace = this.normalizeTrace(trace);
+      // Process each trace (some formats may yield multiple traces per file)
+      for (const trace of traces) {
+        trace.filename = filename;
+        trace.fileSize = stats.size;
+        trace.lastModified = stats.mtime.getTime();
 
-      await this.storage.ingestTrace(normalizedTrace);
-      this.processedFiles.add(filename);
-    } catch (error) {
-      if (error instanceof SyntaxError) {
-        console.error(`Invalid JSON in trace file ${filename}:`, error.message);
-      } else {
-        console.error(`Error processing trace file ${filename}:`, error);
+        // Normalize trace format
+        const normalizedTrace = this.normalizeTrace(trace);
+        await this.storage.ingestTrace(normalizedTrace);
       }
+
+      this.processedFiles.add(filename);
+      console.log(`Ingested ${traces.length} traces from ${filename}`);
+    } catch (error) {
+      console.error(`Error processing file ${filename}:`, error);
       throw error;
     }
+  }
+
+  private parseFileContent(content: string, filePath: string): any[] {
+    const extension = path.extname(filePath);
+
+    switch (extension) {
+      case '.json':
+        return [JSON.parse(content)];
+
+      case '.jsonl':
+        return content
+          .split('\n')
+          .filter(line => line.trim())
+          .map(line => JSON.parse(line));
+
+      case '.log':
+        return this.parseStructuredLog(content, filePath);
+
+      case '.trace':
+        // Try JSON first, fall back to structured log parsing
+        try {
+          return [JSON.parse(content)];
+        } catch {
+          return this.parseStructuredLog(content, filePath);
+        }
+
+      default:
+        throw new Error(`Unsupported file format: ${extension}`);
+    }
+  }
+
+  private parseStructuredLog(content: string, filePath: string): any[] {
+    const traces: any[] = [];
+    const filename = path.basename(filePath);
+
+    // Detect if this is Alfred's structured log format
+    if (this.isAlfredLog(content, filename)) {
+      return this.parseAlfredLog(content, filename);
+    }
+
+    // Generic structured log parsing - look for JSON-like structured data
+    const lines = content.split('\n');
+    for (const line of lines) {
+      const structuredData = this.extractStructuredData(line);
+      if (structuredData) {
+        traces.push(structuredData);
+      }
+    }
+
+    // If no structured data found, create a basic trace for the whole file
+    if (traces.length === 0) {
+      traces.push({
+        agentId: this.extractAgentIdFromPath(filePath),
+        name: `Log file: ${filename}`,
+        trigger: 'log-file',
+        timestamp: Date.now(),
+        nodes: {
+          'root': {
+            id: 'root',
+            type: 'log-file',
+            name: filename,
+            status: 'completed',
+            startTime: Date.now(),
+            endTime: Date.now(),
+            metadata: { lineCount: lines.length }
+          }
+        }
+      });
+    }
+
+    return traces;
+  }
+
+  private isAlfredLog(content: string, filename: string): boolean {
+    return filename.includes('alfred') ||
+           content.includes('daemon.starting') ||
+           content.includes('zo.dispatching') ||
+           content.includes('agent_invoke');
+  }
+
+  private parseAlfredLog(content: string, filename: string): any[] {
+    const traces: any[] = [];
+    const lines = content.split('\n');
+    const sessions = new Map<string, any>();
+
+    for (const line of lines) {
+      const logEntry = this.parseAlfredLogLine(line);
+      if (!logEntry) continue;
+
+      const sessionId = logEntry.runId || logEntry.sweepId || 'default';
+
+      if (!sessions.has(sessionId)) {
+        sessions.set(sessionId, {
+          agentId: `alfred-${logEntry.component || 'unknown'}`,
+          name: `Alfred ${logEntry.component || 'activity'}: ${sessionId}`,
+          trigger: logEntry.trigger || 'scheduled',
+          timestamp: logEntry.timestamp,
+          nodes: {},
+          metadata: { sessionId, component: logEntry.component }
+        });
+      }
+
+      const session = sessions.get(sessionId);
+      this.addAlfredNodeToSession(session, logEntry);
+    }
+
+    return Array.from(sessions.values()).filter(session => Object.keys(session.nodes).length > 0);
+  }
+
+  private parseAlfredLogLine(line: string): any | null {
+    // Parse Alfred's structured log format: [timestamp] [level] [action] [key=value pairs]
+    const timestampMatch = line.match(/^\[2m(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z)\[0m/);
+    if (!timestampMatch) return null;
+
+    const levelMatch = line.match(/\[\[(\d+)m\[\[1m(\w+)\s*\[0m\]/);
+    const actionMatch = line.match(/\[1m([^\[]+?)\s*\[0m/);
+
+    if (!actionMatch) return null;
+
+    const timestamp = new Date(timestampMatch[1]).getTime();
+    const level = levelMatch ? levelMatch[2] : 'info';
+    const action = actionMatch[1].trim();
+
+    // Extract key-value pairs
+    const kvPairs: any = {};
+    const kvRegex = /\[36m(\w+)\[0m=\[35m([^\[]+?)\[0m/g;
+    let match;
+    while ((match = kvRegex.exec(line)) !== null) {
+      let value: any = match[2];
+      // Try to parse as number or remove quotes
+      if (value.match(/^\d+$/)) value = parseInt(value);
+      else if (value.match(/^\d+\.\d+$/)) value = parseFloat(value);
+      else if (value.startsWith("'") && value.endsWith("'")) value = value.slice(1, -1);
+      kvPairs[match[1]] = value;
+    }
+
+    return {
+      timestamp,
+      level,
+      action,
+      component: action.split('.')[0], // e.g., 'daemon' from 'daemon.starting'
+      operation: action.split('.').slice(1).join('.'), // e.g., 'starting'
+      runId: kvPairs.run_id,
+      sweepId: kvPairs.sweep_id,
+      project: kvPairs.project,
+      sources: kvPairs.sources,
+      method: kvPairs.method,
+      url: kvPairs.url,
+      ...kvPairs
+    };
+  }
+
+  private addAlfredNodeToSession(session: any, logEntry: any): void {
+    const nodeId = `${logEntry.component}-${logEntry.operation}-${Date.now()}`;
+
+    const node = {
+      id: nodeId,
+      type: logEntry.component,
+      name: `${logEntry.component}: ${logEntry.operation}`,
+      status: this.getNodeStatus(logEntry),
+      startTime: logEntry.timestamp,
+      endTime: logEntry.timestamp, // Single point in time for log events
+      metadata: {
+        level: logEntry.level,
+        action: logEntry.action,
+        ...logEntry
+      }
+    };
+
+    session.nodes[nodeId] = node;
+  }
+
+  private getNodeStatus(logEntry: any): string {
+    if (logEntry.level === 'error') return 'failed';
+    if (logEntry.level === 'warning') return 'warning';
+    if (logEntry.operation?.includes('start')) return 'running';
+    if (logEntry.operation?.includes('complete')) return 'completed';
+    return 'completed'; // Default for log events
+  }
+
+  private extractStructuredData(line: string): any | null {
+    // Try to extract JSON-like data from log lines
+    try {
+      const jsonMatch = line.match(/\{.*\}/);
+      if (jsonMatch) {
+        return JSON.parse(jsonMatch[0]);
+      }
+    } catch {
+      // Not JSON, continue
+    }
+
+    // Look for key=value patterns
+    const kvMatches = line.match(/(\w+)=([^\s]+)/g);
+    if (kvMatches && kvMatches.length >= 2) {
+      const data: any = { timestamp: Date.now() };
+      kvMatches.forEach(match => {
+        const [key, value] = match.split('=', 2);
+        data[key] = value;
+      });
+      return data;
+    }
+
+    return null;
+  }
+
+  private extractAgentIdFromPath(filePath: string): string {
+    const pathParts = filePath.split(path.sep);
+
+    // Look for agent-related directory names
+    for (const part of pathParts) {
+      if (part.includes('agent') || part.includes('alfred') || part.includes('worker')) {
+        return part;
+      }
+    }
+
+    return path.basename(filePath, path.extname(filePath));
   }
 
   private normalizeTrace(trace: any): any {

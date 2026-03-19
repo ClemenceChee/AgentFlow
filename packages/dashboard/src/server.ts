@@ -29,7 +29,10 @@ export class DashboardServer {
   private processHealthCache: { result: ProcessAuditResult | null; ts: number } = { result: null, ts: 0 };
 
   constructor(private config: DashboardConfig) {
-    this.watcher = new TraceWatcher(config.tracesDir);
+    this.watcher = new TraceWatcher({
+      tracesDir: config.tracesDir,
+      dataDirs: config.dataDirs,
+    });
     this.stats = new AgentStats();
     this.setupExpress();
     this.setupWebSocket();
@@ -73,6 +76,22 @@ export class DashboardServer {
         res.json(trace);
       } catch (error) {
         res.status(500).json({ error: 'Failed to load trace' });
+      }
+    });
+
+    this.app.get('/api/traces/:filename/events', (req, res) => {
+      try {
+        const trace = this.watcher.getTrace(req.params.filename);
+        if (!trace) {
+          return res.status(404).json({ error: 'Trace not found' });
+        }
+        res.json({
+          events: (trace as any).sessionEvents || [],
+          tokenUsage: (trace as any).tokenUsage || null,
+          sourceType: (trace as any).sourceType || 'trace',
+        });
+      } catch (error) {
+        res.status(500).json({ error: 'Failed to load trace events' });
       }
     });
 

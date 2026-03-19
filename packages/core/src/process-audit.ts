@@ -383,11 +383,43 @@ export function auditProcesses(config: ProcessAuditConfig): ProcessAuditResult {
   }
   if (systemd?.mainPid) knownPids.add(systemd.mainPid);
 
+  // Also mark child processes of known PIDs as known (not orphans).
+  // This prevents legitimate subprocesses (e.g., Milvus spawned by a worker)
+  // from being flagged as orphans.
+  const childPids = new Set<number>();
+  for (const knownPid of knownPids) {
+    try {
+      const childrenRaw = readFileSync(`/proc/${knownPid}/task/${knownPid}/children`, 'utf8').trim();
+      if (childrenRaw) {
+        for (const c of childrenRaw.split(/\s+/)) {
+          const cp = parseInt(c, 10);
+          if (!isNaN(cp)) childPids.add(cp);
+        }
+      }
+    } catch {
+      // /proc/<pid>/task/<pid>/children may not exist on all systems; fall back to ppid check
+    }
+  }
+  // Fallback: check /proc/<pid>/status for PPid field for each OS process
+  for (const p of osProcesses) {
+    if (knownPids.has(p.pid)) continue;
+    try {
+      const statusContent = readFileSync(`/proc/${p.pid}/status`, 'utf8');
+      const ppidMatch = statusContent.match(/^PPid:\s+(\d+)/m);
+      if (ppidMatch) {
+        const ppid = parseInt(ppidMatch[1], 10);
+        if (knownPids.has(ppid)) childPids.add(p.pid);
+      }
+    } catch {
+      // process may have exited
+    }
+  }
+
   // Exclude current process and its parent from orphan detection
   const selfPid = process.pid;
   const selfPpid = process.ppid;
   const orphans = osProcesses.filter((p) =>
-    !knownPids.has(p.pid) && p.pid !== selfPid && p.pid !== selfPpid
+    !knownPids.has(p.pid) && !childPids.has(p.pid) && p.pid !== selfPid && p.pid !== selfPpid
   );
 
   // Collect problems
