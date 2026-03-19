@@ -1,32 +1,39 @@
-# AgentFlow Dashboard v0.3.0
+# AgentFlow Dashboard v0.4.0
 
-Real-time monitoring dashboard for AgentFlow - Visualize agent execution graphs and performance metrics with comprehensive agent infrastructure monitoring.
+Real-time monitoring dashboard for AI agent systems. Visualize execution graphs, session transcripts, and performance metrics from any agent framework.
 
 ## Features
 
-### **🎯 Universal Agent Monitoring**
-- **Alfred Integration** - Full Alfred worker and conversation monitoring
-- **OpenClaw Support** - OpenClaw gateway and agent trace ingestion
-- **Multi-Framework** - Supports LangChain, CrewAI, AutoGen, Mastra, and more
-- **Real-time Updates** - Live WebSocket connections with instant trace updates
+### Universal Agent Monitoring
+- **Multi-Format Ingestion** - AgentFlow JSON traces, JSONL session logs (Claude Code compatible), structured log files, cron run logs
+- **Auto-Discovery** - Recursively scans directories for trace files, watches for new files in real-time
+- **Framework Agnostic** - Works with any agent system that produces JSON traces or JSONL session logs
 
-### **🛠️ Enhanced Process Health**
-- **Process Tagging** - Smart categorization (`main`, `agents`, `browser`, `context`, `exec`, `read`, `tool`, `think`, `user`, `write`)
-- **Tree View Structure** - Hierarchical process relationships with parent-child visualization
-- **Infrastructure Detection** - Automatic detection of Milvus, Redis, PostgreSQL, and vector databases
-- **Resource Monitoring** - CPU, memory, and uptime tracking for all processes
+### 7 Interactive Tabs
+- **Timeline** - Waterfall execution timeline with duration bars and status icons
+- **Transcript** - Full conversation view: user messages, assistant responses, thinking blocks, tool calls
+- **Graph** - Interactive Cytoscape.js execution flow visualization
+- **Metrics** - Success rates, token usage, duration stats, node breakdown
+- **Heatmap** - Error distribution across recent traces
+- **State Machine** - Execution state flow diagram with node counts
+- **Summary** - Auto-generated text summary with recommendations
 
-### **💬 LLM Conversation Tracking**
-- **Session Parsing** - Full Alfred and OpenClaw conversation logs
-- **Token Usage** - OpenRouter, Claude, and other provider usage statistics
-- **Model Interactions** - Complete LLM request/response chains with metadata
-- **Activity Filtering** - Filter traces by agent activity type and behavior
+### Session Transcripts
+- Chat-bubble UI for JSONL sessions
+- User/assistant messages, tool calls with args and results
+- Collapsible thinking blocks
+- Token usage and cost per message
+- Subagent spawn tracking
 
-### **📊 Performance & Visualization**
-- **Interactive Graphs** - Cytoscape.js execution flow visualization
-- **Timeline View** - Waterfall execution timeline with duration metrics
-- **Success Metrics** - Agent performance, failure rates, and health monitoring
-- **Responsive Design** - Works on desktop and mobile devices
+### Process Health
+- Live process detection and categorization
+- PID file and systemd unit monitoring
+- Orphan process detection
+- CPU/memory resource tracking
+
+### Real-Time Updates
+- WebSocket live trace broadcasting with auto-reconnect
+- File watcher triggers instant sidebar updates on new/changed files
 
 ## Quick Start
 
@@ -34,8 +41,15 @@ Real-time monitoring dashboard for AgentFlow - Visualize agent execution graphs 
 # Install globally
 npm install -g agentflow-dashboard
 
-# Start monitoring your traces
+# Monitor a traces directory
 agentflow-dashboard --traces ./traces --port 3000
+
+# Watch multiple directories
+agentflow-dashboard \
+  --traces ./traces \
+  --data-dir ./sessions \
+  --data-dir ./cron-runs \
+  --host 0.0.0.0
 
 # Or run with npx
 npx agentflow-dashboard --traces ./my-agent-traces
@@ -43,341 +57,129 @@ npx agentflow-dashboard --traces ./my-agent-traces
 
 Open http://localhost:3000 to view the dashboard.
 
-## Installation
+## CLI Options
 
-```bash
-npm install agentflow-dashboard
 ```
-
-**Requirements:**
-- Node.js 18+
-- AgentFlow traces directory
-
-## Usage
-
-### Command Line Interface
-
-```bash
 agentflow-dashboard [options]
+
+Options:
+  -p, --port <number>     Server port (default: 3000)
+  -t, --traces <path>     Primary traces directory (default: ./traces)
+  -h, --host <address>    Host address (default: localhost)
+  --data-dir <path>       Extra data directory (repeatable)
+  --cors                  Enable CORS headers
+  --help                  Show help message
 ```
 
-**Options:**
-- `-p, --port <number>` - Server port (default: 3000)
-- `-t, --traces <path>` - Traces directory (default: ./traces)
-- `-h, --host <address>` - Host address (default: localhost)
-- `--cors` - Enable CORS headers
-- `--help` - Show help message
+## Supported File Formats
 
-### Examples
+| Format | Extension | Description |
+|--------|-----------|-------------|
+| AgentFlow JSON | `.json` | Execution graph traces with nodes, edges, timing |
+| JSONL Sessions | `.jsonl` | Claude Code / OpenClaw session transcripts |
+| Cron Run Logs | `.jsonl` | Job execution logs (`ts`, `jobId`, `action`, `status`) |
+| Structured Logs | `.log` | Python structlog, JSON logs, key=value logs |
+| Session Index | `sessions.json` | Agent session metadata (auto-discovered) |
 
-```bash
-# Basic usage
-agentflow-dashboard
+### JSONL Session Format
 
-# Custom port and traces directory
-agentflow-dashboard --port 8080 --traces /var/log/agentflow
+Compatible with Claude Code session format:
 
-# Enable external access with CORS
-agentflow-dashboard --host 0.0.0.0 --cors --port 3000
-
-# Monitor specific agent traces
-agentflow-dashboard --traces ./my-ai-agent/traces
+```jsonl
+{"type":"session","id":"abc123","timestamp":"2026-03-19T10:00:00Z"}
+{"type":"model_change","modelId":"claude-sonnet-4-20250514","provider":"anthropic"}
+{"type":"message","message":{"role":"user","content":[{"type":"text","text":"Hello"}]}}
+{"type":"message","message":{"role":"assistant","content":[{"type":"text","text":"Hi!"}],"usage":{"input":100,"output":50}}}
 ```
 
-### Programmatic Usage
+### AgentFlow Trace Format
+
+```json
+{
+  "id": "node_001",
+  "rootNodeId": "node_001",
+  "agentId": "my-agent",
+  "trigger": "cron",
+  "startTime": 1710800000000,
+  "endTime": 1710800060000,
+  "status": "completed",
+  "nodes": {
+    "node_001": { "id": "node_001", "type": "agent", "name": "my-agent", "children": ["node_002"] },
+    "node_002": { "id": "node_002", "type": "tool", "name": "search", "children": [] }
+  }
+}
+```
+
+## Programmatic Usage
 
 ```typescript
 import { DashboardServer } from 'agentflow-dashboard';
 
 const dashboard = new DashboardServer({
-    port: 3000,
-    tracesDir: './traces',
-    host: 'localhost',
-    enableCors: false
+  port: 3000,
+  tracesDir: './traces',
+  dataDirs: ['./sessions', './cron-runs'],
+  host: 'localhost',
+  enableCors: false,
 });
 
 await dashboard.start();
-console.log('Dashboard started!');
 ```
-
-## Dashboard Interface
-
-### Overview Page
-
-The main dashboard shows:
-
-- **Global Statistics** - Total agents, executions, success rate, active agents
-- **Agent List** - All agents with execution counts and success rates
-- **Recent Activity** - Latest agent executions with status indicators
-- **Performance Trends** - Success/failure patterns over time
-
-### Agent Details
-
-Click any agent to view:
-
-- **Execution History** - All recent executions for that agent
-- **Performance Metrics** - Success rate, average execution time
-- **Trigger Analysis** - How the agent is being invoked
-- **Error Patterns** - Common failure modes and debugging info
-
-### Real-Time Updates
-
-The dashboard automatically updates when:
-
-- New trace files are created
-- Existing traces are updated
-- Agent performance changes
-- System status changes
-
-## Configuration
-
-### Directory Structure
-
-The dashboard expects this structure:
-
-```
-traces/
-├── agent1-2024-01-15T10-30-00.json
-├── agent1-2024-01-15T10-35-00.json
-├── agent2-2024-01-15T10-32-00.json
-└── ...
-```
-
-### Trace File Format
-
-Compatible with standard AgentFlow trace format:
-
-```json
-{
-  "agentId": "my-agent",
-  "trigger": "cron_job",
-  "name": "my-agent data_processing execution",
-  "timestamp": 1642234200000,
-  "nodes": [...],
-  "rootId": "node_1",
-  "metadata": {...}
-}
-```
-
-### Environment Variables
-
-- `AGENTFLOW_DASHBOARD_PORT` - Default port
-- `AGENTFLOW_DASHBOARD_HOST` - Default host
-- `AGENTFLOW_TRACES_DIR` - Default traces directory
 
 ## API Endpoints
 
-The dashboard exposes REST endpoints for integration:
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/traces` | List all traces with metadata |
+| GET | `/api/traces/:filename` | Full trace detail (nodes, events, token usage) |
+| GET | `/api/traces/:filename/events` | Session events and token usage |
+| GET | `/api/agents` | All discovered agents with metrics |
+| GET | `/api/stats` | Global performance statistics |
+| GET | `/api/stats/:agentId` | Per-agent statistics |
+| GET | `/api/process-health` | Running process audit |
+| WS | `/` | Real-time trace updates |
 
-### GET /api/traces
-Get all trace files with metadata.
+## Architecture
 
-```bash
-curl http://localhost:3000/api/traces
+```
+Trace files (.json, .jsonl, .log)
+        │
+        ▼
+  TraceWatcher ──▶ AgentStats ──▶ Express + WebSocket
+  (file watcher)   (metrics)      (REST API + live updates)
+                                        │
+                                        ▼
+                                   Browser SPA
+                                  (dashboard.js)
 ```
 
-### GET /api/traces/:filename
-Get specific trace file content.
+## Deployment
 
-```bash
-curl http://localhost:3000/api/traces/agent1-2024-01-15T10-30-00.json
-```
-
-### GET /api/stats
-Get global performance statistics.
-
-```bash
-curl http://localhost:3000/api/stats
-```
-
-### GET /api/stats/:agentId
-Get statistics for specific agent.
-
-```bash
-curl http://localhost:3000/api/stats/my-agent
-```
-
-### GET /api/agents
-Get list of all known agents.
-
-```bash
-curl http://localhost:3000/api/agents
-```
-
-## Integration Examples
-
-### Docker Deployment
-
-```dockerfile
-FROM node:18-alpine
-
-RUN npm install -g agentflow-dashboard
-
-EXPOSE 3000
-
-CMD ["agentflow-dashboard", "--host", "0.0.0.0", "--traces", "/traces"]
-```
-
-```yaml
-# docker-compose.yml
-version: '3.8'
-services:
-  agentflow-dashboard:
-    image: node:18-alpine
-    ports:
-      - "3000:3000"
-    volumes:
-      - ./traces:/traces
-    command: >
-      sh -c "npm install -g agentflow-dashboard &&
-             agentflow-dashboard --host 0.0.0.0 --traces /traces"
-```
-
-### Kubernetes Deployment
-
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: agentflow-dashboard
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: agentflow-dashboard
-  template:
-    metadata:
-      labels:
-        app: agentflow-dashboard
-    spec:
-      containers:
-      - name: dashboard
-        image: node:18-alpine
-        ports:
-        - containerPort: 3000
-        command:
-        - sh
-        - -c
-        - "npm install -g agentflow-dashboard && agentflow-dashboard --host 0.0.0.0"
-        volumeMounts:
-        - name: traces
-          mountPath: /traces
-      volumes:
-      - name: traces
-        persistentVolumeClaim:
-          claimName: agentflow-traces
-```
-
-### Nginx Reverse Proxy
-
-```nginx
-server {
-    listen 80;
-    server_name dashboard.example.com;
-
-    location / {
-        proxy_pass http://localhost:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_cache_bypass $http_upgrade;
-    }
-}
-```
-
-### Systemd Service
+### Systemd
 
 ```ini
-# /etc/systemd/system/agentflow-dashboard.service
 [Unit]
 Description=AgentFlow Dashboard
 After=network.target
 
 [Service]
 Type=simple
-User=agentflow
-WorkingDirectory=/opt/agentflow
-ExecStart=/usr/local/bin/agentflow-dashboard --traces /var/log/agentflow
+ExecStart=/usr/local/bin/agentflow-dashboard --host 0.0.0.0 --traces /var/log/agentflow
 Restart=always
-Environment=NODE_ENV=production
 
 [Install]
 WantedBy=multi-user.target
 ```
 
-## Performance Tuning
+### Docker
 
-### Large Trace Volumes
-
-For high-volume agent systems:
-
-```bash
-# Increase Node.js memory limit
-NODE_OPTIONS="--max-old-space-size=4096" agentflow-dashboard
-
-# Use dedicated traces directory with log rotation
-agentflow-dashboard --traces /var/log/agentflow/current
+```dockerfile
+FROM node:20-alpine
+RUN npm install -g agentflow-dashboard
+EXPOSE 3000
+CMD ["agentflow-dashboard", "--host", "0.0.0.0", "--traces", "/traces"]
 ```
-
-### Network Optimization
-
-```typescript
-// Disable real-time updates for low-bandwidth connections
-const dashboard = new DashboardServer({
-    port: 3000,
-    tracesDir: './traces',
-    enableCors: true,
-    // Custom update intervals can be configured
-});
-```
-
-## Troubleshooting
-
-### Common Issues
-
-**Dashboard not loading traces:**
-```bash
-# Check traces directory permissions
-ls -la ./traces
-
-# Check trace file format
-cat traces/agent-*.json | head -20
-```
-
-**WebSocket connection failures:**
-```bash
-# Check firewall settings
-sudo ufw status
-
-# Test WebSocket connectivity
-curl -i -N -H "Connection: Upgrade" -H "Upgrade: websocket" http://localhost:3000
-```
-
-**High memory usage:**
-```bash
-# Monitor dashboard process
-top -p $(pgrep -f agentflow-dashboard)
-
-# Clean old trace files
-find ./traces -name "*.json" -mtime +7 -delete
-```
-
-### Debug Mode
-
-```bash
-# Enable debug logging
-DEBUG=agentflow:* agentflow-dashboard --traces ./traces
-
-# Check dashboard health
-curl http://localhost:3000/api/stats
-```
-
-## Contributing
-
-See [CONTRIBUTING.md](../../CONTRIBUTING.md) for development guidelines.
 
 ## License
 
-MIT - See [LICENSE](../../LICENSE) for details.
+MIT
