@@ -307,10 +307,14 @@ class AgentFlowDashboard {
     this.selectedTrace = trace;
     this.selectedTraceData = trace;
 
-    // Reset process map cache when agent changes
+    // Reset agent-level caches when agent changes
     if (this._processMapAgent !== trace.agentId) {
       this._processMapAgent = null;
       if (this._cyProcessMap) { this._cyProcessMap.destroy(); this._cyProcessMap = null; }
+    }
+    if (this._agentTimelineAgent !== trace.agentId) {
+      this._agentTimelineAgent = null;
+      this._agentTimelineRendered = false;
     }
 
     // Update sidebar selection
@@ -856,6 +860,7 @@ class AgentFlowDashboard {
       case 'state': this.renderStateMachine(); break;
       case 'summary': this.renderSummary(); break;
       case 'transcript': this.renderTranscript(); break;
+      case 'agenttimeline': this.renderAgentTimeline(); break;
       case 'processmap': this.renderProcessMap(); break;
     }
     this.updateToolbarInfo();
@@ -1915,7 +1920,164 @@ class AgentFlowDashboard {
   }
 
   // ---------------------------------------------------------------------------
-  // Tab 8: Process Map (Process Mining Graph)
+  // Tab 8: Agent Timeline (Gantt Chart)
+  // ---------------------------------------------------------------------------
+  renderAgentTimeline() {
+    var trace = this.selectedTraceData || this.selectedTrace;
+    if (!trace || !trace.agentId) {
+      document.getElementById('agentTimelineEmpty').style.display = '';
+      return;
+    }
+
+    var agentId = trace.agentId;
+    var self = this;
+
+    if (this._agentTimelineAgent === agentId && this._agentTimelineRendered) return;
+    this._agentTimelineAgent = agentId;
+
+    var container = document.getElementById('agentTimelineContent');
+    container.innerHTML =
+      '<div class="empty-state"><div class="empty-state-icon" style="animation:spin 1s linear infinite">&#9881;</div>' +
+      '<div class="empty-state-text">Loading timeline for ' + escapeHtml(agentId) + '...</div></div>';
+
+    fetch('/api/agents/' + encodeURIComponent(agentId) + '/timeline?limit=50')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.error || !data.executions || data.executions.length === 0) {
+          container.innerHTML =
+            '<div class="empty-state"><div class="empty-state-text">No timeline data for ' + escapeHtml(agentId) + '</div></div>';
+          return;
+        }
+        self._agentTimelineRendered = true;
+        self._renderGantt(container, data);
+      })
+      .catch(function() {
+        container.innerHTML =
+          '<div class="empty-state"><div class="empty-state-text">Failed to load agent timeline.</div></div>';
+      });
+  }
+
+  _renderGantt(container, data) {
+    var execs = data.executions;
+    var minTime = data.minTime;
+    var maxTime = data.maxTime;
+    var timeSpan = maxTime - minTime || 1;
+    var self = this;
+
+    // Layout constants
+    var labelW = 220;
+    var chartW = 900;
+    var rowH = 28;
+    var subRowH = 20;
+    var headerH = 36;
+    var totalW = labelW + chartW + 20;
+
+    // Build HTML
+    var html = '<div class="gantt-wrapper" style="font-size:11px;color:#c9d1d9;min-width:' + totalW + 'px;">';
+
+    // Header with time axis
+    html += '<div class="gantt-header" style="display:flex;height:' + headerH + 'px;border-bottom:1px solid #30363d;position:sticky;top:0;background:#0d1117;z-index:2;">';
+    html += '<div style="width:' + labelW + 'px;min-width:' + labelW + 'px;padding:8px 10px;font-weight:600;color:#8b949e;">Execution</div>';
+    html += '<div style="flex:1;position:relative;">';
+    // Time ticks
+    var tickCount = 6;
+    for (var t = 0; t <= tickCount; t++) {
+      var pct = (t / tickCount) * 100;
+      var tickTime = minTime + (t / tickCount) * timeSpan;
+      var d = new Date(tickTime);
+      var label = d.getMonth() + 1 + '/' + d.getDate() + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+      html += '<div style="position:absolute;left:' + pct + '%;top:0;height:100%;border-left:1px solid #21262d;padding:8px 4px;font-size:9px;color:#6b7280;white-space:nowrap;">' + label + '</div>';
+    }
+    html += '</div></div>';
+
+    // Rows
+    html += '<div class="gantt-body">';
+    for (var i = 0; i < execs.length; i++) {
+      var exec = execs[i];
+      var execStart = ((exec.startTime - minTime) / timeSpan) * 100;
+      var execWidth = Math.max(0.3, ((exec.endTime - exec.startTime) / timeSpan) * 100);
+      var statusColor = exec.status === 'failed' ? '#ef4444' : exec.status === 'running' ? '#3b82f6' : '#10b981';
+      var hasActivities = exec.activities && exec.activities.length > 0;
+      var execId = 'gantt-exec-' + i;
+
+      // Main execution row
+      html += '<div class="gantt-row" style="display:flex;height:' + rowH + 'px;border-bottom:1px solid #161b22;cursor:pointer;" ' +
+        'onclick="(function(){var el=document.getElementById(\'' + execId + '\');if(el)el.style.display=el.style.display===\'none\'?\'block\':\'none\';})()" ' +
+        'title="Click to ' + (hasActivities ? 'expand' : 'view') + '">';
+
+      // Label
+      var execName = exec.name || exec.filename || exec.id;
+      if (execName.length > 28) execName = execName.slice(0, 28) + '...';
+      var dur = this.computeDuration(exec.startTime, exec.endTime);
+      var triggerBadge = exec.trigger ? '<span style="background:#1f2937;padding:1px 4px;border-radius:3px;font-size:8px;margin-left:4px;">' + escapeHtml(exec.trigger) + '</span>' : '';
+      var expandIcon = hasActivities ? '<span style="color:#6b7280;margin-right:4px;">&#9654;</span>' : '<span style="width:14px;display:inline-block;"></span>';
+
+      html += '<div style="width:' + labelW + 'px;min-width:' + labelW + 'px;padding:4px 10px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;line-height:' + (rowH - 8) + 'px;">' +
+        expandIcon + escapeHtml(execName) + triggerBadge + '</div>';
+
+      // Bar
+      html += '<div style="flex:1;position:relative;padding:4px 0;">';
+      html += '<div style="position:absolute;left:' + execStart + '%;width:' + execWidth + '%;top:4px;height:' + (rowH - 12) + 'px;' +
+        'background:' + statusColor + ';border-radius:3px;opacity:0.85;min-width:3px;" ' +
+        'title="' + escapeHtml(exec.name || '') + ' | ' + dur + ' | ' + escapeHtml(exec.status) + '"></div>';
+      html += '</div></div>';
+
+      // Sub-activities (collapsed by default)
+      if (hasActivities) {
+        html += '<div id="' + execId + '" style="display:none;background:#0a0e14;">';
+        // Filter to top-level activities (no parentId or parentId is root)
+        var rootIds = new Set();
+        if (exec.activities.length > 0) {
+          var firstAct = exec.activities[0];
+          rootIds.add(firstAct.id);
+        }
+
+        for (var j = 0; j < exec.activities.length; j++) {
+          var act = exec.activities[j];
+          var actStart = ((Math.max(act.startTime, exec.startTime) - minTime) / timeSpan) * 100;
+          var actEnd = act.endTime || act.startTime;
+          var actWidth = Math.max(0.2, ((actEnd - Math.max(act.startTime, exec.startTime)) / timeSpan) * 100);
+          var actColor = act.status === 'failed' ? '#f87171' :
+                         act.type === 'user' ? '#60a5fa' :
+                         act.type === 'assistant' ? '#34d399' :
+                         act.type === 'thinking' ? '#a78bfa' :
+                         act.type === 'tool_call' ? '#fb923c' :
+                         act.type === 'tool_result' ? '#4ade80' :
+                         act.type === 'agent' ? '#38bdf8' :
+                         '#6b7280';
+          var actName = act.name || act.type;
+          if (actName.length > 30) actName = actName.slice(0, 30) + '...';
+          var isChild = act.parentId && !rootIds.has(act.id);
+
+          html += '<div style="display:flex;height:' + subRowH + 'px;border-bottom:1px solid #0d1117;">';
+          html += '<div style="width:' + labelW + 'px;min-width:' + labelW + 'px;padding:2px 10px 2px ' + (isChild ? '30' : '20') + 'px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:10px;color:#8b949e;line-height:' + (subRowH - 4) + 'px;">' +
+            '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + actColor + ';margin-right:6px;vertical-align:middle;"></span>' +
+            escapeHtml(actName) + '</div>';
+          html += '<div style="flex:1;position:relative;">';
+          html += '<div style="position:absolute;left:' + actStart + '%;width:' + actWidth + '%;top:3px;height:' + (subRowH - 8) + 'px;' +
+            'background:' + actColor + ';border-radius:2px;opacity:0.7;min-width:2px;" ' +
+            'title="' + escapeHtml(act.name || act.type) + ' | ' + escapeHtml(act.status) + '"></div>';
+          html += '</div></div>';
+        }
+        html += '</div>';
+      }
+    }
+
+    html += '</div>';
+
+    // Summary bar
+    html += '<div style="padding:10px;border-top:1px solid #30363d;color:#8b949e;font-size:10px;">';
+    html += escapeHtml(data.agentId) + ' &mdash; ' + data.executions.length + ' of ' + data.totalExecutions + ' executions shown';
+    var timeRange = new Date(minTime).toLocaleDateString() + ' to ' + new Date(maxTime).toLocaleDateString();
+    html += ' &mdash; ' + timeRange;
+    html += '</div>';
+
+    html += '</div>';
+    container.innerHTML = html;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Tab 9: Process Map (Process Mining Graph)
   // ---------------------------------------------------------------------------
   renderProcessMap() {
     var trace = this.selectedTraceData || this.selectedTrace;

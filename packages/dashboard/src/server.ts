@@ -135,6 +135,98 @@ export class DashboardServer {
       }
     });
 
+    // Agent timeline: all executions for an agent with sub-activities for Gantt view
+    this.app.get('/api/agents/:agentId/timeline', (req, res) => {
+      try {
+        const agentId = req.params.agentId;
+        const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
+        const rawTraces = this.watcher.getTracesByAgent(agentId);
+        if (rawTraces.length === 0) {
+          return res.status(404).json({ error: 'No traces for agent' });
+        }
+
+        // Sort by startTime descending, take limit
+        const traces = rawTraces
+          .sort((a, b) => (b.startTime || 0) - (a.startTime || 0))
+          .slice(0, limit)
+          .reverse(); // chronological for the Gantt
+
+        const executions = traces.map(t => {
+          const serialized = serializeTrace(t);
+          const nodes = serialized.nodes || {};
+          const events = serialized.sessionEvents || [];
+
+          // Build sub-activities from nodes or events
+          const activities: Array<{
+            id: string; name: string; type: string; status: string;
+            startTime: number; endTime: number; parentId?: string;
+          }> = [];
+
+          if (events.length > 0) {
+            // Session-based: convert events to activities with timing
+            // Use gap to next event as implicit duration when no explicit duration
+            for (let i = 0; i < events.length; i++) {
+              const evt = events[i];
+              if (evt.type === 'system' || evt.type === 'model_change') continue;
+              const dur = evt.duration || 0;
+              const startTs = dur > 0 ? evt.timestamp - dur : evt.timestamp;
+              // End time: use explicit duration, or gap to next event, or 1s minimum for visibility
+              const nextTs = i + 1 < events.length ? events[i + 1].timestamp : evt.timestamp;
+              const endTs = dur > 0 ? evt.timestamp : Math.max(nextTs, startTs + 500);
+              activities.push({
+                id: evt.id || `evt-${i}`,
+                name: evt.toolName || evt.name || evt.type,
+                type: evt.type,
+                status: evt.toolError ? 'failed' : 'completed',
+                startTime: startTs,
+                endTime: endTs,
+                parentId: evt.parentId,
+              });
+            }
+          } else {
+            // Graph-based: use nodes
+            const sorted = Object.values(nodes).sort((a: any, b: any) =>
+              (a.startTime || 0) - (b.startTime || 0));
+            for (const node of sorted as any[]) {
+              activities.push({
+                id: node.id,
+                name: node.name || node.type || node.id,
+                type: node.type || 'unknown',
+                status: node.status || 'completed',
+                startTime: node.startTime || t.startTime,
+                endTime: node.endTime || node.startTime || t.startTime,
+                parentId: node.parentId,
+              });
+            }
+          }
+
+          return {
+            id: serialized.id || serialized.filename,
+            filename: serialized.filename,
+            name: serialized.name || serialized.filename,
+            agentId: serialized.agentId,
+            trigger: serialized.trigger,
+            status: serialized.status || 'completed',
+            sourceType: serialized.sourceType,
+            startTime: serialized.startTime,
+            endTime: serialized.endTime || serialized.startTime,
+            tokenUsage: serialized.tokenUsage,
+            activities,
+          };
+        });
+
+        // Compute global time range
+        const allTimes = executions.flatMap(e => [e.startTime, e.endTime]);
+        const minTime = Math.min(...allTimes);
+        const maxTime = Math.max(...allTimes);
+
+        res.json({ agentId, totalExecutions: rawTraces.length, executions, minTime, maxTime });
+      } catch (error) {
+        console.error('Agent timeline error:', error);
+        res.status(500).json({ error: 'Failed to build agent timeline' });
+      }
+    });
+
     // Process mining graph: aggregate all traces for an agent into a transition graph
     this.app.get('/api/agents/:agentId/process-graph', (req, res) => {
       try {

@@ -1235,6 +1235,7 @@
                 <div class="tab" data-tab="state">State Machine</div>
                 <div class="tab" data-tab="summary">Summary</div>
                 <div class="tab" data-tab="transcript">Transcript</div>
+                <div class="tab" data-tab="agenttimeline">Agent Timeline</div>
                 <div class="tab" data-tab="processmap">Process Map</div>
             </div>
 
@@ -1330,6 +1331,17 @@
                     <div class="timeline-container" id="transcriptContent">
                         <div class="empty-state">
                             <div class="empty-state-text">Select a session trace to view transcript.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Agent Timeline (Gantt) tab -->
+                <div class="tab-panel" id="panel-agenttimeline">
+                    <div class="timeline-container" id="agentTimelineContent" style="overflow:auto;">
+                        <div class="empty-state" id="agentTimelineEmpty">
+                            <div class="empty-state-icon">&#9776;</div>
+                            <div class="empty-state-title">Agent Timeline</div>
+                            <div class="empty-state-text">Select a trace to view all executions for its agent as a Gantt chart.</div>
                         </div>
                     </div>
                 </div>
