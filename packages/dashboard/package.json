@@ -21,7 +21,7 @@
     "public"
   ],
   "scripts": {
-    "build": "tsup src/index.ts src/cli.ts --format esm,cjs --clean && npm run build:public",
+    "build": "tsup src/index.ts src/cli.ts src/server.ts --format esm,cjs --clean && npm run build:public",
     "build:public": "cp -r public dist/",
     "dev": "tsx src/server.ts",
     "start": "node dist/server.js"

@@ -155,12 +155,21 @@ export class TraceIngester {
 
   private parseFileContent(content: string, filePath: string): any[] {
     const extension = path.extname(filePath);
+    const filename = path.basename(filePath);
 
     switch (extension) {
       case '.json':
+        // Check if it's an Alfred workers.json file
+        if (filename === 'workers.json') {
+          return this.parseAlfredWorkers(content, filePath);
+        }
         return [JSON.parse(content)];
 
       case '.jsonl':
+        // Check if it's an Alfred session file
+        if (this.isAlfredSessionFile(content, filePath)) {
+          return this.parseAlfredSession(content, filePath);
+        }
         return content
           .split('\n')
           .filter(line => line.trim())
@@ -189,6 +198,11 @@ export class TraceIngester {
     // Detect if this is Alfred's structured log format
     if (this.isAlfredLog(content, filename)) {
       return this.parseAlfredLog(content, filename);
+    }
+
+    // Detect if this is OpenClaw log format
+    if (this.isOpenClawLog(content, filename)) {
+      return this.parseOpenClawLog(content, filename);
     }
 
     // Generic structured log parsing - look for JSON-like structured data
@@ -229,6 +243,13 @@ export class TraceIngester {
            content.includes('daemon.starting') ||
            content.includes('zo.dispatching') ||
            content.includes('agent_invoke');
+  }
+
+  private isOpenClawLog(content: string, filename: string): boolean {
+    return filename.includes('openclaw') ||
+           content.includes('"name":"openclaw"') ||
+           content.includes('sessionId') ||
+           content.includes('agentMeta');
   }
 
   private parseAlfredLog(content: string, filename: string): any[] {
@@ -336,21 +357,32 @@ export class TraceIngester {
     try {
       const jsonMatch = line.match(/\{.*\}/);
       if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]);
+        const parsed = JSON.parse(jsonMatch[0]);
+        // Skip if it's just timestamp or very small objects
+        if (Object.keys(parsed).length < 2) return null;
+        // Skip if it contains corrupted data patterns
+        if (JSON.stringify(parsed).includes('"ts":') && Object.keys(parsed).length < 3) return null;
+        return parsed;
       }
     } catch {
       // Not JSON, continue
     }
 
-    // Look for key=value patterns
+    // Look for key=value patterns (but be more restrictive)
     const kvMatches = line.match(/(\w+)=([^\s]+)/g);
-    if (kvMatches && kvMatches.length >= 2) {
+    if (kvMatches && kvMatches.length >= 3) { // Require at least 3 key-value pairs
       const data: any = { timestamp: Date.now() };
       kvMatches.forEach(match => {
         const [key, value] = match.split('=', 2);
+        // Skip corrupted keys
+        if (key.includes('{') || key.includes('"') || value.includes('"ts"')) return;
         data[key] = value;
       });
-      return data;
+
+      // Only return if we have meaningful data
+      if (Object.keys(data).length > 2) {
+        return data;
+      }
     }
 
     return null;
@@ -435,6 +467,212 @@ export class TraceIngester {
       this.watcher = undefined;
       console.log('Stopped trace file ingestion');
     }
+  }
+
+  // Parse Alfred workers.json
+  private parseAlfredWorkers(content: string, filePath: string): any[] {
+    const data = JSON.parse(content);
+    const trace = {
+      agentId: `alfred-orchestrator-${data.pid}`,
+      name: `Alfred Orchestrator (PID ${data.pid})`,
+      trigger: 'worker-status',
+      timestamp: new Date(data.started_at).getTime(),
+      nodes: {}
+    };
+
+    // Add orchestrator node
+    const orchestratorId = `orchestrator-${data.pid}`;
+    trace.nodes[orchestratorId] = {
+      id: orchestratorId,
+      type: 'orchestrator',
+      name: 'Alfred Orchestrator',
+      status: 'running',
+      startTime: trace.timestamp,
+      endTime: null,
+      metadata: {
+        pid: data.pid,
+        started_at: data.started_at,
+        worker_count: Object.keys(data.tools || {}).length
+      }
+    };
+
+    // Add worker nodes
+    for (const [workerName, workerData] of Object.entries(data.tools || {})) {
+      const workerId = `worker-${workerName}-${workerData.pid}`;
+      trace.nodes[workerId] = {
+        id: workerId,
+        type: 'worker',
+        name: `Alfred ${workerName}`,
+        status: workerData.status === 'running' ? 'running' : 'failed',
+        startTime: trace.timestamp,
+        endTime: null,
+        parentId: orchestratorId,
+        metadata: {
+          pid: workerData.pid,
+          worker_type: workerName,
+          restarts: workerData.restarts || 0
+        }
+      };
+    }
+
+    return [trace];
+  }
+
+  // Check if JSONL file is an Alfred session
+  private isAlfredSessionFile(content: string, filePath: string): boolean {
+    const firstLine = content.split('\n')[0];
+    if (!firstLine) return false;
+
+    try {
+      const data = JSON.parse(firstLine);
+      return data.type === 'session' ||
+             filePath.includes('/agents/') ||
+             filePath.includes('/sessions/');
+    } catch {
+      return false;
+    }
+  }
+
+  // Parse Alfred session JSONL
+  private parseAlfredSession(content: string, filePath: string): any[] {
+    const lines = content.split('\n').filter(line => line.trim());
+    if (lines.length === 0) return [];
+
+    const events = lines.map(line => {
+      try {
+        return JSON.parse(line);
+      } catch {
+        return null;
+      }
+    }).filter(Boolean);
+
+    if (events.length === 0) return [];
+
+    // Find session metadata
+    const sessionEvent = events.find(e => e.type === 'session');
+    if (!sessionEvent) return [];
+
+    const sessionId = sessionEvent.id;
+    const agentPath = filePath.includes('/main/') ? 'main' :
+                    filePath.includes('/vault-curator/') ? 'vault-curator' :
+                    filePath.includes('/vault-janitor/') ? 'vault-janitor' :
+                    filePath.includes('/vault-distiller/') ? 'vault-distiller' :
+                    filePath.includes('/vault-surveyor/') ? 'vault-surveyor' : 'unknown';
+
+    const trace = {
+      agentId: `alfred-${agentPath}`,
+      name: `Alfred ${agentPath} Session`,
+      trigger: 'llm-conversation',
+      timestamp: new Date(sessionEvent.timestamp).getTime(),
+      sessionId: sessionId,
+      nodes: {}
+    };
+
+    // Process conversation events
+    let nodeCounter = 0;
+    for (const event of events) {
+      const nodeId = `event-${++nodeCounter}`;
+      let nodeName = event.type;
+      let nodeType = event.type;
+
+      // Categorize event types
+      if (event.type === 'message') {
+        nodeName = event.message?.role === 'user' ? 'User Message' : 'Assistant Message';
+        nodeType = event.message?.role === 'user' ? 'user' : 'assistant';
+      } else if (event.type === 'thinking') {
+        nodeName = 'AI Thinking';
+        nodeType = 'think';
+      } else if (event.type === 'tool_call') {
+        nodeName = `Tool: ${event.toolName || 'Unknown'}`;
+        nodeType = 'tool';
+      }
+
+      trace.nodes[nodeId] = {
+        id: nodeId,
+        type: nodeType,
+        name: nodeName,
+        status: 'completed',
+        startTime: new Date(event.timestamp).getTime(),
+        endTime: new Date(event.timestamp).getTime() + 1000,
+        metadata: {
+          eventType: event.type,
+          eventData: event,
+          content: event.message?.content || event.content || '',
+          model: event.provider || event.modelId
+        }
+      };
+    }
+
+    return [trace];
+  }
+
+  // Parse OpenClaw JSON logs
+  private parseOpenClawLog(content: string, filePath: string): any[] {
+    const traces: any[] = [];
+    const lines = content.split('\n').filter(line => line.trim());
+
+    for (const line of lines) {
+      try {
+        const logEntry = JSON.parse(line);
+
+        // Skip malformed or meta-only entries
+        if (!logEntry['0'] || !logEntry._meta) continue;
+
+        const logData = logEntry['0'];
+        const meta = logEntry._meta;
+
+        // Try to parse the main log data as JSON (for agent conversations)
+        let conversationData = null;
+        try {
+          conversationData = JSON.parse(logData);
+        } catch {
+          // Not JSON, treat as text log
+          if (logData.length > 1000) continue; // Skip very long text logs to avoid bloat
+        }
+
+        if (conversationData && conversationData.meta && conversationData.meta.agentMeta) {
+          // This is an agent conversation
+          const agentMeta = conversationData.meta.agentMeta;
+          const sessionId = agentMeta.sessionId;
+          const agentId = sessionId.split('-')[0] || 'openclaw-unknown';
+
+          const trace = {
+            agentId: `openclaw-${agentId}`,
+            name: `OpenClaw ${agentId} Session`,
+            trigger: 'openclaw-conversation',
+            timestamp: new Date(meta.date).getTime(),
+            sessionId: sessionId,
+            nodes: {}
+          };
+
+          // Create conversation node
+          const nodeId = `conversation-${sessionId}`;
+          trace.nodes[nodeId] = {
+            id: nodeId,
+            type: 'conversation',
+            name: 'OpenClaw LLM Conversation',
+            status: conversationData.meta.aborted ? 'failed' : 'completed',
+            startTime: trace.timestamp,
+            endTime: trace.timestamp + (conversationData.meta.durationMs || 1000),
+            metadata: {
+              provider: agentMeta.provider,
+              model: agentMeta.model,
+              usage: agentMeta.usage,
+              sessionId: sessionId,
+              payloads: conversationData.payloads || [],
+              durationMs: conversationData.meta.durationMs
+            }
+          };
+
+          traces.push(trace);
+        }
+      } catch (error) {
+        // Skip malformed JSON lines
+        continue;
+      }
+    }
+
+    return traces;
   }
 
   // Manual ingestion for testing

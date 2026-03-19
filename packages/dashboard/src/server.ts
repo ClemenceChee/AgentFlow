@@ -20,6 +20,8 @@ export interface DashboardConfig {
   dataDirs?: string[];
 }
 
+import { startDashboard } from './cli.js';
+
 export class DashboardServer {
   private app = express();
   private server = createServer(this.app);
@@ -250,4 +252,9 @@ export class DashboardServer {
   public getTraces() {
     return this.watcher.getAllTraces();
   }
+}
+
+// Start dashboard if this file is run directly
+if (import.meta.url === `file://${process.argv[1]}`) {
+  startDashboard().catch(console.error);
 }

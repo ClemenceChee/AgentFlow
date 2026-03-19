@@ -710,6 +710,203 @@
             margin-right: 0.4rem;
         }
 
+        /* Enhanced Process Health */
+        .ph-section {
+            margin-bottom: 1rem;
+        }
+        .process-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 0.4rem;
+            margin-top: 0.5rem;
+        }
+
+        /* Worker cards */
+        .worker-card {
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+            padding: 0.5rem;
+            border-left: 3px solid var(--border-color);
+        }
+        .worker-card.ok { border-left-color: var(--accent-success); }
+        .worker-card.warn { border-left-color: var(--accent-warning); }
+        .worker-card.bad { border-left-color: var(--accent-error); }
+        .worker-name {
+            font-weight: 600;
+            font-size: 0.75rem;
+            margin-bottom: 0.25rem;
+        }
+        .worker-details {
+            display: flex;
+            flex-direction: column;
+            gap: 0.1rem;
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+        }
+
+        /* Service cards */
+        .service-card, .infra-card {
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+            padding: 0.5rem;
+            border-left: 3px solid var(--border-color);
+        }
+        .service-card.low, .infra-card.low { border-left-color: var(--accent-success); }
+        .service-card.medium, .infra-card.medium { border-left-color: var(--accent-warning); }
+        .service-card.high, .infra-card.high { border-left-color: var(--accent-error); }
+        .service-name, .infra-name {
+            font-weight: 600;
+            font-size: 0.75rem;
+            margin-bottom: 0.25rem;
+        }
+        .service-details, .infra-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.1rem 0.5rem;
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+        }
+
+        /* Process Tree View */
+        .process-tree {
+            margin-top: 0.5rem;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+        }
+        .process-node {
+            display: flex;
+            align-items: center;
+            padding: 0.3rem 0.5rem;
+            margin-bottom: 0.2rem;
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+            border-left: 3px solid var(--border-color);
+            transition: all 0.2s ease;
+        }
+        .process-node:hover {
+            background: var(--bg-secondary);
+        }
+        .process-node.agent-node.low { border-left-color: var(--accent-success); }
+        .process-node.agent-node.medium { border-left-color: var(--accent-warning); }
+        .process-node.agent-node.high { border-left-color: var(--accent-error); }
+        .process-node.infrastructure-node.low { border-left-color: var(--accent-success); }
+        .process-node.infrastructure-node.medium { border-left-color: var(--accent-warning); }
+        .process-node.infrastructure-node.high { border-left-color: var(--accent-error); }
+
+        .tree-connector {
+            color: var(--text-secondary);
+            font-weight: 400;
+            margin-right: 0.3rem;
+        }
+        .process-main {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            min-height: 1.5rem;
+        }
+        .process-name {
+            font-weight: 600;
+            font-size: 0.75rem;
+            color: var(--text-primary);
+            flex: 1;
+        }
+        .process-metrics {
+            display: flex;
+            gap: 0.4rem;
+            align-items: center;
+        }
+        .pid-badge, .cpu-badge, .mem-badge, .time-badge {
+            font-size: 0.65rem;
+            padding: 0.1rem 0.3rem;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        .pid-badge {
+            background: var(--accent-primary);
+            color: var(--bg-primary);
+            font-weight: 600;
+        }
+        .cpu-badge {
+            background: var(--bg-primary);
+            color: var(--accent-warning);
+            border: 1px solid var(--border-color);
+        }
+        .mem-badge {
+            background: var(--bg-primary);
+            color: var(--accent-primary);
+            border: 1px solid var(--border-color);
+        }
+        .time-badge {
+            background: var(--bg-primary);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+
+        /* Activity Tags */
+        .activity-tag {
+            font-size: 0.6rem;
+            padding: 0.1rem 0.3rem;
+            border-radius: 2px;
+            margin-left: 0.3rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .tag-main { background: var(--accent-primary); color: var(--bg-primary); }
+        .tag-agents { background: var(--accent-success); color: var(--bg-primary); }
+        .tag-browser { background: var(--accent-warning); color: var(--bg-primary); }
+        .tag-context { background: #bc8cff; color: var(--bg-primary); }
+        .tag-exec { background: #f0883e; color: var(--bg-primary); }
+        .tag-read { background: #58a6ff; color: var(--bg-primary); }
+        .tag-tool { background: #da3633; color: var(--bg-primary); }
+        .tag-think { background: #bc8cff; color: var(--bg-primary); }
+        .tag-user { background: #3fb950; color: var(--bg-primary); }
+        .tag-write { background: #f0883e; color: var(--bg-primary); }
+        .tag-other { background: var(--text-secondary); color: var(--bg-primary); }
+
+        /* Enhanced orphans */
+        .orphan-list {
+            margin-top: 0.5rem;
+        }
+        .orphan-row {
+            display: flex;
+            gap: 0.5rem;
+            padding: 0.25rem;
+            background: var(--bg-tertiary);
+            border-radius: 3px;
+            margin-bottom: 0.25rem;
+            font-size: 0.7rem;
+        }
+        .orphan-pid {
+            min-width: 60px;
+            font-family: monospace;
+            color: var(--accent-primary);
+        }
+        .orphan-resources {
+            min-width: 120px;
+            color: var(--text-secondary);
+        }
+        .orphan-cmd {
+            flex: 1;
+            color: var(--text-primary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Enhanced problems */
+        .problems-section {
+            border-top: 1px solid var(--border-color);
+            padding-top: 0.5rem;
+        }
+        .problem-item {
+            background: rgba(218, 54, 51, 0.1);
+            border: 1px solid rgba(218, 54, 51, 0.3);
+            border-radius: 3px;
+            padding: 0.4rem;
+            margin-bottom: 0.25rem;
+            font-size: 0.7rem;
+            color: var(--accent-error);
+        }
+
         /* Error Heatmap */
         .heatmap-container {
             padding: 1rem;
@@ -982,6 +1179,23 @@
                             <option value="success">Completed</option>
                             <option value="failure">Failed</option>
                             <option value="running">Running</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Activity</label>
+                        <select id="activityFilter">
+                            <option value="all">All</option>
+                            <option value="main">Main</option>
+                            <option value="agents">Agents</option>
+                            <option value="browser">Browser</option>
+                            <option value="context">Context</option>
+                            <option value="exec">Exec</option>
+                            <option value="read">Read</option>
+                            <option value="tool">Tool</option>
+                            <option value="think">Think</option>
+                            <option value="user">User</option>
+                            <option value="write">Write</option>
+                            <option value="other">Other</option>
                         </select>
                     </div>
                 </div>
