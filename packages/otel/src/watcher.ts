@@ -1,6 +1,6 @@
-import { watch } from 'fs';
-import { readFile } from 'fs/promises';
-import { join } from 'path';
+import { watch } from 'node:fs';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { loadGraph } from 'agentflow-core';
 import { exportGraphToOTel } from './index.js';
 
@@ -38,7 +38,7 @@ export class OTelWatcher {
    * Stop watching
    */
   stop(): void {
-    this.watchers.forEach(cleanup => cleanup());
+    for (const cleanup of this.watchers) cleanup();
     this.watchers = [];
     console.log('🔭 OTel watcher stopped');
   }

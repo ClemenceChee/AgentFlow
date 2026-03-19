@@ -1,13 +1,21 @@
+import { EventEmitter } from 'node:events';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import type { ExecutionGraph, ExecutionNode } from 'agentflow-core';
 import { loadGraph } from 'agentflow-core';
 import chokidar from 'chokidar';
-import { EventEmitter } from 'events';
-import * as fs from 'fs';
-import * as path from 'path';
 
 /** Parsed event from a JSONL session for rich timeline rendering. */
 export interface SessionEvent {
-  type: 'user' | 'assistant' | 'tool_call' | 'tool_result' | 'thinking' | 'spawn' | 'model_change' | 'system';
+  type:
+    | 'user'
+    | 'assistant'
+    | 'tool_call'
+    | 'tool_result'
+    | 'thinking'
+    | 'spawn'
+    | 'model_change'
+    | 'system';
   timestamp: number;
   name?: string;
   content?: string;
@@ -90,7 +98,9 @@ export class TraceWatcher extends EventEmitter {
       }
     }
 
-    console.log(`Scanned ${totalDirectories} directories (recursive), loaded ${this.traces.size} items from ${totalFiles} files`);
+    console.log(
+      `Scanned ${totalDirectories} directories (recursive), loaded ${this.traces.size} items from ${totalFiles} files`,
+    );
   }
 
   /** Recursively scan directory for supported file types */
@@ -127,18 +137,34 @@ export class TraceWatcher extends EventEmitter {
 
   /** Check if file type is supported */
   private isSupportedFile(filename: string): boolean {
-    return filename.endsWith('.json') ||
-           filename.endsWith('.jsonl') ||
-           filename.endsWith('.log') ||
-           filename.endsWith('.trace');
+    return (
+      filename.endsWith('.json') ||
+      filename.endsWith('.jsonl') ||
+      filename.endsWith('.log') ||
+      filename.endsWith('.trace')
+    );
   }
 
   /** File names that are config/state, not traces — skip them. */
   private static SKIP_FILES = new Set([
-    'workers.json', 'package.json', 'package-lock.json', 'tsconfig.json',
-    'biome.json', 'jobs.json', 'auth.json', 'models.json', 'config.json',
+    'workers.json',
+    'package.json',
+    'package-lock.json',
+    'tsconfig.json',
+    'biome.json',
+    'jobs.json',
+    'auth.json',
+    'models.json',
+    'config.json',
   ]);
-  private static SKIP_SUFFIXES = ['-state.json', '-config.json', '-watch-state.json', '.tmp', '.bak', '.backup'];
+  private static SKIP_SUFFIXES = [
+    '-state.json',
+    '-config.json',
+    '-watch-state.json',
+    '.tmp',
+    '.bak',
+    '.backup',
+  ];
 
   /** Load a .json trace, .jsonl session file, or .log file. */
   private loadFile(filePath: string): boolean {
@@ -146,7 +172,7 @@ export class TraceWatcher extends EventEmitter {
 
     // Skip known non-trace files
     if (TraceWatcher.SKIP_FILES.has(filename)) return false;
-    if (TraceWatcher.SKIP_SUFFIXES.some(s => filename.endsWith(s))) return false;
+    if (TraceWatcher.SKIP_SUFFIXES.some((s) => filename.endsWith(s))) return false;
 
     if (filePath.endsWith('.jsonl')) {
       return this.loadSessionFile(filePath);
@@ -191,7 +217,8 @@ export class TraceWatcher extends EventEmitter {
         trace.sourceDir = path.dirname(filePath);
 
         // Create unique key for each trace from the same file
-        const key = traces.length === 1 ? this.traceKey(filePath) : `${this.traceKey(filePath)}-${i}`;
+        const key =
+          traces.length === 1 ? this.traceKey(filePath) : `${this.traceKey(filePath)}-${i}`;
         this.traces.set(key, trace as WatchedTrace);
       }
 
@@ -204,7 +231,7 @@ export class TraceWatcher extends EventEmitter {
 
   /** Universal log parser - detects agent activities from any system */
   private parseUniversalLog(content: string, filename: string, filePath: string): WatchedTrace[] {
-    const lines = content.split('\n').filter(line => line.trim());
+    const lines = content.split('\n').filter((line) => line.trim());
     const activities = new Map<string, any>();
 
     // Pattern detection - identify structured entries
@@ -227,7 +254,7 @@ export class TraceWatcher extends EventEmitter {
           nodes: {},
           edges: [],
           events: [],
-          metadata: { sessionId, source: filename }
+          metadata: { sessionId, source: filename },
         });
       }
 
@@ -245,22 +272,26 @@ export class TraceWatcher extends EventEmitter {
       }
     }
 
-    const traces = Array.from(activities.values()).filter(session =>
-      Object.keys(session.nodes).length > 0
+    const traces = Array.from(activities.values()).filter(
+      (session) => Object.keys(session.nodes).length > 0,
     );
 
     // Convert log entries to sessionEvents for transcript tab
     for (const trace of traces) {
-      const sortedNodes = Object.values(trace.nodes).sort((a: any, b: any) => a.startTime - b.startTime);
+      const sortedNodes = Object.values(trace.nodes).sort(
+        (a: any, b: any) => a.startTime - b.startTime,
+      );
       trace.sessionEvents = sortedNodes.map((node: any) => ({
-        type: node.status === 'failed' ? 'tool_result' : 'system' as const,
+        type: node.status === 'failed' ? 'tool_result' : ('system' as const),
         timestamp: node.startTime,
         name: node.name,
-        content: node.metadata.count > 1
-          ? `${node.name} (${node.metadata.count} occurrences, ${node.metadata.errorCount || 0} errors)`
-          : node.name,
+        content:
+          node.metadata.count > 1
+            ? `${node.name} (${node.metadata.count} occurrences, ${node.metadata.errorCount || 0} errors)`
+            : node.name,
         duration: node.endTime - node.startTime,
-        toolError: node.status === 'failed' ? `${node.metadata.errorCount || 1} error(s)` : undefined,
+        toolError:
+          node.status === 'failed' ? `${node.metadata.errorCount || 1} error(s)` : undefined,
         id: node.id,
       }));
       trace.sourceType = 'session'; // Enable transcript/timeline tabs
@@ -273,7 +304,7 @@ export class TraceWatcher extends EventEmitter {
         id: '',
         rootNodeId: 'root',
         nodes: {
-          'root': {
+          root: {
             id: 'root',
             type: 'log-file',
             name: filename,
@@ -281,8 +312,8 @@ export class TraceWatcher extends EventEmitter {
             startTime: stats.mtime.getTime(),
             endTime: stats.mtime.getTime(),
             children: [],
-            metadata: { lineCount: lines.length, path: filePath }
-          }
+            metadata: { lineCount: lines.length, path: filePath },
+          },
         },
         edges: [],
         startTime: stats.mtime.getTime(),
@@ -291,7 +322,7 @@ export class TraceWatcher extends EventEmitter {
         trigger: 'file',
         agentId: this.extractAgentFromPath(filePath),
         events: [],
-        metadata: { type: 'file-trace' }
+        metadata: { type: 'file-trace' },
       });
     }
 
@@ -314,7 +345,8 @@ export class TraceWatcher extends EventEmitter {
       if (jsonMatch) {
         try {
           const parsed = JSON.parse(jsonMatch[0]);
-          timestamp = this.parseTimestamp(parsed.timestamp || parsed.time || parsed.ts) || Date.now();
+          timestamp =
+            this.parseTimestamp(parsed.timestamp || parsed.time || parsed.ts) || Date.now();
           level = parsed.level || parsed.severity || 'info';
           action = parsed.action || parsed.event || parsed.message || '';
           kvPairs = parsed;
@@ -327,7 +359,7 @@ export class TraceWatcher extends EventEmitter {
       const kvMatches = line.match(/(\w+)=([^\s]+)/g);
       if (kvMatches && kvMatches.length >= 2) {
         const pairs: any = {};
-        kvMatches.forEach(match => {
+        kvMatches.forEach((match) => {
           const [key, value] = match.split('=', 2);
           pairs[key] = this.parseValue(value);
         });
@@ -340,7 +372,9 @@ export class TraceWatcher extends EventEmitter {
 
     // 4. Standard syslog/application logs
     if (!timestamp) {
-      const logMatch = line.match(/^(\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}:\d{2}[.\d]*Z?)\s+(\w+)?\s*:?\s*(.+)/);
+      const logMatch = line.match(
+        /^(\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}:\d{2}[.\d]*Z?)\s+(\w+)?\s*:?\s*(.+)/,
+      );
       if (logMatch) {
         timestamp = new Date(logMatch[1]).getTime();
         level = logMatch[2] || 'info';
@@ -356,7 +390,7 @@ export class TraceWatcher extends EventEmitter {
       action,
       component: this.detectComponent(action, kvPairs),
       operation: this.detectOperation(action, kvPairs),
-      ...kvPairs
+      ...kvPairs,
     };
   }
 
@@ -393,7 +427,10 @@ export class TraceWatcher extends EventEmitter {
     if (actionMatch) return actionMatch[1].trim();
 
     // After level, extract the main message
-    const afterLevel = clean.replace(/^.*?(debug|info|warn|warning|error|fatal|trace)\s*\]?\s*/i, '');
+    const afterLevel = clean.replace(
+      /^.*?(debug|info|warn|warning|error|fatal|trace)\s*\]?\s*/i,
+      '',
+    );
     return afterLevel.split(/\s+/)[0] || '';
   }
 
@@ -403,7 +440,7 @@ export class TraceWatcher extends EventEmitter {
 
     // key=value or key='quoted value' format
     const kvRegex = /(\w+)=('(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|\S+)/g;
-    let match;
+    let match: RegExpExecArray | null;
     while ((match = kvRegex.exec(clean)) !== null) {
       // Skip timestamp and level fields
       if (match[1] === 'Z' || match[1] === 'm') continue;
@@ -414,7 +451,7 @@ export class TraceWatcher extends EventEmitter {
   }
 
   private parseValue(value: string): any {
-    if (value.match(/^\d+$/)) return parseInt(value);
+    if (value.match(/^\d+$/)) return parseInt(value, 10);
     if (value.match(/^\d+\.\d+$/)) return parseFloat(value);
     if (value.startsWith("'") && value.endsWith("'")) return value.slice(1, -1);
     if (value.startsWith('"') && value.endsWith('"')) return value.slice(1, -1);
@@ -458,12 +495,18 @@ export class TraceWatcher extends EventEmitter {
 
   private extractSessionIdentifier(activity: any): string {
     // Look for session/run/transaction IDs (prefer more specific ones)
-    return activity.session_id || activity.run_id || activity.request_id ||
-           activity.trace_id || activity.sweep_id || activity.transaction_id ||
-           'default';
+    return (
+      activity.session_id ||
+      activity.run_id ||
+      activity.request_id ||
+      activity.trace_id ||
+      activity.sweep_id ||
+      activity.transaction_id ||
+      'default'
+    );
   }
 
-  private detectAgentIdentifier(activity: any, filename: string, filePath: string): string {
+  private detectAgentIdentifier(activity: any, _filename: string, filePath: string): string {
     // Use agent_id from log fields if available (Alfred pipeline.llm_call has this)
     if (activity.agent_id) {
       const agentId = activity.agent_id;
@@ -560,7 +603,7 @@ export class TraceWatcher extends EventEmitter {
       startTime: activity.timestamp,
       endTime: activity.timestamp,
       children: [],
-      metadata: { ...activity, count: 1 }
+      metadata: { ...activity, count: 1 },
     };
 
     session.nodes[nodeId] = node;
@@ -580,11 +623,28 @@ export class TraceWatcher extends EventEmitter {
   }
 
   /** Parse OpenClaw tslog-format log files with session run results. */
-  private loadOpenClawLogFile(content: string, filename: string, filePath: string, stats: fs.Stats): boolean {
-    const lines = content.split('\n').filter(l => l.trim());
-    const sessions = new Map<string, {
-      entries: Array<{ text: string; timestamp: number; sessionId: string; provider: string; model: string; usage: any; durationMs: number; agentName: string }>;
-    }>();
+  private loadOpenClawLogFile(
+    content: string,
+    filename: string,
+    filePath: string,
+    stats: fs.Stats,
+  ): boolean {
+    const lines = content.split('\n').filter((l) => l.trim());
+    const sessions = new Map<
+      string,
+      {
+        entries: Array<{
+          text: string;
+          timestamp: number;
+          sessionId: string;
+          provider: string;
+          model: string;
+          usage: any;
+          durationMs: number;
+          agentName: string;
+        }>;
+      }
+    >();
 
     for (const line of lines) {
       try {
@@ -594,20 +654,25 @@ export class TraceWatcher extends EventEmitter {
           // tslog format - the "0" field contains the logged object as a string or the actual content
           // Check if it's a JSON string containing payloads/agentMeta
           try {
-            const inner = typeof parsed['0'] === 'string' && parsed['0'].startsWith('{')
-              ? JSON.parse(parsed['0'])
-              : null;
+            const inner =
+              typeof parsed['0'] === 'string' && parsed['0'].startsWith('{')
+                ? JSON.parse(parsed['0'])
+                : null;
             if (inner?.payloads && inner?.meta?.agentMeta) {
               const agentMeta = inner.meta.agentMeta;
               const sessionId = agentMeta.sessionId || 'unknown';
               const agentName = this.openClawSessionIdToAgent(sessionId);
-              const timestamp = parsed.time ? new Date(parsed.time).getTime() : (parsed._meta?.date ? new Date(parsed._meta.date).getTime() : stats.mtime.getTime());
+              const timestamp = parsed.time
+                ? new Date(parsed.time).getTime()
+                : parsed._meta?.date
+                  ? new Date(parsed._meta.date).getTime()
+                  : stats.mtime.getTime();
               const texts = (inner.payloads || []).map((p: any) => p.text || '').filter(Boolean);
 
               if (!sessions.has(sessionId)) {
                 sessions.set(sessionId, { entries: [] });
               }
-              sessions.get(sessionId)!.entries.push({
+              sessions.get(sessionId)?.entries.push({
                 text: texts.join('\n'),
                 timestamp,
                 sessionId,
@@ -619,7 +684,9 @@ export class TraceWatcher extends EventEmitter {
               });
               continue;
             }
-          } catch { /* not a JSON string in "0" field */ }
+          } catch {
+            /* not a JSON string in "0" field */
+          }
         }
 
         // Direct payloads/agentMeta format (non-tslog wrapped)
@@ -627,13 +694,17 @@ export class TraceWatcher extends EventEmitter {
           const agentMeta = parsed.meta.agentMeta;
           const sessionId = agentMeta.sessionId || 'unknown';
           const agentName = this.openClawSessionIdToAgent(sessionId);
-          const timestamp = parsed.time ? new Date(parsed.time).getTime() : (parsed._meta?.date ? new Date(parsed._meta.date).getTime() : stats.mtime.getTime());
+          const timestamp = parsed.time
+            ? new Date(parsed.time).getTime()
+            : parsed._meta?.date
+              ? new Date(parsed._meta.date).getTime()
+              : stats.mtime.getTime();
           const texts = (parsed.payloads || []).map((p: any) => p.text || '').filter(Boolean);
 
           if (!sessions.has(sessionId)) {
             sessions.set(sessionId, { entries: [] });
           }
-          sessions.get(sessionId)!.entries.push({
+          sessions.get(sessionId)?.entries.push({
             text: texts.join('\n'),
             timestamp,
             sessionId,
@@ -644,7 +715,9 @@ export class TraceWatcher extends EventEmitter {
             agentName,
           });
         }
-      } catch { /* skip unparseable lines */ }
+      } catch {
+        /* skip unparseable lines */
+      }
     }
 
     if (sessions.size === 0) return false;
@@ -659,7 +732,9 @@ export class TraceWatcher extends EventEmitter {
       const agentId = firstEntry.agentName;
 
       // Aggregate usage
-      let totalInput = 0, totalOutput = 0, totalTokens = 0;
+      let totalInput = 0,
+        totalOutput = 0,
+        totalTokens = 0;
       let totalDuration = 0;
       for (const entry of entries) {
         totalInput += entry.usage.input || 0;
@@ -703,7 +778,7 @@ export class TraceWatcher extends EventEmitter {
         endTime: lastEntry.timestamp,
         status: 'completed',
         parentId: undefined,
-        children: Array.from(nodes.keys()).filter(k => k !== rootId),
+        children: Array.from(nodes.keys()).filter((k) => k !== rootId),
         metadata: {
           provider: firstEntry.provider,
           model: firstEntry.model,
@@ -723,7 +798,11 @@ export class TraceWatcher extends EventEmitter {
         content: e.text,
         model: e.model,
         provider: e.provider,
-        tokens: { input: e.usage.input || 0, output: e.usage.output || 0, total: e.usage.total || 0 },
+        tokens: {
+          input: e.usage.input || 0,
+          output: e.usage.output || 0,
+          total: e.usage.total || 0,
+        },
         duration: e.durationMs,
         id: `entry-${idx}`,
       }));
@@ -745,7 +824,12 @@ export class TraceWatcher extends EventEmitter {
         sourceType: 'session',
         sourceDir: path.dirname(filePath),
         sessionEvents,
-        tokenUsage: { input: totalInput, output: totalOutput, total: totalTokens || (totalInput + totalOutput), cost: 0 },
+        tokenUsage: {
+          input: totalInput,
+          output: totalOutput,
+          total: totalTokens || totalInput + totalOutput,
+          cost: 0,
+        },
         metadata: {
           provider: firstEntry.provider,
           model: firstEntry.model,
@@ -754,7 +838,8 @@ export class TraceWatcher extends EventEmitter {
         },
       } as WatchedTrace;
 
-      const key = sessions.size === 1 ? this.traceKey(filePath) : `${this.traceKey(filePath)}-${traceIndex}`;
+      const key =
+        sessions.size === 1 ? this.traceKey(filePath) : `${this.traceKey(filePath)}-${traceIndex}`;
       this.traces.set(key, trace);
       traceIndex++;
     }
@@ -830,7 +915,7 @@ export class TraceWatcher extends EventEmitter {
         if (!sessionId) continue;
 
         // Check if we already have a JSONL file for this session
-        const existingKey = Array.from(this.traces.keys()).find(k => {
+        const existingKey = Array.from(this.traces.keys()).find((k) => {
           const t = this.traces.get(k);
           return t?.id === sessionId || t?.traceId === sessionId;
         });
@@ -972,7 +1057,9 @@ export class TraceWatcher extends EventEmitter {
       }
 
       // Extract the user prompt (first message)
-      const firstMessage = rawEvents.find((e) => e.type === 'message' && e.message?.role === 'user');
+      const firstMessage = rawEvents.find(
+        (e) => e.type === 'message' && e.message?.role === 'user',
+      );
       const userPrompt = firstMessage?.message?.content?.[0]?.text || '';
       const cronMatch = userPrompt.match(/\[cron:(\S+)\s+([^\]]+)\]/);
       const triggerName = cronMatch ? cronMatch[2] : '';
@@ -998,7 +1085,8 @@ export class TraceWatcher extends EventEmitter {
 
       // Create root node
       const rootId = `session-${sessionId.slice(0, 8)}`;
-      const rootName = triggerName || (userPrompt.slice(0, 80) + (userPrompt.length > 80 ? '...' : '')) || sessionId;
+      const rootName =
+        triggerName || userPrompt.slice(0, 80) + (userPrompt.length > 80 ? '...' : '') || sessionId;
 
       // Parse ALL events and create nodes/sessionEvents
       for (const evt of rawEvents) {
@@ -1066,7 +1154,7 @@ export class TraceWatcher extends EventEmitter {
           nodes.set(spawnId, {
             id: spawnId,
             type: 'subagent',
-            name: 'Subagent: ' + (evt.data?.sessionId || '').slice(0, 12),
+            name: `Subagent: ${(evt.data?.sessionId || '').slice(0, 12)}`,
             startTime: evtTs,
             endTime: evtTs,
             status: 'completed' as any,
@@ -1121,12 +1209,14 @@ export class TraceWatcher extends EventEmitter {
                   content: block.text,
                   id: evt.id,
                   parentId: evt.parentId,
-                  tokens: msg.usage ? {
-                    input: msg.usage.input || 0,
-                    output: msg.usage.output || 0,
-                    total: msg.usage.totalTokens || 0,
-                    cost: msg.usage.cost?.total,
-                  } : undefined,
+                  tokens: msg.usage
+                    ? {
+                        input: msg.usage.input || 0,
+                        output: msg.usage.output || 0,
+                        total: msg.usage.totalTokens || 0,
+                        cost: msg.usage.cost?.total,
+                      }
+                    : undefined,
                   model: modelId,
                   provider,
                 });
@@ -1216,7 +1306,7 @@ export class TraceWatcher extends EventEmitter {
             });
 
             // Update matching tool node with end time and status
-            for (const [nodeId, node] of nodes) {
+            for (const [_nodeId, node] of nodes) {
               if (node.type === 'tool' && node.metadata?.toolCallId === toolCallId) {
                 node.endTime = evtTs;
                 node.status = hasError ? ('failed' as any) : ('completed' as any);
@@ -1258,7 +1348,7 @@ export class TraceWatcher extends EventEmitter {
       const tokenUsage = {
         input: totalInputTokens,
         output: totalOutputTokens,
-        total: totalTokensSum || (totalInputTokens + totalOutputTokens),
+        total: totalTokensSum || totalInputTokens + totalOutputTokens,
         cost: totalCost,
       };
 
@@ -1407,7 +1497,7 @@ export class TraceWatcher extends EventEmitter {
         // e.g., agents/main/sessions → "main/sessions" instead of just "sessions"
         const dirParts = dir.split(path.sep).filter(Boolean);
         const dirSuffix = dirParts.slice(-2).join('/');
-        return path.relative(dir, filePath).replace(/\\/g, '/') + '@' + dirSuffix;
+        return `${path.relative(dir, filePath).replace(/\\/g, '/')}@${dirSuffix}`;
       }
     }
     return filePath;
@@ -1427,16 +1517,16 @@ export class TraceWatcher extends EventEmitter {
 
       const watcher = chokidar.watch(patterns, {
         ignored: [
-          /^\./,              // Ignore hidden files
-          /node_modules/,     // Ignore node_modules
-          /\.git/,            // Ignore git directories
-          /\.vscode/,         // Ignore vscode
-          /\.idea/,           // Ignore idea
+          /^\./, // Ignore hidden files
+          /node_modules/, // Ignore node_modules
+          /\.git/, // Ignore git directories
+          /\.vscode/, // Ignore vscode
+          /\.idea/, // Ignore idea
         ],
         persistent: true,
         ignoreInitial: true,
         followSymlinks: false,
-        depth: 10,            // Allow deep nesting for OpenClaw agents/*/sessions/
+        depth: 10, // Allow deep nesting for OpenClaw agents/*/sessions/
       });
 
       watcher.on('add', (filePath) => {
@@ -1480,7 +1570,9 @@ export class TraceWatcher extends EventEmitter {
       this.watchers.push(watcher);
     }
 
-    console.log(`Watching ${this.allWatchDirs.length} directories recursively for JSON/JSONL/LOG/TRACE files`);
+    console.log(
+      `Watching ${this.allWatchDirs.length} directories recursively for JSON/JSONL/LOG/TRACE files`,
+    );
   }
 
   public getAllTraces(): WatchedTrace[] {

@@ -1,11 +1,11 @@
-import express from 'express';
-import * as fs from 'fs';
-import { createServer } from 'http';
-import * as path from 'path';
-import { fileURLToPath } from 'url';
-import { WebSocketServer } from 'ws';
-import { discoverProcessConfig, auditProcesses } from 'agentflow-core';
+import * as fs from 'node:fs';
+import { createServer } from 'node:http';
+import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { ProcessAuditResult } from 'agentflow-core';
+import { auditProcesses, discoverProcessConfig } from 'agentflow-core';
+import express from 'express';
+import { WebSocketServer } from 'ws';
 import { AgentStats } from './stats.js';
 import { TraceWatcher } from './watcher.js';
 
@@ -42,7 +42,10 @@ export class DashboardServer {
   private wss = new WebSocketServer({ server: this.server });
   private watcher: TraceWatcher;
   private stats: AgentStats;
-  private processHealthCache: { result: ProcessAuditResult | null; ts: number } = { result: null, ts: 0 };
+  private processHealthCache: { result: ProcessAuditResult | null; ts: number } = {
+    result: null,
+    ts: 0,
+  };
 
   constructor(private config: DashboardConfig) {
     this.watcher = new TraceWatcher({
@@ -63,7 +66,7 @@ export class DashboardServer {
 
   private setupExpress() {
     if (this.config.enableCors) {
-      this.app.use((req, res, next) => {
+      this.app.use((_req, res, next) => {
         res.header('Access-Control-Allow-Origin', '*');
         res.header(
           'Access-Control-Allow-Headers',
@@ -80,11 +83,11 @@ export class DashboardServer {
     }
 
     // API endpoints
-    this.app.get('/api/traces', (req, res) => {
+    this.app.get('/api/traces', (_req, res) => {
       try {
         const traces = this.watcher.getAllTraces().map(serializeTrace);
         res.json(traces);
-      } catch (error) {
+      } catch (_error) {
         res.status(500).json({ error: 'Failed to load traces' });
       }
     });
@@ -96,7 +99,7 @@ export class DashboardServer {
           return res.status(404).json({ error: 'Trace not found' });
         }
         res.json(serializeTrace(trace));
-      } catch (error) {
+      } catch (_error) {
         res.status(500).json({ error: 'Failed to load trace' });
       }
     });
@@ -112,25 +115,25 @@ export class DashboardServer {
           tokenUsage: (trace as any).tokenUsage || null,
           sourceType: (trace as any).sourceType || 'trace',
         });
-      } catch (error) {
+      } catch (_error) {
         res.status(500).json({ error: 'Failed to load trace events' });
       }
     });
 
-    this.app.get('/api/agents', (req, res) => {
+    this.app.get('/api/agents', (_req, res) => {
       try {
         const agents = this.stats.getAgentsList();
         res.json(agents);
-      } catch (error) {
+      } catch (_error) {
         res.status(500).json({ error: 'Failed to load agents' });
       }
     });
 
-    this.app.get('/api/stats', (req, res) => {
+    this.app.get('/api/stats', (_req, res) => {
       try {
         const globalStats = this.stats.getGlobalStats();
         res.json(globalStats);
-      } catch (error) {
+      } catch (_error) {
         res.status(500).json({ error: 'Failed to load statistics' });
       }
     });
@@ -139,7 +142,7 @@ export class DashboardServer {
     this.app.get('/api/agents/:agentId/timeline', (req, res) => {
       try {
         const agentId = req.params.agentId;
-        const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
+        const limit = Math.min(parseInt(req.query.limit as string, 10) || 50, 200);
         const rawTraces = this.watcher.getTracesByAgent(agentId);
         if (rawTraces.length === 0) {
           return res.status(404).json({ error: 'No traces for agent' });
@@ -151,15 +154,20 @@ export class DashboardServer {
           .slice(0, limit)
           .reverse(); // chronological for the Gantt
 
-        const executions = traces.map(t => {
+        const executions = traces.map((t) => {
           const serialized = serializeTrace(t);
           const nodes = serialized.nodes || {};
           const events = serialized.sessionEvents || [];
 
           // Build sub-activities from nodes or events
           const activities: Array<{
-            id: string; name: string; type: string; status: string;
-            startTime: number; endTime: number; parentId?: string;
+            id: string;
+            name: string;
+            type: string;
+            status: string;
+            startTime: number;
+            endTime: number;
+            parentId?: string;
           }> = [];
 
           if (events.length > 0) {
@@ -185,8 +193,9 @@ export class DashboardServer {
             }
           } else {
             // Graph-based: use nodes
-            const sorted = Object.values(nodes).sort((a: any, b: any) =>
-              (a.startTime || 0) - (b.startTime || 0));
+            const sorted = Object.values(nodes).sort(
+              (a: any, b: any) => (a.startTime || 0) - (b.startTime || 0),
+            );
             for (const node of sorted as any[]) {
               activities.push({
                 id: node.id,
@@ -216,7 +225,7 @@ export class DashboardServer {
         });
 
         // Compute global time range
-        const allTimes = executions.flatMap(e => [e.startTime, e.endTime]);
+        const allTimes = executions.flatMap((e) => [e.startTime, e.endTime]);
         const minTime = Math.min(...allTimes);
         const maxTime = Math.max(...allTimes);
 
@@ -246,7 +255,12 @@ export class DashboardServer {
         for (const trace of traces) {
           totalTraces++;
           // Extract activity sequence from this trace
-          const activities: Array<{ name: string; type: string; status: string; duration: number }> = [];
+          const activities: Array<{
+            name: string;
+            type: string;
+            status: string;
+            duration: number;
+          }> = [];
 
           if (trace.sessionEvents && trace.sessionEvents.length > 0) {
             // Session-based: use event types as activities
@@ -263,7 +277,9 @@ export class DashboardServer {
           } else {
             // Graph-based: use nodes sorted by startTime
             const nodes = trace.nodes || {};
-            const sorted = Object.values(nodes).sort((a: any, b: any) => (a.startTime || 0) - (b.startTime || 0));
+            const sorted = Object.values(nodes).sort(
+              (a: any, b: any) => (a.startTime || 0) - (b.startTime || 0),
+            );
             for (const node of sorted as any[]) {
               activities.push({
                 name: node.name || node.type || node.id,
@@ -276,13 +292,13 @@ export class DashboardServer {
 
           // Count activities and transitions
           // Add virtual START and END nodes
-          const seq = ['[START]', ...activities.map(a => a.name), '[END]'];
+          const seq = ['[START]', ...activities.map((a) => a.name), '[END]'];
           for (let i = 0; i < seq.length; i++) {
             const act = seq[i];
             activityCounts.set(act, (activityCounts.get(act) || 0) + 1);
 
             if (i < seq.length - 1) {
-              const key = act + ' → ' + seq[i + 1];
+              const key = `${act} → ${seq[i + 1]}`;
               transitionCounts.set(key, (transitionCounts.get(key) || 0) + 1);
             }
           }
@@ -323,8 +339,8 @@ export class DashboardServer {
         });
 
         // Compute max edge count for relative sizing
-        const maxEdgeCount = Math.max(...edges.map(e => e.count), 1);
-        const maxNodeCount = Math.max(...nodes.filter(n => !n.isVirtual).map(n => n.count), 1);
+        const maxEdgeCount = Math.max(...edges.map((e) => e.count), 1);
+        const maxNodeCount = Math.max(...nodes.filter((n) => !n.isVirtual).map((n) => n.count), 1);
 
         res.json({
           agentId,
@@ -347,12 +363,12 @@ export class DashboardServer {
           return res.status(404).json({ error: 'Agent not found' });
         }
         res.json(agentStats);
-      } catch (error) {
+      } catch (_error) {
         res.status(500).json({ error: 'Failed to load agent statistics' });
       }
     });
 
-    this.app.get('/api/process-health', (req, res) => {
+    this.app.get('/api/process-health', (_req, res) => {
       try {
         const now = Date.now();
         if (this.processHealthCache.result && now - this.processHealthCache.ts < 10_000) {
@@ -400,8 +416,8 @@ export class DashboardServer {
         ];
 
         // Remove duplicates by PID
-        const uniqueProcesses = allOsProcesses.filter((proc, index, arr) =>
-          arr.findIndex(p => p.pid === proc.pid) === index
+        const uniqueProcesses = allOsProcesses.filter(
+          (proc, index, arr) => arr.findIndex((p) => p.pid === proc.pid) === index,
         );
 
         // Build combined result using Alfred as the base (since it has PID file and workers)
@@ -409,21 +425,29 @@ export class DashboardServer {
           ...alfredResult,
           osProcesses: uniqueProcesses,
           // Recalculate orphans based on all processes
-          orphans: uniqueProcesses.filter(p => {
+          orphans: uniqueProcesses.filter((p) => {
             // Known PIDs from Alfred system
             const alfredKnownPids = new Set<number>();
-            if (alfredResult.pidFile?.pid && !alfredResult.pidFile.stale) alfredKnownPids.add(alfredResult.pidFile.pid);
+            if (alfredResult.pidFile?.pid && !alfredResult.pidFile.stale)
+              alfredKnownPids.add(alfredResult.pidFile.pid);
             if (alfredResult.workers) {
-              if (alfredResult.workers.orchestratorPid) alfredKnownPids.add(alfredResult.workers.orchestratorPid);
+              if (alfredResult.workers.orchestratorPid)
+                alfredKnownPids.add(alfredResult.workers.orchestratorPid);
               for (const w of alfredResult.workers.workers) {
                 if (w.pid) alfredKnownPids.add(w.pid);
               }
             }
 
             // Don't consider OpenClaw processes as orphans
-            const isOpenClawProcess = p.cmdline.includes('openclaw') || p.cmdline.includes('clawmetry');
+            const isOpenClawProcess =
+              p.cmdline.includes('openclaw') || p.cmdline.includes('clawmetry');
 
-            return !alfredKnownPids.has(p.pid) && !isOpenClawProcess && p.pid !== process.pid && p.pid !== process.ppid;
+            return (
+              !alfredKnownPids.has(p.pid) &&
+              !isOpenClawProcess &&
+              p.pid !== process.pid &&
+              p.pid !== process.ppid
+            );
           }),
         };
 
@@ -440,13 +464,13 @@ export class DashboardServer {
 
         this.processHealthCache = { result, ts: now };
         res.json(result);
-      } catch (error) {
+      } catch (_error) {
         res.status(500).json({ error: 'Failed to audit processes' });
       }
     });
 
     // Fallback to serve index.html for SPA routing
-    this.app.get('*', (req, res) => {
+    this.app.get('*', (_req, res) => {
       const indexPath = path.join(__dirname, '../public/index.html');
       if (fs.existsSync(indexPath)) {
         res.sendFile(indexPath);

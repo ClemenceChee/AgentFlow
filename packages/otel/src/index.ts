@@ -28,13 +28,13 @@
  * ```
  */
 
+export { AgentFlowOTelConfig, type OTelConfig, OTelPresets } from './config.js';
 export { AgentFlowOTelExporter } from './exporter.js';
-export { AgentFlowOTelConfig, OTelPresets, type OTelConfig } from './config.js';
 export { createOTelWatcher } from './watcher.js';
 
-import { AgentFlowOTelExporter } from './exporter.js';
-import { AgentFlowOTelConfig, type OTelConfig } from './config.js';
 import type { ExecutionGraph } from 'agentflow-core';
+import { AgentFlowOTelConfig, type OTelConfig } from './config.js';
+import { AgentFlowOTelExporter } from './exporter.js';
 
 // Global instances
 let globalConfig: AgentFlowOTelConfig | null = null;

@@ -1,6 +1,6 @@
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import chokidar from 'chokidar';
-import * as fs from 'fs';
-import * as path from 'path';
 import type { AgentFlowStorage } from './storage.js';
 
 export class TraceIngester {
@@ -56,7 +56,7 @@ export class TraceIngester {
 
   private isTraceFile(filePath: string): boolean {
     const supportedExtensions = ['.json', '.jsonl', '.log', '.trace'];
-    return supportedExtensions.some(ext => filePath.endsWith(ext));
+    return supportedExtensions.some((ext) => filePath.endsWith(ext));
   }
 
   private queueFile(filePath: string) {
@@ -172,8 +172,8 @@ export class TraceIngester {
         }
         return content
           .split('\n')
-          .filter(line => line.trim())
-          .map(line => JSON.parse(line));
+          .filter((line) => line.trim())
+          .map((line) => JSON.parse(line));
 
       case '.log':
         return this.parseStructuredLog(content, filePath);
@@ -222,16 +222,16 @@ export class TraceIngester {
         trigger: 'log-file',
         timestamp: Date.now(),
         nodes: {
-          'root': {
+          root: {
             id: 'root',
             type: 'log-file',
             name: filename,
             status: 'completed',
             startTime: Date.now(),
             endTime: Date.now(),
-            metadata: { lineCount: lines.length }
-          }
-        }
+            metadata: { lineCount: lines.length },
+          },
+        },
       });
     }
 
@@ -239,21 +239,25 @@ export class TraceIngester {
   }
 
   private isAlfredLog(content: string, filename: string): boolean {
-    return filename.includes('alfred') ||
-           content.includes('daemon.starting') ||
-           content.includes('zo.dispatching') ||
-           content.includes('agent_invoke');
+    return (
+      filename.includes('alfred') ||
+      content.includes('daemon.starting') ||
+      content.includes('zo.dispatching') ||
+      content.includes('agent_invoke')
+    );
   }
 
   private isOpenClawLog(content: string, filename: string): boolean {
-    return filename.includes('openclaw') ||
-           content.includes('"name":"openclaw"') ||
-           content.includes('sessionId') ||
-           content.includes('agentMeta');
+    return (
+      filename.includes('openclaw') ||
+      content.includes('"name":"openclaw"') ||
+      content.includes('sessionId') ||
+      content.includes('agentMeta')
+    );
   }
 
-  private parseAlfredLog(content: string, filename: string): any[] {
-    const traces: any[] = [];
+  private parseAlfredLog(content: string, _filename: string): any[] {
+    const _traces: any[] = [];
     const lines = content.split('\n');
     const sessions = new Map<string, any>();
 
@@ -270,7 +274,7 @@ export class TraceIngester {
           trigger: logEntry.trigger || 'scheduled',
           timestamp: logEntry.timestamp,
           nodes: {},
-          metadata: { sessionId, component: logEntry.component }
+          metadata: { sessionId, component: logEntry.component },
         });
       }
 
@@ -278,7 +282,7 @@ export class TraceIngester {
       this.addAlfredNodeToSession(session, logEntry);
     }
 
-    return Array.from(sessions.values()).filter(session => Object.keys(session.nodes).length > 0);
+    return Array.from(sessions.values()).filter((session) => Object.keys(session.nodes).length > 0);
   }
 
   private parseAlfredLogLine(line: string): any | null {
@@ -287,7 +291,7 @@ export class TraceIngester {
     if (!timestampMatch) return null;
 
     const levelMatch = line.match(/\[\[(\d+)m\[\[1m(\w+)\s*\[0m\]/);
-    const actionMatch = line.match(/\[1m([^\[]+?)\s*\[0m/);
+    const actionMatch = line.match(/\[1m([^[]+?)\s*\[0m/);
 
     if (!actionMatch) return null;
 
@@ -297,12 +301,12 @@ export class TraceIngester {
 
     // Extract key-value pairs
     const kvPairs: any = {};
-    const kvRegex = /\[36m(\w+)\[0m=\[35m([^\[]+?)\[0m/g;
-    let match;
+    const kvRegex = /\[36m(\w+)\[0m=\[35m([^[]+?)\[0m/g;
+    let match: RegExpExecArray | null;
     while ((match = kvRegex.exec(line)) !== null) {
       let value: any = match[2];
       // Try to parse as number or remove quotes
-      if (value.match(/^\d+$/)) value = parseInt(value);
+      if (value.match(/^\d+$/)) value = parseInt(value, 10);
       else if (value.match(/^\d+\.\d+$/)) value = parseFloat(value);
       else if (value.startsWith("'") && value.endsWith("'")) value = value.slice(1, -1);
       kvPairs[match[1]] = value;
@@ -320,7 +324,7 @@ export class TraceIngester {
       sources: kvPairs.sources,
       method: kvPairs.method,
       url: kvPairs.url,
-      ...kvPairs
+      ...kvPairs,
     };
   }
 
@@ -337,8 +341,8 @@ export class TraceIngester {
       metadata: {
         level: logEntry.level,
         action: logEntry.action,
-        ...logEntry
-      }
+        ...logEntry,
+      },
     };
 
     session.nodes[nodeId] = node;
@@ -370,9 +374,10 @@ export class TraceIngester {
 
     // Look for key=value patterns (but be more restrictive)
     const kvMatches = line.match(/(\w+)=([^\s]+)/g);
-    if (kvMatches && kvMatches.length >= 3) { // Require at least 3 key-value pairs
+    if (kvMatches && kvMatches.length >= 3) {
+      // Require at least 3 key-value pairs
       const data: any = { timestamp: Date.now() };
-      kvMatches.forEach(match => {
+      kvMatches.forEach((match) => {
         const [key, value] = match.split('=', 2);
         // Skip corrupted keys
         if (key.includes('{') || key.includes('"') || value.includes('"ts"')) return;
@@ -470,14 +475,14 @@ export class TraceIngester {
   }
 
   // Parse Alfred workers.json
-  private parseAlfredWorkers(content: string, filePath: string): any[] {
+  private parseAlfredWorkers(content: string, _filePath: string): any[] {
     const data = JSON.parse(content);
     const trace = {
       agentId: `alfred-orchestrator-${data.pid}`,
       name: `Alfred Orchestrator (PID ${data.pid})`,
       trigger: 'worker-status',
       timestamp: new Date(data.started_at).getTime(),
-      nodes: {}
+      nodes: {},
     };
 
     // Add orchestrator node
@@ -492,8 +497,8 @@ export class TraceIngester {
       metadata: {
         pid: data.pid,
         started_at: data.started_at,
-        worker_count: Object.keys(data.tools || {}).length
-      }
+        worker_count: Object.keys(data.tools || {}).length,
+      },
     };
 
     // Add worker nodes
@@ -510,8 +515,8 @@ export class TraceIngester {
         metadata: {
           pid: workerData.pid,
           worker_type: workerName,
-          restarts: workerData.restarts || 0
-        }
+          restarts: workerData.restarts || 0,
+        },
       };
     }
 
@@ -525,9 +530,9 @@ export class TraceIngester {
 
     try {
       const data = JSON.parse(firstLine);
-      return data.type === 'session' ||
-             filePath.includes('/agents/') ||
-             filePath.includes('/sessions/');
+      return (
+        data.type === 'session' || filePath.includes('/agents/') || filePath.includes('/sessions/')
+      );
     } catch {
       return false;
     }
@@ -535,29 +540,37 @@ export class TraceIngester {
 
   // Parse Alfred session JSONL
   private parseAlfredSession(content: string, filePath: string): any[] {
-    const lines = content.split('\n').filter(line => line.trim());
+    const lines = content.split('\n').filter((line) => line.trim());
     if (lines.length === 0) return [];
 
-    const events = lines.map(line => {
-      try {
-        return JSON.parse(line);
-      } catch {
-        return null;
-      }
-    }).filter(Boolean);
+    const events = lines
+      .map((line) => {
+        try {
+          return JSON.parse(line);
+        } catch {
+          return null;
+        }
+      })
+      .filter(Boolean);
 
     if (events.length === 0) return [];
 
     // Find session metadata
-    const sessionEvent = events.find(e => e.type === 'session');
+    const sessionEvent = events.find((e) => e.type === 'session');
     if (!sessionEvent) return [];
 
     const sessionId = sessionEvent.id;
-    const agentPath = filePath.includes('/main/') ? 'main' :
-                    filePath.includes('/vault-curator/') ? 'vault-curator' :
-                    filePath.includes('/vault-janitor/') ? 'vault-janitor' :
-                    filePath.includes('/vault-distiller/') ? 'vault-distiller' :
-                    filePath.includes('/vault-surveyor/') ? 'vault-surveyor' : 'unknown';
+    const agentPath = filePath.includes('/main/')
+      ? 'main'
+      : filePath.includes('/vault-curator/')
+        ? 'vault-curator'
+        : filePath.includes('/vault-janitor/')
+          ? 'vault-janitor'
+          : filePath.includes('/vault-distiller/')
+            ? 'vault-distiller'
+            : filePath.includes('/vault-surveyor/')
+              ? 'vault-surveyor'
+              : 'unknown';
 
     const trace = {
       agentId: `alfred-${agentPath}`,
@@ -565,7 +578,7 @@ export class TraceIngester {
       trigger: 'llm-conversation',
       timestamp: new Date(sessionEvent.timestamp).getTime(),
       sessionId: sessionId,
-      nodes: {}
+      nodes: {},
     };
 
     // Process conversation events
@@ -598,8 +611,8 @@ export class TraceIngester {
           eventType: event.type,
           eventData: event,
           content: event.message?.content || event.content || '',
-          model: event.provider || event.modelId
-        }
+          model: event.provider || event.modelId,
+        },
       };
     }
 
@@ -607,9 +620,9 @@ export class TraceIngester {
   }
 
   // Parse OpenClaw JSON logs
-  private parseOpenClawLog(content: string, filePath: string): any[] {
+  private parseOpenClawLog(content: string, _filePath: string): any[] {
     const traces: any[] = [];
-    const lines = content.split('\n').filter(line => line.trim());
+    const lines = content.split('\n').filter((line) => line.trim());
 
     for (const line of lines) {
       try {
@@ -630,7 +643,7 @@ export class TraceIngester {
           if (logData.length > 1000) continue; // Skip very long text logs to avoid bloat
         }
 
-        if (conversationData && conversationData.meta && conversationData.meta.agentMeta) {
+        if (conversationData?.meta?.agentMeta) {
           // This is an agent conversation
           const agentMeta = conversationData.meta.agentMeta;
           const sessionId = agentMeta.sessionId;
@@ -642,7 +655,7 @@ export class TraceIngester {
             trigger: 'openclaw-conversation',
             timestamp: new Date(meta.date).getTime(),
             sessionId: sessionId,
-            nodes: {}
+            nodes: {},
           };
 
           // Create conversation node
@@ -660,16 +673,13 @@ export class TraceIngester {
               usage: agentMeta.usage,
               sessionId: sessionId,
               payloads: conversationData.payloads || [],
-              durationMs: conversationData.meta.durationMs
-            }
+              durationMs: conversationData.meta.durationMs,
+            },
           };
 
           traces.push(trace);
         }
-      } catch (error) {
-        // Skip malformed JSON lines
-        continue;
-      }
+      } catch (_error) {}
     }
 
     return traces;

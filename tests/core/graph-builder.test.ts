@@ -25,10 +25,10 @@ describe('createGraphBuilder', () => {
 
       const root = graph.nodes.get(rootId);
       expect(root).toBeDefined();
-      expect(root!.name).toBe('main');
-      expect(root!.type).toBe('agent');
-      expect(root!.status).toBe('completed');
-      expect(root!.endTime).not.toBeNull();
+      expect(root?.name).toBe('main');
+      expect(root?.type).toBe('agent');
+      expect(root?.status).toBe('completed');
+      expect(root?.endTime).not.toBeNull();
     });
 
     it('establishes parent-child relationships', () => {
@@ -178,7 +178,7 @@ describe('createGraphBuilder', () => {
       expect(customEvents.length).toBeGreaterThanOrEqual(1);
       const pushed = customEvents.find((e) => e.data.key === 'value');
       expect(pushed).toBeDefined();
-      expect(pushed!.nodeId).toBe(rootId);
+      expect(pushed?.nodeId).toBe(rootId);
     });
 
     it('records ordered event stream', () => {

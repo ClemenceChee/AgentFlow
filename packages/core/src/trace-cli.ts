@@ -7,7 +7,7 @@
  * @module
  */
 
-import { resolve } from 'path';
+import { resolve } from 'node:path';
 
 import { createTraceStore } from './trace-store.js';
 import type { GraphStatus } from './types.js';

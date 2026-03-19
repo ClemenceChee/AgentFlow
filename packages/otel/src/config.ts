@@ -1,7 +1,7 @@
-import { NodeSDK } from '@opentelemetry/sdk-node';
-import { OTLPTraceExporter } from '@opentelemetry/exporter-otlp-http';
 import { JaegerExporter } from '@opentelemetry/exporter-jaeger';
+import { OTLPTraceExporter } from '@opentelemetry/exporter-otlp-http';
 import { Resource } from '@opentelemetry/resources';
+import { NodeSDK } from '@opentelemetry/sdk-node';
 import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions';
 
 export interface OTelConfig {
@@ -76,7 +76,8 @@ export class AgentFlowOTelConfig {
         return new OTLPTraceExporter({
           url: config.endpoint || 'https://api.honeycomb.io/v1/traces',
           headers: {
-            'x-honeycomb-team': config.headers?.['x-honeycomb-team'] || process.env.HONEYCOMB_API_KEY || '',
+            'x-honeycomb-team':
+              config.headers?.['x-honeycomb-team'] || process.env.HONEYCOMB_API_KEY || '',
             'x-honeycomb-dataset': config.headers?.['x-honeycomb-dataset'] || 'agentflow',
             ...config.headers,
           },
@@ -89,7 +90,7 @@ export class AgentFlowOTelConfig {
             Authorization: `Basic ${Buffer.from(
               `${config.headers?.username || process.env.GRAFANA_TEMPO_USERNAME}:${
                 config.headers?.password || process.env.GRAFANA_TEMPO_PASSWORD
-              }`
+              }`,
             ).toString('base64')}`,
             ...config.headers,
           },

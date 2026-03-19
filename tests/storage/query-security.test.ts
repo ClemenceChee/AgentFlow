@@ -3,7 +3,7 @@
  */
 
 import Database from 'better-sqlite3';
-import { describe, expect, it, beforeEach, afterEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { QueryBuilder } from '../../packages/storage/src/query.js';
 
 describe('QueryBuilder ORDER BY allowlist', () => {

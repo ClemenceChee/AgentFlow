@@ -7,7 +7,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { createGraphBuilder } from '../../packages/core/src/graph-builder.js';
 import type { GuardConfig } from '../../packages/core/src/guards.js';
 import { checkGuards, withGuards } from '../../packages/core/src/guards.js';
-import type { ExecutionGraph, ExecutionNode } from '../../packages/core/src/types.js';
+import type { ExecutionGraph } from '../../packages/core/src/types.js';
 
 /**
  * Helper to create deterministic IDs for testing.

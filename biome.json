@@ -6,11 +6,17 @@
     "rules": {
       "recommended": true,
       "suspicious": {
-        "noExplicitAny": "error"
+        "noExplicitAny": "warn",
+        "noAssignInExpressions": "warn",
+        "noControlCharactersInRegex": "warn"
       },
       "style": {
         "useConst": "error",
         "noNonNullAssertion": "warn"
+      },
+      "correctness": {
+        "noUnusedVariables": "error",
+        "noUnusedImports": "error"
       }
     }
   },
