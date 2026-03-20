@@ -16,11 +16,62 @@ AgentFlow shows you the subagent 3 levels deep that silently hung at 2 AM.
 
 ## The Problem
 
-LangSmith and Langfuse show you tokens in, tokens out, latency, cost. Beautiful dashboards of what the *model* did.
+LLM observability tools show you tokens in, tokens out, latency, cost. Beautiful dashboards of what the *model* did.
 
 But your agents aren't stateless API calls. They're stateful processes that spawn subagents, call tools, branch on decisions, retry on failures, and run for hours. When something goes wrong, you need to see the **execution graph** — not a list of log lines.
 
 **AgentFlow brings process mining to AI agents.** The same techniques that Celonis uses to find bottlenecks in enterprise workflows, applied to your agent infrastructure. Discover execution patterns, detect silent failures, and understand what your agents actually do — with zero dependencies and no LLM cost.
+
+---
+
+## How AgentFlow Is Different
+
+Every AI observability tool tracks LLM calls. AgentFlow is the only one that treats agents as **graph-structured processes** and applies process mining to discover how they actually behave.
+
+| Capability | AgentFlow | LangSmith | LangFuse | Arize Phoenix | Datadog LLM | MLflow | W&B Weave |
+|-----------|:---------:|:---------:|:--------:|:-------------:|:-----------:|:------:|:---------:|
+| LLM call logging | via OTel | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Execution graph tracing | ✅ | basic | basic | DAG-aware | basic | DAG | trace trees |
+| **Process mining** | ✅ | — | — | — | — | — | — |
+| **Variant discovery** | ✅ | — | — | — | — | — | — |
+| **Bottleneck detection (P95)** | ✅ | — | — | — | — | — | — |
+| **Conformance checking** | ✅ | — | — | — | — | — | — |
+| **Adaptive runtime guards** | ✅ | — | — | — | — | — | — |
+| **Organizational learning** | ✅ (Soma) | — | — | — | — | — | — |
+| Framework-agnostic | ✅ | mostly LC | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Zero dependency core | ✅ | — | — | — | — | — | — |
+| Self-hosted | ✅ | — | ✅ | ✅ | — | ✅ | — |
+| No LLM cost for analysis | ✅ | — | — | — | — | — | — |
+
+**The gap is clear:** existing tools log what happened. AgentFlow discovers *patterns* across hundreds of runs — which execution paths succeed, where failures cluster, and what guards should be enforced. No other tool does this.
+
+### vs. LangSmith
+
+LangSmith is a debugger — it helps you inspect *one* run. AgentFlow mines patterns across *thousands* of runs. LangSmith traces LLM calls; AgentFlow discovers that 73% of your runs take path A→B→C, but the 12% that take path A→D fail 80% of the time. LangSmith requires LangChain for best results; AgentFlow works with any framework. They're complementary — use LangSmith to debug a single failure, use AgentFlow to understand your system.
+
+### vs. LangFuse
+
+LangFuse is strong on LLM observability (token usage, latency, cost, prompt management) and is open-source/self-hosted. But it doesn't know about execution graphs, process mining, or runtime guards. AgentFlow adds the layer that LangFuse can't: behavioral analysis at the agent system level. Use LangFuse for LLM-level metrics, AgentFlow for agent-level intelligence.
+
+### vs. Arize Phoenix
+
+Phoenix excels at LLM evaluation (LLM-as-a-Judge, dataset curation from production failures). It has DAG-aware tracing but no process mining — it can show you one trace graph, but can't discover patterns across traces. AgentFlow does algorithmic variant analysis, conformance checking, and bottleneck detection that Phoenix doesn't attempt.
+
+### vs. Datadog LLM Observability
+
+Datadog added agentic AI monitoring in 2026 with cost insights and an AI Agents Console. It's enterprise-grade but expensive (~$0.10/1K tokens, scaling to thousands/day at volume). AgentFlow's process mining runs with zero LLM cost and zero per-token charges. Datadog doesn't do variant discovery, conformance checking, or adaptive guards.
+
+### vs. MLflow
+
+MLflow has evolved strong agent tracing (DAG support, multi-agent orchestration, Agent Server). But it's fundamentally an experiment tracker — it logs runs for comparison. AgentFlow mines across runs to discover process models, detect conformance drift, and enforce learned policies at runtime. MLflow shows you what happened; AgentFlow tells you what *should* happen.
+
+### vs. W&B Weave
+
+Weave provides trace trees with automatic cost/latency aggregation, tightly integrated with the W&B experiment tracking ecosystem. Like MLflow, it's observability — it watches. AgentFlow adds intelligence — it learns and adapts. Weave doesn't do process mining, variant discovery, or runtime policy enforcement.
+
+### Can I use AgentFlow with these tools?
+
+**Yes.** AgentFlow exports to OpenTelemetry, feeding Datadog, Grafana, Jaeger, or any OTel-compatible backend. AgentFlow adds a layer (execution intelligence) that LLM-focused tools can't provide. Use them together.
 
 ---
 
@@ -65,7 +116,6 @@ Any OTel-instrumented agent (LangChain, CrewAI, AutoGen, custom) can push traces
 ### Dashboard — Agent Overview with Process Health
 Service health, agent cards grouped by system, execution sparklines, failure indicators — all on one page.
 
-<!-- TODO: Replace with new React dashboard screenshot -->
 <img width="2889" alt="AgentFlow Dashboard" src="https://github.com/user-attachments/assets/acd199cd-5064-44be-8deb-94bd2d101c63" />
 
 ### Process Mining — Variant Analysis & Bottleneck Detection
@@ -75,24 +125,39 @@ Discover execution patterns across hundreds of runs. See the happy path, find wh
 
 
 ### Flame Chart — Nested Execution Timeline
-Every node in the execution graph, positioned by actual time, colored by type. Hover for operation details. Failed nodes highlighted with callouts.
+Every node in the execution graph, positioned by actual time, colored by type. Hover for operation details. Failed nodes highlighted with error messages.
 
 ### Transcript — Chat Replay
-User input on the right, agent actions on the left. See tool calls, thinking steps, and responses in a chat-bubble UI.
+User input on the right, agent actions on the left. See tool calls, thinking steps, and responses in a chat-bubble UI. Error messages from `state.error` and `metadata.error` surfaced directly.
+
+### Intelligence — Organizational Learning (Soma)
+Agent health overview, learned insights, auto-generated guard policies, and recommendations — powered by Soma's knowledge vault. See which agents are healthy, which are critical, and what the system has learned from execution history.
 
 ---
 
-## Why AgentFlow Exists
+## Soma Intelligence (Preview)
 
-Last year I woke up to find my portfolio reconciliation agent had been running for **eight hours straight**. It should have taken ten minutes.
+> Soma is AgentFlow's organizational intelligence layer. It turns execution history into knowledge that makes your agents smarter over time.
 
-The logs showed no errors. Just a steady stream of "processing..." messages repeating since 2 AM. The culprit? A subagent three levels deep that spawned a data fetcher which never returned. The parent was waiting. Forever.
+**What Soma does:**
+- Ingests execution traces and builds a knowledge vault
+- Uses LLM analysis to extract insights, decisions, and constraints from real agent behavior
+- Discovers failure patterns shared across agents
+- Auto-generates guard policies based on what it learns
+- Feeds learned policies back to AgentFlow's runtime guards
 
-I spent 48+ hours debugging: config files overriding each other, model names that must be spelled exactly one way, CLI tools requiring parameters in a specific order. Three bugs, zero error messages.
+**Real results from production data (17 agents, 1,229 executions):**
+- 11 insights extracted (failure patterns, reliability trends, shared root causes)
+- 4 guard policies auto-generated (failure rate thresholds, investigation priorities)
+- 6 agents flagged as critical (>30% failure rate)
+- Guards would have blocked 6 unreliable agents before they failed again
 
-**Silent failures don't announce themselves — they just consume your compute budget while producing nothing.**
+**The feedback loop:**
+```
+Agents execute → AgentFlow traces → Soma learns → Guards adapt → Agents improve
+```
 
-Existing tools couldn't help because they treat agents like stateless functions. AgentFlow treats them like what they are: long-running, hierarchical, graph-structured processes.
+Soma is currently available as an early access preview. [Contact us](mailto:clemence.chee@gmail.com) for access.
 
 ---
 
@@ -112,7 +177,7 @@ Each step is independently valuable. Use what you need:
 | **Accumulate** | Knowledge store with agent profiles, rolling stats | No |
 | **Adapt** | Adaptive guards that learn from execution history | No |
 
-**Everything above runs with zero LLM cost.** This is Tier 1 — shipped and production-ready.
+**Everything above runs with zero LLM cost.** Optional Tier 2 adds LLM-powered analysis.
 
 ### Knowledge Engine Tiers
 
@@ -121,9 +186,9 @@ Each step is independently valuable. Use what you need:
 | 0 | System of Record | Trace storage, visualization, export | ✅ Shipped |
 | 1 | **Statistical** | Process mining, variants, bottlenecks, conformance, adaptive guards | ✅ **Shipped** |
 | 2 | Semantic | LLM-powered insight engine — "Why did this agent fail 3x today?" | ✅ Shipped |
-| 3 | Compounding | Cross-domain knowledge transfer, organizational learning | 🔜 Planned |
+| 3 | Compounding | Organizational intelligence, cross-domain learning (Soma) | ✅ Preview |
 
-**Tier 1 is the differentiator.** LangSmith and Langfuse stop at Tier 0. AgentFlow ships Tier 1 out of the box.
+**Tier 1 is the differentiator.** Every other tool stops at Tier 0.
 
 ---
 
@@ -180,39 +245,9 @@ console.log(analysis.content); // "The 3 recent failures share a root cause..."
 | **Orphan processes** | Agents running outside your process manager |
 | **Conformance drift** | Execution deviating from discovered patterns |
 | **Bottlenecks** | Steps with P95 duration above threshold |
+| **High failure rate** | Agent failure rate exceeding learned threshold |
 
-All detections work at Tier 1 — no LLM required.
-
----
-
-## Adapter System
-
-Write a custom adapter in ~30 lines:
-
-```typescript
-import type { TraceAdapter, NormalizedTrace } from 'agentflow-dashboard';
-
-class MyFrameworkAdapter implements TraceAdapter {
-  name = 'my-framework';
-
-  detect(dirPath: string): boolean {
-    // Return true if this directory contains your framework's traces
-    return existsSync(join(dirPath, 'my-framework.json'));
-  }
-
-  canHandle(filePath: string): boolean {
-    return filePath.endsWith('.my-trace');
-  }
-
-  parse(filePath: string): NormalizedTrace[] {
-    // Read your format, return normalized traces
-    const data = JSON.parse(readFileSync(filePath, 'utf-8'));
-    return [{ id: data.id, agentId: data.agent, nodes: {...}, ... }];
-  }
-}
-```
-
-Register it and the dashboard auto-discovers your traces.
+All detections work without LLM calls.
 
 ---
 
@@ -239,7 +274,7 @@ cd AgentFlow
 npm install
 npm test            # 400+ tests
 npm run build       # Build all packages
-npm run typecheck   # Zero errors
+npm run docs:dev    # Start documentation site
 ```
 
 ### Monorepo Structure
@@ -247,8 +282,11 @@ npm run typecheck   # Zero errors
 ```
 packages/
 ├── core/           # Zero-dep library: types, graph builder, mining, guards, knowledge engine
-├── dashboard/      # React dashboard + Express API + trace adapters
-└── otel/           # OpenTelemetry exporter (AgentFlow → OTel backends)
+├── dashboard/      # React dashboard + Express API + trace adapters + Intelligence tab
+├── storage/        # SQLite storage and analytics
+├── otel/           # OpenTelemetry exporter
+└── python/         # Python integration
+docs/               # Docusaurus documentation site
 ```
 
 ---
@@ -263,11 +301,12 @@ packages/
 - [x] Universal adapter system (AgentFlow, OpenClaw, OTel)
 - [x] HTTP trace collector (OTLP-compatible)
 - [x] Agent clustering and deduplication
+- [x] Intelligence tab with organizational learning (Soma)
+- [x] Documentation site with API reference
+- [ ] LangChain adapter (npm package)
+- [ ] CrewAI adapter
 - [ ] Live message flow visualization
 - [ ] Session management with cost tracking
-- [ ] Scheduled job monitoring
-- [ ] Real-time log streaming
-- [ ] Organizational intelligence layer
 
 ---
 
