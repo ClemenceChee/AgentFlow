@@ -1,8 +1,12 @@
-# AgentFlow Dashboard v0.5.0
+# AgentFlow Dashboard v0.7.1
 
 Real-time monitoring dashboard for AI agent systems. Visualize execution graphs, session transcripts, and performance metrics from any agent framework.
 
 ## Features
+
+### Error Surfacing
+- **Crystal-clear error tracking** — Failed node errors (`state.error` and `metadata.error`) are surfaced in all detail views: Flame Chart, Agent Flow, Summary, and Transcript
+- Error messages like `"403 Forbidden — Key limit exceeded"` appear directly in the UI — no more digging through log files
 
 ### Universal Agent Monitoring
 - **Multi-Format Ingestion** - AgentFlow JSON traces, JSONL session logs (Claude Code compatible), structured log files, cron run logs
