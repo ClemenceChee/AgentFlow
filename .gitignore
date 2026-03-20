@@ -41,7 +41,10 @@ IMPLEMENTATION_PLAN.md
 **/PRD.md
 examples/validate-*
 examples/alfred-*
-docs/
+docs/build/
+docs/node_modules/
+docs/.docusaurus/
+docs/docs/api/core/
 
 # Internal dev/debug files
 **/OPENCLAW_FIXES.md
