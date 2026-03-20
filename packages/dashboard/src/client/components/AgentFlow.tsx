@@ -60,7 +60,7 @@ export function AgentFlow({ trace }: { trace: FullTrace }) {
                 {node.metadata.model && <span className="af-step__op-tag af-step__op-tag--model">{String(node.metadata.model)}</span>}
               </div>
             )}
-            {node.metadata?.error && <div className="af-step__err">{'\u2718'} {String(node.metadata.error)}</div>}
+            {(node.metadata?.error ?? node.state?.error) && <div className="af-step__err">{'\u2718'} {String(node.metadata?.error ?? node.state?.error)}</div>}
           </div>
         );
       })}

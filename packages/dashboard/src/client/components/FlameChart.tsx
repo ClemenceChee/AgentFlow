@@ -61,7 +61,7 @@ export function FlameChart({ trace }: { trace: FullTrace }) {
               <span style={{ color: typeColor(n.type) }}>{n.type}:</span>
               <strong>{n.name}</strong>
               <span className="flame__fail-ts">{new Date(n.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
-              {n.metadata?.error && <span className="flame__fail-err">{String(n.metadata.error)}</span>}
+              {(n.metadata?.error ?? n.state?.error) && <span className="flame__fail-err">{String(n.metadata?.error ?? n.state?.error)}</span>}
             </div>
           ))}
         </div>
@@ -114,7 +114,7 @@ export function FlameChart({ trace }: { trace: FullTrace }) {
                       {n.metadata?.component && <div className="flame__tt-meta">Component: {String(n.metadata.component)}</div>}
                       {n.metadata?.action && <div className="flame__tt-meta">Action: {String(n.metadata.action)}</div>}
                       {n.metadata?.model && <div className="flame__tt-meta">Model: {String(n.metadata.model)}</div>}
-                      {n.metadata?.error && <div className="flame__tt-err">{'\u2718'} {String(n.metadata.error)}</div>}
+                      {(n.metadata?.error ?? n.state?.error) && <div className="flame__tt-err">{'\u2718'} {String(n.metadata?.error ?? n.state?.error)}</div>}
                     </div>
                   )}
                 </div>

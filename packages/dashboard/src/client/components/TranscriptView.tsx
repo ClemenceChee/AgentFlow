@@ -50,8 +50,28 @@ export function TranscriptView({ trace }: { trace: FullTrace }) {
     });
   };
 
+  const failedNodes = Object.values(trace.nodes).filter((n) => n.status === 'failed');
+
   return (
     <div className="tv-chat">
+      {failedNodes.length > 0 && (
+        <div className="tv-bubble tv-bubble--error tv-bubble--left" style={{ marginBottom: 16 }}>
+          <div className="tv-bubble__header">
+            <span className="tv-origin tv-origin--system">system</span>
+            <span className="tv-bubble__icon">{'\u2718'}</span>
+            <span className="tv-bubble__role">{failedNodes.length} Failed Node{failedNodes.length > 1 ? 's' : ''}</span>
+          </div>
+          {failedNodes.map((n) => {
+            const errMsg = n.metadata?.error ?? n.state?.error;
+            return (
+              <div key={n.id} style={{ padding: '4px 0', fontFamily: 'monospace', fontSize: 12 }}>
+                <strong>{n.type}: {n.name}</strong>
+                {errMsg && <div style={{ color: 'var(--color-critical, #f85149)', marginTop: 2 }}>Error: {String(errMsg)}</div>}
+              </div>
+            );
+          })}
+        </div>
+      )}
       {[...events].reverse().map((ev, i) => {
         const raw = ev as Record<string, unknown>;
         const msg = (raw.message as Record<string, unknown>) ?? {};

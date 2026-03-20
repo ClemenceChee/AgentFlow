@@ -101,7 +101,7 @@ function SummaryContent({ trace }: { trace: FullTrace }) {
             <div key={n.id} className="sc-failure">
               <span className="sc-failure__type">{n.type}:</span>
               <strong>{n.name}</strong>
-              {n.metadata?.error && <span className="sc-failure__err">{String(n.metadata.error)}</span>}
+              {(n.metadata?.error ?? n.state?.error) && <span className="sc-failure__err">{String(n.metadata?.error ?? n.state?.error)}</span>}
             </div>
           ))}
         </div>
