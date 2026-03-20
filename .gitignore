@@ -38,6 +38,9 @@ CLAUDE.md
 PROMPT.md
 DEPLOYMENT_COMMANDS.md
 IMPLEMENTATION_PLAN.md
+**/PRD.md
+examples/validate-*
+examples/alfred-*
 docs/
 
 # Internal dev/debug files
