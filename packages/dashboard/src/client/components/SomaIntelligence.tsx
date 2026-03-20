@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { SomaReport } from '../hooks/useSomaReport';
 
 function timeAgo(isoDate: string): string {
@@ -21,6 +22,14 @@ function ActiveView({ report, agentId }: { report: SomaReport; agentId: string }
   const agentData = report.agents?.find((a) => a.name === agentId);
   const agentGuard = report.guardRecommendations?.find((g) => g.agent === agentId);
   const isStale = report.generatedAt && (Date.now() - new Date(report.generatedAt).getTime()) > 30 * 60_000;
+
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [confFilter, setConfFilter] = useState('all');
+  const [showAllInsights, setShowAllInsights] = useState(false);
+  const [showAllPolicies, setShowAllPolicies] = useState(false);
+
+  const INSIGHT_LIMIT = 10;
+  const POLICY_LIMIT = 10;
 
   return (
     <div className="soma-intel">
@@ -79,34 +88,71 @@ function ActiveView({ report, agentId }: { report: SomaReport; agentId: string }
         </div>
       </div>
 
-      {/* Insights */}
-      {report.insights && report.insights.length > 0 && (
-        <div className="soma-intel__section">
-          <h4 className="soma-intel__section-title">Learned Insights ({report.insights.length})</h4>
-          {report.insights.map((ins, i) => (
-            <div key={i} className="soma-intel__insight">
-              <span className="soma-intel__insight-type">{ins.type}</span>
-              <strong>{ins.title}</strong>
-              <span className="soma-intel__insight-conf">{ins.confidence}</span>
-              {ins.claim && <div className="soma-intel__insight-claim">{ins.claim}</div>}
+      {/* Insights with filters */}
+      {report.insights && report.insights.length > 0 && (() => {
+        const filtered = report.insights
+          .filter((ins) => typeFilter === 'all' || ins.type === typeFilter)
+          .filter((ins) => confFilter === 'all' || ins.confidence === confFilter);
+        const visible = showAllInsights ? filtered : filtered.slice(0, INSIGHT_LIMIT);
+
+        return (
+          <div className="soma-intel__section">
+            <div className="soma-intel__section-header">
+              <h4 className="soma-intel__section-title">Learned Insights ({filtered.length})</h4>
+              <div className="soma-intel__filters">
+                <select className="soma-intel__filter" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
+                  <option value="all">All types</option>
+                  <option value="insight">Insight</option>
+                  <option value="decision">Decision</option>
+                  <option value="constraint">Constraint</option>
+                  <option value="contradiction">Contradiction</option>
+                </select>
+                <select className="soma-intel__filter" value={confFilter} onChange={(e) => setConfFilter(e.target.value)}>
+                  <option value="all">All confidence</option>
+                  <option value="high">High</option>
+                  <option value="medium">Medium</option>
+                  <option value="low">Low</option>
+                </select>
+              </div>
             </div>
-          ))}
-        </div>
-      )}
+            {visible.map((ins, i) => (
+              <div key={i} className="soma-intel__insight">
+                <span className="soma-intel__insight-type">{ins.type}</span>
+                <strong>{ins.title}</strong>
+                <span className="soma-intel__insight-conf">{ins.confidence}</span>
+                {ins.claim && <div className="soma-intel__insight-claim">{ins.claim}</div>}
+              </div>
+            ))}
+            {filtered.length > INSIGHT_LIMIT && (
+              <button className="soma-intel__show-more" onClick={() => setShowAllInsights(!showAllInsights)}>
+                {showAllInsights ? 'Show less' : `Show all (${filtered.length})`}
+              </button>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Policies */}
-      {report.policies && report.policies.length > 0 && (
-        <div className="soma-intel__section">
-          <h4 className="soma-intel__section-title">Guard Policies ({report.policies.length})</h4>
-          {report.policies.map((pol, i) => (
-            <div key={i} className="soma-intel__policy">
-              <strong>{pol.name}</strong>
-              <span className={`soma-intel__enforcement soma-intel__enforcement--${pol.enforcement}`}>{pol.enforcement}</span>
-              {pol.conditions && <div className="soma-intel__policy-cond">{pol.conditions}</div>}
-            </div>
-          ))}
-        </div>
-      )}
+      {report.policies && report.policies.length > 0 && (() => {
+        const visible = showAllPolicies ? report.policies : report.policies.slice(0, POLICY_LIMIT);
+        return (
+          <div className="soma-intel__section">
+            <h4 className="soma-intel__section-title">Guard Policies ({report.policies.length})</h4>
+            {visible.map((pol, i) => (
+              <div key={i} className="soma-intel__policy">
+                <strong>{pol.name}</strong>
+                <span className={`soma-intel__enforcement soma-intel__enforcement--${pol.enforcement}`}>{pol.enforcement}</span>
+                {pol.conditions && <div className="soma-intel__policy-cond">{pol.conditions}</div>}
+              </div>
+            ))}
+            {report.policies.length > POLICY_LIMIT && (
+              <button className="soma-intel__show-more" onClick={() => setShowAllPolicies(!showAllPolicies)}>
+                {showAllPolicies ? 'Show less' : `Show all (${report.policies.length})`}
+              </button>
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 }
