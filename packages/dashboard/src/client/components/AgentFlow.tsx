@@ -25,11 +25,43 @@ function categorize(n: TraceNode): { cat: string; icon: string; color: string } 
   return { cat: n.type, icon: '\u25CB', color: '#8b949e' };
 }
 
+/**
+ * Build a tree-aware reversed list: root-level nodes are sorted most-recent-first,
+ * but children stay grouped under their parent in chronological order.
+ */
+function buildReversedTree(nodes: Record<string, TraceNode>): TraceNode[] {
+  const all = Object.values(nodes);
+  const roots = all.filter((n) => !n.parentId || !nodes[n.parentId]);
+  const childrenOf = new Map<string, TraceNode[]>();
+
+  for (const n of all) {
+    if (n.parentId && nodes[n.parentId]) {
+      const siblings = childrenOf.get(n.parentId) ?? [];
+      siblings.push(n);
+      childrenOf.set(n.parentId, siblings);
+    }
+  }
+
+  // Sort roots by startTime descending (most recent first)
+  roots.sort((a, b) => b.startTime - a.startTime);
+
+  // Flatten: each root followed by its children (chronological, recursive)
+  const result: TraceNode[] = [];
+  function walk(node: TraceNode) {
+    result.push(node);
+    const children = childrenOf.get(node.id);
+    if (children) {
+      children.sort((a, b) => a.startTime - b.startTime);
+      for (const child of children) walk(child);
+    }
+  }
+  for (const root of roots) walk(root);
+
+  return result;
+}
+
 export function AgentFlow({ trace }: { trace: FullTrace }) {
-  const steps = useMemo(() =>
-    Object.values(trace.nodes).sort((a, b) => a.startTime - b.startTime),
-    [trace.nodes],
-  );
+  const steps = useMemo(() => buildReversedTree(trace.nodes), [trace.nodes]);
 
   return (
     <div className="aflow">

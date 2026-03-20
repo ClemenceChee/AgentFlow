@@ -29,9 +29,10 @@ export function ExecSidebar({ agentId, sourceAgentIds, traces, selectedFilename,
     return traces
       .filter((t) => matchIds.has(t.agentId))
       .sort((a, b) => {
-        if (a.status === 'failed' && b.status !== 'failed') return -1;
-        if (a.status !== 'failed' && b.status === 'failed') return 1;
-        return b.timestamp - a.timestamp;
+        // Sort by last activity (end time = start + duration), most recent first
+        const aEnd = a.timestamp + a.duration;
+        const bEnd = b.timestamp + b.duration;
+        return bEnd - aEnd;
       });
   }, [traces, agentId]);
 

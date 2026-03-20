@@ -100,6 +100,9 @@ export async function startDashboard() {
       case '--collector-token':
         config.collectorAuthToken = args[++i];
         break;
+      case '--soma-vault':
+        config.somaVault = args[++i];
+        break;
       case '--help':
         printHelp();
         process.exit(0);
@@ -112,6 +115,9 @@ export async function startDashboard() {
   }
   if (process.env.AGENTFLOW_NO_COLLECTOR === 'true') {
     config.enableCollector = false;
+  }
+  if (!config.somaVault && process.env.SOMA_VAULT) {
+    config.somaVault = process.env.SOMA_VAULT;
   }
 
   const tracesPath = path.resolve(config.tracesDir);
