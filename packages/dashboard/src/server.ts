@@ -30,6 +30,10 @@ export interface DashboardConfig {
   host?: string;
   enableCors?: boolean;
   dataDirs?: string[];
+  /** Enable OTLP trace collector at POST /v1/traces. Default: true */
+  enableCollector?: boolean;
+  /** Auth token for OTLP collector. If set, requests must include Authorization: Bearer <token> */
+  collectorAuthToken?: string;
 }
 
 import { startDashboard } from './cli.js';
@@ -740,8 +744,17 @@ export class DashboardServer {
     });
 
     // OTLP trace collector endpoint
+    if (this.config.enableCollector !== false) {
     this.app.post('/v1/traces', express.json({ limit: '10mb' }), (req, res) => {
       try {
+        // Auth check
+        if (this.config.collectorAuthToken) {
+          const auth = req.headers.authorization;
+          if (!auth || auth !== `Bearer ${this.config.collectorAuthToken}`) {
+            return res.status(401).json({ error: 'Unauthorized — provide Authorization: Bearer <token>' });
+          }
+        }
+
         const traces = parseOtlpPayload(req.body);
         let ingested = 0;
 
@@ -787,6 +800,7 @@ export class DashboardServer {
         res.status(400).json({ error: 'Failed to parse OTLP payload' });
       }
     });
+    } // end enableCollector
 
     // Health check endpoints
     this.app.get('/health', (_req, res) => {
