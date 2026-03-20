@@ -94,10 +94,24 @@ export async function startDashboard() {
       case '--cors':
         config.enableCors = true;
         break;
+      case '--no-collector':
+        config.enableCollector = false;
+        break;
+      case '--collector-token':
+        config.collectorAuthToken = args[++i];
+        break;
       case '--help':
         printHelp();
         process.exit(0);
     }
+  }
+
+  // Support env vars
+  if (!config.collectorAuthToken && process.env.AGENTFLOW_COLLECTOR_TOKEN) {
+    config.collectorAuthToken = process.env.AGENTFLOW_COLLECTOR_TOKEN;
+  }
+  if (process.env.AGENTFLOW_NO_COLLECTOR === 'true') {
+    config.enableCollector = false;
   }
 
   const tracesPath = path.resolve(config.tracesDir);
@@ -150,6 +164,8 @@ Options:
   -h, --host <address>    Host address (default: localhost)
   --data-dir <path>       Extra data directory for process discovery (repeatable)
   --cors                  Enable CORS headers
+  --no-collector          Disable OTLP trace collector (POST /v1/traces)
+  --collector-token <tok> Require auth token for collector (or set AGENTFLOW_COLLECTOR_TOKEN)
   --help                  Show this help message
 
 Examples:
