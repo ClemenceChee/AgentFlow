@@ -34,6 +34,8 @@ agentflow-dashboard --traces ./traces --data-dir ./data
 
 # Open http://localhost:3000
 ```
+![AgentFlow_Gif](https://github.com/user-attachments/assets/afd356d4-2a65-4361-9330-63ce9bd30e0d)
+
 
 That's it. AgentFlow auto-discovers your agents, parses their traces, and shows you:
 
@@ -69,7 +71,8 @@ Service health, agent cards grouped by system, execution sparklines, failure ind
 ### Process Mining — Variant Analysis & Bottleneck Detection
 Discover execution patterns across hundreds of runs. See the happy path, find where failures cluster, identify the slowest steps.
 
-<img width="2879" alt="AgentFlow Process Mining" src="https://github.com/user-attachments/assets/fa1fd4f1-41bf-4506-9a5d-342ed84243de" />
+<img width="3283" height="1551" alt="Screenshot 2026-03-20 154543" src="https://github.com/user-attachments/assets/fb6c910f-d163-44e1-a204-d4c195c5a71b" />
+
 
 ### Flame Chart — Nested Execution Timeline
 Every node in the execution graph, positioned by actual time, colored by type. Hover for operation details. Failed nodes highlighted with callouts.
