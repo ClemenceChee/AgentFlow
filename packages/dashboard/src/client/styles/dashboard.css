@@ -277,7 +277,13 @@ body{font-family:var(--f);font-size:var(--base);color:var(--t1);background:var(-
 .soma-intel__guard-block{margin-top:8px;padding:8px;background:rgba(248,81,73,0.1);border:1px solid var(--fail);border-radius:4px;color:var(--fail);font-size:12px;font-weight:600}
 .soma-intel__empty{color:var(--t3);padding:12px}
 .soma-intel__section{margin-bottom:16px}
-.soma-intel__section-title{font-size:13px;font-weight:700;margin-bottom:8px;color:var(--t1);border-bottom:1px solid var(--bd);padding-bottom:4px}
+.soma-intel__section-header{display:flex;align-items:center;gap:8px;margin-bottom:8px;border-bottom:1px solid var(--bd);padding-bottom:4px;flex-wrap:wrap}
+.soma-intel__section-title{font-size:13px;font-weight:700;color:var(--t1);margin:0}
+.soma-intel__filters{display:flex;gap:4px;margin-left:auto}
+.soma-intel__filter{font-size:11px;padding:2px 6px;background:var(--bg2);border:1px solid var(--bd);border-radius:4px;color:var(--t1);cursor:pointer}
+.soma-intel__filter:focus{outline:1px solid var(--info)}
+.soma-intel__show-more{display:block;width:100%;padding:6px;margin-top:4px;background:none;border:1px dashed var(--bd);border-radius:4px;color:var(--t2);font-size:11px;cursor:pointer;text-align:center}
+.soma-intel__show-more:hover{background:var(--bg2);color:var(--t1)}
 .soma-intel__table{font-size:12px;font-family:var(--mono)}
 .soma-intel__row{display:grid;grid-template-columns:1fr 60px 50px 55px 60px;padding:4px 0;border-bottom:1px solid var(--bd)}
 .soma-intel__row--header{font-weight:700;color:var(--t2);border-bottom:2px solid var(--bd)}
