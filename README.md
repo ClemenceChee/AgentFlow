@@ -45,6 +45,8 @@ Every AI observability tool tracks LLM calls. AgentFlow is the only one that tre
 
 **The gap is clear:** existing tools log what happened. AgentFlow discovers *patterns* across hundreds of runs — which execution paths succeed, where failures cluster, and what guards should be enforced. No other tool does this.
 
+**How the process mining works:** AgentFlow runs `discoverProcess()` across hundreds of traces to build a directly-follows process model, then `findVariants()` to cluster execution paths, `getBottlenecks()` to identify slow nodes statistically, and `checkConformance()` to score new runs against the baseline. This is industrial process mining (think Celonis) applied to AI agents. LangSmith, Arize, LangFuse — none of them do this. They show you one trace at a time and leave the pattern-finding to you.
+
 ### vs. LangSmith
 
 LangSmith is a debugger — it helps you inspect *one* run. AgentFlow mines patterns across *thousands* of runs. LangSmith traces LLM calls; AgentFlow discovers that 73% of your runs take path A→B→C, but the 12% that take path A→D fail 80% of the time. LangSmith requires LangChain for best results; AgentFlow works with any framework. They're complementary — use LangSmith to debug a single failure, use AgentFlow to understand your system.
@@ -71,7 +73,7 @@ Weave provides trace trees with automatic cost/latency aggregation, tightly inte
 
 ### Can I use AgentFlow with these tools?
 
-**Yes.** AgentFlow exports to OpenTelemetry, feeding Datadog, Grafana, Jaeger, or any OTel-compatible backend. AgentFlow adds a layer (execution intelligence) that LLM-focused tools can't provide. Use them together.
+**Yes.** AgentFlow exports to OpenTelemetry (with a full `agentflow-otel` package supporting GenAI semantic conventions, presets for Datadog/Grafana/Honeycomb/Jaeger, cost tracking, and guard violation export). AgentFlow adds a layer (execution intelligence) that LLM-focused tools can't provide. Use them together.
 
 ---
 
@@ -137,14 +139,17 @@ Agent health overview, learned insights, auto-generated guard policies, and reco
 
 ## Soma Intelligence (Preview)
 
-> Soma is AgentFlow's organizational intelligence layer. It turns execution history into knowledge that makes your agents smarter over time.
+> Agent systems have a memory problem. Each run starts fresh. Failures recur. Patterns go unnoticed. Soma fixes this.
+
+Soma is AgentFlow's organizational intelligence layer. It accumulates knowledge across executions, discovers what works and what fails, and feeds that knowledge back into runtime guards — creating a **closed feedback loop** where agents get smarter over time.
 
 **What Soma does:**
 - Ingests execution traces and builds a knowledge vault
 - Uses LLM analysis to extract insights, decisions, and constraints from real agent behavior
-- Discovers failure patterns shared across agents
+- Discovers failure patterns shared across agents (including cross-agent archetypes)
 - Auto-generates guard policies based on what it learns
-- Feeds learned policies back to AgentFlow's runtime guards
+- Feeds learned policies back to AgentFlow's runtime guards via the PolicySource interface
+- Stores everything in plain Markdown with YAML frontmatter — readable, greppable, git-diffable
 
 **Real results from production data (17 agents, 1,229 executions):**
 - 11 insights extracted (failure patterns, reliability trends, shared root causes)
@@ -178,6 +183,8 @@ Each step is independently valuable. Use what you need:
 | **Adapt** | Adaptive guards that learn from execution history | No |
 
 **Everything above runs with zero LLM cost.** Optional Tier 2 adds LLM-powered analysis.
+
+The guard system creates a closed feedback loop: `Traces → Mining → Guards → Better behavior → Traces`. Guards enforce runtime limits (max depth, max reasoning steps, spawn explosion, timeout) and adapt based on mined patterns — e.g., if P95 depth is 8, flag anything over 12. With Soma's policy bridge, guards also pull from accumulated organizational knowledge (failure rates, known bottlenecks, conformance scores). No competitor offers this kind of closed-loop enforcement.
 
 ### Knowledge Engine Tiers
 
@@ -229,7 +236,7 @@ const analysis = await engine.explainFailures('my-agent');
 console.log(analysis.content); // "The 3 recent failures share a root cause..."
 ```
 
-**Zero dependencies in core.** Just TypeScript, `Map<string, ExecutionNode>`, and pure functions.
+**Zero dependencies in core.** `agentflow-core` has zero npm dependencies — just TypeScript, `Map<string, ExecutionNode>`, and pure functions. This matters: dependency conflicts are a real blocker for adoption in agent codebases that already have heavy dependency trees.
 
 ---
 
