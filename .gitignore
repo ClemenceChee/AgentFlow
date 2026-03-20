@@ -28,3 +28,19 @@ coverage/
 
 # Temp / validation data
 tmp/
+
+# Internal planning & specs (not for public repo)
+openspec/
+**/openspec/
+ARCHITECTURE.md
+STATE_OF_THE_CODEBASE.md
+CLAUDE.md
+PROMPT.md
+docs/
+
+# Internal dev/debug files
+**/OPENCLAW_FIXES.md
+**/restart.sh
+**/test-openclaw-discovery.js
+**/verify-openclaw-integration.test.ts
+**/debug.html

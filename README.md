@@ -117,7 +117,7 @@ Each step is independently valuable. Use what you need:
 | 0 | System of Record | Trace storage, visualization, export | ✅ Shipped |
 | 1 | **Statistical** | Process mining, variants, bottlenecks, conformance, adaptive guards | ✅ **Shipped** |
 | 2 | Semantic | LLM-powered insight engine — "Why did this agent fail 3x today?" | ✅ Shipped |
-| 3 | Compounding | Cross-domain knowledge transfer, organizational learning | 🔜 Next |
+| 3 | Compounding | Cross-domain knowledge transfer, organizational learning | 🔜 Planned |
 
 **Tier 1 is the differentiator.** LangSmith and Langfuse stop at Tier 0. AgentFlow ships Tier 1 out of the box.
 
@@ -263,7 +263,7 @@ packages/
 - [ ] Session management with cost tracking
 - [ ] Scheduled job monitoring
 - [ ] Real-time log streaming
-- [ ] Soma: organizational intelligence layer
+- [ ] Organizational intelligence layer
 
 ---
 
