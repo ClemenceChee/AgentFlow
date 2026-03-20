@@ -263,3 +263,45 @@ body{font-family:var(--f);font-size:var(--base);color:var(--t1);background:var(-
 /* Helpers */
 .status-dot{display:inline-block;width:7px;height:7px;border-radius:50%;flex-shrink:0}
 .status-dot--ok{background:var(--ok)}.status-dot--critical{background:var(--fail)}.status-dot--warn{background:var(--warn)}.status-dot--inactive{background:var(--t3)}
+
+/* Soma Intelligence Tab */
+.soma-intel{padding:16px;font-size:13px;line-height:1.5}
+.soma-intel__header{display:flex;align-items:center;gap:8px;margin-bottom:16px}
+.soma-intel__title{font-size:16px;font-weight:700}
+.soma-intel__badge{font-size:10px;background:var(--info);color:#000;padding:2px 6px;border-radius:4px;font-weight:600}
+.soma-intel__ts{margin-left:auto;font-size:11px;color:var(--t3)}
+.soma-intel__ts--stale{color:var(--warn)}
+.soma-intel__agent-card{background:var(--bg2);border:1px solid var(--bd);border-radius:6px;padding:12px;margin-bottom:16px}
+.soma-intel__agent-name{font-weight:700;font-size:14px;margin-bottom:4px}
+.soma-intel__agent-stats{display:flex;gap:16px;font-size:12px;color:var(--t2)}
+.soma-intel__guard-block{margin-top:8px;padding:8px;background:rgba(248,81,73,0.1);border:1px solid var(--fail);border-radius:4px;color:var(--fail);font-size:12px;font-weight:600}
+.soma-intel__empty{color:var(--t3);padding:12px}
+.soma-intel__section{margin-bottom:16px}
+.soma-intel__section-title{font-size:13px;font-weight:700;margin-bottom:8px;color:var(--t1);border-bottom:1px solid var(--bd);padding-bottom:4px}
+.soma-intel__table{font-size:12px;font-family:var(--mono)}
+.soma-intel__row{display:grid;grid-template-columns:1fr 60px 50px 55px 60px;padding:4px 0;border-bottom:1px solid var(--bd)}
+.soma-intel__row--header{font-weight:700;color:var(--t2);border-bottom:2px solid var(--bd)}
+.soma-intel__row--active{background:rgba(88,166,255,0.08)}
+.soma-intel__col-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.soma-intel__col-num{text-align:right}
+.soma-intel__col-status{text-align:right}
+.soma-intel__insight{padding:8px;background:var(--bg2);border-radius:4px;margin-bottom:6px}
+.soma-intel__insight-type{font-size:10px;text-transform:uppercase;color:var(--info);margin-right:6px;font-weight:600}
+.soma-intel__insight-conf{font-size:10px;color:var(--t3);margin-left:6px}
+.soma-intel__insight-claim{font-size:12px;color:var(--t2);margin-top:4px}
+.soma-intel__policy{padding:8px;background:var(--bg2);border-radius:4px;margin-bottom:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.soma-intel__enforcement{font-size:10px;padding:2px 6px;border-radius:3px;font-weight:600}
+.soma-intel__enforcement--warn{background:rgba(210,153,34,0.2);color:var(--warn)}
+.soma-intel__enforcement--error{background:rgba(248,81,73,0.2);color:var(--fail)}
+.soma-intel__enforcement--abort{background:rgba(248,81,73,0.3);color:var(--fail)}
+.soma-intel__policy-cond{width:100%;font-size:11px;color:var(--t3);margin-top:2px}
+
+/* Soma Teaser */
+.soma-intel--teaser{text-align:center;padding:40px 20px}
+.soma-intel__teaser-icon{font-size:48px;margin-bottom:12px}
+.soma-intel__teaser-title{font-size:20px;font-weight:700;margin-bottom:4px}
+.soma-intel__teaser-subtitle{font-size:14px;color:var(--t2);margin-bottom:24px}
+.soma-intel__teaser-features{text-align:left;max-width:360px;margin:0 auto 24px;font-size:13px}
+.soma-intel__teaser-feature{padding:6px 0;color:var(--t1)}
+.soma-intel__teaser-cta{display:inline-block;padding:10px 24px;background:var(--info);color:#000;border-radius:6px;text-decoration:none;font-weight:700;font-size:14px}
+.soma-intel__teaser-cta:hover{opacity:0.9}

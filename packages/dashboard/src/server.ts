@@ -34,6 +34,8 @@ export interface DashboardConfig {
   enableCollector?: boolean;
   /** Auth token for OTLP collector. If set, requests must include Authorization: Bearer <token> */
   collectorAuthToken?: string;
+  /** Path to Soma vault directory. Enables Intelligence tab in dashboard. */
+  somaVault?: string;
 }
 
 import { startDashboard } from './cli.js';
@@ -523,6 +525,25 @@ export class DashboardServer {
         res.json(agentStats);
       } catch (_error) {
         res.status(500).json({ error: 'Failed to load agent statistics' });
+      }
+    });
+
+    // Soma Intelligence API
+    this.app.get('/api/soma/report', (_req, res) => {
+      const somaVault = this.config.somaVault;
+      if (!somaVault) {
+        return res.json({ available: false, teaser: true });
+      }
+      try {
+        const reportPath = path.join(somaVault, '..', 'soma-report.json');
+        if (!fs.existsSync(reportPath)) {
+          return res.json({ available: false, teaser: false, message: 'No report file yet. Run soma watch.' });
+        }
+        const report = JSON.parse(fs.readFileSync(reportPath, 'utf-8'));
+        res.json(report);
+      } catch (error) {
+        console.error('Soma report error:', error);
+        res.json({ available: false, teaser: false, message: 'Failed to read report' });
       }
     });
 

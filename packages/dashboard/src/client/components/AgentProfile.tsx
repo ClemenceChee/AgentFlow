@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import type { AgentStats } from '../hooks/useAgents';
 import type { ProcessModelData } from '../hooks/useProcessModel';
+import { useSomaReport } from '../hooks/useSomaReport';
 import { BottleneckView } from './BottleneckView';
 import { DottedChart } from './DottedChart';
 import { ProcessMapView } from './ProcessMapView';
+import { SomaIntelligence } from './SomaIntelligence';
 import { VariantExplorer } from './VariantExplorer';
 import type { TraceEntry } from '../hooks/useTraces';
 
-type Tab = 'process-map' | 'variants' | 'bottlenecks' | 'dotted';
+type Tab = 'process-map' | 'variants' | 'bottlenecks' | 'dotted' | 'intelligence';
 
 function fmtDur(ms: number): string {
   if (ms < 1000) return `${Math.round(ms)}ms`;
@@ -26,6 +28,7 @@ interface Props {
 export function AgentProfile({ agentId, agents, traces, processModel, processModelLoading }: Props) {
   const agentTraces = traces.filter((t) => t.agentId === agentId);
   const [tab, setTab] = useState<Tab>('process-map');
+  const { report: somaReport } = useSomaReport();
   const agent = agents.find((a) => a.agentId === agentId);
 
   return (
@@ -48,6 +51,7 @@ export function AgentProfile({ agentId, agents, traces, processModel, processMod
           { id: 'variants' as const, label: 'Variants' },
           { id: 'bottlenecks' as const, label: 'Bottlenecks' },
           { id: 'dotted' as const, label: 'Dotted Chart' },
+          { id: 'intelligence' as const, label: '\u{1F9E0} Intelligence' },
         ].map((t) => (
           <button key={t.id} className={`ap-tab ${tab === t.id ? 'ap-tab--active' : ''}`} onClick={() => setTab(t.id)}>
             {t.label}
@@ -70,6 +74,9 @@ export function AgentProfile({ agentId, agents, traces, processModel, processMod
         )}
         {tab === 'dotted' && (
           <DottedChart traces={agentTraces} />
+        )}
+        {tab === 'intelligence' && (
+          <SomaIntelligence report={somaReport} agentId={agentId} />
         )}
       </div>
     </div>
