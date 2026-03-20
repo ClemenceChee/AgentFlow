@@ -3,6 +3,7 @@
 [![npm version](https://img.shields.io/npm/v/agentflow-core)](https://www.npmjs.com/package/agentflow-core)
 [![License](https://img.shields.io/badge/License-Apache%202.0%20+%20Commons%20Clause-blue.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue.svg)](https://www.typescriptlang.org/)
+[![Docs](https://img.shields.io/badge/docs-agentflow-blue)](https://clemencechee.github.io/AgentFlow/)
 
 **Process mining for AI agents. See what your agents actually do — not just what they log.**
 
