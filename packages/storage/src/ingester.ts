@@ -572,8 +572,11 @@ export class TraceIngester {
               ? 'vault-surveyor'
               : 'unknown';
 
+    // Use canonical agent IDs consistent with watcher.ts
+    const canonicalId = agentPath === 'main' ? 'alfred-main' : agentPath.startsWith('vault-') ? agentPath : `alfred-${agentPath}`;
+
     const trace = {
-      agentId: `alfred-${agentPath}`,
+      agentId: canonicalId,
       name: `Alfred ${agentPath} Session`,
       trigger: 'llm-conversation',
       timestamp: new Date(sessionEvent.timestamp).getTime(),

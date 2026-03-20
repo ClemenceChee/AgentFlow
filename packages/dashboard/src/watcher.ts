@@ -4,6 +4,7 @@ import * as path from 'node:path';
 import type { ExecutionGraph, ExecutionNode } from 'agentflow-core';
 import { loadGraph } from 'agentflow-core';
 import chokidar from 'chokidar';
+import { findAdapter, type NormalizedTrace } from './adapters/index.js';
 import {
   detectActivityPattern,
   detectTrigger,
@@ -159,10 +160,14 @@ export class TraceWatcher extends EventEmitter {
     'package-lock.json',
     'tsconfig.json',
     'biome.json',
-    'jobs.json',
     'auth.json',
     'models.json',
     'config.json',
+    'runs.json',
+    'sessions.json',
+    'containers.json',
+    'update-check.json',
+    'exec-approvals.json',
   ]);
   private static SKIP_SUFFIXES = [
     '-state.json',
@@ -173,7 +178,7 @@ export class TraceWatcher extends EventEmitter {
     '.backup',
   ];
 
-  /** Load a .json trace, .jsonl session file, or .log file. */
+  /** Load a file using the adapter registry, falling back to built-in parsing. */
   private loadFile(filePath: string): boolean {
     const filename = path.basename(filePath);
 
@@ -181,6 +186,13 @@ export class TraceWatcher extends EventEmitter {
     if (TraceWatcher.SKIP_FILES.has(filename)) return false;
     if (TraceWatcher.SKIP_SUFFIXES.some((s) => filename.endsWith(s))) return false;
 
+    // Try adapter registry — non-agentflow adapters handle their own parsing
+    const adapter = findAdapter(filePath);
+    if (adapter && adapter.name !== 'agentflow') {
+      return this.loadViaAdapter(filePath, adapter.name);
+    }
+
+    // Fallback: existing AgentFlow parsing
     if (filePath.endsWith('.jsonl')) {
       return this.loadSessionFile(filePath);
     }
@@ -188,6 +200,64 @@ export class TraceWatcher extends EventEmitter {
       return this.loadLogFile(filePath);
     }
     return this.loadTraceFile(filePath);
+  }
+
+  /** Load a file using a specific adapter and store normalized traces. */
+  private loadViaAdapter(filePath: string, adapterName: string): boolean {
+    try {
+      const adapter = findAdapter(filePath);
+      if (!adapter) return false;
+
+      const normalized = adapter.parse(filePath);
+      if (normalized.length === 0) return false;
+
+      for (const trace of normalized) {
+        // Convert NormalizedTrace to WatchedTrace shape
+        const nodes = new Map<string, any>();
+        for (const [id, node] of Object.entries(trace.nodes)) {
+          nodes.set(id, {
+            id: node.id,
+            type: node.type,
+            name: node.name,
+            status: node.status,
+            startTime: node.startTime,
+            endTime: node.endTime,
+            parentId: node.parentId,
+            children: node.children,
+            metadata: node.metadata,
+            state: {},
+          });
+        }
+
+        const watched: WatchedTrace = {
+          id: trace.id,
+          rootNodeId: Object.keys(trace.nodes)[0] ?? '',
+          agentId: trace.agentId,
+          name: trace.name,
+          trigger: trace.trigger,
+          startTime: trace.startTime,
+          endTime: trace.endTime,
+          status: trace.status as any,
+          nodes: nodes as any,
+          edges: [],
+          events: [],
+          metadata: { ...trace.metadata, adapterSource: adapterName },
+          sessionEvents: trace.sessionEvents ?? [],
+          sourceType: 'session',
+          filename: path.basename(filePath),
+          lastModified: Date.now(),
+          sourceDir: path.dirname(filePath),
+        };
+
+        const key = `${adapterName}:${trace.id}`;
+        this.traces.set(key, watched);
+      }
+
+      return true;
+    } catch (error) {
+      console.error(`Adapter ${adapterName} failed for ${filePath}:`, error);
+      return false;
+    }
   }
 
   private loadLogFile(filePath: string): boolean {
@@ -336,14 +406,40 @@ export class TraceWatcher extends EventEmitter {
     return traces;
   }
 
+  /**
+   * Normalise agent identifiers so that the same worker is never shown
+   * under two different names (e.g. "vault-curator" vs "openclaw-vault-curator").
+   *
+   * Canonical names:  alfred-main, vault-curator, vault-janitor,
+   *                   vault-distiller, vault-surveyor
+   */
+  private static readonly AGENT_ALIASES: Record<string, string> = {
+    'openclaw-main': 'alfred-main',
+    'openclaw-vault-curator': 'vault-curator',
+    'openclaw-vault-janitor': 'vault-janitor',
+    'openclaw-vault-distiller': 'vault-distiller',
+    'openclaw-vault-surveyor': 'vault-surveyor',
+    'alfred-curator': 'vault-curator',
+    'alfred-janitor': 'vault-janitor',
+    'alfred-distiller': 'vault-distiller',
+    'alfred-surveyor': 'vault-surveyor',
+    curator: 'vault-curator',
+    janitor: 'vault-janitor',
+    distiller: 'vault-distiller',
+    surveyor: 'vault-surveyor',
+  };
+
+  private normaliseAgentId(raw: string): string {
+    return TraceWatcher.AGENT_ALIASES[raw] ?? raw;
+  }
+
   private detectAgentIdentifier(activity: any, _filename: string, filePath: string): string {
     // Use agent_id from log fields if available (Alfred pipeline.llm_call has this)
     if (activity.agent_id) {
       const agentId = activity.agent_id;
       // Ensure proper prefixing for known agent types
-      if (agentId.startsWith('vault-')) return agentId;
-      if (agentId === 'main' && filePath.includes('.alfred/')) return 'alfred-main';
-      return agentId;
+      if (agentId === 'main' && filePath.includes('.alfred/')) return this.normaliseAgentId('alfred-main');
+      return this.normaliseAgentId(agentId);
     }
 
     // Use path-based detection as primary
@@ -353,11 +449,12 @@ export class TraceWatcher extends EventEmitter {
     if (filePath.includes('.alfred/') && !pathAgent.startsWith('alfred-')) {
       const basename = path.basename(filePath, path.extname(filePath));
       if (basename.match(/^(janitor|curator|distiller|surveyor|alfred)$/)) {
-        return basename === 'alfred' ? 'alfred' : `alfred-${basename}`;
+        const raw = basename === 'alfred' ? 'alfred' : `alfred-${basename}`;
+        return this.normaliseAgentId(raw);
       }
     }
 
-    return pathAgent;
+    return this.normaliseAgentId(pathAgent);
   }
 
   private extractAgentFromPath(filePath: string): string {
@@ -1387,9 +1484,29 @@ export class TraceWatcher extends EventEmitter {
     // Try exact key match first
     const exact = this.traces.get(filename);
     if (exact) return exact;
-    // Fallback: search by filename across all keys
+
+    // Handle composite key: "filename::startTime"
+    if (filename.includes('::')) {
+      const [fname, startTimeStr] = filename.split('::');
+      const startTime = Number(startTimeStr);
+      if (fname && !Number.isNaN(startTime)) {
+        for (const trace of this.traces.values()) {
+          if (trace.filename === fname && trace.startTime === startTime) {
+            return trace;
+          }
+        }
+      }
+    }
+
+    // Try with adapter prefixes
+    for (const prefix of ['openclaw:', 'otel:', '']) {
+      const prefixed = this.traces.get(prefix + filename);
+      if (prefixed) return prefixed;
+    }
+
+    // Fallback: search by filename or id across all keys
     for (const [key, trace] of this.traces) {
-      if (trace.filename === filename || key.endsWith(filename)) {
+      if (trace.filename === filename || trace.id === filename || key.endsWith(filename)) {
         return trace;
       }
     }
