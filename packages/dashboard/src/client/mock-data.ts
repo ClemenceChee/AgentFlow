@@ -1,0 +1,121 @@
+/**
+ * Mock data for development and testing.
+ * Demonstrates dynamic naming, mixed statuses, workers, orphans, and trace failures.
+ */
+
+import type { ProcessHealthData } from './hooks/useProcessHealth';
+import type { TraceEntry } from './hooks/useTraces';
+
+export const mockProcessHealth: ProcessHealthData = {
+  pidFile: {
+    path: '/home/trader/.alfred/data/alfred.pid',
+    pid: 551275,
+    alive: true,
+    matchesProcess: true,
+    stale: false,
+    reason: 'PID 551275 alive and matches alfred',
+  },
+  systemd: {
+    unit: 'alfred.service',
+    activeState: 'active',
+    subState: 'running',
+    mainPid: 551275,
+    restarts: 0,
+    result: 'success',
+    crashLooping: false,
+    failed: false,
+  },
+  workers: {
+    orchestratorPid: 551275,
+    orchestratorAlive: true,
+    startedAt: '2026-03-19T10:00:00Z',
+    workers: [
+      { name: 'curator', pid: 551280, declaredStatus: 'running', alive: true, stale: false },
+      { name: 'janitor', pid: 551281, declaredStatus: 'running', alive: true, stale: false },
+      { name: 'distiller', pid: 551282, declaredStatus: 'running', alive: true, stale: false },
+      { name: 'surveyor', pid: 551283, declaredStatus: 'running', alive: false, stale: true },
+    ],
+  },
+  osProcesses: [
+    { pid: 551275, cpu: '12.5', mem: '3.2', elapsed: '2:31:05', started: 'Wed Mar 19 10:00:00 2026', command: '/usr/bin/alfred --config config.yaml up', cmdline: '/usr/bin/alfred --config config.yaml up --foreground' },
+    { pid: 551280, cpu: '5.1', mem: '1.8', elapsed: '2:31:04', started: 'Wed Mar 19 10:00:01 2026', command: 'alfred-curator', cmdline: 'alfred-curator --worker' },
+    { pid: 551281, cpu: '2.3', mem: '0.9', elapsed: '2:31:04', started: 'Wed Mar 19 10:00:01 2026', command: 'alfred-janitor', cmdline: 'alfred-janitor --worker' },
+    { pid: 551282, cpu: '8.7', mem: '2.1', elapsed: '2:31:04', started: 'Wed Mar 19 10:00:01 2026', command: 'alfred-distiller', cmdline: 'alfred-distiller --worker' },
+    { pid: 600100, cpu: '0.5', mem: '0.3', elapsed: '0:05:12', started: 'Wed Mar 19 12:25:00 2026', command: 'python3 orphan-script.py', cmdline: 'python3 orphan-script.py' },
+  ],
+  orphans: [
+    { pid: 600100, cpu: '0.5', mem: '0.3', elapsed: '0:05:12', started: 'Wed Mar 19 12:25:00 2026', command: 'python3 orphan-script.py', cmdline: 'python3 orphan-script.py' },
+  ],
+  problems: ['[alfred] Worker "surveyor" (pid 551283) declares running but is dead', '[alfred] 1 orphan process(es) not tracked by PID file or workers registry'],
+  services: [
+    {
+      name: 'extraction-worker-1',
+      pidFile: { path: '/tmp/extraction.pid', pid: 700001, alive: true, matchesProcess: true, stale: false, reason: 'PID 700001 alive' },
+      systemd: { unit: 'extraction-worker-1.service', activeState: 'active', subState: 'running', mainPid: 700001, restarts: 0, result: 'success', crashLooping: false, failed: false },
+      workers: null,
+      problems: [],
+      metrics: { cpu: '45.2', mem: '12.1', elapsed: '1:15:30' },
+    },
+    {
+      name: 'sweep-handler-alpha',
+      pidFile: null,
+      systemd: { unit: 'sweep-handler-alpha.service', activeState: 'failed', subState: 'failed', mainPid: 0, restarts: 3, result: 'exit-code', crashLooping: false, failed: true },
+      workers: null,
+      problems: ['Systemd unit has failed'],
+      metrics: undefined,
+    },
+    {
+      name: 'digest-compiler',
+      pidFile: null,
+      systemd: { unit: 'digest-compiler.service', activeState: 'active', subState: 'running', mainPid: 700003, restarts: 0, result: 'success', crashLooping: false, failed: false },
+      workers: null,
+      problems: [],
+      metrics: { cpu: '78.3', mem: '45.6', elapsed: '0:45:12' },
+    },
+    {
+      name: '',
+      pidFile: { path: '/tmp/unknown.pid', pid: 700004, alive: true, matchesProcess: false, stale: true, reason: 'PID 700004 alive but process name mismatch' },
+      systemd: null,
+      workers: null,
+      problems: ['Stale PID file: PID 700004 alive but process name mismatch'],
+      metrics: { cpu: '2.0', mem: '0.5', elapsed: '3:00:00' },
+    },
+    {
+      name: 'alfred',
+      pidFile: { path: '/home/trader/.alfred/data/alfred.pid', pid: 551275, alive: true, matchesProcess: true, stale: false, reason: 'PID 551275 alive and matches alfred' },
+      systemd: { unit: 'alfred.service', activeState: 'active', subState: 'running', mainPid: 551275, restarts: 0, result: 'success', crashLooping: false, failed: false },
+      workers: {
+        orchestratorPid: 551275,
+        orchestratorAlive: true,
+        startedAt: '2026-03-19T10:00:00Z',
+        workers: [
+          { name: 'curator', pid: 551280, declaredStatus: 'running', alive: true, stale: false },
+          { name: 'janitor', pid: 551281, declaredStatus: 'running', alive: true, stale: false },
+          { name: 'distiller', pid: 551282, declaredStatus: 'running', alive: true, stale: false },
+          { name: 'surveyor', pid: 551283, declaredStatus: 'running', alive: false, stale: true },
+        ],
+      },
+      problems: ['Worker "surveyor" (pid 551283) declares running but is dead'],
+      metrics: { cpu: '12.5', mem: '3.2', elapsed: '2:31:05' },
+    },
+    {
+      name: 'vault-sync',
+      pidFile: null,
+      systemd: { unit: 'vault-sync.service', activeState: 'inactive', subState: 'dead', mainPid: 0, restarts: 0, result: 'success', crashLooping: false, failed: false },
+      workers: null,
+      problems: [],
+      metrics: undefined,
+    },
+  ],
+};
+
+export const mockTraces: TraceEntry[] = [
+  { filename: 'trace-001.json', agentId: 'alfred', graphId: 'g-abc123', status: 'completed', nodeCount: 12, duration: 2500, timestamp: Date.now() - 60000, trigger: 'scheduled' },
+  { filename: 'trace-002.json', agentId: 'alfred', graphId: 'g-def456', status: 'completed', nodeCount: 8, duration: 1800, timestamp: Date.now() - 120000, trigger: 'scheduled' },
+  { filename: 'trace-003.json', agentId: 'alfred-curator', graphId: 'g-ghi789', status: 'failed', nodeCount: 73, duration: 45000, timestamp: Date.now() - 180000, trigger: 'event' },
+  { filename: 'trace-004.json', agentId: 'alfred-curator', graphId: 'g-jkl012', status: 'completed', nodeCount: 15, duration: 3200, timestamp: Date.now() - 240000, trigger: 'event' },
+  { filename: 'trace-005.json', agentId: 'extraction-worker-1', graphId: 'g-mno345', status: 'completed', nodeCount: 6, duration: 900, timestamp: Date.now() - 300000, trigger: 'api' },
+  { filename: 'trace-006.json', agentId: 'extraction-worker-1', graphId: 'g-pqr678', status: 'completed', nodeCount: 6, duration: 850, timestamp: Date.now() - 360000, trigger: 'api' },
+  { filename: 'trace-007.json', agentId: 'sweep-handler-alpha', graphId: 'g-stu901', status: 'failed', nodeCount: 4, duration: 500, timestamp: Date.now() - 420000, trigger: 'scheduled' },
+  { filename: 'trace-008.json', agentId: 'digest-compiler', graphId: 'g-vwx234', status: 'completed', nodeCount: 22, duration: 8700, timestamp: Date.now() - 480000, trigger: 'cron' },
+];

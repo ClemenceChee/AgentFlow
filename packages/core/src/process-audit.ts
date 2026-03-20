@@ -282,10 +282,29 @@ function getOsProcesses(processName: string): OsProcess[] {
  * ```
  */
 export function discoverProcessConfig(dirs: string[]): ProcessAuditConfig | null {
-  let pidFile: string | undefined;
-  let workersFile: string | undefined;
-  let processName = '';
+  const configs = discoverAllProcessConfigs(dirs);
+  return configs.length > 0 ? configs[0] ?? null : null;
+}
 
+/**
+ * Discover all process configurations from the given directories and systemd.
+ *
+ * Unlike `discoverProcessConfig` which returns only the first match, this
+ * scans all PID files and also discovers systemd user services to return
+ * a complete list of auditable processes.
+ *
+ * @example
+ * ```ts
+ * const configs = discoverAllProcessConfigs(['./data', '/var/run']);
+ * for (const config of configs) {
+ *   console.log(formatAuditReport(auditProcesses(config)));
+ * }
+ * ```
+ */
+export function discoverAllProcessConfigs(dirs: string[]): ProcessAuditConfig[] {
+  const configs = new Map<string, ProcessAuditConfig>();
+
+  // Phase 1: Scan directories for PID files and worker registries
   for (const dir of dirs) {
     if (!existsSync(dir)) continue;
     let entries: string[];
@@ -304,44 +323,75 @@ export function discoverProcessConfig(dirs: string[]): ProcessAuditConfig | null
       }
 
       // PID files: *.pid
-      if (f.endsWith('.pid') && !pidFile) {
-        pidFile = fp;
-        // Infer process name: "alfred.pid" → "alfred", "my-agent.pid" → "my-agent"
-        if (!processName) {
-          processName = basename(f, '.pid');
+      if (f.endsWith('.pid')) {
+        const name = basename(f, '.pid');
+        if (!configs.has(name)) {
+          configs.set(name, { processName: name });
         }
+        const cfg = configs.get(name)!; // biome-ignore lint: just set above
+        if (!cfg.pidFile) cfg.pidFile = fp;
       }
 
       // Worker registries
-      if ((f === 'workers.json' || f.endsWith('-workers.json')) && !workersFile) {
-        workersFile = fp;
-        // Infer process name from "myapp-workers.json" if not already set
-        if (!processName && f !== 'workers.json') {
-          processName = basename(f, '-workers.json');
+      if (f === 'workers.json' || f.endsWith('-workers.json')) {
+        const name = f === 'workers.json' ? '' : basename(f, '-workers.json');
+        if (name && !configs.has(name)) {
+          configs.set(name, { processName: name });
+        }
+        if (name) {
+          const cfg = configs.get(name)!; // biome-ignore lint: just set above
+          if (!cfg.workersFile) cfg.workersFile = fp;
         }
       }
     }
   }
 
-  if (!processName && !pidFile && !workersFile) return null;
-  if (!processName) processName = 'agent'; // fallback
-
-  // Try to discover systemd user unit: check if <processName>.service exists
-  let systemdUnit: string | undefined;
+  // Phase 2: Discover systemd user services
   try {
-    const unitName = `${processName}.service`;
-    const result = execSync(
-      `systemctl --user show ${unitName} --property=LoadState --no-pager 2>/dev/null`,
-      { encoding: 'utf8', timeout: 3000 },
+    const raw = execSync(
+      'systemctl --user list-units --type=service --all --no-legend --no-pager 2>/dev/null',
+      { encoding: 'utf8', timeout: 5000 },
     );
-    if (result.includes('LoadState=loaded')) {
-      systemdUnit = unitName;
+    for (const line of raw.trim().split('\n')) {
+      if (!line.trim()) continue;
+      // Format: "unit.service loaded active running Description"
+      const parts = line.trim().split(/\s+/);
+      const unitName = parts[0] ?? '';
+      const loadState = parts[1] ?? '';
+      if (!unitName.endsWith('.service') || loadState !== 'loaded') continue;
+
+      // Skip well-known system/internal services (not user applications)
+      const name = unitName.replace('.service', '');
+      if (/^(dbus|gpg-agent|dirmngr|keyboxd|snapd\.|pk-|launchpadlib-)/.test(name)) continue;
+
+      if (!configs.has(name)) {
+        configs.set(name, { processName: name });
+      }
+      const cfg = configs.get(name)!; // biome-ignore lint: just set above
+      cfg.systemdUnit = unitName;
     }
   } catch {
-    /* systemd not available or unit not found */
+    /* systemd not available */
   }
 
-  return { processName, pidFile, workersFile, systemdUnit };
+  // Phase 3: For configs from PID files without a systemd unit, try to discover one
+  for (const cfg of configs.values()) {
+    if (cfg.systemdUnit !== undefined) continue;
+    try {
+      const unitName = `${cfg.processName}.service`;
+      const result = execSync(
+        `systemctl --user show ${unitName} --property=LoadState --no-pager 2>/dev/null`,
+        { encoding: 'utf8', timeout: 3000 },
+      );
+      if (result.includes('LoadState=loaded')) {
+        cfg.systemdUnit = unitName;
+      }
+    } catch {
+      /* unit not found */
+    }
+  }
+
+  return [...configs.values()];
 }
 
 // ---------------------------------------------------------------------------

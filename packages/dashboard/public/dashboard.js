@@ -380,51 +380,83 @@ class AgentFlowDashboard {
     section.style.display = '';
     var html = '<h4>Process Health</h4>';
 
-    // PID File section
-    if (r.pidFile) {
-      var pf = r.pidFile;
-      var cls = pf.alive && pf.matchesProcess ? 'ok' : pf.stale ? 'bad' : 'warn';
-      html += '<div class="ph-row">';
-      html += '<span class="ph-label">PID File</span>';
-      html += `<span class="ph-value ${cls}">`;
-      html += pf.pid ? `PID ${pf.pid}${pf.alive ? ' (alive)' : ' (dead)'}` : 'No PID';
-      html += '</span></div>';
-    }
+    // Render all discovered services (new multi-service format)
+    var services = r.services || [];
+    if (services.length > 0) {
+      for (var si = 0; si < services.length; si++) {
+        var svc = services[si];
+        html += '<div class="ph-service">';
+        html += `<div class="ph-service-name">${escapeHtml(svc.name)}</div>`;
 
-    // Systemd section
-    if (r.systemd) {
-      var sd = r.systemd;
-      var sdCls = sd.activeState === 'active' ? 'ok' : sd.failed ? 'bad' : 'warn';
-      html += '<div class="ph-row">';
-      html += '<span class="ph-label">Systemd</span>';
-      html += `<span class="ph-value ${sdCls}">`;
-      html +=
-        escapeHtml(sd.unit) +
-        ' \u2014 ' +
-        escapeHtml(sd.activeState) +
-        ' (' +
-        escapeHtml(sd.subState) +
-        ')';
-      if (sd.restarts > 0) html += ` [${sd.restarts} restarts]`;
-      html += '</span></div>';
-    }
+        // PID File for this service
+        if (svc.pidFile) {
+          var pf = svc.pidFile;
+          var cls = pf.alive && pf.matchesProcess ? 'ok' : pf.stale ? 'bad' : 'warn';
+          html += '<div class="ph-row">';
+          html += '<span class="ph-label">PID File</span>';
+          html += `<span class="ph-value ${cls}">`;
+          html += pf.pid ? `PID ${pf.pid}${pf.alive ? ' (alive)' : ' (dead)'}` : 'No PID';
+          html += '</span></div>';
+        }
 
-    // Workers detailed view
-    if (r.workers?.workers) {
-      html += '<div class="ph-section">';
-      html += '<span class="ph-label">Workers</span>';
-      html += '<div class="process-grid">';
-      for (var i = 0; i < r.workers.workers.length; i++) {
-        var worker = r.workers.workers[i];
-        var statusCls = worker.alive ? 'ok' : worker.stale ? 'bad' : 'warn';
-        html += `<div class="worker-card ${statusCls}">`;
-        html += `<div class="worker-name">${escapeHtml(worker.name)}</div>`;
-        html += '<div class="worker-details">';
-        html += `<span>PID: ${worker.pid || '-'}</span>`;
-        html += `<span>${escapeHtml(worker.declaredStatus)}</span>`;
-        html += '</div></div>';
+        // Systemd for this service
+        if (svc.systemd) {
+          var sd = svc.systemd;
+          var sdCls = sd.activeState === 'active' ? 'ok' : sd.failed ? 'bad' : 'warn';
+          html += '<div class="ph-row">';
+          html += '<span class="ph-label">Systemd</span>';
+          html += `<span class="ph-value ${sdCls}">`;
+          html +=
+            escapeHtml(sd.unit) +
+            ' \u2014 ' +
+            escapeHtml(sd.activeState) +
+            ' (' +
+            escapeHtml(sd.subState) +
+            ')';
+          if (sd.restarts > 0) html += ` [${sd.restarts} restarts]`;
+          html += '</span></div>';
+        }
+
+        // Workers for this service
+        if (svc.workers?.workers) {
+          html += '<div class="ph-section">';
+          html += '<span class="ph-label">Workers</span>';
+          html += '<div class="process-grid">';
+          for (var i = 0; i < svc.workers.workers.length; i++) {
+            var worker = svc.workers.workers[i];
+            var statusCls = worker.alive ? 'ok' : worker.stale ? 'bad' : 'warn';
+            html += `<div class="worker-card ${statusCls}">`;
+            html += `<div class="worker-name">${escapeHtml(worker.name)}</div>`;
+            html += '<div class="worker-details">';
+            html += `<span>PID: ${worker.pid || '-'}</span>`;
+            html += `<span>${escapeHtml(worker.declaredStatus)}</span>`;
+            html += '</div></div>';
+          }
+          html += '</div></div>';
+        }
+
+        html += '</div>'; // .ph-service
       }
-      html += '</div></div>';
+    } else {
+      // Fallback: legacy single-service format
+      if (r.pidFile) {
+        var pf2 = r.pidFile;
+        var cls2 = pf2.alive && pf2.matchesProcess ? 'ok' : pf2.stale ? 'bad' : 'warn';
+        html += '<div class="ph-row">';
+        html += '<span class="ph-label">PID File</span>';
+        html += `<span class="ph-value ${cls2}">`;
+        html += pf2.pid ? `PID ${pf2.pid}${pf2.alive ? ' (alive)' : ' (dead)'}` : 'No PID';
+        html += '</span></div>';
+      }
+      if (r.systemd) {
+        var sd2 = r.systemd;
+        var sdCls2 = sd2.activeState === 'active' ? 'ok' : sd2.failed ? 'bad' : 'warn';
+        html += '<div class="ph-row">';
+        html += '<span class="ph-label">Systemd</span>';
+        html += `<span class="ph-value ${sdCls2}">`;
+        html += escapeHtml(sd2.unit) + ' \u2014 ' + escapeHtml(sd2.activeState) + ' (' + escapeHtml(sd2.subState) + ')';
+        html += '</span></div>';
+      }
     }
 
     // Agent Services - categorize processes and build tree

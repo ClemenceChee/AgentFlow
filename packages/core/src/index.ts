@@ -63,7 +63,7 @@ export type {
   WorkersResult,
 } from './process-audit.js';
 // Process audit
-export { auditProcesses, discoverProcessConfig, formatAuditReport } from './process-audit.js';
+export { auditProcesses, discoverAllProcessConfigs, discoverProcessConfig, formatAuditReport } from './process-audit.js';
 // Prompt builders (Tier 2)
 export {
   buildFailureAnalysisPrompt,

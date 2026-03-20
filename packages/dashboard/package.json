@@ -21,9 +21,11 @@
     "public"
   ],
   "scripts": {
-    "build": "tsup src/index.ts src/cli.ts src/server.ts --format esm,cjs --clean && npm run build:public",
+    "build": "tsup src/index.ts src/cli.ts src/server.ts --format esm,cjs --clean && npm run build:public && npm run build:client",
     "build:public": "cp -r public dist/",
+    "build:client": "vite build",
     "dev": "tsx src/server.ts",
+    "dev:client": "vite",
     "start": "node dist/server.js",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -40,17 +42,23 @@
     "agentflow-core": "^0.8.0",
     "chokidar": "^3.5.3",
     "express": "^4.18.2",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
     "ws": "^8.16.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.41.0",
     "@types/express": "^4.17.21",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
     "@types/ws": "^8.5.10",
+    "@vitejs/plugin-react": "^4.4.1",
     "@vitest/coverage-v8": "^3.0.0",
     "get-port": "^7.0.0",
     "supertest": "^7.0.0",
     "tsup": "^8.4.0",
     "tsx": "^4.19.0",
+    "vite": "^6.3.5",
     "vitest": "^3.0.0",
     "ws": "^8.16.0"
   },

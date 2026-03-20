@@ -7,14 +7,17 @@ import {
   auditProcesses,
   createExecutionEvent,
   createKnowledgeStore,
+  discoverAllProcessConfigs,
   discoverProcess,
-  discoverProcessConfig,
   findVariants,
   getBottlenecks,
   loadGraph,
 } from 'agentflow-core';
 import express from 'express';
 import { WebSocketServer } from 'ws';
+import './adapters/index.js'; // Register all adapters
+import { deduplicateAgents, groupAgents } from './agent-clustering.js';
+import { parseOtlpPayload } from './adapters/otel.js';
 import { AgentStats } from './stats.js';
 import { TraceWatcher } from './watcher.js';
 
@@ -58,6 +61,34 @@ export class DashboardServer {
   private knowledgeStore: KnowledgeStore;
 
   constructor(private config: DashboardConfig) {
+    // Merge extra dirs from saved config (persisted via Settings panel)
+    const home = process.env.HOME ?? '/home/trader';
+    const configPath = path.join(home, '.agentflow/dashboard-config.json');
+    if (!config.dataDirs) config.dataDirs = [];
+    try {
+      if (fs.existsSync(configPath)) {
+        const saved = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+        const extraDirs: string[] = saved.extraDirs ?? [];
+        for (const d of extraDirs) {
+          if (!config.dataDirs.includes(d)) config.dataDirs.push(d);
+        }
+      }
+    } catch { /* ignore corrupt config, use CLI args only */ }
+
+    // Auto-discover known agent framework directories
+    const autoDiscoverPaths = [
+      path.join(home, '.openclaw/cron/runs'),
+      path.join(home, '.openclaw/workspace/traces'),
+      path.join(home, '.openclaw/subagents'),
+      path.join(home, '.openclaw/agents/main/sessions'),
+      path.join(home, '.agentflow/traces'),
+    ];
+    for (const p of autoDiscoverPaths) {
+      if (fs.existsSync(p) && !config.dataDirs.includes(p)) {
+        config.dataDirs.push(p);
+      }
+    }
+
     this.watcher = new TraceWatcher({
       tracesDir: config.tracesDir,
       dataDirs: config.dataDirs,
@@ -101,10 +132,16 @@ export class DashboardServer {
       });
     }
 
-    // Serve static files
+    // Serve React dashboard (primary)
+    const clientDir = path.join(__dirname, '../dist/client');
+    if (fs.existsSync(clientDir)) {
+      this.app.use(express.static(clientDir));
+    }
+
+    // Serve legacy dashboard at /v1
     const publicDir = path.join(__dirname, '../public');
     if (fs.existsSync(publicDir)) {
-      this.app.use(express.static(publicDir));
+      this.app.use('/v1', express.static(publicDir));
     }
 
     // API endpoints
@@ -145,10 +182,35 @@ export class DashboardServer {
       }
     });
 
-    this.app.get('/api/agents', (_req, res) => {
+    this.app.get('/api/agents', (req, res) => {
       try {
-        const agents = this.stats.getAgentsList();
-        res.json(agents);
+        const raw = this.stats.getAgentsList();
+
+        // Enrich with display names from trace data
+        for (const agent of raw) {
+          if (!agent.displayName) {
+            // Find the most recent trace for this agent and use its name
+            const traces = this.watcher.getTracesByAgent(agent.agentId);
+            if (traces.length > 0) {
+              const latest = traces[traces.length - 1];
+              const name = latest?.name;
+              if (name && name !== 'default' && name !== agent.agentId && !name.startsWith('pipeline:') && name.length < 40) {
+                agent.displayName = name;
+              }
+            }
+            if (!agent.displayName) agent.displayName = agent.agentId;
+          }
+        }
+
+        // Backward-compatible flat mode
+        if (req.query.flat === 'true') {
+          return res.json(raw);
+        }
+
+        // Deduplicate and group
+        const deduped = deduplicateAgents(raw);
+        const grouped = groupAgents(deduped);
+        res.json(grouped);
       } catch (_error) {
         res.status(500).json({ error: 'Failed to load agents' });
       }
@@ -339,6 +401,115 @@ export class DashboardServer {
       }
     });
 
+    // Combined process model endpoint (process graph + variants + bottlenecks)
+    this.app.get('/api/process-model/:agentId', (req, res) => {
+      try {
+        const agentId = req.params.agentId;
+        const allTraces = this.watcher.getTracesByAgent(agentId);
+        if (allTraces.length === 0) {
+          return res.status(404).json({ error: 'No traces for agent' });
+        }
+
+        // Build process model from all traces (session-based or graph-based)
+        const transMap = new Map<string, number>();
+        const nodeTypeMap = new Map<string, string>();
+        const variantMap = new Map<string, number>();
+        const durationMap = new Map<string, number[]>();
+
+        for (const trace of allTraces) {
+          const serialized = serializeTrace(trace);
+          const nodes = serialized.nodes;
+          if (!nodes || typeof nodes !== 'object') continue;
+
+          const nodeArr = Object.values(nodes) as { name?: string; type?: string; startTime?: number; endTime?: number; status?: string }[];
+          const sorted = nodeArr
+            .filter((n) => n.name && typeof n.startTime === 'number' && n.startTime > 0)
+            .sort((a, b) => (a.startTime ?? 0) - (b.startTime ?? 0));
+
+          // Transitions (directly-follows)
+          for (let i = 0; i < sorted.length - 1; i++) {
+            const from = sorted[i]!.name!;
+            const to = sorted[i + 1]!.name!;
+            const key = `${from}|||${to}`;
+            transMap.set(key, (transMap.get(key) ?? 0) + 1);
+          }
+
+          // Node types
+          for (const n of sorted) {
+            if (n.name && n.type) nodeTypeMap.set(n.name, n.type);
+          }
+
+          // Variant (path signature)
+          const sig = sorted.map((n) => n.name).join('\u2192');
+          if (sig) variantMap.set(sig, (variantMap.get(sig) ?? 0) + 1);
+
+          // Durations for bottleneck detection
+          for (const n of sorted) {
+            if (n.name && n.endTime && n.startTime) {
+              const dur = n.endTime - n.startTime;
+              if (dur > 0) {
+                const arr = durationMap.get(n.name) ?? [];
+                arr.push(dur);
+                durationMap.set(n.name, arr);
+              }
+            }
+          }
+        }
+
+        // Build model
+        const model = {
+          transitions: [...transMap.entries()].map(([key, count]) => {
+            const [from, to] = key.split('|||');
+            return { from: from!, to: to!, count };
+          }),
+          nodeTypes: Object.fromEntries(nodeTypeMap),
+        };
+
+        // Build variants (top 20)
+        const totalTraces = allTraces.length;
+        const variants = [...variantMap.entries()]
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 20)
+          .map(([sig, count]) => ({
+            pathSignature: sig,
+            count,
+            percentage: totalTraces > 0 ? (count / totalTraces) * 100 : 0,
+          }));
+
+        // Build bottlenecks (top 15 by p95)
+        const bottlenecks = [...durationMap.entries()]
+          .map(([name, durations]) => {
+            const sorted = durations.sort((a, b) => a - b);
+            const p95 = sorted[Math.floor(sorted.length * 0.95)] ?? 0;
+            return { nodeName: name, nodeType: nodeTypeMap.get(name) ?? 'unknown', p95 };
+          })
+          .sort((a, b) => b.p95 - a.p95)
+          .slice(0, 15);
+
+        // Also try core API for graph-based traces
+        const graphs = this.getGraphTraces(agentId);
+        if (graphs.length > 0) {
+          // Enrich with core results if available
+          try {
+            const coreBottlenecks = getBottlenecks(graphs).map((b) => ({
+              nodeName: b.nodeName,
+              nodeType: b.nodeType,
+              p95: b.durations.sort((a: number, b2: number) => a - b2)[Math.floor(b.durations.length * 0.95)] ?? 0,
+            }));
+            if (coreBottlenecks.length > bottlenecks.length) {
+              bottlenecks.length = 0;
+              bottlenecks.push(...coreBottlenecks);
+            }
+          } catch { /* use fallback */ }
+        }
+
+        res.json({ model, variants, bottlenecks });
+      } catch (error) {
+        console.error('Process model error:', error);
+        res.status(500).json({ error: 'Failed to compute process model' });
+      }
+    });
+
     this.app.get('/api/stats/:agentId', (req, res) => {
       try {
         const agentStats = this.stats.getAgentStats(req.params.agentId);
@@ -365,90 +536,255 @@ export class DashboardServer {
           ...(this.config.dataDirs || []),
         ];
 
-        const processConfig = discoverProcessConfig(discoveryDirs);
-        if (!processConfig) {
+        // Discover all services (PID files + systemd units)
+        const configs = discoverAllProcessConfigs(discoveryDirs);
+        if (configs.length === 0) {
           return res.json(null);
         }
 
-        // Get Alfred processes
-        const alfredResult = auditProcesses(processConfig);
+        // Audit each discovered service
+        const services: { name: string; audit: ProcessAuditResult }[] = [];
+        const allKnownPids = new Set<number>();
 
-        // Also get OpenClaw processes explicitly
-        const openclawConfig = {
-          processName: 'openclaw',
-          pidFile: undefined,
-          workersFile: undefined,
-          systemdUnit: null,
-        };
-        const openclawResult = auditProcesses(openclawConfig);
+        for (const config of configs) {
+          const audit = auditProcesses(config);
+          services.push({ name: config.processName, audit });
 
-        // Get clawmetry processes
-        const clawmetryConfig = {
-          processName: 'clawmetry',
-          pidFile: undefined,
-          workersFile: undefined,
-          systemdUnit: null,
-        };
-        const clawmetryResult = auditProcesses(clawmetryConfig);
+          // Track known PIDs across all services
+          if (audit.pidFile?.pid && !audit.pidFile.stale) allKnownPids.add(audit.pidFile.pid);
+          if (audit.systemd?.mainPid) allKnownPids.add(audit.systemd.mainPid);
+          if (audit.workers) {
+            if (audit.workers.orchestratorPid) allKnownPids.add(audit.workers.orchestratorPid);
+            for (const w of audit.workers.workers) {
+              if (w.pid) allKnownPids.add(w.pid);
+            }
+          }
+          for (const p of audit.osProcesses) allKnownPids.add(p.pid);
+        }
 
-        // Combine all OS processes
-        const allOsProcesses = [
-          ...alfredResult.osProcesses,
-          ...openclawResult.osProcesses,
-          ...clawmetryResult.osProcesses,
-        ];
+        // Use first service with a PID file as the "primary" for backward compat
+        const primary = services.find((s) => s.audit.pidFile) ?? services[0];
 
-        // Remove duplicates by PID
+        // Merge all OS processes, deduplicate
+        const allOsProcesses = services.flatMap((s) => s.audit.osProcesses);
         const uniqueProcesses = allOsProcesses.filter(
           (proc, index, arr) => arr.findIndex((p) => p.pid === proc.pid) === index,
         );
 
-        // Build combined result using Alfred as the base (since it has PID file and workers)
+        // Global orphans: not tracked by ANY service
+        const orphans = uniqueProcesses.filter(
+          (p) =>
+            !allKnownPids.has(p.pid) &&
+            p.pid !== process.pid &&
+            p.pid !== process.ppid,
+        );
+
+        // Collect all problems
+        const problems = services.flatMap((s) =>
+          s.audit.problems.map((p) => `[${s.name}] ${p}`),
+        );
+
         const result = {
-          ...alfredResult,
+          // Backward-compatible fields from primary service
+          pidFile: primary?.audit.pidFile ?? null,
+          systemd: primary?.audit.systemd ?? null,
+          workers: primary?.audit.workers ?? null,
           osProcesses: uniqueProcesses,
-          // Recalculate orphans based on all processes
-          orphans: uniqueProcesses.filter((p) => {
-            // Known PIDs from Alfred system
-            const alfredKnownPids = new Set<number>();
-            if (alfredResult.pidFile?.pid && !alfredResult.pidFile.stale)
-              alfredKnownPids.add(alfredResult.pidFile.pid);
-            if (alfredResult.workers) {
-              if (alfredResult.workers.orchestratorPid)
-                alfredKnownPids.add(alfredResult.workers.orchestratorPid);
-              for (const w of alfredResult.workers.workers) {
-                if (w.pid) alfredKnownPids.add(w.pid);
-              }
-            }
+          orphans,
+          problems,
+          // All discovered services with their individual audit results + metrics
+          services: services.map((s) => {
+            // Match OS process metrics to this service by PID
+            const mainPid = s.audit.pidFile?.pid ?? s.audit.systemd?.mainPid;
+            const osProc = mainPid
+              ? uniqueProcesses.find((p) => p.pid === mainPid)
+              : undefined;
 
-            // Don't consider OpenClaw processes as orphans
-            const isOpenClawProcess =
-              p.cmdline.includes('openclaw') || p.cmdline.includes('clawmetry');
-
-            return (
-              !alfredKnownPids.has(p.pid) &&
-              !isOpenClawProcess &&
-              p.pid !== process.pid &&
-              p.pid !== process.ppid
-            );
+            return {
+              name: s.name,
+              pidFile: s.audit.pidFile,
+              systemd: s.audit.systemd,
+              workers: s.audit.workers,
+              problems: s.audit.problems,
+              metrics: osProc
+                ? { cpu: osProc.cpu, mem: osProc.mem, elapsed: osProc.elapsed }
+                : undefined,
+            };
           }),
+
+          // Topology edges: parent-child relationships from process ppid
+          topology: uniqueProcesses
+            .map((p) => {
+              try {
+                const statusContent = fs.readFileSync(`/proc/${p.pid}/status`, 'utf8');
+                const ppidMatch = statusContent.match(/^PPid:\s+(\d+)/m);
+                const ppid = ppidMatch ? parseInt(ppidMatch[1] ?? '0', 10) : 0;
+                if (ppid > 1 && allKnownPids.has(ppid)) {
+                  return { source: ppid, target: p.pid };
+                }
+              } catch {
+                // process may have exited
+              }
+              return null;
+            })
+            .filter(Boolean),
         };
-
-        // Update problems to include OpenClaw status
-        const openclawProblems = [];
-        if (openclawResult.osProcesses.length === 0) {
-          openclawProblems.push('No OpenClaw gateway processes detected');
-        }
-        if (clawmetryResult.osProcesses.length === 0) {
-          openclawProblems.push('No clawmetry processes detected');
-        }
-
-        result.problems = [...(alfredResult.problems || []), ...openclawProblems];
 
         this.processHealthCache = { result, ts: now };
         res.json(result);
       } catch (_error) {
         res.status(500).json({ error: 'Failed to audit processes' });
+      }
+    });
+
+    // Directory discovery endpoint
+    this.app.get('/api/directories', (_req, res) => {
+      try {
+        // Read extra dirs from saved config
+        const home = process.env.HOME ?? '/home/trader';
+        const configPath = path.join(home, '.agentflow/dashboard-config.json');
+        let extraDirs: string[] = [];
+        try {
+          if (fs.existsSync(configPath)) {
+            const cfg = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+            extraDirs = cfg.extraDirs ?? [];
+          }
+        } catch { /* fresh */ }
+
+        const watched = [
+          this.config.tracesDir,
+          ...(this.config.dataDirs || []),
+          ...extraDirs,
+        ];
+
+        // Discover from systemd
+        const discovered: string[] = [];
+        try {
+          const { execSync } = require('node:child_process');
+          const raw = execSync(
+            'systemctl --user show --property=ExecStart --no-pager alfred.service openclaw-gateway.service 2>/dev/null',
+            { encoding: 'utf8', timeout: 5000 },
+          );
+          for (const line of raw.split('\n')) {
+            const match = line.match(/path=([^\s;]+)/);
+            if (match?.[1]) {
+              const dir = path.dirname(match[1]);
+              if (fs.existsSync(dir)) discovered.push(dir);
+            }
+          }
+        } catch { /* ignore */ }
+
+        // Check common locations
+        const commonPaths = [
+          path.join(home, '.alfred/traces'),
+          path.join(home, '.alfred/data'),
+          path.join(home, '.openclaw/workspace/traces'),
+          path.join(home, '.openclaw/subagents'),
+          path.join(home, '.openclaw/cron/runs'),
+          path.join(home, '.openclaw/cron'),
+          path.join(home, '.openclaw/agents/main/sessions'),
+          path.join(home, '.agentflow/traces'),
+        ];
+        for (const p of commonPaths) {
+          if (fs.existsSync(p) && !discovered.includes(p)) {
+            discovered.push(p);
+          }
+        }
+
+        // Suggested = discovered but not watched
+        const watchedSet = new Set(watched.map((w) => path.resolve(w)));
+        const suggested = discovered.filter((d) => !watchedSet.has(path.resolve(d)));
+
+        res.json({ watched, discovered, suggested });
+      } catch (error) {
+        console.error('Directory discovery error:', error);
+        res.status(500).json({ error: 'Failed to discover directories' });
+      }
+    });
+
+    this.app.post('/api/directories', express.json(), (req, res) => {
+      try {
+        const { add, remove } = req.body as { add?: string; remove?: string };
+
+        // Validate path exists for add
+        if (add && !fs.existsSync(add)) {
+          return res.status(400).json({ error: `Directory does not exist: ${add}` });
+        }
+
+        const configPath = path.join(process.env.HOME ?? '/home/trader', '.agentflow/dashboard-config.json');
+
+        let config: { extraDirs?: string[] } = {};
+        try {
+          if (fs.existsSync(configPath)) {
+            config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+          }
+        } catch { /* fresh config */ }
+
+        if (!config.extraDirs) config.extraDirs = [];
+
+        if (add && !config.extraDirs.includes(add)) {
+          config.extraDirs.push(add);
+        }
+        if (remove) {
+          config.extraDirs = config.extraDirs.filter((d) => d !== remove);
+        }
+
+        fs.mkdirSync(path.dirname(configPath), { recursive: true });
+        fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+
+        res.json({ ok: true, extraDirs: config.extraDirs });
+      } catch (error) {
+        console.error('Directory config error:', error);
+        res.status(500).json({ error: 'Failed to update directory config' });
+      }
+    });
+
+    // OTLP trace collector endpoint
+    this.app.post('/v1/traces', express.json({ limit: '10mb' }), (req, res) => {
+      try {
+        const traces = parseOtlpPayload(req.body);
+        let ingested = 0;
+
+        for (const trace of traces) {
+          // Convert to WatchedTrace and store
+          const nodes = new Map<string, any>();
+          for (const [id, node] of Object.entries(trace.nodes)) {
+            nodes.set(id, { ...node, state: {} });
+          }
+
+          const watched = {
+            id: trace.id,
+            rootNodeId: Object.keys(trace.nodes)[0] ?? '',
+            agentId: trace.agentId,
+            name: trace.name,
+            trigger: trace.trigger,
+            startTime: trace.startTime,
+            endTime: trace.endTime,
+            status: trace.status,
+            nodes,
+            edges: [],
+            events: [],
+            metadata: { ...trace.metadata, adapterSource: 'otel' },
+            sessionEvents: [],
+            sourceType: 'session',
+            filename: `otel-${trace.id}`,
+            lastModified: Date.now(),
+            sourceDir: 'http-collector',
+          };
+
+          (this.watcher as any).traces.set(`otel:${trace.id}`, watched);
+          ingested++;
+        }
+
+        // Notify connected WebSocket clients
+        if (ingested > 0) {
+          this.broadcast({ type: 'traces-updated', count: ingested });
+        }
+
+        res.json({ ok: true, tracesIngested: ingested });
+      } catch (error) {
+        console.error('OTLP collector error:', error);
+        res.status(400).json({ error: 'Failed to parse OTLP payload' });
       }
     });
 
@@ -466,11 +802,21 @@ export class DashboardServer {
       res.json({ status: 'ready' });
     });
 
-    // Fallback to serve index.html for SPA routing
+    // SPA fallback for /v1 legacy dashboard
+    this.app.get('/v1/*', (_req, res) => {
+      const legacyIndex = path.join(__dirname, '../public/index.html');
+      if (fs.existsSync(legacyIndex)) {
+        res.sendFile(legacyIndex);
+      } else {
+        res.status(404).send('Legacy dashboard not found');
+      }
+    });
+
+    // SPA fallback — serve React dashboard
     this.app.get('*', (_req, res) => {
-      const indexPath = path.join(__dirname, '../public/index.html');
-      if (fs.existsSync(indexPath)) {
-        res.sendFile(indexPath);
+      const clientIndex = path.join(__dirname, '../dist/client/index.html');
+      if (fs.existsSync(clientIndex)) {
+        res.sendFile(clientIndex);
       } else {
         res.status(404).send('Dashboard not found - public files may not be built');
       }

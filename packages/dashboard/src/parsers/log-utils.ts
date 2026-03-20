@@ -199,12 +199,12 @@ export function getUniversalNodeStatus(activity: Record<string, unknown>): strin
   return 'completed';
 }
 
-/** Map OpenClaw sessionId prefix to agent name. */
+/** Map OpenClaw sessionId prefix to canonical agent name. */
 export function openClawSessionIdToAgent(sessionId: string): string {
   if (sessionId.startsWith('janitor-')) return 'vault-janitor';
   if (sessionId.startsWith('curator-')) return 'vault-curator';
   if (sessionId.startsWith('distiller-')) return 'vault-distiller';
-  if (sessionId.startsWith('main-')) return 'main';
+  if (sessionId.startsWith('main-')) return 'alfred-main';
   const firstSegment = sessionId.split('-')[0];
   if (firstSegment) return firstSegment;
   return 'openclaw';
