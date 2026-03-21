@@ -75,6 +75,7 @@ export function loadGraph(input: string | Record<string, unknown>): ExecutionGra
     traceId: raw.traceId as string | undefined,
     spanId: raw.spanId as string | undefined,
     parentSpanId: raw.parentSpanId as string | null | undefined,
+    metadata: (raw.metadata as Record<string, unknown>) ?? {},
   };
 }
 

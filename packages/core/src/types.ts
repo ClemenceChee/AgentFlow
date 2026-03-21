@@ -117,6 +117,8 @@ export interface ExecutionGraph {
   readonly spanId?: string;
   /** Parent span ID, or null if this is the root span. */
   readonly parentSpanId?: string | null;
+  /** Arbitrary metadata preserved from the trace file. */
+  readonly metadata?: Record<string, unknown>;
 }
 
 // ---------------------------------------------------------------------------
