@@ -37,7 +37,7 @@ export class TestDataGenerator {
       trigger = 'test',
     } = options;
 
-    const startTime = Date.now() - nodeCount * 1000;
+    const startTime = Date.now() - nodeCount * 1000 + TestDataGenerator.sessionIdCounter * 100;
     const nodes = new Map<string, ExecutionNode>();
 
     // Create root node
@@ -109,7 +109,8 @@ export class TestDataGenerator {
    */
   static createWatchedTrace(options: TestDataOptions = {}): WatchedTrace {
     const graph = TestDataGenerator.createExecutionGraph(options);
-    const filename = `trace-${Date.now()}-${options.agentId || 'test'}.json`;
+    const seqId = TestDataGenerator.sessionIdCounter++;
+    const filename = `trace-${Date.now()}-${seqId}-${options.agentId || 'test'}.json`;
 
     return {
       ...graph,
