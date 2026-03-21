@@ -4,20 +4,26 @@ import * as path from 'node:path';
 import getPort from 'get-port';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { DashboardServer } from '../../src/server.js';
-import { TestDataGenerator } from '../fixtures/test-data-generator.js';
+import { TestDataGenerator, traceToJson } from '../fixtures/test-data-generator.js';
 
 describe('OpenClaw Integration Tests', () => {
   let tempDir: string;
   let server: DashboardServer;
   let port: number;
 
+  let origHome: string | undefined;
+
   beforeEach(async () => {
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'openclaw-test-'));
     port = await getPort();
     TestDataGenerator.resetCounters();
+    // Isolate from user config to prevent production data contamination
+    origHome = process.env.HOME;
+    process.env.HOME = tempDir;
   });
 
   afterEach(async () => {
+    process.env.HOME = origHome;
     if (server) {
       await server.stop();
     }
