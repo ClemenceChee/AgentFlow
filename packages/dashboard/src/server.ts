@@ -940,7 +940,7 @@ export class DashboardServer {
           try {
             const raw = execFileSync('systemctl', ['--user', 'show', '--property=ExecStart', '--no-pager', ...svcNames], {
               encoding: 'utf8', timeout: 5000,
-            );
+            });
             for (const line of raw.split('\n')) {
               const match = line.match(/path=([^\s;]+)/);
               if (match?.[1]) {
