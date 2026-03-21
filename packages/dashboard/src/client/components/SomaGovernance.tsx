@@ -77,7 +77,7 @@ export function SomaGovernance({
           <h4 style={{ color: '#58a6ff', margin: '0 0 8px', fontSize: 13 }}>
             Pending Proposals ({data.insights.length})
           </h4>
-          {data.insights.map((ins, i) => {
+          {data.insights.map((ins, _i) => {
             const id = ins.title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
             const isExpanded = expandedId === id;
             const isRejecting = rejectingId === id;
@@ -86,7 +86,7 @@ export function SomaGovernance({
 
             return (
               <div
-                key={i}
+                key={id}
                 style={{
                   padding: '8px 12px',
                   marginBottom: 4,
@@ -210,9 +210,9 @@ export function SomaGovernance({
           <h4 style={{ color: '#3fb950', margin: '0 0 8px', fontSize: 13 }}>
             Canon ({data.canon.length})
           </h4>
-          {data.canon.map((c, i) => (
+          {data.canon.map((c, _i) => (
             <div
-              key={i}
+              key={c.title}
               style={{
                 padding: '6px 12px',
                 marginBottom: 4,

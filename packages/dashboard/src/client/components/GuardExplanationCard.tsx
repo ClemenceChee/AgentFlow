@@ -4,7 +4,7 @@
  * Falls back to raw message when explanation field is missing.
  */
 
-interface GuardExplanation {
+export interface GuardExplanation {
   rule: string;
   threshold: number | string;
   actual: number | string;
@@ -12,7 +12,7 @@ interface GuardExplanation {
   evidence?: string;
 }
 
-interface Violation {
+export interface Violation {
   type: string;
   nodeId: string;
   message: string;

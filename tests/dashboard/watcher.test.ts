@@ -208,7 +208,8 @@ describe('TraceWatcher', () => {
       const watcher = new TraceWatcher(tmpDir);
       try {
         const trace = watcher.getAllTraces()[0] as WatchedTrace;
-        const events = trace.sessionEvents!;
+        expect(trace.sessionEvents).toBeDefined();
+        const events = trace.sessionEvents;
 
         expect(events.length).toBeGreaterThan(0);
 
@@ -291,7 +292,8 @@ describe('TraceWatcher', () => {
       const watcher = new TraceWatcher(tmpDir);
       try {
         const trace = watcher.getAllTraces()[0] as WatchedTrace;
-        const events = trace.sessionEvents!;
+        expect(trace.sessionEvents).toBeDefined();
+        const events = trace.sessionEvents;
 
         const toolCalls = events.filter((e) => e.type === 'tool_call');
         expect(toolCalls.length).toBe(1);
@@ -320,7 +322,8 @@ describe('TraceWatcher', () => {
       const watcher = new TraceWatcher(tmpDir);
       try {
         const trace = watcher.getAllTraces()[0] as WatchedTrace;
-        const events = trace.sessionEvents!;
+        expect(trace.sessionEvents).toBeDefined();
+        const events = trace.sessionEvents;
 
         const thinkingEvents = events.filter((e) => e.type === 'thinking');
         expect(thinkingEvents.length).toBe(1);

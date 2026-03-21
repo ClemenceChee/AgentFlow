@@ -61,20 +61,20 @@ async function getAvailablePort(): Promise<number> {
 /** Simple HTTP GET that returns { status, body } */
 function httpGet(
   url: string,
-): Promise<{ status: number; body: any; headers: http.IncomingHttpHeaders }> {
+): Promise<{ status: number; body: unknown; headers: http.IncomingHttpHeaders }> {
   return new Promise((resolve, reject) => {
     http
       .get(url, (res) => {
         let data = '';
         res.on('data', (chunk) => (data += chunk));
         res.on('end', () => {
-          let body: any;
+          let body: unknown;
           try {
             body = JSON.parse(data);
           } catch {
             body = data;
           }
-          resolve({ status: res.statusCode!, body, headers: res.headers });
+          resolve({ status: res.statusCode ?? 500, body, headers: res.headers });
         });
       })
       .on('error', reject);
@@ -226,7 +226,7 @@ describe('DashboardServer API', () => {
     it('sends init data on connection', async () => {
       const wsUrl = `ws://127.0.0.1:${port}`;
 
-      const initMessage = await new Promise<any>((resolve, reject) => {
+      const initMessage = await new Promise<unknown>((resolve, reject) => {
         const ws = new WebSocket(wsUrl);
         const timeout = setTimeout(() => {
           ws.close();

@@ -1,0 +1,55 @@
+{
+  "name": "soma",
+  "version": "0.1.0",
+  "description": "Organizational intelligence layer for AI agent systems. Knowledge vault, semantic search, and adaptive policy generation.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --dts --clean --tsconfig tsconfig.build.json",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "agentflow-core": "^0.8.0"
+  },
+  "devDependencies": {
+    "tsup": "^8.4.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  },
+  "keywords": [
+    "soma",
+    "organizational-intelligence",
+    "knowledge-vault",
+    "agent",
+    "ai",
+    "process-mining",
+    "semantic-search",
+    "policy-engine"
+  ],
+  "license": "Apache-2.0 WITH Commons-Clause-1.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ClemenceChee/AgentFlow.git"
+  },
+  "homepage": "https://github.com/ClemenceChee/AgentFlow#readme",
+  "bugs": {
+    "url": "https://github.com/ClemenceChee/AgentFlow/issues"
+  },
+  "author": "Clemence Chee",
+  "engines": {
+    "node": ">=20"
+  }
+}

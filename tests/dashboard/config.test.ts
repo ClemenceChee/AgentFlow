@@ -67,7 +67,7 @@ describe('Config', () => {
       );
       const { config } = loadConfig(cfgPath);
       expect(config.aliases).toEqual({ a: 'b' });
-      expect((config as any)['// this is a comment']).toBeUndefined();
+      expect((config as Record<string, unknown>)['// this is a comment']).toBeUndefined();
     });
 
     it('returns empty defaults on invalid JSON', () => {

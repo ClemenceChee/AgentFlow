@@ -97,9 +97,10 @@ export function HealthBanner({
             <span className="stat-cell__label">{s.label}</span>
             {s.sparkline && (
               <div className="stat-cell__sparkline">
-                {s.sparkline.map((ok, i) => (
-                  <div key={i} className={`spark ${ok ? 'spark--ok' : 'spark--fail'}`} />
-                ))}
+                {s.sparkline.map((ok, i, arr) => {
+                  const position = arr.indexOf(ok, i);
+                  return <div key={`${s.label}-sparkline-${position}`} className={`spark ${ok ? 'spark--ok' : 'spark--fail'}`} />
+                })}
               </div>
             )}
           </div>

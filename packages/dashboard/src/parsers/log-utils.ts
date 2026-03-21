@@ -66,8 +66,11 @@ export function extractKeyValuePairs(line: string): Record<string, unknown> {
   const kvRegex = /(\w+)=('(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|\S+)/g;
   let match: RegExpExecArray | null;
   while ((match = kvRegex.exec(clean)) !== null) {
-    if (match[1] === 'Z' || match[1] === 'm') continue;
-    pairs[match[1]!] = parseValue(match[2]!);
+    const key = match[1];
+    const value = match[2];
+    if (!key || !value) continue;
+    if (key === 'Z' || key === 'm') continue;
+    pairs[key] = parseValue(value);
   }
 
   return pairs;
@@ -75,7 +78,10 @@ export function extractKeyValuePairs(line: string): Record<string, unknown> {
 
 /** Detect component from action string or key-value pairs. */
 export function detectComponent(action: string, kvPairs: Record<string, unknown>): string {
-  if (action.includes('.')) return action.split('.')[0]!;
+  if (action.includes('.')) {
+    const parts = action.split('.');
+    return parts[0] || action;
+  }
   if (kvPairs.component) return String(kvPairs.component);
   if (kvPairs.service) return String(kvPairs.service);
   if (kvPairs.module) return String(kvPairs.module);
@@ -132,7 +138,9 @@ export function detectActivityPattern(line: string): LogActivity | null {
       const pairs: Record<string, unknown> = {};
       for (const m of kvMatches) {
         const [key, value] = m.split('=', 2);
-        pairs[key!] = parseValue(value!);
+        if (key && value !== undefined) {
+          pairs[key] = parseValue(value);
+        }
       }
       timestamp = parseTimestamp(pairs.timestamp || pairs.time) || Date.now();
       level = String(pairs.level || 'info');
@@ -146,8 +154,8 @@ export function detectActivityPattern(line: string): LogActivity | null {
     const logMatch = line.match(
       /^(\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}:\d{2}[.\d]*Z?)\s+(\w+)?\s*:?\s*(.+)/,
     );
-    if (logMatch) {
-      timestamp = new Date(logMatch[1]!).getTime();
+    if (logMatch && logMatch[1]) {
+      timestamp = new Date(logMatch[1]).getTime();
       level = logMatch[2] || 'info';
       action = logMatch[3] || '';
     }

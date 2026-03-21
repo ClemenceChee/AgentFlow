@@ -70,7 +70,7 @@ export function VariantExplorer({
             </div>
             <div className="var-row__steps">
               {steps.map((step, si) => (
-                <span key={si}>
+                <span key={`step-${step}-${step.length}`}>
                   {si > 0 && <span className="var-row__arrow">{'\u2192'}</span>}
                   <span
                     className="var-row__step"
