@@ -3,7 +3,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { TraceWatcher } from '../../src/watcher.js';
-import { TestDataGenerator } from '../fixtures/test-data-generator.js';
+import { TestDataGenerator, traceToJson } from '../fixtures/test-data-generator.js';
 
 describe('TraceWatcher', () => {
   let tempDir: string;
@@ -80,7 +80,7 @@ describe('TraceWatcher', () => {
       });
 
       const traceFile = path.join(tempDir, 'traces', 'test.json');
-      fs.writeFileSync(traceFile, JSON.stringify(trace));
+      fs.writeFileSync(traceFile, traceToJson(trace as unknown as Record<string, unknown>));
 
       // Recreate watcher so it picks up the file via loadExistingFiles
       watcher.stop();
@@ -194,14 +194,14 @@ describe('TraceWatcher', () => {
       setTimeout(() => {
         const trace = TestDataGenerator.createExecutionGraph();
         const newFile = path.join(tracesDir, 'new-trace.json');
-        fs.writeFileSync(newFile, JSON.stringify(trace));
+        fs.writeFileSync(newFile, traceToJson(trace as unknown as Record<string, unknown>));
       }, 50);
     });
 
     it('should emit trace-updated event when file is modified', (done) => {
       const trace = TestDataGenerator.createExecutionGraph();
       const traceFile = path.join(tracesDir, 'update-test.json');
-      fs.writeFileSync(traceFile, JSON.stringify(trace));
+      fs.writeFileSync(traceFile, traceToJson(trace as unknown as Record<string, unknown>));
 
       let eventCount = 0;
       watcher.on('trace-updated', (updatedTrace) => {
@@ -225,7 +225,7 @@ describe('TraceWatcher', () => {
     it('should remove trace when file is deleted', (done) => {
       const trace = TestDataGenerator.createExecutionGraph();
       const traceFile = path.join(tracesDir, 'delete-test.json');
-      fs.writeFileSync(traceFile, JSON.stringify(trace));
+      fs.writeFileSync(traceFile, traceToJson(trace as unknown as Record<string, unknown>));
 
       // Wait for initial load
       setTimeout(() => {

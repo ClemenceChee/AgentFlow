@@ -4,20 +4,25 @@ import * as path from 'node:path';
 import getPort from 'get-port';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { DashboardServer } from '../../src/server.js';
-import { TestDataGenerator } from '../fixtures/test-data-generator.js';
+import { TestDataGenerator, traceToJson } from '../fixtures/test-data-generator.js';
 
 describe('Multi-Agent Integration Tests', () => {
   let tempDir: string;
   let server: DashboardServer;
   let port: number;
 
+  let origHome: string | undefined;
+
   beforeEach(async () => {
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'multi-agent-test-'));
     port = await getPort();
     TestDataGenerator.resetCounters();
+    origHome = process.env.HOME;
+    process.env.HOME = tempDir;
   });
 
   afterEach(async () => {
+    process.env.HOME = origHome;
     if (server) {
       await server.stop();
     }
@@ -214,7 +219,7 @@ describe('Multi-Agent Integration Tests', () => {
               failureRate: Math.random() < 0.1 ? 0.3 : 0,
             });
 
-            fs.writeFileSync(path.join(heavyDir, `heavy-${i}.json`), JSON.stringify(trace));
+            fs.writeFileSync(path.join(heavyDir, `heavy-${i}.json`), traceToJson(trace as unknown as Record<string, unknown>));
             resolve();
           });
         });
@@ -453,7 +458,7 @@ describe('Multi-Agent Integration Tests', () => {
             trigger: `trigger-${i}`,
           });
 
-          fs.writeFileSync(path.join(tracesDir, `${agentId}-${i}.json`), JSON.stringify(trace));
+          fs.writeFileSync(path.join(tracesDir, `${agentId}-${i}.json`), traceToJson(trace as unknown as Record<string, unknown>));
         }
       }
 
@@ -499,6 +504,7 @@ describe('Multi-Agent Integration Tests', () => {
       const tracesDir = path.join(tempDir, 'traces');
       const sessionDir = path.join(tempDir, 'sessions');
 
+      fs.mkdirSync(tracesDir, { recursive: true });
       fs.mkdirSync(sessionDir, { recursive: true });
 
       const agentId = 'hybrid-agent';
@@ -511,7 +517,7 @@ describe('Multi-Agent Integration Tests', () => {
         includeTimings: true,
       });
 
-      fs.writeFileSync(path.join(tracesDir, 'hybrid-json.json'), JSON.stringify(jsonTrace));
+      fs.writeFileSync(path.join(tracesDir, 'hybrid-json.json'), traceToJson(jsonTrace as unknown as Record<string, unknown>));
 
       // Create JSONL session trace for same agent
       const sessionTrace = TestDataGenerator.createSessionTrace({

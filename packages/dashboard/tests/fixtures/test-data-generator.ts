@@ -3,6 +3,13 @@ import * as path from 'node:path';
 import type { ExecutionGraph, ExecutionNode } from 'agentflow-core';
 import type { SessionEvent, WatchedTrace } from '../../src/watcher.js';
 
+/** Serialize a trace/graph to JSON, converting Maps to plain objects. */
+export function traceToJson(trace: Record<string, unknown>): string {
+  return JSON.stringify(trace, (_key, value) =>
+    value instanceof Map ? Object.fromEntries(value) : value,
+  );
+}
+
 export interface TestDataOptions {
   agentId?: string;
   nodeCount?: number;
@@ -90,7 +97,7 @@ export class TestDataGenerator {
     return {
       id: `trace-${Date.now()}`,
       rootNodeId: rootId,
-      nodes: Object.fromEntries(nodes),
+      nodes,
       edges: childIds.map((childId) => ({ from: rootId, to: childId })),
       startTime,
       endTime: Math.max(...Array.from(nodes.values()).map((n) => n.endTime || n.startTime)),
@@ -288,7 +295,7 @@ export class TestDataGenerator {
     return {
       id: sessionId,
       rootNodeId: rootId,
-      nodes: Object.fromEntries(nodes),
+      nodes,
       edges: toolIds.map((toolId) => ({ from: rootId, to: toolId })),
       startTime,
       endTime,
@@ -401,7 +408,7 @@ export class TestDataGenerator {
         });
 
         const traceFile = path.join(targetDir, `trace-${i}.json`);
-        fs.writeFileSync(traceFile, JSON.stringify(trace, null, 2));
+        fs.writeFileSync(traceFile, traceToJson(trace as unknown as Record<string, unknown>));
         filePaths.push(traceFile);
       }
     }
@@ -464,7 +471,7 @@ export class TestDataGenerator {
           });
 
           const filePath = path.join(targetDir, `perf-trace-${i}.json`);
-          fs.writeFileSync(filePath, JSON.stringify(trace));
+          fs.writeFileSync(filePath, traceToJson(trace as unknown as Record<string, unknown>));
           resolve();
         });
       });
