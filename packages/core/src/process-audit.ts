@@ -11,7 +11,7 @@
  * @module
  */
 
-import { execSync } from 'node:child_process';
+import { execFileSync, execSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, join } from 'node:path';
 
@@ -161,8 +161,9 @@ function auditSystemd(config: ProcessAuditConfig): SystemdUnitResult | null {
 
   const unit = config.systemdUnit;
   try {
-    const raw = execSync(
-      `systemctl --user show ${unit} --property=ActiveState,SubState,MainPID,NRestarts,Result --no-pager 2>/dev/null`,
+    const raw = execFileSync(
+      'systemctl',
+      ['--user', 'show', unit, '--property=ActiveState,SubState,MainPID,NRestarts,Result', '--no-pager'],
       { encoding: 'utf8', timeout: 5000 },
     );
     const props: Record<string, string> = {};
