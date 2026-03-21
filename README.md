@@ -1,5 +1,6 @@
 # AgentFlow
 
+[![CI](https://github.com/ClemenceChee/AgentFlow/actions/workflows/ci.yml/badge.svg)](https://github.com/ClemenceChee/AgentFlow/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/agentflow-core)](https://www.npmjs.com/package/agentflow-core)
 [![License](https://img.shields.io/badge/License-Apache%202.0%20+%20Commons%20Clause-blue.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue.svg)](https://www.typescriptlang.org/)
@@ -215,10 +216,18 @@ docs/               Documentation site (Docusaurus + TypeDoc API reference)
 git clone https://github.com/ClemenceChee/AgentFlow.git
 cd AgentFlow
 npm install
-npm test            # 400+ tests
+npm test            # 500+ tests
 npm run build       # All packages
+npm run typecheck   # Strict TypeScript
+npm run lint        # Biome
 npm run docs:dev    # Documentation site
 ```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for full development setup and PR guidelines.
+
+## Security
+
+Report vulnerabilities responsibly — see [SECURITY.md](SECURITY.md). Do not open public issues for security reports.
 
 ---
 
