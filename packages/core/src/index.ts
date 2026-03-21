@@ -18,8 +18,6 @@
 export { createEventEmitter, createExecutionEvent, createPatternEvent } from './event-emitter.js';
 // Graph construction
 export { createGraphBuilder } from './graph-builder.js';
-// Insight engine (Tier 2)
-export { createInsightEngine } from './insight-engine.js';
 // Graph querying
 export {
   findWaitingOn,
@@ -39,20 +37,19 @@ export { getTraceTree, groupByTraceId, stitchTrace } from './graph-stitch.js';
 export type { GuardConfig, GuardViolation } from './guards.js';
 // Runtime guards
 export { checkGuards, withGuards } from './guards.js';
+// Insight engine (Tier 2)
+export { createInsightEngine } from './insight-engine.js';
 export type { JsonEventWriterConfig } from './json-event-writer.js';
 // JSON event writer
 export { createJsonEventWriter } from './json-event-writer.js';
 // Knowledge store
 export { createKnowledgeStore } from './knowledge-store.js';
-// Policy source
-export { createPolicySource } from './policy-source.js';
-export type { SomaEventWriterConfig } from './soma-event-writer.js';
-// Soma event writer
-export { createSomaEventWriter } from './soma-event-writer.js';
 // Live monitor
 export { startLive } from './live.js';
 // Serialization / deserialization
 export { graphToJson, loadGraph } from './loader.js';
+// Policy source
+export { createPolicySource } from './policy-source.js';
 export type {
   OsProcess,
   PidFileResult,
@@ -63,14 +60,12 @@ export type {
   WorkersResult,
 } from './process-audit.js';
 // Process audit
-export { auditProcesses, discoverAllProcessConfigs, discoverProcessConfig, formatAuditReport } from './process-audit.js';
-// Prompt builders (Tier 2)
 export {
-  buildFailureAnalysisPrompt,
-  buildAnomalyExplanationPrompt,
-  buildAgentSummaryPrompt,
-  buildFixSuggestionPrompt,
-} from './prompt-builder.js';
+  auditProcesses,
+  discoverAllProcessConfigs,
+  discoverProcessConfig,
+  formatAuditReport,
+} from './process-audit.js';
 // Process mining
 export {
   checkConformance,
@@ -79,9 +74,21 @@ export {
   getBottlenecks,
   getPathSignature,
 } from './process-mining.js';
+// Prompt builders (Tier 2)
+export {
+  buildAgentSummaryPrompt,
+  buildAnomalyExplanationPrompt,
+  buildFailureAnalysisPrompt,
+  buildFixSuggestionPrompt,
+} from './prompt-builder.js';
+// Run receipts
+export { formatReceipt, toReceipt } from './receipts.js';
 export type { RunConfig, RunResult } from './runner.js';
 // CLI runner
 export { runTraced } from './runner.js';
+export type { SomaEventWriterConfig } from './soma-event-writer.js';
+// Soma event writer
+export { createSomaEventWriter } from './soma-event-writer.js';
 export type { TraceStore } from './trace-store.js';
 // Trace storage
 export { createTraceStore } from './trace-store.js';
@@ -91,12 +98,20 @@ export type {
   AgentFlowConfig,
   AgentFlowEventType,
   AgentProfile,
+  AnalysisFn,
   Bottleneck,
+  ConformanceHistory,
+  ConformanceHistoryEntry,
   ConformanceReport,
+  DecisionTraceData,
   Deviation,
   DeviationType,
   DistributedTrace,
+  DriftOptions,
+  DriftReport,
   EdgeType,
+  EfficiencyFlag,
+  EfficiencyReport,
   EventEmitter,
   EventEmitterConfig,
   EventWriter,
@@ -107,31 +122,36 @@ export type {
   ExecutionNode,
   FailurePoint,
   GraphBuilder,
+  GraphStats,
+  GraphStatus,
+  GuardExplanation,
   InsightEngine,
   InsightEngineConfig,
   InsightEvent,
   InsightResult,
-  GraphStats,
-  GraphStatus,
   KnowledgeStore,
   KnowledgeStoreConfig,
   MutableExecutionNode,
+  NodeCost,
   NodeStatus,
   NodeType,
+  OutcomeAssertion,
   PatternEvent,
   PolicySource,
   PolicyThresholds,
   ProcessContext,
   ProcessModel,
   ProcessTransition,
+  RunEfficiency,
+  RunReceipt,
   SemanticContext,
   StartNodeOptions,
-  DecisionTraceData,
+  StepSummary,
   TraceEvent,
   TraceEventType,
   Variant,
+  VariantOptions,
   Writer,
-  AnalysisFn,
 } from './types.js';
 // Trace visualization
 export { toAsciiTree, toTimeline } from './visualize.js';

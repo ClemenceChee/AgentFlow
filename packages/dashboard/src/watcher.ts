@@ -4,7 +4,7 @@ import * as path from 'node:path';
 import type { ExecutionGraph, ExecutionNode } from 'agentflow-core';
 import { loadGraph } from 'agentflow-core';
 import chokidar from 'chokidar';
-import { findAdapter, type NormalizedTrace } from './adapters/index.js';
+import { findAdapter } from './adapters/index.js';
 import type { DashboardUserConfig } from './config.js';
 import { getAgentDetection, getAliases, getSkipDirectories, getSkipFiles } from './config.js';
 import {
@@ -100,7 +100,9 @@ export class TraceWatcher extends EventEmitter {
     ]);
     this.userSkipDirs = new Set(getSkipDirectories(this.userConfig));
     // Deduplicate watch directories (config discoveryPaths may overlap with CLI --data-dir)
-    this.allWatchDirs = [...new Set([this.tracesDir, ...this.dataDirs].map((d) => path.resolve(d)))];
+    this.allWatchDirs = [
+      ...new Set([this.tracesDir, ...this.dataDirs].map((d) => path.resolve(d))),
+    ];
     this.ensureTracesDir();
     this.loadExistingFiles();
     this.archiveOldTraces();
@@ -112,7 +114,7 @@ export class TraceWatcher extends EventEmitter {
   /** Move trace files older than maxAgeMs into archive/YYYY-MM/ subdirectories. */
   private archiveOldTraces() {
     const cutoff = Date.now() - this.maxAgeMs;
-    let archived = 0;
+    const _archived = 0;
 
     for (const dir of this.allWatchDirs) {
       if (!fs.existsSync(dir)) continue;
@@ -133,7 +135,12 @@ export class TraceWatcher extends EventEmitter {
     try {
       const entries = fs.readdirSync(dir, { withFileTypes: true });
       for (const entry of entries) {
-        if (entry.name.startsWith('.') || entry.name === 'archive' || this.userSkipDirs.has(entry.name)) continue;
+        if (
+          entry.name.startsWith('.') ||
+          entry.name === 'archive' ||
+          this.userSkipDirs.has(entry.name)
+        )
+          continue;
         const fullPath = path.join(dir, entry.name);
 
         if (entry.isDirectory()) {
@@ -1617,7 +1624,8 @@ export class TraceWatcher extends EventEmitter {
 
     // When multiple traces remain, prefer the one with more nodes (richer data)
     let best = candidates[0]!;
-    let bestNodeCount = best.nodes instanceof Map ? best.nodes.size : Object.keys(best.nodes ?? {}).length;
+    let bestNodeCount =
+      best.nodes instanceof Map ? best.nodes.size : Object.keys(best.nodes ?? {}).length;
     for (let i = 1; i < candidates.length; i++) {
       const c = candidates[i]!;
       const nc = c.nodes instanceof Map ? c.nodes.size : Object.keys(c.nodes ?? {}).length;

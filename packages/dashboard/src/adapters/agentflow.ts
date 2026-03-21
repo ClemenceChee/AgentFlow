@@ -15,12 +15,24 @@
 import type { TraceAdapter } from './types.js';
 
 const SKIP_FILES = new Set([
-  'workers.json', 'package.json', 'package-lock.json',
-  'tsconfig.json', 'biome.json', 'auth.json',
-  'models.json', 'config.json',
+  'workers.json',
+  'package.json',
+  'package-lock.json',
+  'tsconfig.json',
+  'biome.json',
+  'auth.json',
+  'models.json',
+  'config.json',
 ]);
 
-const SKIP_SUFFIXES = ['-state.json', '-config.json', '-watch-state.json', '.tmp', '.bak', '.backup'];
+const SKIP_SUFFIXES = [
+  '-state.json',
+  '-config.json',
+  '-watch-state.json',
+  '.tmp',
+  '.bak',
+  '.backup',
+];
 
 /**
  * AgentFlow adapter — acts as the fallback adapter.

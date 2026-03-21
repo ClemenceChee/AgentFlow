@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { SomaIntelligence } from './SomaIntelligence';
-import { SomaGovernance } from './SomaGovernance';
-import { SomaPolicyEditor } from './SomaPolicyEditor';
-import { SomaKnowledgeExplorer } from './SomaKnowledgeExplorer';
-import { SomaActivityFeed } from './SomaActivityFeed';
-import { useSomaReport } from '../hooks/useSomaReport';
 import { useSomaGovernance } from '../hooks/useSomaGovernance';
+import { useSomaReport } from '../hooks/useSomaReport';
 import type { SomaTier } from '../hooks/useSomaTier';
+import { SomaActivityFeed } from './SomaActivityFeed';
+import { SomaGovernance } from './SomaGovernance';
+import { SomaIntelligence } from './SomaIntelligence';
+import { SomaKnowledgeExplorer } from './SomaKnowledgeExplorer';
+import { SomaPolicyEditor } from './SomaPolicyEditor';
 
 export type SomaView = 'intelligence' | 'review' | 'policies' | 'knowledge' | 'activity';
 
@@ -40,15 +40,25 @@ export function SomaPage({ tier }: Props) {
           <div className="soma-page__teaser-features">
             <div className="soma-page__teaser-card">
               <strong>Governance Layers</strong>
-              <p>Four-layer knowledge architecture: Archive, Working, Emerging, Canon. Machine-proposed insights flow through human review before becoming organizational truth.</p>
+              <p>
+                Four-layer knowledge architecture: Archive, Working, Emerging, Canon.
+                Machine-proposed insights flow through human review before becoming organizational
+                truth.
+              </p>
             </div>
             <div className="soma-page__teaser-card">
               <strong>Guard Policies</strong>
-              <p>Define enforcement rules that shape agent behavior. Warn, block, or abort based on learned patterns.</p>
+              <p>
+                Define enforcement rules that shape agent behavior. Warn, block, or abort based on
+                learned patterns.
+              </p>
             </div>
             <div className="soma-page__teaser-card">
               <strong>Knowledge Explorer</strong>
-              <p>Browse everything SOMA has learned — insights, decisions, constraints, contradictions — organized by layer and confidence.</p>
+              <p>
+                Browse everything SOMA has learned — insights, decisions, constraints,
+                contradictions — organized by layer and confidence.
+              </p>
             </div>
           </div>
           <p className="soma-page__teaser-cta">
@@ -64,19 +74,21 @@ export function SomaPage({ tier }: Props) {
   return (
     <div className="soma-page">
       <div className="soma-page__tabs">
-        {(Object.entries(VIEW_LABELS) as [SomaView, { icon: string; label: string }][]).map(([view, { icon, label }]) => {
-          const locked = PAID_VIEWS.includes(view) && !isPro;
-          return (
-            <button
-              key={view}
-              className={`soma-page__tab ${activeView === view ? 'soma-page__tab--active' : ''} ${locked ? 'soma-page__tab--locked' : ''}`}
-              onClick={() => !locked && setActiveView(view)}
-              title={locked ? 'Configure SOMA governance to unlock' : label}
-            >
-              {icon} {label} {locked && '\u{1F512}'}
-            </button>
-          );
-        })}
+        {(Object.entries(VIEW_LABELS) as [SomaView, { icon: string; label: string }][]).map(
+          ([view, { icon, label }]) => {
+            const locked = PAID_VIEWS.includes(view) && !isPro;
+            return (
+              <button
+                key={view}
+                className={`soma-page__tab ${activeView === view ? 'soma-page__tab--active' : ''} ${locked ? 'soma-page__tab--locked' : ''}`}
+                onClick={() => !locked && setActiveView(view)}
+                title={locked ? 'Configure SOMA governance to unlock' : label}
+              >
+                {icon} {label} {locked && '\u{1F512}'}
+              </button>
+            );
+          },
+        )}
       </div>
 
       <div className="soma-page__content">
@@ -87,7 +99,11 @@ export function SomaPage({ tier }: Props) {
           <div className="soma-page__loading">Loading intelligence data...</div>
         )}
         {activeView === 'review' && isPro && (
-          <SomaGovernance data={somaGov.data} onPromote={somaGov.promote} onReject={somaGov.reject} />
+          <SomaGovernance
+            data={somaGov.data}
+            onPromote={somaGov.promote}
+            onReject={somaGov.reject}
+          />
         )}
         {activeView === 'policies' && isPro && <SomaPolicyEditor />}
         {activeView === 'knowledge' && isPro && <SomaKnowledgeExplorer />}
@@ -97,7 +113,10 @@ export function SomaPage({ tier }: Props) {
           <div className="soma-page__locked">
             <div className="soma-page__locked-icon">{'\u{1F512}'}</div>
             <h3>{VIEW_LABELS[activeView].label}</h3>
-            <p>This feature requires SOMA governance data. Run <code>soma watch</code> to start generating insights and policies.</p>
+            <p>
+              This feature requires SOMA governance data. Run <code>soma watch</code> to start
+              generating insights and policies.
+            </p>
           </div>
         )}
       </div>

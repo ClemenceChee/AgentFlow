@@ -1,8 +1,8 @@
 import { rmSync } from 'node:fs';
-import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
-import type { AnalysisFn, ExecutionEvent, InsightEvent } from 'agentflow-core';
+import type { AnalysisFn } from 'agentflow-core';
 import {
   createExecutionEvent,
   createGraphBuilder,
@@ -172,8 +172,8 @@ describe('InsightEngine', () => {
 
       const insights = store.getRecentInsights('test-agent', { type: 'failure-analysis' });
       expect(insights).toHaveLength(1);
-      expect(insights[0]!.response).toBe('Stored insight');
-      expect(insights[0]!.prompt).toContain('Failure');
+      expect(insights[0]?.response).toBe('Stored insight');
+      expect(insights[0]?.prompt).toContain('Failure');
     });
   });
 
@@ -284,7 +284,9 @@ describe('InsightEngine', () => {
   describe('error handling', () => {
     it('catches analysisFn errors and returns error message', async () => {
       const store = seedStore(testDir);
-      const fn: AnalysisFn = async () => { throw new Error('LLM quota exceeded'); };
+      const fn: AnalysisFn = async () => {
+        throw new Error('LLM quota exceeded');
+      };
       const engine = createInsightEngine(store, fn);
 
       const result = await engine.explainFailures('test-agent');
@@ -294,7 +296,9 @@ describe('InsightEngine', () => {
 
     it('does not cache failed analyses', async () => {
       const store = seedStore(testDir);
-      const fn: AnalysisFn = async () => { throw new Error('LLM quota exceeded'); };
+      const fn: AnalysisFn = async () => {
+        throw new Error('LLM quota exceeded');
+      };
       const engine = createInsightEngine(store, fn);
 
       await engine.explainFailures('test-agent');
@@ -305,7 +309,9 @@ describe('InsightEngine', () => {
 
     it('handles non-Error throws', async () => {
       const store = seedStore(testDir);
-      const fn: AnalysisFn = async () => { throw 'string error'; };
+      const fn: AnalysisFn = async () => {
+        throw 'string error';
+      };
       const engine = createInsightEngine(store, fn);
 
       const result = await engine.explainFailures('test-agent');

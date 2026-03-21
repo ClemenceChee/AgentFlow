@@ -17,16 +17,19 @@ export const INITIAL_STATE: DashboardState = {
 export function pickInitialAgent(agents: AgentStats[]): string | null {
   if (agents.length === 0) return null;
   const withFails = agents.filter((a) => a.failedExecutions > 0);
-  if (withFails.length > 0) return withFails.sort((a, b) => b.failedExecutions - a.failedExecutions)[0]!.agentId;
-  return agents.sort((a, b) => b.totalExecutions - a.totalExecutions)[0]!.agentId;
+  if (withFails.length > 0)
+    return withFails.sort((a, b) => b.failedExecutions - a.failedExecutions)[0]?.agentId;
+  return agents.sort((a, b) => b.totalExecutions - a.totalExecutions)[0]?.agentId;
 }
 
 /** Pick the best initial execution for an agent: first failed, or most recent. */
 export function pickInitialExecution(traces: TraceEntry[], agentId: string): string | null {
   const agentTraces = traces.filter((t) => t.agentId === agentId);
   if (agentTraces.length === 0) return null;
-  const failed = agentTraces.filter((t) => t.status === 'failed').sort((a, b) => b.timestamp - a.timestamp);
-  if (failed.length > 0) return failed[0]!.filename;
+  const failed = agentTraces
+    .filter((t) => t.status === 'failed')
+    .sort((a, b) => b.timestamp - a.timestamp);
+  if (failed.length > 0) return failed[0]?.filename;
   const recent = agentTraces.sort((a, b) => b.timestamp - a.timestamp);
-  return recent[0]!.filename;
+  return recent[0]?.filename;
 }

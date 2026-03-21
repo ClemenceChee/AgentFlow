@@ -163,7 +163,13 @@ function auditSystemd(config: ProcessAuditConfig): SystemdUnitResult | null {
   try {
     const raw = execFileSync(
       'systemctl',
-      ['--user', 'show', unit, '--property=ActiveState,SubState,MainPID,NRestarts,Result', '--no-pager'],
+      [
+        '--user',
+        'show',
+        unit,
+        '--property=ActiveState,SubState,MainPID,NRestarts,Result',
+        '--no-pager',
+      ],
       { encoding: 'utf8', timeout: 5000 },
     );
     const props: Record<string, string> = {};
@@ -284,7 +290,7 @@ function getOsProcesses(processName: string): OsProcess[] {
  */
 export function discoverProcessConfig(dirs: string[]): ProcessAuditConfig | null {
   const configs = discoverAllProcessConfigs(dirs);
-  return configs.length > 0 ? configs[0] ?? null : null;
+  return configs.length > 0 ? (configs[0] ?? null) : null;
 }
 
 /**
@@ -329,8 +335,7 @@ export function discoverAllProcessConfigs(dirs: string[]): ProcessAuditConfig[] 
         if (!configs.has(name)) {
           configs.set(name, { processName: name });
         }
-        const cfg = configs.get(name)!; // biome-ignore lint: just set above
-        if (!cfg.pidFile) cfg.pidFile = fp;
+        const cfg = configs.get(name)!;        if (!cfg.pidFile) cfg.pidFile = fp;
       }
 
       // Worker registries
@@ -340,8 +345,7 @@ export function discoverAllProcessConfigs(dirs: string[]): ProcessAuditConfig[] 
           configs.set(name, { processName: name });
         }
         if (name) {
-          const cfg = configs.get(name)!; // biome-ignore lint: just set above
-          if (!cfg.workersFile) cfg.workersFile = fp;
+          const cfg = configs.get(name)!;          if (!cfg.workersFile) cfg.workersFile = fp;
         }
       }
     }
@@ -368,8 +372,7 @@ export function discoverAllProcessConfigs(dirs: string[]): ProcessAuditConfig[] 
       if (!configs.has(name)) {
         configs.set(name, { processName: name });
       }
-      const cfg = configs.get(name)!; // biome-ignore lint: just set above
-      cfg.systemdUnit = unitName;
+      const cfg = configs.get(name)!;      cfg.systemdUnit = unitName;
     }
   } catch {
     /* systemd not available */

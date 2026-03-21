@@ -171,8 +171,8 @@ describe('discoverProcess', () => {
       (t) => t.from === 'agent:main' && t.to === 'tool:fetch',
     );
     expect(mainToFetch).toBeDefined();
-    expect(mainToFetch!.count).toBe(10);
-    expect(mainToFetch!.probability).toBe(0.5); // 50% because main has two children
+    expect(mainToFetch?.count).toBe(10);
+    expect(mainToFetch?.probability).toBe(0.5); // 50% because main has two children
   });
 
   it('discovers divergent transitions with correct probabilities', () => {
@@ -187,14 +187,14 @@ describe('discoverProcess', () => {
       (t) => t.from === 'agent:main' && t.to === 'tool:analyze',
     );
     expect(mainToAnalyze).toBeDefined();
-    expect(mainToAnalyze!.count).toBe(10);
+    expect(mainToAnalyze?.count).toBe(10);
 
     // main→retry: only 2 times (retry variant only)
     const mainToRetry = model.transitions.find(
       (t) => t.from === 'agent:main' && t.to === 'tool:retry',
     );
     expect(mainToRetry).toBeDefined();
-    expect(mainToRetry!.count).toBe(2);
+    expect(mainToRetry?.count).toBe(2);
   });
 
   it('works with a single graph', () => {
@@ -224,8 +224,8 @@ describe('findVariants', () => {
     const variants = findVariants(graphs);
 
     expect(variants).toHaveLength(1);
-    expect(variants[0]!.count).toBe(10);
-    expect(variants[0]!.percentage).toBe(100);
+    expect(variants[0]?.count).toBe(10);
+    expect(variants[0]?.percentage).toBe(100);
   });
 
   it('returns multiple variants sorted by frequency', () => {
@@ -234,10 +234,10 @@ describe('findVariants', () => {
     const variants = findVariants([...happy, ...failure]);
 
     expect(variants).toHaveLength(2);
-    expect(variants[0]!.count).toBe(8);
-    expect(variants[0]!.percentage).toBe(80);
-    expect(variants[1]!.count).toBe(2);
-    expect(variants[1]!.percentage).toBe(20);
+    expect(variants[0]?.count).toBe(8);
+    expect(variants[0]?.percentage).toBe(80);
+    expect(variants[1]?.count).toBe(2);
+    expect(variants[1]?.percentage).toBe(20);
   });
 
   it('returns empty array for empty input', () => {
@@ -259,9 +259,9 @@ describe('findVariants', () => {
     const graphs = Array.from({ length: 3 }, () => buildHappyPath());
     const variants = findVariants(graphs);
 
-    expect(variants[0]!.graphIds).toHaveLength(3);
-    expect(variants[0]!.exampleGraph).toBeDefined();
-    expect(variants[0]!.exampleGraph.agentId).toBe('test-agent');
+    expect(variants[0]?.graphIds).toHaveLength(3);
+    expect(variants[0]?.exampleGraph).toBeDefined();
+    expect(variants[0]?.exampleGraph.agentId).toBe('test-agent');
   });
 });
 
@@ -279,8 +279,8 @@ describe('getBottlenecks', () => {
 
     // Verify sorted by p95 descending
     for (let i = 1; i < bottlenecks.length; i++) {
-      expect(bottlenecks[i - 1]!.durations.p95).toBeGreaterThanOrEqual(
-        bottlenecks[i]!.durations.p95,
+      expect(bottlenecks[i - 1]?.durations.p95).toBeGreaterThanOrEqual(
+        bottlenecks[i]?.durations.p95,
       );
     }
   });
@@ -297,12 +297,12 @@ describe('getBottlenecks', () => {
     const analyzeBottleneck = bottlenecks.find((b) => b.nodeName === 'analyze');
 
     expect(fetchBottleneck).toBeDefined();
-    expect(fetchBottleneck!.occurrences).toBe(5); // present in all 5 graphs
-    expect(fetchBottleneck!.percentOfGraphs).toBe(100);
+    expect(fetchBottleneck?.occurrences).toBe(5); // present in all 5 graphs
+    expect(fetchBottleneck?.percentOfGraphs).toBe(100);
 
     expect(analyzeBottleneck).toBeDefined();
-    expect(analyzeBottleneck!.occurrences).toBe(3); // only in happy paths
-    expect(analyzeBottleneck!.percentOfGraphs).toBe(60);
+    expect(analyzeBottleneck?.occurrences).toBe(3); // only in happy paths
+    expect(analyzeBottleneck?.percentOfGraphs).toBe(60);
   });
 
   it('returns empty array for empty input', () => {
@@ -337,7 +337,7 @@ describe('getBottlenecks', () => {
     const bottlenecks = getBottlenecks([snapshot]);
     const runningTool = bottlenecks.find((b) => b.nodeName === 'running-tool');
     expect(runningTool).toBeDefined();
-    expect(runningTool!.durations.median).toBeGreaterThanOrEqual(0);
+    expect(runningTool?.durations.median).toBeGreaterThanOrEqual(0);
   });
 });
 
@@ -461,8 +461,8 @@ describe('process mining integration', () => {
     // Phase 3: Find variants
     const variants = findVariants(allGraphs);
     expect(variants.length).toBe(2);
-    expect(variants[0]!.count).toBe(8); // happy path is dominant
-    expect(variants[1]!.count).toBe(2); // failure variant
+    expect(variants[0]?.count).toBe(8); // happy path is dominant
+    expect(variants[1]?.count).toBe(2); // failure variant
 
     // Phase 4: Get bottlenecks
     const bottlenecks = getBottlenecks(allGraphs);
@@ -470,7 +470,7 @@ describe('process mining integration', () => {
     // main agent should be present in all runs
     const mainBottleneck = bottlenecks.find((b) => b.nodeName === 'main');
     expect(mainBottleneck).toBeDefined();
-    expect(mainBottleneck!.occurrences).toBe(10);
+    expect(mainBottleneck?.occurrences).toBe(10);
 
     // Phase 5: Check conformance of a new happy path
     const newHappy = buildHappyPath('-new');

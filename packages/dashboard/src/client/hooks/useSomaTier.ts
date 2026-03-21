@@ -7,13 +7,19 @@ export interface SomaTier {
 }
 
 export function useSomaTier(): SomaTier {
-  const [tier, setTier] = useState<SomaTier>({ tier: 'teaser', somaVault: false, governanceAvailable: false });
+  const [tier, setTier] = useState<SomaTier>({
+    tier: 'teaser',
+    somaVault: false,
+    governanceAvailable: false,
+  });
 
   const fetchTier = useCallback(async () => {
     try {
       const res = await fetch('/api/soma/tier');
       if (res.ok) setTier(await res.json());
-    } catch { /* default to teaser */ }
+    } catch {
+      /* default to teaser */
+    }
   }, []);
 
   useEffect(() => {

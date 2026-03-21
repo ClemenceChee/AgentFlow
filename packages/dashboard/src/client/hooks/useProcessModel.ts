@@ -13,12 +13,18 @@ export interface Bottleneck {
 }
 
 export interface ProcessModelData {
-  model: { transitions: { from: string; to: string; count: number }[]; nodeTypes: Record<string, string> };
+  model: {
+    transitions: { from: string; to: string; count: number }[];
+    nodeTypes: Record<string, string>;
+  };
   variants: ProcessVariant[];
   bottlenecks: Bottleneck[];
 }
 
-export function useProcessModel(agentId: string | null): { data: ProcessModelData | null; loading: boolean } {
+export function useProcessModel(agentId: string | null): {
+  data: ProcessModelData | null;
+  loading: boolean;
+} {
   const [data, setData] = useState<ProcessModelData | null>(null);
   const [loading, setLoading] = useState(false);
   const [lastAgent, setLastAgent] = useState<string | null>(null);
@@ -37,7 +43,10 @@ export function useProcessModel(agentId: string | null): { data: ProcessModelDat
   }, []);
 
   useEffect(() => {
-    if (!agentId) { setData(null); return; }
+    if (!agentId) {
+      setData(null);
+      return;
+    }
     if (agentId !== lastAgent) {
       setLastAgent(agentId);
       fetchModel(agentId);

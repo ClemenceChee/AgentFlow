@@ -29,9 +29,12 @@ export function BottleneckView({ model }: { model: ProcessModelData }) {
   const { nodes, edges, positions, maxP95 } = useMemo(() => {
     const trans = model.model.transitions;
     const nodeSet = new Set<string>();
-    for (const t of trans) { nodeSet.add(t.from); nodeSet.add(t.to); }
+    for (const t of trans) {
+      nodeSet.add(t.from);
+      nodeSet.add(t.to);
+    }
     const nodeArr = [...nodeSet];
-    const maxCount = Math.max(...trans.map((t) => t.count), 1);
+    const _maxCount = Math.max(...trans.map((t) => t.count), 1);
 
     // Build p95 map
     const p95Map = new Map<string, number>();
@@ -76,7 +79,8 @@ export function BottleneckView({ model }: { model: ProcessModelData }) {
     return { nodes: nodeArr, edges: trans, positions: pos, maxP95: maxP };
   }, [model]);
 
-  if (nodes.length === 0) return <div className="workspace__empty">No process data to visualize</div>;
+  if (nodes.length === 0)
+    return <div className="workspace__empty">No process data to visualize</div>;
 
   const maxX = Math.max(...[...positions.values()].map((p) => p.x), 200);
   const maxY = Math.max(...[...positions.values()].map((p) => p.y), 100);
@@ -84,94 +88,182 @@ export function BottleneckView({ model }: { model: ProcessModelData }) {
   return (
     <div className="bn-layout">
       <div style={{ fontSize: 'var(--xs)', color: 'var(--t3)', marginBottom: 'var(--s2)' }}>
-        Thermal view — blue = fast, red = slow (by p95 duration). {model.bottlenecks.length} bottlenecks detected.
+        Thermal view — blue = fast, red = slow (by p95 duration). {model.bottlenecks.length}{' '}
+        bottlenecks detected.
       </div>
 
       {/* Legend */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s2)', marginBottom: 'var(--s3)', fontSize: 'var(--xs)' }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 'var(--s2)',
+          marginBottom: 'var(--s3)',
+          fontSize: 'var(--xs)',
+        }}
+      >
         <span style={{ color: heatColor(0) }}>{'\u25A0'} Fast</span>
-        <div style={{ width: 80, height: 8, borderRadius: 4, background: 'linear-gradient(to right, rgb(88,166,255), rgb(210,153,34), rgb(248,81,73))' }} />
+        <div
+          style={{
+            width: 80,
+            height: 8,
+            borderRadius: 4,
+            background:
+              'linear-gradient(to right, rgb(88,166,255), rgb(210,153,34), rgb(248,81,73))',
+          }}
+        />
         <span style={{ color: heatColor(1) }}>{'\u25A0'} Slow</span>
       </div>
 
       {/* Chart area — fixed height with scroll */}
       <div className="bn-chart-area">
         <div className="bn-chart-controls">
-          <button onClick={zp.zoomOut} className="zb">−</button>
-          <button onClick={zp.reset} className="zb">⟲</button>
-          <button onClick={zp.zoomIn} className="zb">+</button>
+          <button onClick={zp.zoomOut} className="zb">
+            −
+          </button>
+          <button onClick={zp.reset} className="zb">
+            ⟲
+          </button>
+          <button onClick={zp.zoomIn} className="zb">
+            +
+          </button>
         </div>
-        <svg width="100%" height={maxY + 80} viewBox={`0 0 ${maxX + 220} ${maxY + 80}`}
-             {...zp.handlers} style={{ cursor: 'grab' }}>
+        <svg
+          width="100%"
+          height={maxY + 80}
+          viewBox={`0 0 ${maxX + 220} ${maxY + 80}`}
+          {...zp.handlers}
+          style={{ cursor: 'grab' }}
+        >
           <g transform={zp.svgTransform}>
-        <defs>
-          <marker id="bn-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
-            <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--t3)" opacity="0.4" />
-          </marker>
-          <filter id="glow">
-            <feGaussianBlur stdDeviation="4" result="blur" />
-            <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-          </filter>
-        </defs>
+            <defs>
+              <marker
+                id="bn-arrow"
+                viewBox="0 0 10 10"
+                refX="9"
+                refY="5"
+                markerWidth="5"
+                markerHeight="5"
+                orient="auto-start-reverse"
+              >
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--t3)" opacity="0.4" />
+              </marker>
+              <filter id="glow">
+                <feGaussianBlur stdDeviation="4" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
 
-        {/* Edges */}
-        {edges.map((e, i) => {
-          const from = positions.get(e.from);
-          const to = positions.get(e.to);
-          if (!from || !to) return null;
-          return (
-            <line key={i} x1={from.x + 140} y1={from.y + 20} x2={to.x} y2={to.y + 20}
-              stroke="var(--t3)" strokeWidth={1} opacity={0.3} markerEnd="url(#bn-arrow)" />
-          );
-        })}
+            {/* Edges */}
+            {edges.map((e, i) => {
+              const from = positions.get(e.from);
+              const to = positions.get(e.to);
+              if (!from || !to) return null;
+              return (
+                <line
+                  key={i}
+                  x1={from.x + 140}
+                  y1={from.y + 20}
+                  x2={to.x}
+                  y2={to.y + 20}
+                  stroke="var(--t3)"
+                  strokeWidth={1}
+                  opacity={0.3}
+                  markerEnd="url(#bn-arrow)"
+                />
+              );
+            })}
 
-        {/* Nodes with heat coloring */}
-        {nodes.map((n) => {
-          const p = positions.get(n);
-          if (!p) return null;
-          const p95 = model.bottlenecks.find((b) => b.nodeName === n)?.p95 ?? 0;
-          const ratio = maxP95 > 0 ? p95 / maxP95 : 0;
-          const color = heatColor(ratio);
-          const isHot = ratio > 0.7;
+            {/* Nodes with heat coloring */}
+            {nodes.map((n) => {
+              const p = positions.get(n);
+              if (!p) return null;
+              const p95 = model.bottlenecks.find((b) => b.nodeName === n)?.p95 ?? 0;
+              const ratio = maxP95 > 0 ? p95 / maxP95 : 0;
+              const color = heatColor(ratio);
+              const isHot = ratio > 0.7;
 
-          return (
-            <g key={n} filter={isHot ? 'url(#glow)' : undefined}>
-              <rect x={p.x} y={p.y} width={140} height={40} rx={5}
-                fill={color} opacity={0.15} stroke={color} strokeWidth={isHot ? 3 : 1.5} />
-              <text x={p.x + 8} y={p.y + 16} fill="#e6edf3" fontSize={10} fontFamily="var(--fm)" fontWeight={600}>
-                {n.length > 18 ? n.slice(0, 18) + '\u2026' : n}
-              </text>
-              {p95 > 0 && (
-                <text x={p.x + 8} y={p.y + 32} fill={color} fontSize={10} fontFamily="var(--fm)" fontWeight={700}>
-                  p95: {fmtDur(p95)}
-                </text>
-              )}
-            </g>
-          );
-        })}
+              return (
+                <g key={n} filter={isHot ? 'url(#glow)' : undefined}>
+                  <rect
+                    x={p.x}
+                    y={p.y}
+                    width={140}
+                    height={40}
+                    rx={5}
+                    fill={color}
+                    opacity={0.15}
+                    stroke={color}
+                    strokeWidth={isHot ? 3 : 1.5}
+                  />
+                  <text
+                    x={p.x + 8}
+                    y={p.y + 16}
+                    fill="#e6edf3"
+                    fontSize={10}
+                    fontFamily="var(--fm)"
+                    fontWeight={600}
+                  >
+                    {n.length > 18 ? `${n.slice(0, 18)}\u2026` : n}
+                  </text>
+                  {p95 > 0 && (
+                    <text
+                      x={p.x + 8}
+                      y={p.y + 32}
+                      fill={color}
+                      fontSize={10}
+                      fontFamily="var(--fm)"
+                      fontWeight={700}
+                    >
+                      p95: {fmtDur(p95)}
+                    </text>
+                  )}
+                </g>
+              );
+            })}
           </g>
         </svg>
       </div>
 
       {/* Bottleneck ranking — always visible */}
       <div className="bn-ranking">
-      <h4 style={{ fontSize: 'var(--xs)', color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.06em', margin: 'var(--s3) 0 var(--s2)' }}>
-        Bottleneck Ranking
-      </h4>
-      {model.bottlenecks.sort((a, b) => b.p95 - a.p95).map((b, i) => {
-        const ratio = maxP95 > 0 ? b.p95 / maxP95 : 0;
-        return (
-          <div key={b.nodeName} className="bn-row">
-            <span style={{ width: 18, color: 'var(--t3)', fontSize: 'var(--xs)' }}>#{i + 1}</span>
-            <span className="bn-row__name">{b.nodeName}</span>
-            <span className="bn-row__type">{b.nodeType}</span>
-            <span className="bn-row__p95" style={{ color: heatColor(ratio) }}>{fmtDur(b.p95)}</span>
-            <span className="bn-row__bar">
-              <span className="bn-row__fill" style={{ width: `${ratio * 100}%`, background: heatColor(ratio) }} />
-            </span>
-          </div>
-        );
-      })}
+        <h4
+          style={{
+            fontSize: 'var(--xs)',
+            color: 'var(--t3)',
+            textTransform: 'uppercase',
+            letterSpacing: '.06em',
+            margin: 'var(--s3) 0 var(--s2)',
+          }}
+        >
+          Bottleneck Ranking
+        </h4>
+        {model.bottlenecks
+          .sort((a, b) => b.p95 - a.p95)
+          .map((b, i) => {
+            const ratio = maxP95 > 0 ? b.p95 / maxP95 : 0;
+            return (
+              <div key={b.nodeName} className="bn-row">
+                <span style={{ width: 18, color: 'var(--t3)', fontSize: 'var(--xs)' }}>
+                  #{i + 1}
+                </span>
+                <span className="bn-row__name">{b.nodeName}</span>
+                <span className="bn-row__type">{b.nodeType}</span>
+                <span className="bn-row__p95" style={{ color: heatColor(ratio) }}>
+                  {fmtDur(b.p95)}
+                </span>
+                <span className="bn-row__bar">
+                  <span
+                    className="bn-row__fill"
+                    style={{ width: `${ratio * 100}%`, background: heatColor(ratio) }}
+                  />
+                </span>
+              </div>
+            );
+          })}
       </div>
     </div>
   );

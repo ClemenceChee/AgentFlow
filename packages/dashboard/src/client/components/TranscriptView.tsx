@@ -3,20 +3,39 @@ import type { FullTrace, SessionEvent } from '../hooks/useSelectedTrace';
 
 function fmtTime(ts?: number) {
   if (!ts) return '';
-  return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  return new Date(ts).toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
 }
 
 const ROLE_CONFIG: Record<string, { icon: string; label: string; cls: string; origin: string }> = {
   user: { icon: '\u25B6', label: 'User Input', cls: 'tv-bubble--user', origin: 'user' },
   human: { icon: '\u25B6', label: 'User Input', cls: 'tv-bubble--user', origin: 'user' },
-  assistant: { icon: '\u2726', label: 'Agent Response', cls: 'tv-bubble--assistant', origin: 'agent' },
+  assistant: {
+    icon: '\u2726',
+    label: 'Agent Response',
+    cls: 'tv-bubble--assistant',
+    origin: 'agent',
+  },
   tool: { icon: '\u2699', label: 'Tool Call', cls: 'tv-bubble--tool', origin: 'agent' },
   tool_call: { icon: '\u2699', label: 'Tool Call', cls: 'tv-bubble--tool', origin: 'agent' },
   tool_result: { icon: '\u21B3', label: 'Tool Result', cls: 'tv-bubble--tool', origin: 'agent' },
   toolResult: { icon: '\u21B3', label: 'Tool Result', cls: 'tv-bubble--tool', origin: 'agent' },
   tool_use: { icon: '\u2699', label: 'Tool Use', cls: 'tv-bubble--tool', origin: 'agent' },
-  thinking: { icon: '\u2026', label: 'Agent Thinking', cls: 'tv-bubble--thinking', origin: 'agent' },
-  model_change: { icon: '\u21C4', label: 'Model Change', cls: 'tv-bubble--system', origin: 'system' },
+  thinking: {
+    icon: '\u2026',
+    label: 'Agent Thinking',
+    cls: 'tv-bubble--thinking',
+    origin: 'agent',
+  },
+  model_change: {
+    icon: '\u21C4',
+    label: 'Model Change',
+    cls: 'tv-bubble--system',
+    origin: 'system',
+  },
   system: { icon: '\u2630', label: 'System', cls: 'tv-bubble--system', origin: 'system' },
   event: { icon: '\u25CB', label: 'Event', cls: 'tv-bubble--event', origin: 'system' },
 };
@@ -33,19 +52,21 @@ export function TranscriptView({ trace }: { trace: FullTrace }) {
     }
     setLoading(true);
     fetch(`/api/traces/${encodeURIComponent(trace.filename)}/events`)
-      .then((r) => r.ok ? r.json() : [])
+      .then((r) => (r.ok ? r.json() : []))
       .then((d) => setEvents(Array.isArray(d) ? d : []))
       .catch(() => setEvents([]))
       .finally(() => setLoading(false));
   }, [trace.filename, trace.sessionEvents]);
 
   if (loading) return <div className="workspace__empty">Loading transcript...</div>;
-  if (events.length === 0) return <div className="workspace__empty">No session events for this trace</div>;
+  if (events.length === 0)
+    return <div className="workspace__empty">No session events for this trace</div>;
 
   const toggleThinking = (idx: number) => {
     setExpandedThinking((prev) => {
       const next = new Set(prev);
-      if (next.has(idx)) next.delete(idx); else next.add(idx);
+      if (next.has(idx)) next.delete(idx);
+      else next.add(idx);
       return next;
     });
   };
@@ -59,14 +80,22 @@ export function TranscriptView({ trace }: { trace: FullTrace }) {
           <div className="tv-bubble__header">
             <span className="tv-origin tv-origin--system">system</span>
             <span className="tv-bubble__icon">{'\u2718'}</span>
-            <span className="tv-bubble__role">{failedNodes.length} Failed Node{failedNodes.length > 1 ? 's' : ''}</span>
+            <span className="tv-bubble__role">
+              {failedNodes.length} Failed Node{failedNodes.length > 1 ? 's' : ''}
+            </span>
           </div>
           {failedNodes.map((n) => {
             const errMsg = n.metadata?.error ?? n.state?.error;
             return (
               <div key={n.id} style={{ padding: '4px 0', fontFamily: 'monospace', fontSize: 12 }}>
-                <strong>{n.type}: {n.name}</strong>
-                {errMsg && <div style={{ color: 'var(--color-critical, #f85149)', marginTop: 2 }}>Error: {String(errMsg)}</div>}
+                <strong>
+                  {n.type}: {n.name}
+                </strong>
+                {errMsg && (
+                  <div style={{ color: 'var(--color-critical, #f85149)', marginTop: 2 }}>
+                    Error: {String(errMsg)}
+                  </div>
+                )}
               </div>
             );
           })}
@@ -77,7 +106,8 @@ export function TranscriptView({ trace }: { trace: FullTrace }) {
         const msg = (raw.message as Record<string, unknown>) ?? {};
 
         // Role: check top-level, then nested message.role, then type
-        const role = (raw.role as string) || (msg.role as string) || (raw.type as string) || 'event';
+        const role =
+          (raw.role as string) || (msg.role as string) || (raw.type as string) || 'event';
 
         // Content: check top-level, then message.content (which may be array of {type, text})
         let content = '';
@@ -88,7 +118,8 @@ export function TranscriptView({ trace }: { trace: FullTrace }) {
           content = rawContent
             .map((c: Record<string, unknown>) => {
               if (c.type === 'thinking') return `[thinking] ${String(c.thinking ?? '')}`;
-              if (c.type === 'toolCall') return `[tool call: ${String((c as any).name ?? (c as any).toolName ?? 'unknown')}]`;
+              if (c.type === 'toolCall')
+                return `[tool call: ${String((c as any).name ?? (c as any).toolName ?? 'unknown')}]`;
               return String(c.text ?? c.content ?? '');
             })
             .filter(Boolean)
@@ -100,7 +131,10 @@ export function TranscriptView({ trace }: { trace: FullTrace }) {
         const isHuman = config.origin === 'user';
 
         return (
-          <div key={i} className={`tv-bubble ${config.cls} ${isError ? 'tv-bubble--error' : ''} ${isHuman ? 'tv-bubble--right' : 'tv-bubble--left'}`}>
+          <div
+            key={i}
+            className={`tv-bubble ${config.cls} ${isError ? 'tv-bubble--error' : ''} ${isHuman ? 'tv-bubble--right' : 'tv-bubble--left'}`}
+          >
             {/* Avatar + role */}
             <div className="tv-bubble__header">
               <span className={`tv-origin tv-origin--${config.origin}`}>{config.origin}</span>
@@ -108,7 +142,9 @@ export function TranscriptView({ trace }: { trace: FullTrace }) {
               <span className="tv-bubble__role">{config.label}</span>
               {raw.model && <span className="tv-bubble__model">{String(raw.model)}</span>}
               {raw.tokenCount && Number(raw.tokenCount) > 0 && (
-                <span className="tv-bubble__tokens">{Number(raw.tokenCount).toLocaleString()} tok</span>
+                <span className="tv-bubble__tokens">
+                  {Number(raw.tokenCount).toLocaleString()} tok
+                </span>
               )}
               <span className="tv-bubble__time">{fmtTime(raw.timestamp as number)}</span>
             </div>
@@ -116,9 +152,14 @@ export function TranscriptView({ trace }: { trace: FullTrace }) {
             {/* Tool call info */}
             {raw.toolName && (
               <div className="tv-bubble__tool">
-                <span className="tv-bubble__tool-name">{'\u2699'} {String(raw.toolName)}</span>
+                <span className="tv-bubble__tool-name">
+                  {'\u2699'} {String(raw.toolName)}
+                </span>
                 {raw.toolArgs && (
-                  <pre className="tv-code">{String(raw.toolArgs).slice(0, 300)}{String(raw.toolArgs).length > 300 ? '...' : ''}</pre>
+                  <pre className="tv-code">
+                    {String(raw.toolArgs).slice(0, 300)}
+                    {String(raw.toolArgs).length > 300 ? '...' : ''}
+                  </pre>
                 )}
               </div>
             )}
@@ -133,20 +174,23 @@ export function TranscriptView({ trace }: { trace: FullTrace }) {
             {/* Content */}
             {(!isThinking || expandedThinking.has(i)) && content && (
               <div className="tv-bubble__content">
-                {content.length > 1000 ? content.slice(0, 1000) + '...' : content}
+                {content.length > 1000 ? `${content.slice(0, 1000)}...` : content}
               </div>
             )}
 
             {/* Tool result */}
             {raw.toolResult && (
               <pre className={`tv-code ${isError ? 'tv-code--error' : ''}`}>
-                {String(raw.toolResult).slice(0, 500)}{String(raw.toolResult).length > 500 ? '...' : ''}
+                {String(raw.toolResult).slice(0, 500)}
+                {String(raw.toolResult).length > 500 ? '...' : ''}
               </pre>
             )}
 
             {/* Error */}
             {raw.error && (
-              <div className="tv-bubble__error">{'\u2718'} {String(raw.error)}</div>
+              <div className="tv-bubble__error">
+                {'\u2718'} {String(raw.error)}
+              </div>
             )}
           </div>
         );

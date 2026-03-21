@@ -72,7 +72,10 @@ function expandTilde(p: string): string {
  *
  * Returns empty defaults if no file is found or parsing fails.
  */
-export function loadConfig(explicitPath?: string): { config: DashboardUserConfig; configPath: string | null } {
+export function loadConfig(explicitPath?: string): {
+  config: DashboardUserConfig;
+  configPath: string | null;
+} {
   const candidates: string[] = [];
 
   if (explicitPath) {

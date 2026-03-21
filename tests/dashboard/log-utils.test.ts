@@ -158,8 +158,8 @@ describe('Log Utils', () => {
     it('detects ISO-timestamped log lines', () => {
       const activity = detectActivityPattern('2026-03-19T10:00:00Z [info] autofix.run field=name');
       expect(activity).not.toBeNull();
-      expect(activity!.component).toBe('autofix');
-      expect(activity!.operation).toBe('run');
+      expect(activity?.component).toBe('autofix');
+      expect(activity?.operation).toBe('run');
     });
 
     it('detects JSON log lines', () => {
@@ -167,7 +167,7 @@ describe('Log Utils', () => {
         '{"timestamp":"2026-03-19T10:00:00Z","level":"info","action":"process","status":"ok"}',
       );
       expect(activity).not.toBeNull();
-      expect(activity!.level).toBe('info');
+      expect(activity?.level).toBe('info');
     });
 
     it('returns null for unstructured lines', () => {
