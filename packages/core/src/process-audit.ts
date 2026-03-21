@@ -380,8 +380,9 @@ export function discoverAllProcessConfigs(dirs: string[]): ProcessAuditConfig[] 
     if (cfg.systemdUnit !== undefined) continue;
     try {
       const unitName = `${cfg.processName}.service`;
-      const result = execSync(
-        `systemctl --user show ${unitName} --property=LoadState --no-pager 2>/dev/null`,
+      const result = execFileSync(
+        'systemctl',
+        ['--user', 'show', unitName, '--property=LoadState', '--no-pager'],
         { encoding: 'utf8', timeout: 3000 },
       );
       if (result.includes('LoadState=loaded')) {

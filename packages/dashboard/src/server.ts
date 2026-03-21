@@ -17,6 +17,7 @@ import {
 } from 'agentflow-core';
 import chokidar from 'chokidar';
 import express from 'express';
+import rateLimit from 'express-rate-limit';
 import { WebSocketServer } from 'ws';
 import './adapters/index.js'; // Register all adapters
 import { deduplicateAgents, groupAgents } from './agent-clustering.js';
@@ -135,6 +136,14 @@ export class DashboardServer {
   }
 
   private setupExpress() {
+    // Rate limit API endpoints to prevent abuse
+    this.app.use('/api/', rateLimit({
+      windowMs: 60 * 1000, // 1 minute
+      max: 300,            // 300 requests per minute per IP
+      standardHeaders: true,
+      legacyHeaders: false,
+    }));
+
     if (this.config.enableCors) {
       this.app.use((_req, res, next) => {
         res.header('Access-Control-Allow-Origin', '*');
