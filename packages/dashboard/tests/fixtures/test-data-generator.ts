@@ -90,7 +90,7 @@ export class TestDataGenerator {
     return {
       id: `trace-${Date.now()}`,
       rootNodeId: rootId,
-      nodes,
+      nodes: Object.fromEntries(nodes),
       edges: childIds.map((childId) => ({ from: rootId, to: childId })),
       startTime,
       endTime: Math.max(...Array.from(nodes.values()).map((n) => n.endTime || n.startTime)),
@@ -288,7 +288,7 @@ export class TestDataGenerator {
     return {
       id: sessionId,
       rootNodeId: rootId,
-      nodes,
+      nodes: Object.fromEntries(nodes),
       edges: toolIds.map((toolId) => ({ from: rootId, to: toolId })),
       startTime,
       endTime,
