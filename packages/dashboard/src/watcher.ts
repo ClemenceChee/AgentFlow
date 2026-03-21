@@ -1370,6 +1370,7 @@ export class TraceWatcher extends EventEmitter {
         edges: [],
         events: [],
         startTime,
+        status: status as any,
         agentId,
         trigger,
         name: rootName,
@@ -1567,9 +1568,12 @@ export class TraceWatcher extends EventEmitter {
   }
 
   public getTrace(filename: string): WatchedTrace | undefined {
-    // Try exact key match first
+    // Collect all candidates, then return the richest (most nodes)
+    const candidates: WatchedTrace[] = [];
+
+    // Try exact key match
     const exact = this.traces.get(filename);
-    if (exact) return exact;
+    if (exact) candidates.push(exact);
 
     // Handle composite key: "filename::startTime"
     if (filename.includes('::')) {
@@ -1578,7 +1582,7 @@ export class TraceWatcher extends EventEmitter {
       if (fname && !Number.isNaN(startTime)) {
         for (const trace of this.traces.values()) {
           if (trace.filename === fname && trace.startTime === startTime) {
-            return trace;
+            candidates.push(trace);
           }
         }
       }
@@ -1587,16 +1591,31 @@ export class TraceWatcher extends EventEmitter {
     // Try with adapter prefixes
     for (const prefix of ['openclaw:', 'otel:', '']) {
       const prefixed = this.traces.get(prefix + filename);
-      if (prefixed) return prefixed;
+      if (prefixed) candidates.push(prefixed);
     }
 
-    // Fallback: search by filename or id across all keys
+    // Search by filename or id across all keys
     for (const [key, trace] of this.traces) {
       if (trace.filename === filename || trace.id === filename || key.endsWith(filename)) {
-        return trace;
+        candidates.push(trace);
       }
     }
-    return undefined;
+
+    if (candidates.length === 0) return undefined;
+    if (candidates.length === 1) return candidates[0];
+
+    // When multiple traces match, prefer the one with more nodes (richer data)
+    let best = candidates[0]!;
+    let bestNodeCount = best.nodes instanceof Map ? best.nodes.size : Object.keys(best.nodes ?? {}).length;
+    for (let i = 1; i < candidates.length; i++) {
+      const c = candidates[i]!;
+      const nc = c.nodes instanceof Map ? c.nodes.size : Object.keys(c.nodes ?? {}).length;
+      if (nc > bestNodeCount) {
+        best = c;
+        bestNodeCount = nc;
+      }
+    }
+    return best;
   }
 
   public getTracesByAgent(agentId: string): WatchedTrace[] {
