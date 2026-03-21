@@ -10,7 +10,16 @@
  */
 
 import { getChildren, getDepth, getNode } from './graph-query.js';
-import type { ExecutionGraph, GraphBuilder, GuardViolation, NodeType, PolicySource, PolicyThresholds } from './types.js';
+import type { ExecutionGraph, GraphBuilder, GuardExplanation, GuardViolation, NodeType, PolicySource, PolicyThresholds } from './types.js';
+
+/** Generate a human-readable message from a GuardExplanation. */
+function explainMessage(explanation: GuardExplanation): string {
+  const sourceLabel = explanation.source === 'static' ? 'static config'
+    : explanation.source === 'soma-policy' ? `soma-policy${explanation.evidence ? ` (${explanation.evidence})` : ''}`
+    : explanation.source === 'assertion' ? 'assertion'
+    : 'adaptive';
+  return `This run was stopped because ${explanation.rule} reached ${explanation.actual}, which exceeds the limit of ${explanation.threshold}. Source: ${sourceLabel}.`;
+}
 
 /**
  * Configuration for runtime guard detection.
@@ -84,11 +93,18 @@ export function checkGuards(
       const elapsed = now - node.startTime;
 
       if (elapsed > timeoutThreshold) {
+        const explanation: GuardExplanation = {
+          rule: 'timeout',
+          threshold: timeoutThreshold,
+          actual: elapsed,
+          source: 'static',
+        };
         violations.push({
           type: 'timeout',
           nodeId: node.id,
-          message: `Node ${node.id} (${node.type}: ${node.name}) has been running for ${elapsed}ms, exceeding timeout of ${timeoutThreshold}ms`,
+          message: explainMessage(explanation),
           timestamp: now,
+          explanation,
         });
       }
     }
@@ -97,11 +113,18 @@ export function checkGuards(
   // Check for depth violations
   const depth = getDepth(graph);
   if (depth > maxDepth) {
+    const explanation: GuardExplanation = {
+      rule: 'max-depth',
+      threshold: maxDepth,
+      actual: depth,
+      source: 'static',
+    };
     violations.push({
       type: 'spawn-explosion',
       nodeId: graph.rootNodeId,
-      message: `Graph depth ${depth} exceeds maximum depth of ${maxDepth}`,
+      message: explainMessage(explanation),
       timestamp: now,
+      explanation,
     });
   }
 
@@ -113,11 +136,18 @@ export function checkGuards(
     }
   }
   if (agentCount > maxAgentSpawns) {
+    const explanation: GuardExplanation = {
+      rule: 'max-agent-spawns',
+      threshold: maxAgentSpawns,
+      actual: agentCount,
+      source: 'static',
+    };
     violations.push({
       type: 'spawn-explosion',
       nodeId: graph.rootNodeId,
-      message: `Total agent/subagent count ${agentCount} exceeds maximum of ${maxAgentSpawns}`,
+      message: explainMessage(explanation),
       timestamp: now,
+      explanation,
     });
   }
 
@@ -163,11 +193,18 @@ function detectReasoningLoops(
 
     if (newCount > maxSteps && !reported.has(newType)) {
       reported.add(newType);
+      const explanation: GuardExplanation = {
+        rule: 'max-reasoning-steps',
+        threshold: maxSteps,
+        actual: newCount,
+        source: 'static',
+      };
       violations.push({
         type: 'reasoning-loop',
         nodeId: node.id,
-        message: `Detected ${newCount} consecutive ${newType} nodes along path to ${node.name}`,
+        message: explainMessage(explanation),
         timestamp,
+        explanation,
       });
     }
 
@@ -197,33 +234,54 @@ function checkPolicyViolations(
   // High failure rate
   const failureRate = policySource.recentFailureRate(graph.agentId);
   if (failureRate > maxFailureRate) {
+    const explanation: GuardExplanation = {
+      rule: 'max-failure-rate',
+      threshold: maxFailureRate,
+      actual: failureRate,
+      source: 'soma-policy',
+    };
     violations.push({
       type: 'high-failure-rate',
       nodeId: graph.rootNodeId,
-      message: `Agent ${graph.agentId} has a recent failure rate of ${(failureRate * 100).toFixed(0)}% (threshold: ${(maxFailureRate * 100).toFixed(0)}%)`,
+      message: explainMessage(explanation),
       timestamp,
+      explanation,
     });
   }
 
   // Conformance drift
   const conformanceScore = policySource.lastConformanceScore(graph.agentId);
   if (conformanceScore !== null && conformanceScore < minConformance) {
+    const explanation: GuardExplanation = {
+      rule: 'min-conformance',
+      threshold: minConformance,
+      actual: conformanceScore,
+      source: 'soma-policy',
+    };
     violations.push({
       type: 'conformance-drift',
       nodeId: graph.rootNodeId,
-      message: `Agent ${graph.agentId} conformance score ${(conformanceScore * 100).toFixed(0)}% is below threshold ${(minConformance * 100).toFixed(0)}%`,
+      message: explainMessage(explanation),
       timestamp,
+      explanation,
     });
   }
 
   // Known bottleneck (informational, for running nodes)
   for (const node of graph.nodes.values()) {
     if (node.status === 'running' && policySource.isKnownBottleneck(node.name)) {
+      const explanation: GuardExplanation = {
+        rule: 'known-bottleneck',
+        threshold: 'flagged',
+        actual: 'running',
+        source: 'soma-policy',
+      };
       violations.push({
         type: 'known-bottleneck',
         nodeId: node.id,
-        message: `Node ${node.name} (${node.type}) is a known bottleneck`,
+        message: explainMessage(explanation),
         timestamp,
+        explanation,
       });
     }
   }

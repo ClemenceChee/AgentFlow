@@ -399,14 +399,156 @@ export interface ConformanceReport {
 // Guard types
 // ---------------------------------------------------------------------------
 
+/** Explanation attached to every guard violation for transparency. */
+export interface GuardExplanation {
+  /** The guard rule name (e.g., 'max-depth', 'timeout'). */
+  readonly rule: string;
+  /** The configured threshold that was exceeded. */
+  readonly threshold: number | string;
+  /** The actual observed value. */
+  readonly actual: number | string;
+  /** Where the threshold came from. */
+  readonly source: 'static' | 'soma-policy' | 'adaptive' | 'assertion';
+  /** Optional historical evidence supporting the threshold. */
+  readonly evidence?: string;
+}
+
+/** Outcome assertion for post-action verification. */
+export interface OutcomeAssertion {
+  /** Human-readable label for this assertion. */
+  readonly name: string;
+  /** Verification function — returns true if the expected outcome occurred. */
+  readonly verify: () => Promise<boolean> | boolean;
+  /** Timeout in milliseconds (default: 5000). */
+  readonly timeout?: number;
+}
+
 /**
  * A detected guard violation.
  */
 export interface GuardViolation {
-  readonly type: 'timeout' | 'reasoning-loop' | 'spawn-explosion' | 'high-failure-rate' | 'conformance-drift' | 'known-bottleneck';
+  readonly type: 'timeout' | 'reasoning-loop' | 'spawn-explosion' | 'high-failure-rate' | 'conformance-drift' | 'known-bottleneck' | 'outcome_mismatch';
   readonly nodeId: string;
   readonly message: string;
   readonly timestamp: number;
+  readonly explanation: GuardExplanation;
+}
+
+// ---------------------------------------------------------------------------
+// Efficiency & Receipts types
+// ---------------------------------------------------------------------------
+
+/** Per-node cost attribution. */
+export interface NodeCost {
+  readonly nodeId: string;
+  readonly name: string;
+  readonly type: NodeType;
+  readonly tokenCost: number | null;
+  readonly durationMs: number | null;
+}
+
+/** Wasteful pattern detection flag. */
+export interface EfficiencyFlag {
+  readonly pattern: 'wasteful_retry' | 'context_bloat';
+  readonly nodeName: string;
+  readonly retryCount?: number;
+  readonly tokenCost: number;
+  readonly message: string;
+}
+
+/** Per-run efficiency summary. */
+export interface RunEfficiency {
+  readonly graphId: string;
+  readonly agentId: string;
+  readonly totalTokenCost: number;
+  readonly completedNodes: number;
+  readonly costPerNode: number;
+}
+
+/** Aggregate efficiency report across runs. */
+export interface EfficiencyReport {
+  readonly runs: readonly RunEfficiency[];
+  readonly aggregate: { mean: number; median: number; p95: number };
+  readonly flags: readonly EfficiencyFlag[];
+  readonly nodeCosts: readonly NodeCost[];
+  readonly dataCoverage: number;
+}
+
+/** Per-step summary in a run receipt. */
+export interface StepSummary {
+  readonly nodeId: string;
+  readonly name: string;
+  readonly type: NodeType;
+  readonly status: NodeStatus;
+  readonly durationMs: number | null;
+  readonly tokenCost: number | null;
+  readonly error: string | null;
+}
+
+/** Structured run summary. */
+export interface RunReceipt {
+  readonly runId: string;
+  readonly agentId: string;
+  readonly status: GraphStatus;
+  readonly startTime: number;
+  readonly endTime: number | null;
+  readonly totalDurationMs: number | null;
+  readonly totalTokenCost: number | null;
+  readonly steps: readonly StepSummary[];
+  readonly summary: {
+    readonly attempted: number;
+    readonly succeeded: number;
+    readonly failed: number;
+    readonly skipped: number;
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Drift detection types
+// ---------------------------------------------------------------------------
+
+/** A single conformance history entry. */
+export interface ConformanceHistoryEntry {
+  readonly agentId: string;
+  readonly timestamp: number;
+  readonly score: number;
+  readonly runId: string;
+}
+
+/** Conformance score history for an agent. */
+export type ConformanceHistory = ConformanceHistoryEntry[];
+
+/** Options for drift detection. */
+export interface DriftOptions {
+  /** Sliding window size (number of runs). Default: 50. */
+  readonly windowSize?: number;
+}
+
+/** Drift detection report. */
+export interface DriftReport {
+  readonly status: 'stable' | 'degrading' | 'improving' | 'insufficient_data';
+  readonly slope: number;
+  readonly r2: number;
+  readonly windowSize: number;
+  readonly dataPoints: number;
+  readonly alert?: {
+    readonly type: 'conformance_trend_degradation';
+    readonly agentId: string;
+    readonly currentScore: number;
+    readonly trendSlope: number;
+    readonly windowSize: number;
+    readonly message: string;
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Variant options
+// ---------------------------------------------------------------------------
+
+/** Options for variant analysis. */
+export interface VariantOptions {
+  /** Dimensions to include in variant signature. Default: ['path']. */
+  readonly dimensions?: readonly ('path' | 'modelId' | 'status')[];
 }
 
 // ---------------------------------------------------------------------------

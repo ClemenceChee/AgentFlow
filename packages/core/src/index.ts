@@ -37,6 +37,7 @@ export {
 // Distributed tracing
 export { getTraceTree, groupByTraceId, stitchTrace } from './graph-stitch.js';
 export type { GuardConfig, GuardViolation } from './guards.js';
+export type { GuardExplanation, OutcomeAssertion, NodeCost, EfficiencyFlag, RunEfficiency, EfficiencyReport, StepSummary, RunReceipt, ConformanceHistoryEntry, ConformanceHistory, DriftOptions, DriftReport, VariantOptions } from './types.js';
 // Runtime guards
 export { checkGuards, withGuards } from './guards.js';
 export type { JsonEventWriterConfig } from './json-event-writer.js';
