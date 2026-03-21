@@ -1568,9 +1568,9 @@ export class TraceWatcher extends EventEmitter {
     });
   }
 
-  public getTrace(filename: string): WatchedTrace | undefined {
+  public getTrace(filename: string, agentId?: string): WatchedTrace | undefined {
     // Collect all candidates, then return the richest (most nodes)
-    const candidates: WatchedTrace[] = [];
+    let candidates: WatchedTrace[] = [];
 
     // Try exact key match
     const exact = this.traces.get(filename);
@@ -1605,7 +1605,17 @@ export class TraceWatcher extends EventEmitter {
     if (candidates.length === 0) return undefined;
     if (candidates.length === 1) return candidates[0];
 
-    // When multiple traces match, prefer the one with more nodes (richer data)
+    // When an agent hint is provided, prefer candidates matching that agent
+    if (agentId) {
+      const agentMatches = candidates.filter((c) => c.agentId === agentId);
+      if (agentMatches.length > 0) {
+        candidates = agentMatches;
+      }
+    }
+
+    if (candidates.length === 1) return candidates[0];
+
+    // When multiple traces remain, prefer the one with more nodes (richer data)
     let best = candidates[0]!;
     let bestNodeCount = best.nodes instanceof Map ? best.nodes.size : Object.keys(best.nodes ?? {}).length;
     for (let i = 1; i < candidates.length; i++) {

@@ -18,7 +18,7 @@ interface Props {
   sourceAgentIds?: string[];
   traces: TraceEntry[];
   selectedFilename: string | null;
-  onSelect: (filename: string) => void;
+  onSelect: (filename: string, agentId: string) => void;
 }
 
 export function ExecSidebar({ agentId, sourceAgentIds, traces, selectedFilename, onSelect }: Props) {
@@ -57,7 +57,7 @@ export function ExecSidebar({ agentId, sourceAgentIds, traces, selectedFilename,
           const sel = t.traceKey === selectedFilename || t.filename === selectedFilename;
           const barW = Math.max(3, (t.duration / maxDur) * 100);
           return (
-            <button key={t.traceKey} className={`erow ${fail ? 'erow--fail' : ''} ${sel ? 'erow--sel' : ''}`} onClick={() => onSelect(t.traceKey)}>
+            <button key={t.traceKey} className={`erow ${fail ? 'erow--fail' : ''} ${sel ? 'erow--sel' : ''}`} onClick={() => onSelect(t.traceKey, t.agentId)}>
               <span className="erow__icon">{fail ? '\u2718' : '\u2714'}</span>
               <span className="erow__time">{fmtTime(t.timestamp)}</span>
               <span className="erow__n">{t.nodeCount}n</span>

@@ -51,12 +51,14 @@ export function useSelectedTrace() {
   const [trace, setTrace] = useState<FullTrace | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const selectTrace = useCallback(async (filename: string) => {
+  const selectTrace = useCallback(async (filename: string, agentId?: string) => {
     if (filename === selectedFilename) return;
     setSelectedFilename(filename);
     setLoading(true);
     try {
-      const res = await fetch(`/api/traces/${encodeURIComponent(filename)}`);
+      let url = `/api/traces/${encodeURIComponent(filename)}`;
+      if (agentId) url += `?agent=${encodeURIComponent(agentId)}`;
+      const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
         setTrace(data);

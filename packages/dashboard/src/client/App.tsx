@@ -46,8 +46,8 @@ export function App() {
     clearSelection();
   }, [clearSelection]);
 
-  const handleSelectExecution = useCallback((filename: string) => {
-    selectTrace(filename);
+  const handleSelectExecution = useCallback((filename: string, agentId: string) => {
+    selectTrace(filename, agentId);
     setAgentView('execution');
   }, [selectTrace]);
 
