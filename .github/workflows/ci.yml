@@ -26,8 +26,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build all packages
-        run: npm run build
+      - name: Build packages
+        run: |
+          npm run build -w agentflow-core
+          npm run build -w agentflow-dashboard
+          npm run build -w agentflow-storage
 
       - name: Typecheck
         run: npm run typecheck
