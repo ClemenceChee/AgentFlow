@@ -793,11 +793,11 @@ export class DashboardServer {
           }
         } catch { /* fresh */ }
 
-        const watched = [
+        const watched = [...new Set([
           this.config.tracesDir,
           ...(this.config.dataDirs || []),
           ...extraDirs,
-        ];
+        ].map((w) => path.resolve(w)))];
 
         // Discover from systemd (config-driven service names)
         const discovered: string[] = [];
