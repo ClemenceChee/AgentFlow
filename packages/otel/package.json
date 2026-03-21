@@ -1,5 +1,6 @@
 {
   "name": "agentflow-otel",
+  "private": true,
   "version": "0.1.0",
   "description": "OpenTelemetry exporter for AgentFlow - Export agent execution traces to OTel-compatible backends",
   "type": "module",

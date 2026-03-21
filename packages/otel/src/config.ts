@@ -1,5 +1,4 @@
-import { JaegerExporter } from '@opentelemetry/exporter-jaeger';
-import { OTLPTraceExporter } from '@opentelemetry/exporter-otlp-http';
+import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { Resource } from '@opentelemetry/resources';
 import { NodeSDK } from '@opentelemetry/sdk-node';
 import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions';
@@ -53,8 +52,10 @@ export class AgentFlowOTelConfig {
   private createExporter(config: OTelConfig) {
     switch (config.backend) {
       case 'jaeger':
-        return new JaegerExporter({
-          endpoint: config.endpoint || 'http://localhost:14268/api/traces',
+        // Jaeger supports OTLP natively — use OTLP exporter pointed at Jaeger's OTLP endpoint
+        return new OTLPTraceExporter({
+          url: config.endpoint || 'http://localhost:4318/v1/traces',
+          headers: config.headers || {},
         });
 
       case 'otlp':
@@ -113,7 +114,7 @@ export const OTelPresets = {
     return {
       serviceName: 'agentflow',
       backend: 'jaeger',
-      endpoint: 'http://localhost:14268/api/traces',
+      endpoint: 'http://localhost:4318/v1/traces',
     };
   },
 
