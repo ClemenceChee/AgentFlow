@@ -541,12 +541,14 @@ export class TraceWatcher extends EventEmitter {
     const filename = path.basename(filePath, path.extname(filePath));
     const pathParts = filePath.split(path.sep);
 
-    // Config-driven path pattern matching
+    // Config-driven path pattern matching — determines a prefix or flat agent ID
     const detection = getAgentDetection(this.userConfig);
+    let pathPrefix = '';
     if (detection.pathPatterns) {
       for (const [pathSubstring, agentId] of Object.entries(detection.pathPatterns)) {
         if (filePath.includes(pathSubstring)) {
-          return agentId;
+          pathPrefix = agentId;
+          break;
         }
       }
     }
@@ -554,8 +556,13 @@ export class TraceWatcher extends EventEmitter {
     // Generic: look for agents/AGENT_NAME/sessions/ pattern (common convention)
     const agentsIndex = pathParts.lastIndexOf('agents');
     if (agentsIndex !== -1 && agentsIndex + 1 < pathParts.length) {
-      return pathParts[agentsIndex + 1];
+      const agentName = pathParts[agentsIndex + 1];
+      // If a path pattern matched, use it as prefix (e.g. "openclaw" + "main" → "openclaw-main")
+      return pathPrefix ? `${pathPrefix}-${agentName}` : agentName;
     }
+
+    // If path pattern matched but no agents/ dir found, return it as the agent ID
+    if (pathPrefix) return pathPrefix;
 
     // Look for agent-related terms in path (reversed for inner-most first)
     for (const part of [...pathParts].reverse()) {
@@ -992,26 +999,25 @@ export class TraceWatcher extends EventEmitter {
       const grandParentDir = path.basename(path.dirname(path.dirname(filePath)));
       const greatGrandParentDir = path.basename(path.dirname(path.dirname(path.dirname(filePath))));
 
-      let agentId: string;
+      // Determine agent ID from directory structure
+      let agentName: string;
       if (parentDir === 'sessions' && greatGrandParentDir === 'agents') {
-        // Path: .../agents/{agentName}/sessions/file.jsonl
-        agentId = grandParentDir;
+        agentName = grandParentDir; // .../agents/{agentName}/sessions/file.jsonl
       } else if (grandParentDir === 'agents') {
-        agentId = parentDir;
-      } else if (parentDir === 'runs' && grandParentDir === 'cron') {
-        // Path: .../cron/runs/file.jsonl — use job ID from filename
-        agentId = 'openclaw-cron';
+        agentName = parentDir;
       } else {
-        agentId = parentDir;
+        agentName = parentDir;
       }
 
-      // Note: openclaw- prefix is NOT added in loadSessionFile
-      // (only in extractAgentFromPath for log files)
-
-      // Detect Alfred sessions (different structure)
-      if (filePath.includes('.alfred/') || filePath.includes('alfred')) {
-        if (!agentId.startsWith('alfred-')) {
-          agentId = `alfred-${agentId}`;
+      // Apply config-driven path prefix (e.g. .openclaw/ → "openclaw-main")
+      let agentId = agentName;
+      const detection = getAgentDetection(this.userConfig);
+      if (detection.pathPatterns) {
+        for (const [pathSubstring, prefix] of Object.entries(detection.pathPatterns)) {
+          if (filePath.includes(pathSubstring)) {
+            agentId = `${prefix}-${agentName}`;
+            break;
+          }
         }
       }
 

@@ -18,9 +18,18 @@ describe('Config', () => {
 
   describe('loadConfig', () => {
     it('returns empty defaults when no config file exists', () => {
-      const { config, configPath } = loadConfig('/nonexistent/config.json');
-      expect(configPath).toBeNull();
-      expect(config).toEqual({});
+      // Use a nonexistent explicit path — loadConfig tries it first,
+      // then env (cleared in afterEach), then CWD (no config), then ~/.config.
+      // We need to also prevent the ~/.config fallback.
+      const origHome = process.env.HOME;
+      process.env.HOME = tmpDir; // tmpDir has no .config/agentflow/config.json
+      try {
+        const { config, configPath } = loadConfig('/nonexistent/config.json');
+        expect(configPath).toBeNull();
+        expect(config).toEqual({});
+      } finally {
+        process.env.HOME = origHome;
+      }
     });
 
     it('loads config from explicit path', () => {

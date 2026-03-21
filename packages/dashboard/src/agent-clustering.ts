@@ -114,25 +114,32 @@ export function deduplicateAgents(agents: AgentStats[]): AgentStats[] {
     ...extractSource(a.agentId),
   }));
 
-  // Group by suffix across different sources
+  // Group by (source, suffix) for potential merging
   const suffixGroups = new Map<string, typeof tagged>();
   for (const a of tagged) {
     const suffix = extractSuffix(a.localId);
     if (!suffix) continue;
-    const group = suffixGroups.get(suffix) ?? [];
+    const key = `${a.source}:${suffix}`;
+    const group = suffixGroups.get(key) ?? [];
     group.push(a);
-    suffixGroups.set(suffix, group);
+    suffixGroups.set(key, group);
   }
 
-  // Merge groups that share the same role suffix within "agentflow" (e.g., "app-worker" + "worker")
+  // Merge groups that share the same role suffix AND the same prefix system
+  // (e.g. merge "vault-curator" + "curator" but NOT "soma-main" + "openclaw-main")
   const mergedIds = new Set<string>();
   const mergedAgents: AgentStats[] = [];
 
-  for (const [suffix, group] of suffixGroups) {
-    // Only merge if there are 2+ agents AND they come from different prefixes
+  for (const [_key, group] of suffixGroups) {
+    const suffix = extractSuffix(group[0]!.localId)!;
     if (group.length < 2) continue;
     const prefixes = new Set(group.map((a) => a.localId.split('-')[0]));
+    // Only merge when prefixes are variations of the same system (e.g. "vault" + bare)
+    // Don't merge when prefixes are distinct system names (e.g. "soma" vs "openclaw")
     if (prefixes.size < 2) continue;
+    // If all prefixes are distinct multi-char names, these are likely different systems — skip merge
+    const longPrefixes = [...prefixes].filter((p) => p !== suffix && p.length > 2);
+    if (longPrefixes.length >= 2) continue;
 
     // Merge stats
     const merged: AgentStats = {
