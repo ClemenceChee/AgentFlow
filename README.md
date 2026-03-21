@@ -165,7 +165,7 @@ They're complementary — use LangFuse for LLM metrics, AgentFlow for agent syst
 
 ---
 
-## Soma — Intelligence Tier
+## Soma - Intelligence Tier (https://clemencechee.github.io/soma/) 
 
 AgentFlow tells you what happened. Soma tells you what it means.
 
