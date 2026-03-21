@@ -39,7 +39,7 @@
   },
   "dependencies": {
     "agentflow-core": "^0.8.0",
-    "chokidar": "^3.5.3",
+    "chokidar": "^5.0.0",
     "express": "^4.18.2",
     "express-rate-limit": "^8.3.1",
     "react": "^19.1.0",
