@@ -77,7 +77,7 @@ L1  AgentFlow ──────── Execution observability
 L0  SPE ───────────── Agent-local memory
 ```
 
-For the full picture — data flow, feedback loops, and status of each layer — see the [Full Stack Architecture](https://openclaw.github.io/soma/architecture/full-stack) page in the SOMA documentation.
+For the full picture — data flow, feedback loops, and status of each layer — see the [Full Stack Architecture](https://ClemenceChee.github.io/soma/architecture/full-stack) page in the SOMA documentation.
 
 ## Why It Exists
 
