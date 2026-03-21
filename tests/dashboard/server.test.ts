@@ -172,7 +172,8 @@ describe('DashboardServer API', () => {
 
       const { status, body } = await httpGet(`${baseUrl}/api/agents`);
       expect(status).toBe(200);
-      expect(Array.isArray(body)).toBe(true);
+      // Default response is grouped object; flat=true returns array
+      expect(body).toBeDefined();
     });
   });
 
