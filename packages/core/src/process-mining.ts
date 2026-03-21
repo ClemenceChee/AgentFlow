@@ -17,7 +17,9 @@ import type {
   ExecutionNode,
   ProcessModel,
   ProcessTransition,
+  SemanticContext,
   Variant,
+  VariantOptions,
 } from './types.js';
 
 // ---------------------------------------------------------------------------
@@ -170,13 +172,45 @@ export function discoverProcess(graphs: ExecutionGraph[]): ProcessModel {
  * console.log(`${variants[0].percentage}% of runs follow the happy path`);
  * ```
  */
-export function findVariants(graphs: ExecutionGraph[]): Variant[] {
+/**
+ * Get a variant signature that includes model IDs from node metadata.
+ */
+function getModelAwareSignature(graph: ExecutionGraph, dimensions: readonly string[]): string {
+  const parts: string[] = [];
+
+  if (dimensions.includes('path')) {
+    parts.push(getPathSignature(graph));
+  }
+
+  if (dimensions.includes('modelId')) {
+    const models = new Set<string>();
+    for (const node of graph.nodes.values()) {
+      const semantic = (node.metadata as Record<string, unknown>)?.semantic as
+        | SemanticContext
+        | undefined;
+      const modelId =
+        semantic?.modelId ??
+        ((node.state as Record<string, unknown>)?.modelId as string | undefined);
+      models.add(modelId ?? 'unknown');
+    }
+    parts.push(`model:${[...models].sort().join('+')}`);
+  }
+
+  if (dimensions.includes('status')) {
+    parts.push(`status:${graph.status}`);
+  }
+
+  return parts.join('|');
+}
+
+export function findVariants(graphs: ExecutionGraph[], options?: VariantOptions): Variant[] {
   if (graphs.length === 0) return [];
 
+  const dimensions = options?.dimensions ?? ['path'];
   const groups = new Map<string, ExecutionGraph[]>();
 
   for (const graph of graphs) {
-    const sig = getPathSignature(graph);
+    const sig = getModelAwareSignature(graph, dimensions);
     const group = groups.get(sig) ?? [];
     group.push(graph);
     groups.set(sig, group);

@@ -10,14 +10,27 @@
  */
 
 import { getChildren, getDepth, getNode } from './graph-query.js';
-import type { ExecutionGraph, GraphBuilder, GuardExplanation, GuardViolation, NodeType, PolicySource, PolicyThresholds } from './types.js';
+import type {
+  ExecutionGraph,
+  GraphBuilder,
+  GuardExplanation,
+  GuardViolation,
+  NodeType,
+  OutcomeAssertion,
+  PolicySource,
+  PolicyThresholds,
+} from './types.js';
 
 /** Generate a human-readable message from a GuardExplanation. */
 function explainMessage(explanation: GuardExplanation): string {
-  const sourceLabel = explanation.source === 'static' ? 'static config'
-    : explanation.source === 'soma-policy' ? `soma-policy${explanation.evidence ? ` (${explanation.evidence})` : ''}`
-    : explanation.source === 'assertion' ? 'assertion'
-    : 'adaptive';
+  const sourceLabel =
+    explanation.source === 'static'
+      ? 'static config'
+      : explanation.source === 'soma-policy'
+        ? `soma-policy${explanation.evidence ? ` (${explanation.evidence})` : ''}`
+        : explanation.source === 'assertion'
+          ? 'assertion'
+          : 'adaptive';
   return `This run was stopped because ${explanation.rule} reached ${explanation.actual}, which exceeds the limit of ${explanation.threshold}. Source: ${sourceLabel}.`;
 }
 
@@ -45,6 +58,59 @@ export interface GuardConfig {
 
 // GuardViolation is defined in types.ts and re-exported here for backward compatibility.
 export type { GuardViolation } from './types.js';
+
+/**
+ * Evaluate outcome assertions and return violations for failures.
+ */
+async function evaluateAssertions(
+  assertions: OutcomeAssertion[],
+  nodeId: string,
+  timestamp: number,
+): Promise<GuardViolation[]> {
+  const violations: GuardViolation[] = [];
+
+  for (const assertion of assertions) {
+    const timeoutMs = assertion.timeout ?? 5000;
+    try {
+      const result = await Promise.race([
+        Promise.resolve(assertion.verify()),
+        new Promise<'timeout'>((resolve) => setTimeout(() => resolve('timeout'), timeoutMs)),
+      ]);
+
+      if (result === 'timeout' || result === false) {
+        const explanation: GuardExplanation = {
+          rule: assertion.name,
+          threshold: 'pass',
+          actual: result === 'timeout' ? 'timeout' : 'fail',
+          source: 'assertion',
+        };
+        violations.push({
+          type: 'outcome_mismatch',
+          nodeId,
+          message: explainMessage(explanation),
+          timestamp,
+          explanation,
+        });
+      }
+    } catch {
+      const explanation: GuardExplanation = {
+        rule: assertion.name,
+        threshold: 'pass',
+        actual: 'error',
+        source: 'assertion',
+      };
+      violations.push({
+        type: 'outcome_mismatch',
+        nodeId,
+        message: explainMessage(explanation),
+        timestamp,
+        explanation,
+      });
+    }
+  }
+
+  return violations;
+}
 
 /** Default timeout values in milliseconds per node type. */
 const DEFAULT_TIMEOUTS: Record<NodeType, number> = {
@@ -156,7 +222,9 @@ export function checkGuards(
 
   // Policy-derived violations (only when policySource is configured)
   if (config?.policySource) {
-    violations.push(...checkPolicyViolations(graph, config.policySource, config.policyThresholds, now));
+    violations.push(
+      ...checkPolicyViolations(graph, config.policySource, config.policyThresholds, now),
+    );
   }
 
   return violations;
@@ -310,7 +378,17 @@ function checkPolicyViolations(
  * guarded.endNode(root); // Will check for violations
  * ```
  */
-export function withGuards(builder: GraphBuilder, config?: GuardConfig): GraphBuilder {
+/** Extended builder with assertion support. */
+export interface GuardedGraphBuilder extends GraphBuilder {
+  /** End a node with outcome assertions. Assertions run after status is set. */
+  endNodeWithAssertions(
+    nodeId: string,
+    status: import('./types.js').NodeStatus | undefined,
+    assertions: OutcomeAssertion[],
+  ): Promise<void>;
+}
+
+export function withGuards(builder: GraphBuilder, config?: GuardConfig): GuardedGraphBuilder {
   const logger = config?.logger ?? ((msg: string) => console.warn(`[AgentFlow Guard] ${msg}`));
   const onViolation = config?.onViolation ?? 'warn';
 
@@ -359,6 +437,25 @@ export function withGuards(builder: GraphBuilder, config?: GuardConfig): GraphBu
       const snapshot = builder.getSnapshot();
       const violations = checkGuards(snapshot, config);
       handleViolations(violations);
+    },
+
+    /**
+     * End a node with outcome assertions. Assertions run after status is set.
+     * Failures produce 'outcome_mismatch' violations handled per onViolation config.
+     */
+    async endNodeWithAssertions(
+      nodeId: string,
+      status: import('./types.js').NodeStatus | undefined,
+      assertions: OutcomeAssertion[],
+    ): Promise<void> {
+      builder.endNode(nodeId, status);
+      const snapshot = builder.getSnapshot();
+      const violations = checkGuards(snapshot, config);
+      handleViolations(violations);
+
+      // Evaluate assertions
+      const assertionViolations = await evaluateAssertions(assertions, nodeId, Date.now());
+      handleViolations(assertionViolations);
     },
 
     failNode: (nodeId, error) => {
