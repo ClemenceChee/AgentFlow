@@ -124,6 +124,7 @@ export function AlertBanner({ processHealth }: { processHealth: ProcessHealthDat
               <div className="alert-actions">
                 {alert.actions.map((action) => (
                   <button
+                    type="button"
                     key={action.label}
                     className="alert-action"
                     title={`Copy: ${action.command}`}
@@ -135,7 +136,12 @@ export function AlertBanner({ processHealth }: { processHealth: ProcessHealthDat
               </div>
             )}
           </div>
-          <button className="alert-dismiss" onClick={() => dismiss(alert.id)} title="Dismiss">
+          <button
+            type="button"
+            className="alert-dismiss"
+            onClick={() => dismiss(alert.id)}
+            title="Dismiss"
+          >
             \u00D7
           </button>
         </div>

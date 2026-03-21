@@ -77,12 +77,14 @@ export function App() {
       {/* Top-level page tabs */}
       <div className="page-tabs">
         <button
+          type="button"
           className={`page-tabs__tab ${page === 'agents' ? 'page-tabs__tab--active' : ''}`}
           onClick={() => setPage('agents')}
         >
           {'\u{1F50D}'} Agents
         </button>
         <button
+          type="button"
           className={`page-tabs__tab ${page === 'soma' ? 'page-tabs__tab--active' : ''}`}
           onClick={() => setPage('soma')}
         >

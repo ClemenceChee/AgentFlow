@@ -19,7 +19,7 @@ import { toAsciiTree, toTimeline } from './visualize.js';
 function getTracesDir(argv: string[]): string {
   const idx = argv.indexOf('--traces-dir');
   if (idx !== -1 && argv[idx + 1]) {
-    return resolve(argv[idx + 1]!);
+    return resolve(argv[idx + 1] as string);
   }
   return resolve('./traces');
 }

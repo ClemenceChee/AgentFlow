@@ -84,6 +84,7 @@ export function AgentProfile({
           { id: 'intelligence' as const, label: '\u{1F9E0} Intelligence' },
         ].map((t) => (
           <button
+            type="button"
             key={t.id}
             className={`ap-tab ${tab === t.id ? 'ap-tab--active' : ''}`}
             onClick={() => setTab(t.id)}

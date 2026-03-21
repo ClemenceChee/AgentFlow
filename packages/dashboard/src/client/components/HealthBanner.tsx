@@ -107,6 +107,7 @@ export function HealthBanner({
       </div>
       {onOpenSettings && (
         <button
+          type="button"
           onClick={onOpenSettings}
           style={{
             marginLeft: 'auto',

@@ -54,7 +54,10 @@ export function VariantExplorer({
               <span className="var-row__rank">#{i + 1}</span>
               {isHappy && <span className="var-row__badge">Happy Path</span>}
               {modelPart && (
-                <span className="var-row__badge" style={{ background: 'rgba(130,80,223,0.15)', color: '#8250df' }}>
+                <span
+                  className="var-row__badge"
+                  style={{ background: 'rgba(130,80,223,0.15)', color: '#8250df' }}
+                >
                   {modelPart.replace('model:', '')}
                 </span>
               )}

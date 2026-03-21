@@ -191,7 +191,7 @@ export function findVariants(graphs: ExecutionGraph[]): Variant[] {
       count: groupGraphs.length,
       percentage: (groupGraphs.length / total) * 100,
       graphIds: groupGraphs.map((g) => g.id),
-      exampleGraph: groupGraphs[0]!,
+      exampleGraph: groupGraphs[0] as ExecutionGraph,
     });
   }
 
@@ -213,13 +213,13 @@ export function findVariants(graphs: ExecutionGraph[]): Variant[] {
  */
 function percentile(sorted: number[], p: number): number {
   if (sorted.length === 0) return 0;
-  if (sorted.length === 1) return sorted[0]!;
+  if (sorted.length === 1) return sorted[0] ?? 0;
   const index = (p / 100) * (sorted.length - 1);
   const lower = Math.floor(index);
   const upper = Math.ceil(index);
-  if (lower === upper) return sorted[lower]!;
+  if (lower === upper) return sorted[lower] ?? 0;
   const weight = index - lower;
-  return sorted[lower]! * (1 - weight) + sorted[upper]! * weight;
+  return (sorted[lower] ?? 0) * (1 - weight) + (sorted[upper] ?? 0) * weight;
 }
 
 /**
@@ -268,8 +268,8 @@ export function getBottlenecks(graphs: ExecutionGraph[]): Bottleneck[] {
         median: percentile(sorted, 50),
         p95: percentile(sorted, 95),
         p99: percentile(sorted, 99),
-        min: sorted[0]!,
-        max: sorted[sorted.length - 1]!,
+        min: sorted[0] ?? 0,
+        max: sorted[sorted.length - 1] ?? 0,
       },
       percentOfGraphs: (sorted.length / total) * 100,
     });

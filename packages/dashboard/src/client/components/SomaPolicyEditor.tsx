@@ -73,7 +73,7 @@ export function SomaPolicyEditor() {
     <div className="soma-policies">
       <div className="soma-policies__header">
         <h3>Guard Policies</h3>
-        <button className="soma-policies__add" onClick={() => setShowForm(!showForm)}>
+        <button type="button" className="soma-policies__add" onClick={() => setShowForm(!showForm)}>
           {showForm ? 'Cancel' : '+ New Policy'}
         </button>
       </div>
@@ -104,7 +104,7 @@ export function SomaPolicyEditor() {
             value={newPolicy.conditions}
             onChange={(e) => setNewPolicy({ ...newPolicy, conditions: e.target.value })}
           />
-          <button className="soma-policies__submit" onClick={handleCreate}>
+          <button type="button" className="soma-policies__submit" onClick={handleCreate}>
             Create
           </button>
         </div>
@@ -128,7 +128,11 @@ export function SomaPolicyEditor() {
             </span>
             <span className="soma-policies__scope">{p.scope}</span>
             <span className="soma-policies__cond">{p.conditions}</span>
-            <button className="soma-policies__del" onClick={() => handleDelete(p.name)}>
+            <button
+              type="button"
+              className="soma-policies__del"
+              onClick={() => handleDelete(p.name)}
+            >
               {deleting === p.name ? 'Confirm?' : '\u{2715}'}
             </button>
           </div>

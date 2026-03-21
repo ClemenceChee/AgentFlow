@@ -29,7 +29,7 @@ import './adapters/index.js'; // Register all adapters
 import { parseOtlpPayload } from './adapters/otel.js';
 import { deduplicateAgents, groupAgents } from './agent-clustering.js';
 import { AgentStats } from './stats.js';
-import { TraceWatcher } from './watcher.js';
+import { TraceWatcher, type WatchedTrace } from './watcher.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -53,12 +53,12 @@ export interface DashboardConfig {
 import { startDashboard } from './cli.js';
 
 /** Convert a WatchedTrace for JSON serialization (Map → Object). */
-function serializeTrace(trace: any): any {
+function serializeTrace(trace: WatchedTrace): Record<string, unknown> {
   if (!trace) return trace;
-  const obj = { ...trace };
-  if (obj.nodes instanceof Map) {
-    const nodesObj: Record<string, any> = {};
-    for (const [key, value] of obj.nodes) {
+  const obj: Record<string, unknown> = { ...trace };
+  if (trace.nodes instanceof Map) {
+    const nodesObj: Record<string, unknown> = {};
+    for (const [key, value] of trace.nodes) {
       nodesObj[key] = value;
     }
     obj.nodes = nodesObj;
@@ -231,9 +231,9 @@ export class DashboardServer {
           return res.status(404).json({ error: 'Trace not found' });
         }
         res.json({
-          events: (trace as any).sessionEvents || [],
-          tokenUsage: (trace as any).tokenUsage || null,
-          sourceType: (trace as any).sourceType || 'trace',
+          events: (trace as WatchedTrace).sessionEvents || [],
+          tokenUsage: (trace as WatchedTrace).tokenUsage || null,
+          sourceType: (trace as WatchedTrace).sourceType || 'trace',
         });
       } catch (_error) {
         res.status(500).json({ error: 'Failed to load trace events' });
@@ -345,17 +345,18 @@ export class DashboardServer {
           } else {
             // Graph-based: use nodes
             const sorted = Object.values(nodes).sort(
-              (a: any, b: any) => (a.startTime || 0) - (b.startTime || 0),
+              (a: Record<string, unknown>, b: Record<string, unknown>) =>
+                ((a.startTime as number) || 0) - ((b.startTime as number) || 0),
             );
-            for (const node of sorted as any[]) {
+            for (const node of sorted as Record<string, unknown>[]) {
               activities.push({
-                id: node.id,
-                name: node.name || node.type || node.id,
-                type: node.type || 'unknown',
-                status: node.status || 'completed',
-                startTime: node.startTime || t.startTime,
-                endTime: node.endTime || node.startTime || t.startTime,
-                parentId: node.parentId,
+                id: node.id as string,
+                name: (node.name || node.type || node.id) as string,
+                type: (node.type || 'unknown') as string,
+                status: (node.status || 'completed') as string,
+                startTime: (node.startTime as number) || t.startTime,
+                endTime: (node.endTime as number) || (node.startTime as number) || t.startTime,
+                parentId: node.parentId as string | undefined,
               });
             }
           }
@@ -498,8 +499,8 @@ export class DashboardServer {
 
           // Transitions (directly-follows)
           for (let i = 0; i < sorted.length - 1; i++) {
-            const from = sorted[i]?.name!;
-            const to = sorted[i + 1]?.name!;
+            const from = sorted[i]?.name ?? '';
+            const to = sorted[i + 1]?.name ?? '';
             const key = `${from}|||${to}`;
             transMap.set(key, (transMap.get(key) ?? 0) + 1);
           }
@@ -530,7 +531,7 @@ export class DashboardServer {
         const model = {
           transitions: [...transMap.entries()].map(([key, count]) => {
             const [from, to] = key.split('|||');
-            return { from: from!, to: to!, count };
+            return { from: from ?? '', to: to ?? '', count };
           }),
           nodeTypes: Object.fromEntries(nodeTypeMap),
         };
@@ -661,9 +662,12 @@ export class DashboardServer {
           layers: report.layers ?? { archive: 0, working: 0, emerging: 0, canon: 0 },
           governance: report.governance ?? { pending: 0, promoted: 0, rejected: 0 },
           insights: (report.insights ?? []).filter(
-            (i: any) => i.layer === 'emerging' && i.proposal_status === 'pending',
+            (i: Record<string, unknown>) =>
+              i.layer === 'emerging' && i.proposal_status === 'pending',
           ),
-          canon: (report.insights ?? []).filter((i: any) => i.layer === 'canon'),
+          canon: (report.insights ?? []).filter(
+            (i: Record<string, unknown>) => i.layer === 'canon',
+          ),
           generatedAt: report.generatedAt,
         });
       } catch (error) {
@@ -691,8 +695,10 @@ export class DashboardServer {
           },
         );
         res.json({ success: true, message: result.trim() });
-      } catch (error: any) {
-        res.status(400).json({ error: error.stderr?.trim() || error.message });
+      } catch (error: unknown) {
+        res.status(400).json({
+          error: (error as { stderr?: string }).stderr?.trim() || (error as Error).message,
+        });
       }
     });
 
@@ -722,8 +728,10 @@ export class DashboardServer {
           },
         );
         res.json({ success: true, message: result.trim() });
-      } catch (error: any) {
-        res.status(400).json({ error: error.stderr?.trim() || error.message });
+      } catch (error: unknown) {
+        res.status(400).json({
+          error: (error as { stderr?: string }).stderr?.trim() || (error as Error).message,
+        });
       }
     });
 
@@ -741,8 +749,10 @@ export class DashboardServer {
           },
         );
         res.json({ available: true, output: result.trim() });
-      } catch (error: any) {
-        res.status(404).json({ error: error.stderr?.trim() || error.message });
+      } catch (error: unknown) {
+        res.status(404).json({
+          error: (error as { stderr?: string }).stderr?.trim() || (error as Error).message,
+        });
       }
     });
 
@@ -783,8 +793,10 @@ export class DashboardServer {
         if (conditions) args.push('--conditions', String(conditions).slice(0, 500));
         const result = execFileSync('npx', args, { encoding: 'utf-8', timeout: 10000 });
         res.json({ success: true, message: result.trim() });
-      } catch (error: any) {
-        res.status(400).json({ error: error.stderr?.trim() || error.message });
+      } catch (error: unknown) {
+        res.status(400).json({
+          error: (error as { stderr?: string }).stderr?.trim() || (error as Error).message,
+        });
       }
     });
 
@@ -803,8 +815,10 @@ export class DashboardServer {
           },
         );
         res.json({ success: true, message: result.trim() });
-      } catch (error: any) {
-        res.status(400).json({ error: error.stderr?.trim() || error.message });
+      } catch (error: unknown) {
+        res.status(400).json({
+          error: (error as { stderr?: string }).stderr?.trim() || (error as Error).message,
+        });
       }
     });
 
@@ -817,14 +831,22 @@ export class DashboardServer {
         if (!fs.existsSync(reportPath)) return res.json({ entities: [], total: 0 });
         const report = JSON.parse(fs.readFileSync(reportPath, 'utf-8'));
 
-        let entities: any[] = [
-          ...(report.agents ?? []).map((a: any) => ({ ...a, type: 'agent', id: a.name })),
-          ...(report.insights ?? []).map((i: any, idx: number) => ({
+        let entities: Record<string, unknown>[] = [
+          ...(report.agents ?? []).map((a: Record<string, unknown>) => ({
+            ...a,
+            type: 'agent',
+            id: a.name,
+          })),
+          ...(report.insights ?? []).map((i: Record<string, unknown>, idx: number) => ({
             ...i,
             type: i.type || 'insight',
-            id: i.title?.replace(/\s+/g, '-').toLowerCase() || `insight-${idx}`,
+            id: (i.title as string)?.replace(/\s+/g, '-').toLowerCase() || `insight-${idx}`,
           })),
-          ...(report.policies ?? []).map((p: any) => ({ ...p, type: 'policy', id: p.name })),
+          ...(report.policies ?? []).map((p: Record<string, unknown>) => ({
+            ...p,
+            type: 'policy',
+            id: p.name,
+          })),
         ];
 
         const {
@@ -865,15 +887,16 @@ export class DashboardServer {
         const report = JSON.parse(fs.readFileSync(reportPath, 'utf-8'));
         const { type, id } = req.params;
 
-        let entity: any = null;
+        let entity: Record<string, unknown> | undefined;
         if (type === 'agent') {
-          entity = (report.agents ?? []).find((a: any) => a.name === id);
+          entity = (report.agents ?? []).find((a: Record<string, unknown>) => a.name === id);
         } else if (type === 'policy') {
-          entity = (report.policies ?? []).find((p: any) => p.name === id);
+          entity = (report.policies ?? []).find((p: Record<string, unknown>) => p.name === id);
         } else {
           entity = (report.insights ?? []).find(
-            (i: any) =>
-              (i.title?.replace(/\s+/g, '-').toLowerCase() || '') === id || i.title === id,
+            (i: Record<string, unknown>) =>
+              ((i.title as string)?.replace(/\s+/g, '-').toLowerCase() || '') === id ||
+              i.title === id,
           );
         }
 
@@ -1145,7 +1168,7 @@ export class DashboardServer {
 
           for (const trace of traces) {
             // Convert to WatchedTrace and store
-            const nodes = new Map<string, any>();
+            const nodes = new Map<string, Record<string, unknown>>();
             for (const [id, node] of Object.entries(trace.nodes)) {
               nodes.set(id, { ...node, state: {} });
             }
@@ -1170,7 +1193,10 @@ export class DashboardServer {
               sourceDir: 'http-collector',
             };
 
-            (this.watcher as any).traces.set(`otel:${trace.id}`, watched);
+            (this.watcher as unknown as { traces: Map<string, unknown> }).traces.set(
+              `otel:${trace.id}`,
+              watched,
+            );
             ingested++;
           }
 
@@ -1295,8 +1321,13 @@ export class DashboardServer {
         const nodes = trace.nodes;
         if (!nodes || (typeof nodes === 'object' && Object.keys(nodes).length === 0)) continue;
         // Skip traces with non-standard node types (log-file, etc.)
-        const nodeValues = Object.values(nodes) as any[];
-        if (nodeValues.some((n: any) => n.type === 'log-file' || n.type === 'log-entry')) continue;
+        const nodeValues = Object.values(nodes) as Record<string, unknown>[];
+        if (
+          nodeValues.some(
+            (n: Record<string, unknown>) => n.type === 'log-file' || n.type === 'log-entry',
+          )
+        )
+          continue;
         graphs.push(loadGraph(trace));
       } catch {
         // Skip traces that can't be converted
@@ -1331,7 +1362,16 @@ export class DashboardServer {
     }
 
     // Build nodes from steps
-    const nodes: any[] = [];
+    const nodes: {
+      id: string;
+      label: string;
+      count: number;
+      frequency: number;
+      avgDuration: number;
+      failRate: number;
+      p95Duration: number;
+      isVirtual: boolean;
+    }[] = [];
     const stepCounts = new Map<string, number>();
 
     // Count step occurrences from transitions
@@ -1412,10 +1452,7 @@ export class DashboardServer {
     }
 
     const maxEdgeCount = Math.max(...edges.map((e) => e.count), 1);
-    const maxNodeCount = Math.max(
-      ...nodes.filter((n: any) => !n.isVirtual).map((n: any) => n.count),
-      1,
-    );
+    const maxNodeCount = Math.max(...nodes.filter((n) => !n.isVirtual).map((n) => n.count), 1);
 
     return { agentId, totalTraces: model.totalGraphs, nodes, edges, maxEdgeCount, maxNodeCount };
   }
@@ -1424,7 +1461,7 @@ export class DashboardServer {
    * Legacy process graph computation for session-based traces.
    * Preserved for backward compatibility with JSONL/LOG traces.
    */
-  private buildProcessGraphLegacy(agentId: string, allTraces: any[]) {
+  private buildProcessGraphLegacy(agentId: string, allTraces: WatchedTrace[]) {
     const traces = allTraces.map(serializeTrace);
     const activityCounts = new Map<string, number>();
     const transitionCounts = new Map<string, number>();
@@ -1451,21 +1488,24 @@ export class DashboardServer {
       } else {
         const nodes = trace.nodes || {};
         const sorted = Object.values(nodes).sort(
-          (a: any, b: any) => (a.startTime || 0) - (b.startTime || 0),
+          (a: Record<string, unknown>, b: Record<string, unknown>) =>
+            ((a.startTime as number) || 0) - ((b.startTime as number) || 0),
         );
-        for (const node of sorted as any[]) {
+        for (const node of sorted as Record<string, unknown>[]) {
           activities.push({
-            name: node.name || node.type || node.id,
-            type: node.type || 'unknown',
-            status: node.status || 'completed',
-            duration: (node.endTime || node.startTime || 0) - (node.startTime || 0),
+            name: (node.name || node.type || node.id) as string,
+            type: (node.type || 'unknown') as string,
+            status: (node.status || 'completed') as string,
+            duration:
+              ((node.endTime as number) || (node.startTime as number) || 0) -
+              ((node.startTime as number) || 0),
           });
         }
       }
 
       const seq = ['[START]', ...activities.map((a) => a.name), '[END]'];
       for (let i = 0; i < seq.length; i++) {
-        const act = seq[i]!;
+        const act = seq[i] ?? '';
         activityCounts.set(act, (activityCounts.get(act) || 0) + 1);
         if (i < seq.length - 1) {
           const key = `${act} → ${seq[i + 1]}`;
@@ -1514,9 +1554,9 @@ export class DashboardServer {
   }
 
   /** Check if a trace is a proper ExecutionGraph (not a synthetic session-based trace). */
-  private isGraphTrace(trace: any): boolean {
+  private isGraphTrace(trace: WatchedTrace): boolean {
     if (trace.sourceType === 'session' || trace.sourceType === 'log') return false;
-    if (!trace.rootNodeId && !trace.rootId) return false;
+    if (!trace.rootNodeId && !(trace as unknown as Record<string, unknown>).rootId) return false;
     const nodes = trace.nodes instanceof Map ? Object.fromEntries(trace.nodes) : trace.nodes;
     return nodes && typeof nodes === 'object' && Object.keys(nodes).length > 0;
   }
@@ -1557,7 +1597,7 @@ export class DashboardServer {
     });
   }
 
-  private broadcast(message: any) {
+  private broadcast(message: Record<string, unknown>) {
     this.wss.clients.forEach((client) => {
       if (client.readyState === 1) {
         // WebSocket.OPEN

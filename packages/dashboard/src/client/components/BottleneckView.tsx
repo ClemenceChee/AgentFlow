@@ -73,7 +73,9 @@ export function BottleneckView({ model }: { model: ProcessModelData }) {
       layerNodes.set(l, arr);
     }
     for (const [layer, ns] of layerNodes) {
-      ns.forEach((n, i) => pos.set(n, { x: 60 + layer * 200, y: 40 + i * 70 }));
+      ns.forEach((n, i) => {
+        pos.set(n, { x: 60 + layer * 200, y: 40 + i * 70 });
+      });
     }
 
     return { nodes: nodeArr, edges: trans, positions: pos, maxP95: maxP };
@@ -118,13 +120,13 @@ export function BottleneckView({ model }: { model: ProcessModelData }) {
       {/* Chart area — fixed height with scroll */}
       <div className="bn-chart-area">
         <div className="bn-chart-controls">
-          <button onClick={zp.zoomOut} className="zb">
+          <button type="button" onClick={zp.zoomOut} className="zb">
             −
           </button>
-          <button onClick={zp.reset} className="zb">
+          <button type="button" onClick={zp.reset} className="zb">
             ⟲
           </button>
-          <button onClick={zp.zoomIn} className="zb">
+          <button type="button" onClick={zp.zoomIn} className="zb">
             +
           </button>
         </div>
@@ -135,6 +137,7 @@ export function BottleneckView({ model }: { model: ProcessModelData }) {
           {...zp.handlers}
           style={{ cursor: 'grab' }}
         >
+          <title>Bottleneck thermal chart</title>
           <g transform={zp.svgTransform}>
             <defs>
               <marker
