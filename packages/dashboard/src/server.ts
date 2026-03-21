@@ -192,7 +192,8 @@ export class DashboardServer {
 
     this.app.get('/api/traces/:filename', (req, res) => {
       try {
-        const trace = this.watcher.getTrace(req.params.filename);
+        const agentId = typeof req.query.agent === 'string' ? req.query.agent : undefined;
+        const trace = this.watcher.getTrace(req.params.filename, agentId);
         if (!trace) {
           return res.status(404).json({ error: 'Trace not found' });
         }
