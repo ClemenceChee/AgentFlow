@@ -1,22 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { AgentStats } from '../hooks/useAgents';
 import type { ProcessHealthData } from '../hooks/useProcessHealth';
 import type { TraceEntry } from '../hooks/useTraces';
 
-function useVersion(): string {
-  const [version, setVersion] = useState('…');
-  const fetchVersion = useCallback(async () => {
-    try {
-      const res = await fetch('/api/version');
-      if (res.ok) {
-        const data = await res.json();
-        setVersion(data.version);
-      }
-    } catch { /* ignore */ }
-  }, []);
-  useEffect(() => { fetchVersion(); }, [fetchVersion]);
-  return version;
-}
+declare const __APP_VERSION__: string;
 
 interface StatCell {
   label: string;
@@ -54,7 +41,6 @@ export function HealthBanner({ processHealth, agents, traces, onOpenSettings }: 
     { label: 'Orphans', value: orphans, color: orphans > 0 ? 'var(--color-warn)' : undefined },
   ];
 
-  const version = useVersion();
   const [connected, setConnected] = useState(true);
   const [lastUpdate, setLastUpdate] = useState(Date.now());
 
@@ -75,7 +61,7 @@ export function HealthBanner({ processHealth, agents, traces, onOpenSettings }: 
   return (
     <header className="health-banner">
       <span className="health-banner__title">AgentFlow</span>
-      <span className="hb-version">v{version}</span>
+      <span className="hb-version">v{__APP_VERSION__}</span>
       <span className={`hb-live ${connected ? 'hb-live--on' : 'hb-live--off'}`} title={connected ? 'Connected — scanning live' : 'Disconnected'}>
         <span className={`hb-live__dot ${connected ? 'hb-live__dot--pulse' : ''}`} />
         {connected ? 'LIVE' : 'OFFLINE'}
