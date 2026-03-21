@@ -72,8 +72,8 @@ export function EfficiencyPanel({ apiBase }: { apiBase: string }) {
 
       {report.flags.length > 0 && (
         <div>
-          {report.flags.map((f, i) => (
-            <div key={i} className="efficiency-flag">
+          {report.flags.map((f, _i) => (
+            <div key={`${f.pattern}-${f.nodeName}-${f.tokenCost}`} className="efficiency-flag">
               {'\u26A0'} {f.message}
             </div>
           ))}

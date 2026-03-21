@@ -136,7 +136,7 @@ describe('AgentStats', () => {
       // The analyzeExecution fallback catches errors from getStats and processes plain objects
       const trace = makeTrace({ agentId: 'obj-agent', startTime: 1000 });
       // Force nodes to be a plain object to trigger fallback
-      (trace as any).nodes = {
+      (trace as WatchedTrace & { nodes: Record<string, ExecutionNode> }).nodes = {
         root: {
           id: 'root',
           type: 'agent',

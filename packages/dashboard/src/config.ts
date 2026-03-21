@@ -106,10 +106,10 @@ export function loadConfig(explicitPath?: string): {
   return { config: EMPTY_CONFIG, configPath: null };
 }
 
-function stripCommentKeys(obj: any): any {
+function stripCommentKeys(obj: unknown): unknown {
   if (Array.isArray(obj)) return obj.map(stripCommentKeys);
   if (obj && typeof obj === 'object') {
-    const result: Record<string, any> = {};
+    const result: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(obj)) {
       if (key.startsWith('//')) continue;
       result[key] = stripCommentKeys(value);

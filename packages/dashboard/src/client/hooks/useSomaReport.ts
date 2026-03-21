@@ -17,6 +17,9 @@ export interface SomaReport {
     title: string;
     claim: string;
     confidence: string;
+    layer?: string;
+    proposal_status?: string;
+    confidence_score?: number;
   }>;
   policies?: Array<{
     name: string;

@@ -206,15 +206,15 @@ function ActiveView({ report, agentId }: { report: SomaReport; agentId: string }
                   </select>
                 </div>
               </div>
-              {visible.map((ins, i) => (
-                <div key={i} className="soma-intel__insight">
+              {visible.map((ins, _i) => (
+                <div key={ins.title} className="soma-intel__insight">
                   <span className="soma-intel__insight-type">{ins.type}</span>
                   <strong>{ins.title}</strong>
                   <span className="soma-intel__insight-conf">{ins.confidence}</span>
-                  <LayerBadge layer={(ins as any).layer} status={(ins as any).proposal_status} />
-                  {(ins as any).confidence_score != null && (
+                  <LayerBadge layer={ins.layer} status={ins.proposal_status} />
+                  {ins.confidence_score != null && (
                     <span style={{ fontSize: 10, color: '#8b949e', marginLeft: 4 }}>
-                      ({((ins as any).confidence_score * 100).toFixed(0)}%)
+                      ({(ins.confidence_score * 100).toFixed(0)}%)
                     </span>
                   )}
                   {ins.claim && <div className="soma-intel__insight-claim">{ins.claim}</div>}
@@ -245,8 +245,8 @@ function ActiveView({ report, agentId }: { report: SomaReport; agentId: string }
               <h4 className="soma-intel__section-title">
                 Guard Policies ({report.policies.length})
               </h4>
-              {visible.map((pol, i) => (
-                <div key={i} className="soma-intel__policy">
+              {visible.map((pol, _i) => (
+                <div key={pol.name} className="soma-intel__policy">
                   <strong>{pol.name}</strong>
                   <span
                     className={`soma-intel__enforcement soma-intel__enforcement--${pol.enforcement}`}

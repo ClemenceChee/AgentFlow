@@ -3,7 +3,7 @@ import type { FullTrace } from '../hooks/useSelectedTrace';
 import { AgentFlow } from './AgentFlow';
 import { DependencyTree } from './DependencyTree';
 import { FlameChart } from './FlameChart';
-import { GuardExplanationCard } from './GuardExplanationCard';
+import { GuardExplanationCard, type Violation } from './GuardExplanationCard';
 import { MetricsView } from './MetricsView';
 import { RunReceiptView } from './RunReceiptView';
 import { StateMachine } from './StateMachine';
@@ -134,21 +134,13 @@ function SummaryContent({ trace }: { trace: FullTrace }) {
         <div className="sc-failures">
           <h4 className="sc-failures__title">{'\u2718'} Failed Nodes</h4>
           {failedNodes.map((n) => {
-            const violation = (n.metadata?.guardViolation ?? n.state?.guardViolation) as
-              | {
-                  type: string;
-                  nodeId: string;
-                  message: string;
-                  timestamp: number;
-                  explanation?: Record<string, unknown>;
-                }
-              | undefined;
+            const violation = (n.metadata?.guardViolation ?? n.state?.guardViolation) as Violation | undefined;
             return (
               <div key={n.id} className="sc-failure">
                 <span className="sc-failure__type">{n.type}:</span>
                 <strong>{n.name}</strong>
                 {violation ? (
-                  <GuardExplanationCard violation={violation as any} />
+                  <GuardExplanationCard violation={violation} />
                 ) : (n.metadata?.error ?? n.state?.error) ? (
                   <span className="sc-failure__err">
                     {String(n.metadata?.error ?? n.state?.error)}

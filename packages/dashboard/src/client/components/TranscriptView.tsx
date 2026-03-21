@@ -118,21 +118,23 @@ export function TranscriptView({ trace }: { trace: FullTrace }) {
           content = rawContent
             .map((c: Record<string, unknown>) => {
               if (c.type === 'thinking') return `[thinking] ${String(c.thinking ?? '')}`;
-              if (c.type === 'toolCall')
-                return `[tool call: ${String((c as any).name ?? (c as any).toolName ?? 'unknown')}]`;
+              if (c.type === 'toolCall') {
+                const toolContent = c as { name?: string; toolName?: string };
+                return `[tool call: ${String(toolContent.name ?? toolContent.toolName ?? 'unknown')}]`;
+              }
               return String(c.text ?? c.content ?? '');
             })
             .filter(Boolean)
             .join('\n');
         }
-        const config = ROLE_CONFIG[role] ?? ROLE_CONFIG.event!;
+        const config = ROLE_CONFIG[role] ?? ROLE_CONFIG.event ?? { icon: '•', label: 'Unknown', cls: '', origin: 'system' };
         const isThinking = role === 'thinking';
         const isError = !!raw.error;
         const isHuman = config.origin === 'user';
 
         return (
           <div
-            key={i}
+            key={`event-${raw.id ?? raw.timestamp ?? i}`}
             className={`tv-bubble ${config.cls} ${isError ? 'tv-bubble--error' : ''} ${isHuman ? 'tv-bubble--right' : 'tv-bubble--left'}`}
           >
             {/* Avatar + role */}

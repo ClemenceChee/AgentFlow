@@ -33,13 +33,14 @@ export function ProcessMapView({ model }: { model: ProcessModelData }) {
     // BFS from nodes that have no incoming edges
     const incoming = new Set(edges.map((e) => e.to));
     const roots = nodes.filter((n) => !incoming.has(n));
-    const queue = roots.length > 0 ? roots : [nodes[0]!];
+    const queue = roots.length > 0 ? roots : nodes.length > 0 && nodes[0] ? [nodes[0]] : [];
     for (const r of queue) layers.set(r, 0);
 
     const visited = new Set(queue);
     const bfs = [...queue];
     while (bfs.length > 0) {
-      const current = bfs.shift()!;
+      const current = bfs.shift();
+      if (!current) break;
       const layer = layers.get(current) ?? 0;
       for (const e of edges) {
         if (e.from === current && !visited.has(e.to)) {
@@ -114,7 +115,7 @@ export function ProcessMapView({ model }: { model: ProcessModelData }) {
         <title>Process map chart</title>
         <g transform={zp.svgTransform}>
           {/* Edges */}
-          {edges.map((e, i) => {
+          {edges.map((e, _i) => {
             const from = positions.get(e.from);
             const to = positions.get(e.to);
             if (!from || !to) return null;
@@ -122,7 +123,7 @@ export function ProcessMapView({ model }: { model: ProcessModelData }) {
             const opacity = 0.3 + (e.count / maxCount) * 0.7;
             return (
               <line
-                key={i}
+                key={`${e.from}-${e.to}`}
                 x1={from.x + 70}
                 y1={from.y + 16}
                 x2={to.x}

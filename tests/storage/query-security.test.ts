@@ -51,18 +51,18 @@ describe('QueryBuilder ORDER BY allowlist', () => {
   it('should fall back to defaults for injection payload in orderBy', () => {
     // This should not throw or execute injected SQL
     const results = qb.findExecutions({
-      orderBy: 'timestamp; DROP TABLE executions; --' as any,
+      orderBy: 'timestamp; DROP TABLE executions; --' as 'timestamp' | string,
       orderDirection: 'DESC',
     });
     expect(results).toHaveLength(2);
     // Table should still exist
-    const count = db.prepare('SELECT count(*) as c FROM executions').get() as any;
+    const count = db.prepare('SELECT count(*) as c FROM executions').get() as { c: number };
     expect(count.c).toBe(2);
   });
 
   it('should fall back to defaults for invalid orderDirection', () => {
     const results = qb.findExecutions({
-      orderDirection: 'DESC; --' as any,
+      orderDirection: 'DESC; --' as 'DESC' | string,
     });
     expect(results).toHaveLength(2);
   });

@@ -6,6 +6,17 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { WebSocket } from 'ws';
 import { DashboardServer } from '../../packages/dashboard/src/server.js';
 
+// Test interfaces
+interface TestTrace {
+  id: string;
+  agentId: string;
+  filename?: string;
+}
+
+interface TestApiResponse {
+  traces: TestTrace[];
+}
+
 // ---------------------------------------------------------------------------
 // Fixtures
 // ---------------------------------------------------------------------------
@@ -69,20 +80,20 @@ async function getAvailablePort(): Promise<number> {
   });
 }
 
-function httpGet(url: string): Promise<{ status: number; body: any }> {
+function httpGet(url: string): Promise<{ status: number; body: TestApiResponse }> {
   return new Promise((resolve, reject) => {
     http
       .get(url, (res) => {
         let data = '';
         res.on('data', (chunk) => (data += chunk));
         res.on('end', () => {
-          let body: any;
+          let body: TestApiResponse;
           try {
             body = JSON.parse(data);
           } catch {
             body = data;
           }
-          resolve({ status: res.statusCode!, body });
+          resolve({ status: res.statusCode ?? 500, body });
         });
       })
       .on('error', reject);
@@ -135,7 +146,7 @@ describe('Integration: Full Pipeline', () => {
 
     const { status, body } = await httpGet(`${baseUrl}/api/traces`);
     expect(status).toBe(200);
-    const found = body.traces.find((t: any) => t.id === 'int-1');
+    const found = body.traces.find((t: TestTrace) => t.id === 'int-1');
     expect(found).toBeDefined();
     expect(found.agentId).toBe('int-agent');
   }, 10000);
@@ -151,7 +162,7 @@ describe('Integration: Full Pipeline', () => {
 
     const { status, body } = await httpGet(`${baseUrl}/api/traces`);
     expect(status).toBe(200);
-    const found = body.traces.find((t: any) => t.id === 'int-session-1');
+    const found = body.traces.find((t: TestTrace) => t.id === 'int-session-1');
     expect(found).toBeDefined();
     // agentId should be extracted from path
     expect(found.agentId).toContain('test-worker');
@@ -166,7 +177,7 @@ describe('Integration: Full Pipeline', () => {
     const { status, body } = await httpGet(`${baseUrl}/api/traces`);
     expect(status).toBe(200);
     // Should have loaded the log file in some form
-    const logTraces = body.traces.filter((t: any) => t.filename === 'openclaw-integration.log');
+    const logTraces = body.traces.filter((t: TestTrace) => t.filename === 'openclaw-integration.log');
     expect(logTraces.length).toBeGreaterThanOrEqual(1);
   }, 10000);
 
@@ -186,7 +197,7 @@ describe('Integration: Full Pipeline', () => {
     const { status, body } = await httpGet(`${baseUrl}/api/traces`);
     expect(status).toBe(200);
 
-    const agentIds = new Set(body.traces.map((t: any) => t.agentId));
+    const agentIds = new Set(body.traces.map((t: TestTrace) => t.agentId));
     expect(agentIds.has('alpha')).toBe(true);
     // Beta should appear with some form of agent id containing 'beta'
     const hasBeta = Array.from(agentIds).some((id: string) => id.includes('beta'));
@@ -196,7 +207,7 @@ describe('Integration: Full Pipeline', () => {
   it('real-time updates via WebSocket', async () => {
     const wsUrl = `ws://127.0.0.1:${port}`;
 
-    const messages: any[] = [];
+    const messages: unknown[] = [];
 
     await new Promise<void>((resolve, reject) => {
       const ws = new WebSocket(wsUrl);

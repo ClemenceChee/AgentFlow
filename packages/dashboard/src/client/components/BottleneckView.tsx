@@ -162,13 +162,13 @@ export function BottleneckView({ model }: { model: ProcessModelData }) {
             </defs>
 
             {/* Edges */}
-            {edges.map((e, i) => {
+            {edges.map((e, _i) => {
               const from = positions.get(e.from);
               const to = positions.get(e.to);
               if (!from || !to) return null;
               return (
                 <line
-                  key={i}
+                  key={`${e.from}-${e.to}`}
                   x1={from.x + 140}
                   y1={from.y + 20}
                   x2={to.x}
