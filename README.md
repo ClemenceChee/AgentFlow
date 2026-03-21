@@ -164,17 +164,17 @@ They're complementary — use LangFuse for LLM metrics, AgentFlow for agent syst
 
 ---
 
-## Soma Intelligence (Preview)
+## Soma — Intelligence Tier
 
-Agent systems have a memory problem. Each run starts fresh. Failures recur. Patterns go unnoticed.
+AgentFlow tells you what happened. Soma tells you what it means.
 
-Soma is an organizational intelligence layer that accumulates knowledge across executions and feeds it back into runtime guards. It creates a closed feedback loop where agents get smarter over time.
+Soma is AgentFlow's organizational intelligence layer. Its worker cascade (Harvester → Reconciler → Synthesizer → Cartographer) ingests execution traces, synthesizes cross-agent patterns via LLM, and feeds learned policies back into AgentFlow guards through the PolicySource interface.
 
 ```
-Agents execute → AgentFlow traces → Soma learns → Guards adapt → Agents improve
+Agents execute → AgentFlow traces → Soma cascade → Knowledge vault → Policy Bridge → Guards adapt
 ```
 
-**Production results (17 agents, 1,229 executions):** 11 insights extracted, 4 guard policies auto-generated, 6 agents flagged as critical. Guards would have blocked unreliable agents before they failed again.
+**Production validated:** 6,870+ entities ingested, 15 L3 proposals synthesized from real data, governance loop tested end-to-end with evidence chains. Framework-agnostic via adapters (AgentFlow native + LangChain).
 
 Soma is available as an early access preview. [Contact us](mailto:clemence.chee@gmail.com) for access.
 
