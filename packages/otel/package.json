@@ -18,7 +18,8 @@
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --dts --clean --tsconfig tsconfig.build.json",
     "dev": "tsx src/index.ts",
-    "test": "vitest"
+    "test": "vitest",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "agentflow-core": "^0.8.0",
@@ -47,5 +48,17 @@
     "genai",
     "llm"
   ],
-  "license": "MIT"
+  "license": "Apache-2.0 WITH Commons-Clause-1.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ClemenceChee/AgentFlow.git"
+  },
+  "homepage": "https://github.com/ClemenceChee/AgentFlow#readme",
+  "bugs": {
+    "url": "https://github.com/ClemenceChee/AgentFlow/issues"
+  },
+  "author": "Clemence Chee",
+  "engines": {
+    "node": ">=20"
+  }
 }

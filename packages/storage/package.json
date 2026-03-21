@@ -22,7 +22,8 @@
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --clean",
     "dev": "tsx src/cli.ts",
-    "test": "vitest run"
+    "test": "vitest run",
+    "prepublishOnly": "npm run build && npm run test"
   },
   "dependencies": {
     "better-sqlite3": "^9.2.2",
@@ -44,5 +45,17 @@
     "tracing",
     "history"
   ],
-  "license": "MIT"
+  "license": "Apache-2.0 WITH Commons-Clause-1.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ClemenceChee/AgentFlow.git"
+  },
+  "homepage": "https://github.com/ClemenceChee/AgentFlow#readme",
+  "bugs": {
+    "url": "https://github.com/ClemenceChee/AgentFlow/issues"
+  },
+  "author": "Clemence Chee",
+  "engines": {
+    "node": ">=20"
+  }
 }
