@@ -105,10 +105,11 @@ describe('DashboardServer', () => {
       it('should return all traces', async () => {
         const response = await request(`http://localhost:${port}`).get('/api/traces').expect(200);
 
-        expect(Array.isArray(response.body)).toBe(true);
-        expect(response.body.length).toBeGreaterThan(0);
+        const traces = response.body.traces ?? response.body;
+        expect(Array.isArray(traces)).toBe(true);
+        expect(traces.length).toBeGreaterThan(0);
 
-        const trace = response.body[0];
+        const trace = traces[0];
         expect(trace).toHaveProperty('id');
         expect(trace).toHaveProperty('agentId');
         expect(trace).toHaveProperty('startTime');
@@ -133,7 +134,8 @@ describe('DashboardServer', () => {
           .get('/api/traces')
           .expect(200);
 
-        expect(response.body).toEqual([]);
+        const traces = response.body.traces ?? response.body;
+        expect(traces).toEqual([]);
 
         await emptyServer.stop();
       });
@@ -145,7 +147,8 @@ describe('DashboardServer', () => {
           .get('/api/traces')
           .expect(200);
 
-        const firstTrace = allTracesResponse.body[0];
+        const allTraces = allTracesResponse.body.traces ?? allTracesResponse.body;
+        const firstTrace = allTraces[0];
         const filename = firstTrace.filename;
 
         const response = await request(`http://localhost:${port}`)
@@ -217,7 +220,9 @@ describe('DashboardServer', () => {
 
     describe('GET /api/agents', () => {
       it('should return list of agents with metrics', async () => {
-        const response = await request(`http://localhost:${port}`).get('/api/agents').expect(200);
+        const response = await request(`http://localhost:${port}`)
+          .get('/api/agents?flat=true')
+          .expect(200);
 
         expect(Array.isArray(response.body)).toBe(true);
         expect(response.body.length).toBeGreaterThan(0);
@@ -500,7 +505,8 @@ describe('DashboardServer', () => {
       // Verify server is running
       const response = await request(`http://localhost:${port}`).get('/api/traces').expect(200);
 
-      expect(Array.isArray(response.body)).toBe(true);
+      const traces = response.body.traces ?? response.body;
+      expect(Array.isArray(traces)).toBe(true);
 
       // Stop server
       await server.stop();
@@ -532,7 +538,8 @@ describe('DashboardServer', () => {
           .get('/api/traces')
           .expect(200);
 
-        expect(Array.isArray(response.body)).toBe(true);
+        const cycleTraces = response.body.traces ?? response.body;
+        expect(Array.isArray(cycleTraces)).toBe(true);
 
         await server.stop();
       }

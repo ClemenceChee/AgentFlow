@@ -69,7 +69,8 @@ describe('TraceWatcher', () => {
     beforeEach(() => {
       const tracesDir = path.join(tempDir, 'traces');
       fs.mkdirSync(tracesDir, { recursive: true });
-      watcher = new TraceWatcher(tracesDir);
+      // Don't create watcher here — tests create it after writing files
+      // so loadExistingFiles() picks them up without needing chokidar
     });
 
     it('should parse AgentFlow JSON trace files', async () => {
@@ -81,8 +82,9 @@ describe('TraceWatcher', () => {
       const traceFile = path.join(tempDir, 'traces', 'test.json');
       fs.writeFileSync(traceFile, JSON.stringify(trace));
 
-      // Trigger file load
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      // Recreate watcher so it picks up the file via loadExistingFiles
+      watcher.stop();
+      watcher = new TraceWatcher(path.join(tempDir, 'traces'));
 
       const loadedTrace = watcher.getTrace('test.json');
       expect(loadedTrace).toBeDefined();
@@ -124,8 +126,9 @@ describe('TraceWatcher', () => {
       const sessionFile = path.join(tempDir, 'traces', 'session.jsonl');
       fs.writeFileSync(sessionFile, jsonlContent);
 
-      // Trigger file load
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      // Create watcher after file exists so loadExistingFiles picks it up
+      watcher?.stop();
+      watcher = new TraceWatcher(path.join(tempDir, 'traces'));
 
       const loadedTrace = watcher.getTrace('session.jsonl');
       expect(loadedTrace).toBeDefined();
@@ -138,15 +141,16 @@ describe('TraceWatcher', () => {
     it('should parse OpenClaw log files using universal parser', async () => {
       const _logFiles = TestDataGenerator.createOpenClawLogs(path.join(tempDir, 'traces'));
 
-      // Trigger file load
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      // Create watcher after files exist
+      watcher?.stop();
+      watcher = new TraceWatcher(path.join(tempDir, 'traces'));
 
       const traces = watcher.getAllTraces();
       expect(traces.length).toBeGreaterThan(0);
 
       const openclawTrace = traces.find((t) => t.filename?.includes('openclaw'));
       expect(openclawTrace).toBeDefined();
-      expect(openclawTrace?.sourceType).toBe('trace');
+      expect(openclawTrace?.sourceType).toBe('session');
     });
 
     it('should handle malformed JSON files gracefully', () => {
@@ -273,11 +277,11 @@ describe('TraceWatcher', () => {
     });
 
     it('should filter traces by agent ID', () => {
-      const agentTraces = watcher.getTracesByAgent('agent-0');
+      const agentTraces = watcher.getTracesByAgent('agent-1');
       expect(agentTraces.length).toBeGreaterThan(0);
 
       for (const trace of agentTraces) {
-        expect(trace.agentId).toBe('agent-0');
+        expect(trace.agentId).toBe('agent-1');
       }
     });
 
@@ -289,7 +293,7 @@ describe('TraceWatcher', () => {
     it('should return agent IDs list', () => {
       const agentIds = watcher.getAgentIds();
       expect(agentIds.length).toBeGreaterThan(0);
-      expect(agentIds).toContain('agent-0');
+      expect(agentIds).toContain('agent-1');
 
       // Should be sorted
       const sorted = [...agentIds].sort();

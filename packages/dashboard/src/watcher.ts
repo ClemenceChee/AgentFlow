@@ -178,9 +178,13 @@ export class TraceWatcher extends EventEmitter {
   }
 
   private ensureTracesDir() {
-    if (!fs.existsSync(this.tracesDir)) {
-      fs.mkdirSync(this.tracesDir, { recursive: true });
-      console.log(`Created traces directory: ${this.tracesDir}`);
+    try {
+      if (!fs.existsSync(this.tracesDir)) {
+        fs.mkdirSync(this.tracesDir, { recursive: true });
+        console.log(`Created traces directory: ${this.tracesDir}`);
+      }
+    } catch {
+      // Permission denied or other fs error — continue without creating dir
     }
   }
 
