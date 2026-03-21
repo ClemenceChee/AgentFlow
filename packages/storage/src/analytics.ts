@@ -23,7 +23,7 @@ export class StorageAnalytics {
       params.push(agentId);
     }
 
-    const result = this.db.prepare(sql).get(...params) as any;
+    const result = this.db.prepare(sql).get(...params) as Record<string, number> | undefined;
 
     if (!result || result.total === 0) return 0;
 
@@ -38,7 +38,7 @@ export class StorageAnalytics {
     return Math.min(100, Math.max(0, Math.round(healthScore)));
   }
 
-  public detectAnomalies(agentId: string, days = 30): any[] {
+  public detectAnomalies(agentId: string, days = 30): Record<string, unknown>[] {
     const since = Date.now() - days * 24 * 60 * 60 * 1000;
 
     // Get execution data with hourly aggregation
@@ -56,7 +56,7 @@ export class StorageAnalytics {
         `)
       .all(agentId, since);
 
-    const anomalies: any[] = [];
+    const anomalies: Record<string, unknown>[] = [];
 
     if (hourlyData.length < 24) return anomalies; // Not enough data
 
@@ -120,7 +120,7 @@ export class StorageAnalytics {
     return anomalies.sort((a, b) => new Date(b.hour).getTime() - new Date(a.hour).getTime());
   }
 
-  public getTrends(agentId?: string, days = 30): any {
+  public getTrends(agentId?: string, days = 30): Record<string, unknown> {
     const since = Date.now() - days * 24 * 60 * 60 * 1000;
 
     let sql = `
@@ -167,13 +167,13 @@ export class StorageAnalytics {
     };
   }
 
-  public getResourceUtilization(days = 7): any {
+  public getResourceUtilization(days = 7): Record<string, unknown> {
     const since = Date.now() - days * 24 * 60 * 60 * 1000;
 
     // Database size
     const dbSize = this.db
       .prepare('SELECT page_count * page_size as size FROM pragma_page_count(), pragma_page_size()')
-      .get() as any;
+      .get() as Record<string, number> | undefined;
 
     // Execution statistics
     const execStats = this.db
@@ -187,7 +187,7 @@ export class StorageAnalytics {
             FROM executions
             WHERE timestamp >= ?
         `)
-      .get(since) as any;
+      .get(since) as Record<string, number> | undefined;
 
     // Storage breakdown
     const storageStats = this.db
@@ -198,7 +198,7 @@ export class StorageAnalytics {
                 (SELECT COUNT(*) FROM daily_stats) as dailyStatRecords
             FROM executions
         `)
-      .get() as any;
+      .get() as Record<string, number> | undefined;
 
     return {
       period: `${days} days`,
@@ -221,7 +221,7 @@ export class StorageAnalytics {
     };
   }
 
-  public getAgentComparison(agentIds: string[], days = 7): any {
+  public getAgentComparison(agentIds: string[], days = 7): Record<string, unknown> {
     const since = Date.now() - days * 24 * 60 * 60 * 1000;
 
     const comparisons = agentIds.map((agentId) => {
@@ -235,7 +235,7 @@ export class StorageAnalytics {
                 FROM executions
                 WHERE agentId = ? AND timestamp >= ?
             `)
-        .get(agentId, since) as any;
+        .get(agentId, since) as Record<string, number> | undefined;
 
       return {
         agentId,
@@ -262,7 +262,7 @@ export class StorageAnalytics {
     };
   }
 
-  public getFailurePatterns(days = 30): any {
+  public getFailurePatterns(days = 30): Record<string, unknown> {
     const since = Date.now() - days * 24 * 60 * 60 * 1000;
 
     // Get failure data

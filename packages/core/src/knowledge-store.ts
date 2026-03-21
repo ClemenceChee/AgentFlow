@@ -338,7 +338,7 @@ export function createKnowledgeStore(config?: KnowledgeStoreConfig): KnowledgeSt
 
           for (const file of files) {
             // Filename is {timestamp}-{seq}.json
-            const ts = Number.parseInt(file.split('-')[0]!, 10);
+            const ts = Number.parseInt(file.split('-')[0] ?? '', 10);
             if (!Number.isNaN(ts) && ts < options.olderThan) {
               try {
                 rmSync(join(agentPatternDir, file));

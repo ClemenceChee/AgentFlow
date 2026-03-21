@@ -91,7 +91,7 @@ function parseRunArgs(argv: string[]): ParsedRunArgs {
       case '--watch-dir':
         i++;
         if (flagArgs[i]) {
-          result.watchDirs.push(flagArgs[i]!);
+          result.watchDirs.push(flagArgs[i] as string);
         }
         i++;
         break;
@@ -101,7 +101,7 @@ function parseRunArgs(argv: string[]): ParsedRunArgs {
           if (result.watchPatterns.length === 1 && result.watchPatterns[0] === '*.json') {
             result.watchPatterns = [];
           }
-          result.watchPatterns.push(flagArgs[i]!);
+          result.watchPatterns.push(flagArgs[i] as string);
         }
         i++;
         break;
@@ -198,12 +198,12 @@ async function runCommand(argv: string[]): Promise<void> {
     if (result.tracePaths.length > 0) {
       console.log('\uD83D\uDCDD Traces saved:');
 
-      const orchPath = result.tracePaths[0]!;
+      const orchPath = result.tracePaths[0] as string;
       const orchName = basename(orchPath, '.json').split('-')[0] ?? 'orchestrator';
       console.log(`   ${orchName.padEnd(14)} \u2192 ${orchPath}`);
 
       for (let i = 1; i < result.tracePaths.length; i++) {
-        const tPath = result.tracePaths[i]!;
+        const tPath = result.tracePaths[i] as string;
         const name = basename(tPath, '.json').replace(/-\d{4}-.*$/, '');
         const isLast = i === result.tracePaths.length - 1;
         const prefix = isLast ? '\u2514\u2500' : '\u251C\u2500';
@@ -238,7 +238,7 @@ function parseAuditArgs(argv: string[]): ProcessAuditConfig {
 
   let i = 0;
   while (i < args.length) {
-    const arg = args[i]!;
+    const arg = args[i] ?? '';
     if (arg === '--help' || arg === '-h') {
       printAuditUsage();
       process.exit(0);
@@ -343,7 +343,7 @@ async function main(): Promise<void> {
   const knownCommands = ['run', 'live', 'watch', 'trace', 'audit'];
   if (
     argv.length === 0 ||
-    (!knownCommands.includes(argv[0]!) && (argv.includes('--help') || argv.includes('-h')))
+    (!knownCommands.includes(argv[0] ?? '') && (argv.includes('--help') || argv.includes('-h')))
   ) {
     printHelp();
     process.exit(0);

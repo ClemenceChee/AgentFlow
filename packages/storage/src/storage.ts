@@ -117,7 +117,7 @@ export class AgentFlowStorage {
   private updateAgentStats!: Database.Statement;
   private updateDailyStats!: Database.Statement;
 
-  public async ingestTrace(trace: any): Promise<void> {
+  public async ingestTrace(trace: Record<string, unknown>): Promise<void> {
     const transaction = this.db.transaction(() => {
       // Analyze trace for metrics
       const analysis = this.analyzeTrace(trace);
@@ -147,7 +147,7 @@ export class AgentFlowStorage {
     transaction();
   }
 
-  private analyzeTrace(trace: any): {
+  private analyzeTrace(trace: Record<string, unknown>): {
     success: boolean;
     executionTime: number;
     nodeCount: number;
@@ -180,24 +180,29 @@ export class AgentFlowStorage {
     }
   }
 
-  private extractNodes(trace: any): any[] {
-    if (Array.isArray(trace.nodes)) {
-      return trace.nodes.map(([, node]: [string, any]) => node);
+  private extractNodes(trace: Record<string, unknown>): Record<string, unknown>[] {
+    const nodes = trace.nodes;
+    if (Array.isArray(nodes)) {
+      return nodes.map(([, node]: [string, Record<string, unknown>]) => node);
     }
-    if (trace.nodes instanceof Map) {
-      return Array.from(trace.nodes.values());
+    if (nodes instanceof Map) {
+      return Array.from(nodes.values()) as Record<string, unknown>[];
     }
-    if (typeof trace.nodes === 'object') {
-      return Object.values(trace.nodes);
+    if (typeof nodes === 'object' && nodes !== null) {
+      return Object.values(nodes) as Record<string, unknown>[];
     }
     return [];
   }
 
-  private isFailedNode(node: any): boolean {
-    return node.status === 'failed' || !!node.error || node.metadata?.error;
+  private isFailedNode(node: Record<string, unknown>): boolean {
+    return (
+      node.status === 'failed' ||
+      !!node.error ||
+      !!(node.metadata as Record<string, unknown> | undefined)?.error
+    );
   }
 
-  private estimateExecutionTime(nodes: any[]): number {
+  private estimateExecutionTime(nodes: Record<string, unknown>[]): number {
     if (nodes.length === 0) return 0;
 
     const times = nodes
@@ -207,8 +212,10 @@ export class AgentFlowStorage {
     return times.length > 0 ? Math.max(...times) : 0;
   }
 
-  private updateAgentStatistics(agentId: string, analysis: any) {
-    const existing = this.db.prepare('SELECT * FROM agents WHERE agentId = ?').get(agentId) as any;
+  private updateAgentStatistics(agentId: string, analysis: Record<string, unknown>) {
+    const existing = this.db.prepare('SELECT * FROM agents WHERE agentId = ?').get(agentId) as
+      | Record<string, number>
+      | undefined;
 
     if (existing) {
       const newTotal = existing.totalExecutions + 1;
@@ -245,11 +252,15 @@ export class AgentFlowStorage {
     }
   }
 
-  private updateDailyStatistics(agentId: string, timestamp: number, analysis: any) {
+  private updateDailyStatistics(
+    agentId: string,
+    timestamp: number,
+    analysis: Record<string, unknown>,
+  ) {
     const date = new Date(timestamp).toISOString().split('T')[0];
     const existing = this.db
       .prepare('SELECT * FROM daily_stats WHERE date = ? AND agentId = ?')
-      .get(date, agentId) as any;
+      .get(date, agentId) as Record<string, number> | undefined;
 
     if (existing) {
       const newTotal = existing.totalExecutions + 1;
@@ -295,7 +306,7 @@ export class AgentFlowStorage {
     } = {},
   ): ExecutionTrace[] {
     let sql = 'SELECT * FROM executions WHERE 1=1';
-    const params: any[] = [];
+    const params: (string | number | boolean)[] = [];
 
     if (filters.agentId) {
       sql += ' AND agentId = ?';
@@ -332,11 +343,11 @@ export class AgentFlowStorage {
     return this.db.prepare(sql).all(...params) as ExecutionTrace[];
   }
 
-  public getAgents(): any[] {
+  public getAgents(): unknown[] {
     return this.db.prepare('SELECT * FROM agents ORDER BY lastSeen DESC').all();
   }
 
-  public getDailyStats(agentId?: string, days: number = 30): any[] {
+  public getDailyStats(agentId?: string, days: number = 30): unknown[] {
     const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
     if (agentId) {
@@ -380,7 +391,7 @@ export class AgentFlowStorage {
   }
 
   // Export data for external analysis
-  public export(format: 'json' | 'csv' = 'json', filters: any = {}): string {
+  public export(format: 'json' | 'csv' = 'json', filters: Record<string, unknown> = {}): string {
     const executions = this.getExecutions(filters);
 
     if (format === 'csv') {

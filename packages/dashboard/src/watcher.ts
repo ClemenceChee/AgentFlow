@@ -30,7 +30,7 @@ export interface SessionEvent {
   name?: string;
   content?: string;
   toolName?: string;
-  toolArgs?: any;
+  toolArgs?: unknown;
   toolResult?: string;
   toolError?: string;
   duration?: number;
@@ -320,7 +320,7 @@ export class TraceWatcher extends EventEmitter {
 
       for (const trace of normalized) {
         // Convert NormalizedTrace to WatchedTrace shape
-        const nodes = new Map<string, any>();
+        const nodes = new Map<string, unknown>();
         for (const [id, node] of Object.entries(trace.nodes)) {
           nodes.set(id, {
             id: node.id,
@@ -344,8 +344,8 @@ export class TraceWatcher extends EventEmitter {
           trigger: trace.trigger,
           startTime: trace.startTime,
           endTime: trace.endTime,
-          status: trace.status as any,
-          nodes: nodes as any,
+          status: trace.status as WatchedTrace['status'],
+          nodes: nodes as WatchedTrace['nodes'],
           edges: [],
           events: [],
           metadata: { ...trace.metadata, adapterSource: adapterName },
@@ -388,7 +388,7 @@ export class TraceWatcher extends EventEmitter {
 
         // Ensure nodes is a Map (parseUniversalLog creates plain objects)
         if (trace.nodes && !(trace.nodes instanceof Map)) {
-          const nodeMap = new Map<string, any>();
+          const nodeMap = new Map<string, unknown>();
           for (const [key, value] of Object.entries(trace.nodes)) {
             nodeMap.set(key, value);
           }
@@ -416,7 +416,7 @@ export class TraceWatcher extends EventEmitter {
   /** Universal log parser - detects agent activities from any system */
   private parseUniversalLog(content: string, filename: string, filePath: string): WatchedTrace[] {
     const lines = content.split('\n').filter((line) => line.trim());
-    const activities = new Map<string, any>();
+    const activities = new Map<string, Record<string, unknown>>();
 
     // Pattern detection - identify structured entries
     for (const line of lines) {
@@ -463,9 +463,10 @@ export class TraceWatcher extends EventEmitter {
     // Convert log entries to sessionEvents for transcript tab
     for (const trace of traces) {
       const sortedNodes = Object.values(trace.nodes).sort(
-        (a: any, b: any) => a.startTime - b.startTime,
+        (a: Record<string, unknown>, b: Record<string, unknown>) =>
+          (a.startTime as number) - (b.startTime as number),
       );
-      trace.sessionEvents = sortedNodes.map((node: any) => ({
+      trace.sessionEvents = sortedNodes.map((node: Record<string, unknown>) => ({
         type: node.status === 'failed' ? 'tool_result' : ('system' as const),
         timestamp: node.startTime,
         name: node.name,
@@ -519,7 +520,11 @@ export class TraceWatcher extends EventEmitter {
     return aliases[raw] ?? raw;
   }
 
-  private detectAgentIdentifier(activity: any, _filename: string, filePath: string): string {
+  private detectAgentIdentifier(
+    activity: Record<string, unknown>,
+    _filename: string,
+    filePath: string,
+  ): string {
     // Use agent_id from log fields if available
     if (activity.agent_id) {
       return this.normaliseAgentId(activity.agent_id);
@@ -536,6 +541,7 @@ export class TraceWatcher extends EventEmitter {
         const re = new RegExp(`^(${pattern})$`);
         const match = basename.match(re);
         if (match) {
+          // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional placeholder pattern
           const resolved = template.replace('${match}', match[1]);
           return this.normaliseAgentId(resolved);
         }
@@ -582,13 +588,16 @@ export class TraceWatcher extends EventEmitter {
     return filename;
   }
 
-  private generateActivityName(activity: any, sessionId: string): string {
+  private generateActivityName(activity: Record<string, unknown>, sessionId: string): string {
     const component = activity.component !== 'unknown' ? activity.component : 'Activity';
     const operation = activity.operation !== 'activity' ? `: ${activity.operation}` : '';
     return `${component}${operation} (${sessionId})`;
   }
 
-  private addActivityNode(session: any, activity: any): void {
+  private addActivityNode(
+    session: Record<string, unknown>,
+    activity: Record<string, unknown>,
+  ): void {
     // Group by component.operation to avoid creating thousands of nodes per log file
     const nodeId = `${activity.component}-${activity.operation}`;
 
@@ -642,7 +651,7 @@ export class TraceWatcher extends EventEmitter {
           sessionId: string;
           provider: string;
           model: string;
-          usage: any;
+          usage: Record<string, unknown>;
           durationMs: number;
           agentName: string;
         }>;
@@ -670,7 +679,9 @@ export class TraceWatcher extends EventEmitter {
                 : parsed._meta?.date
                   ? new Date(parsed._meta.date).getTime()
                   : stats.mtime.getTime();
-              const texts = (inner.payloads || []).map((p: any) => p.text || '').filter(Boolean);
+              const texts = (inner.payloads || [])
+                .map((p: Record<string, unknown>) => p.text || '')
+                .filter(Boolean);
 
               if (!sessions.has(sessionId)) {
                 sessions.set(sessionId, { entries: [] });
@@ -702,7 +713,9 @@ export class TraceWatcher extends EventEmitter {
             : parsed._meta?.date
               ? new Date(parsed._meta.date).getTime()
               : stats.mtime.getTime();
-          const texts = (parsed.payloads || []).map((p: any) => p.text || '').filter(Boolean);
+          const texts = (parsed.payloads || [])
+            .map((p: Record<string, unknown>) => p.text || '')
+            .filter(Boolean);
 
           if (!sessions.has(sessionId)) {
             sessions.set(sessionId, { entries: [] });
@@ -746,7 +759,7 @@ export class TraceWatcher extends EventEmitter {
         totalDuration += entry.durationMs;
       }
 
-      const nodes = new Map<string, any>();
+      const nodes = new Map<string, Record<string, unknown>>();
       const rootId = `openclaw-${sessionId.slice(0, 12)}`;
 
       // Create nodes for each entry
@@ -871,7 +884,7 @@ export class TraceWatcher extends EventEmitter {
       // Ensure all nodes have children arrays (prevents getStats() crash)
       if (graph.nodes instanceof Map) {
         for (const node of graph.nodes.values()) {
-          if (!node.children) (node as any).children = [];
+          if (!node.children) (node as unknown as Record<string, unknown>).children = [];
         }
       }
 
@@ -901,7 +914,7 @@ export class TraceWatcher extends EventEmitter {
       let loaded = 0;
       for (const [sessionKey, sessionData] of Object.entries(data)) {
         if (!sessionData || typeof sessionData !== 'object') continue;
-        const session = sessionData as Record<string, any>;
+        const session = sessionData as Record<string, unknown>;
         const sessionId = session.sessionId;
         if (!sessionId) continue;
 
@@ -919,7 +932,7 @@ export class TraceWatcher extends EventEmitter {
         const trigger = sessionKey.includes('cron') ? 'cron' : 'message';
 
         const rootId = `idx-${sessionId.slice(0, 12)}`;
-        const nodes = new Map<string, any>();
+        const nodes = new Map<string, Record<string, unknown>>();
         nodes.set(rootId, {
           id: rootId,
           type: 'agent',
@@ -980,7 +993,7 @@ export class TraceWatcher extends EventEmitter {
       const lines = content.split('\n').filter((l) => l.trim());
       if (lines.length === 0) return false;
 
-      const rawEvents: Array<Record<string, any>> = [];
+      const rawEvents: Array<Record<string, unknown>> = [];
       for (const line of lines) {
         try {
           rawEvents.push(JSON.parse(line));
@@ -1147,7 +1160,7 @@ export class TraceWatcher extends EventEmitter {
             name: `Subagent: ${(evt.data?.sessionId || '').slice(0, 12)}`,
             startTime: evtTs,
             endTime: evtTs,
-            status: 'completed' as any,
+            status: 'completed' as ExecutionNode['status'],
             parentId: rootId,
             children: [],
             metadata: { sessionId: evt.data?.sessionId },
@@ -1159,13 +1172,15 @@ export class TraceWatcher extends EventEmitter {
         if (evt.type === 'message' && evt.message) {
           const msg = evt.message;
           const role = msg.role;
-          const contentBlocks: any[] = Array.isArray(msg.content) ? msg.content : [];
+          const contentBlocks: Record<string, unknown>[] = Array.isArray(msg.content)
+            ? msg.content
+            : [];
 
           if (role === 'user') {
             userMessageCount++;
             const textContent = contentBlocks
-              .filter((b: any) => b.type === 'text')
-              .map((b: any) => b.text || '')
+              .filter((b: Record<string, unknown>) => b.type === 'text')
+              .map((b: Record<string, unknown>) => b.text || '')
               .join('\n');
             sessionEvents.push({
               type: 'user',
@@ -1231,7 +1246,7 @@ export class TraceWatcher extends EventEmitter {
                   name: 'Thinking',
                   startTime: evtTs,
                   endTime: evtTs,
-                  status: 'completed' as any,
+                  status: 'completed' as ExecutionNode['status'],
                   parentId: rootId,
                   children: [],
                   metadata: { preview: block.thinking.slice(0, 100) },
@@ -1264,7 +1279,7 @@ export class TraceWatcher extends EventEmitter {
                   name: toolName,
                   startTime: evtTs,
                   endTime: evtTs, // updated when result arrives
-                  status: 'running' as any,
+                  status: 'running' as ExecutionNode['status'],
                   parentId: rootId,
                   children: [],
                   metadata: {
@@ -1280,9 +1295,11 @@ export class TraceWatcher extends EventEmitter {
             // Link tool result back to tool call
             const toolCallId = contentBlocks[0]?.toolCallId || evt.parentId;
             const resultContent = contentBlocks
-              .map((b: any) => b.text || b.content || '')
+              .map((b: Record<string, unknown>) => b.text || b.content || '')
               .join('\n');
-            const hasError = contentBlocks.some((b: any) => b.isError || b.error);
+            const hasError = contentBlocks.some(
+              (b: Record<string, unknown>) => b.isError || b.error,
+            );
             const errorText = hasError ? resultContent : undefined;
 
             sessionEvents.push({
@@ -1299,7 +1316,9 @@ export class TraceWatcher extends EventEmitter {
             for (const [_nodeId, node] of nodes) {
               if (node.type === 'tool' && node.metadata?.toolCallId === toolCallId) {
                 node.endTime = evtTs;
-                node.status = hasError ? ('failed' as any) : ('completed' as any);
+                node.status = hasError
+                  ? ('failed' as ExecutionNode['status'])
+                  : ('completed' as ExecutionNode['status']);
                 if (hasError) node.metadata.error = errorText?.slice(0, 500);
                 // Compute duration on the session event
                 const callIdx = toolCallMap.get(toolCallId);
@@ -1349,8 +1368,8 @@ export class TraceWatcher extends EventEmitter {
         name: rootName,
         startTime,
         endTime: lastTimestamp,
-        status: status as any,
-        parentId: undefined as any,
+        status: status as ExecutionNode['status'],
+        parentId: undefined as unknown as string,
         children: Array.from(nodes.keys()).filter((k) => k !== rootId),
         metadata: {
           provider,
@@ -1378,7 +1397,7 @@ export class TraceWatcher extends EventEmitter {
         edges: [],
         events: [],
         startTime,
-        status: status as any,
+        status: status as WatchedTrace['status'],
         agentId,
         trigger,
         name: rootName,
@@ -1410,7 +1429,7 @@ export class TraceWatcher extends EventEmitter {
   }
 
   /** Parse cron run JSONL files (ts, jobId, action, status format). */
-  private loadCronRunFile(rawEvents: Array<Record<string, any>>, filePath: string): boolean {
+  private loadCronRunFile(rawEvents: Array<Record<string, unknown>>, filePath: string): boolean {
     try {
       const filename = path.basename(filePath);
       const jobId = rawEvents[0]?.jobId || path.basename(filePath, '.jsonl');
@@ -1438,7 +1457,7 @@ export class TraceWatcher extends EventEmitter {
       const firstTs = rawEvents[0]?.ts || fileStat.mtime.getTime();
       const lastTs = rawEvents[rawEvents.length - 1]?.ts || fileStat.mtime.getTime();
       const rootId = `cron-${jobId.slice(0, 12)}`;
-      const nodes = new Map<string, any>();
+      const nodes = new Map<string, Record<string, unknown>>();
 
       nodes.set(rootId, {
         id: rootId,
@@ -1623,11 +1642,13 @@ export class TraceWatcher extends EventEmitter {
     if (candidates.length === 1) return candidates[0];
 
     // When multiple traces remain, prefer the one with more nodes (richer data)
-    let best = candidates[0]!;
+    let best = candidates[0];
+    if (!best) return undefined;
     let bestNodeCount =
       best.nodes instanceof Map ? best.nodes.size : Object.keys(best.nodes ?? {}).length;
     for (let i = 1; i < candidates.length; i++) {
-      const c = candidates[i]!;
+      const c = candidates[i];
+      if (!c) continue;
       const nc = c.nodes instanceof Map ? c.nodes.size : Object.keys(c.nodes ?? {}).length;
       if (nc > bestNodeCount) {
         best = c;

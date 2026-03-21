@@ -35,10 +35,13 @@ export function ErrorHeatmap({ traces }: { traces: TraceEntry[] }) {
             ? `rgba(248,81,73,${0.3 + intensity * 0.7})`
             : `rgba(63,185,80,${0.1 + intensity * 0.35})`;
           return (
+            // biome-ignore lint/a11y/useSemanticElements: interactive visualization element
             <div
               key={t.filename || i}
               className="heatmap-cell"
               style={{ background: bg }}
+              role="button"
+              tabIndex={0}
               onMouseEnter={() => setHovered(t)}
               onMouseLeave={() => setHovered(null)}
             >

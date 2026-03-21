@@ -83,7 +83,7 @@ function parseFrontmatter(content: string): Record<string, string> {
   const match = content.match(/^---\n([\s\S]*?)\n---/);
   if (!match) return {};
   const fields: Record<string, string> = {};
-  for (const line of match[1]?.split('\n')) {
+  for (const line of match[1]?.split('\n') ?? []) {
     const idx = line.indexOf(':');
     if (idx > 0) {
       fields[line.slice(0, idx).trim()] = line.slice(idx + 1).trim();

@@ -95,9 +95,15 @@ export function SomaGovernance({
                   border: '1px solid var(--bd)',
                 }}
               >
+                {/* biome-ignore lint/a11y/useSemanticElements: interactive element with role+keyboard handlers */}
                 <div
                   style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => setExpandedId(isExpanded ? null : id)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') setExpandedId(isExpanded ? null : id);
+                  }}
                 >
                   <span style={{ color: '#58a6ff', fontSize: 11, fontWeight: 600, minWidth: 36 }}>
                     {score}
@@ -105,6 +111,7 @@ export function SomaGovernance({
                   <span style={{ flex: 1, color: 'var(--t1)', fontSize: 13 }}>{ins.title}</span>
                   <span style={{ fontSize: 10, color: 'var(--t3)' }}>{ins.type}</span>
                   <button
+                    type="button"
                     style={{
                       fontSize: 11,
                       padding: '2px 8px',
@@ -122,6 +129,7 @@ export function SomaGovernance({
                     Approve
                   </button>
                   <button
+                    type="button"
                     style={{
                       fontSize: 11,
                       padding: '2px 8px',
@@ -165,6 +173,7 @@ export function SomaGovernance({
                       }}
                     />
                     <button
+                      type="button"
                       style={{
                         fontSize: 11,
                         padding: '4px 8px',

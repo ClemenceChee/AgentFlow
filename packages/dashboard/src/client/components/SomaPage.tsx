@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useSomaGovernance } from '../hooks/useSomaGovernance';
 import { useSomaReport } from '../hooks/useSomaReport';
 import type { SomaTier } from '../hooks/useSomaTier';
+import { DriftChart } from './DriftChart';
 import { SomaActivityFeed } from './SomaActivityFeed';
 import { SomaGovernance } from './SomaGovernance';
 import { SomaIntelligence } from './SomaIntelligence';
@@ -79,6 +80,7 @@ export function SomaPage({ tier }: Props) {
             const locked = PAID_VIEWS.includes(view) && !isPro;
             return (
               <button
+                type="button"
                 key={view}
                 className={`soma-page__tab ${activeView === view ? 'soma-page__tab--active' : ''} ${locked ? 'soma-page__tab--locked' : ''}`}
                 onClick={() => !locked && setActiveView(view)}
@@ -108,6 +110,15 @@ export function SomaPage({ tier }: Props) {
         {activeView === 'policies' && isPro && <SomaPolicyEditor />}
         {activeView === 'knowledge' && isPro && <SomaKnowledgeExplorer />}
         {activeView === 'activity' && isPro && <SomaActivityFeed />}
+
+        {/* Drift chart (pro tier, shown on intelligence view) */}
+        {activeView === 'intelligence' && isPro && report.report?.agents && (
+          <div style={{ padding: '0 16px 16px' }}>
+            {report.report.agents.slice(0, 3).map((agent: { name: string }) => (
+              <DriftChart key={agent.name} apiBase="" agentId={agent.name} />
+            ))}
+          </div>
+        )}
 
         {PAID_VIEWS.includes(activeView) && !isPro && (
           <div className="soma-page__locked">
