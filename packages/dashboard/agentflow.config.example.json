@@ -59,7 +59,9 @@
   "// agentDetection": "Rules for identifying agents from file paths and names",
   "agentDetection": {
     "// pathPatterns": "Map path substrings to agent IDs",
+    "// pathPatterns note": "Patterns are used as prefix for agents/NAME detection (e.g. .openclaw/ + agents/main → openclaw-main)",
     "pathPatterns": {
+      ".openclaw/": "openclaw",
       ".soma/": "soma-main",
       ".alfred/": "alfred"
     },
