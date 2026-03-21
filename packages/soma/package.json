@@ -21,7 +21,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "agentflow-core": "^0.8.0"
+    "agentflow-core": "^0.8.1"
   },
   "devDependencies": {
     "tsup": "^8.4.0",
