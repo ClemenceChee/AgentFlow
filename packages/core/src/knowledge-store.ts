@@ -178,7 +178,8 @@ export function createKnowledgeStore(config?: KnowledgeStoreConfig): KnowledgeSt
 
     // Update profile
     ensureDir(profilesDir);
-    const existing = readJson<AgentProfile>(profilePath(event.agentId)) ?? emptyProfile(event.agentId);
+    const existing =
+      readJson<AgentProfile>(profilePath(event.agentId)) ?? emptyProfile(event.agentId);
     const updated = mergeExecutionEvent(existing, event);
     writeJsonAtomic(profilePath(event.agentId), updated);
   }
@@ -193,7 +194,8 @@ export function createKnowledgeStore(config?: KnowledgeStoreConfig): KnowledgeSt
 
     // Update profile
     ensureDir(profilesDir);
-    const existing = readJson<AgentProfile>(profilePath(event.agentId)) ?? emptyProfile(event.agentId);
+    const existing =
+      readJson<AgentProfile>(profilePath(event.agentId)) ?? emptyProfile(event.agentId);
     const updated = mergePatternEvent(existing, event);
     writeJsonAtomic(profilePath(event.agentId), updated);
   }
@@ -209,7 +211,10 @@ export function createKnowledgeStore(config?: KnowledgeStoreConfig): KnowledgeSt
       }
     },
 
-    getRecentEvents(agentId: string, options?: { limit?: number; since?: number }): ExecutionEvent[] {
+    getRecentEvents(
+      agentId: string,
+      options?: { limit?: number; since?: number },
+    ): ExecutionEvent[] {
       const limit = options?.limit ?? 50;
       const since = options?.since ?? 0;
 
@@ -386,7 +391,10 @@ export function createKnowledgeStore(config?: KnowledgeStoreConfig): KnowledgeSt
       writeFileSync(join(agentInsightDir, fileName), JSON.stringify(event, null, 2), 'utf-8');
     },
 
-    getRecentInsights(agentId: string, options?: { type?: string; limit?: number }): InsightEvent[] {
+    getRecentInsights(
+      agentId: string,
+      options?: { type?: string; limit?: number },
+    ): InsightEvent[] {
       const limit = options?.limit ?? 10;
       const typeFilter = options?.type;
 

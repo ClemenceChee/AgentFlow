@@ -98,8 +98,8 @@ describe('Adaptive Guards', () => {
 
       const hfr = violations.find((v) => v.type === 'high-failure-rate');
       expect(hfr).toBeDefined();
-      expect(hfr!.explanation.rule).toBe('max-failure-rate');
-      expect(hfr!.explanation.source).toBe('soma-policy');
+      expect(hfr?.explanation.rule).toBe('max-failure-rate');
+      expect(hfr?.explanation.source).toBe('soma-policy');
     });
 
     it('does not emit when failure rate is acceptable', () => {
@@ -131,8 +131,8 @@ describe('Adaptive Guards', () => {
 
       const cd = violations.find((v) => v.type === 'conformance-drift');
       expect(cd).toBeDefined();
-      expect(cd!.explanation.rule).toBe('min-conformance');
-      expect(cd!.explanation.source).toBe('soma-policy');
+      expect(cd?.explanation.rule).toBe('min-conformance');
+      expect(cd?.explanation.source).toBe('soma-policy');
     });
 
     it('does not emit when conformance score is null', () => {
@@ -172,8 +172,8 @@ describe('Adaptive Guards', () => {
 
       const kb = violations.find((v) => v.type === 'known-bottleneck');
       expect(kb).toBeDefined();
-      expect(kb!.explanation.rule).toBe('known-bottleneck');
-      expect(kb!.explanation.source).toBe('soma-policy');
+      expect(kb?.explanation.rule).toBe('known-bottleneck');
+      expect(kb?.explanation.source).toBe('soma-policy');
     });
 
     it('does not emit for completed nodes', () => {
@@ -226,8 +226,8 @@ describe('Adaptive Guards', () => {
 
       const hfr = violations.find((v) => v.type === 'high-failure-rate');
       expect(hfr).toBeDefined();
-      expect(hfr!.explanation.rule).toBe('max-failure-rate');
-      expect(hfr!.explanation.source).toBe('soma-policy');
+      expect(hfr?.explanation.rule).toBe('max-failure-rate');
+      expect(hfr?.explanation.source).toBe('soma-policy');
     });
   });
 });

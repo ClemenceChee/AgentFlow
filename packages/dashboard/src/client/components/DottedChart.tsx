@@ -2,21 +2,21 @@ import { useMemo, useState } from 'react';
 import type { TraceEntry } from '../hooks/useTraces';
 
 const TYPE_COLORS: Record<string, string> = {
-  completed: '#3fb950', failed: '#f85149', running: '#58a6ff', unknown: '#8b949e',
+  completed: '#3fb950',
+  failed: '#f85149',
+  running: '#58a6ff',
+  unknown: '#8b949e',
 };
 
 export function DottedChart({ traces }: { traces: TraceEntry[] }) {
   const [hovered, setHovered] = useState<TraceEntry | null>(null);
 
-  const sorted = useMemo(() =>
-    [...traces].sort((a, b) => a.timestamp - b.timestamp),
-    [traces],
-  );
+  const sorted = useMemo(() => [...traces].sort((a, b) => a.timestamp - b.timestamp), [traces]);
 
   if (sorted.length === 0) return <div className="workspace__empty">No executions to chart</div>;
 
-  const minTime = sorted[0]!.timestamp;
-  const maxTime = sorted[sorted.length - 1]!.timestamp;
+  const minTime = sorted[0]?.timestamp;
+  const maxTime = sorted[sorted.length - 1]?.timestamp;
   const timeRange = Math.max(maxTime - minTime, 1);
 
   const W = 800;
@@ -30,8 +30,21 @@ export function DottedChart({ traces }: { traces: TraceEntry[] }) {
       <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`}>
         {/* Time axis labels */}
         {[0, 0.25, 0.5, 0.75, 1].map((pct) => (
-          <text key={pct} x={40 + (W - 60) * pct} y={H - 4} fill="#6e7681" fontSize={9} fontFamily="var(--fm)" textAnchor="middle">
-            {new Date(minTime + timeRange * pct).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+          <text
+            key={pct}
+            x={40 + (W - 60) * pct}
+            y={H - 4}
+            fill="#6e7681"
+            fontSize={9}
+            fontFamily="var(--fm)"
+            textAnchor="middle"
+          >
+            {new Date(minTime + timeRange * pct).toLocaleString([], {
+              month: 'short',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+            })}
           </text>
         ))}
 
@@ -44,7 +57,9 @@ export function DottedChart({ traces }: { traces: TraceEntry[] }) {
           return (
             <circle
               key={t.filename || i}
-              cx={x} cy={y} r={r}
+              cx={x}
+              cy={y}
+              r={r}
               fill={color}
               opacity={hovered === t ? 1 : 0.7}
               onMouseEnter={() => setHovered(t)}
@@ -56,8 +71,23 @@ export function DottedChart({ traces }: { traces: TraceEntry[] }) {
       </svg>
 
       {hovered && (
-        <div style={{ fontSize: 'var(--xs)', color: 'var(--t2)', background: 'var(--bg2)', border: '1px solid var(--bd)', borderRadius: 'var(--r)', padding: 'var(--s1) var(--s2)', display: 'inline-block', marginTop: 'var(--s1)' }}>
-          <strong>{hovered.agentId}</strong> &middot; {hovered.status} &middot; {hovered.nodeCount}n &middot; {hovered.duration < 1000 ? `${hovered.duration}ms` : `${(hovered.duration / 1000).toFixed(1)}s`}
+        <div
+          style={{
+            fontSize: 'var(--xs)',
+            color: 'var(--t2)',
+            background: 'var(--bg2)',
+            border: '1px solid var(--bd)',
+            borderRadius: 'var(--r)',
+            padding: 'var(--s1) var(--s2)',
+            display: 'inline-block',
+            marginTop: 'var(--s1)',
+          }}
+        >
+          <strong>{hovered.agentId}</strong> &middot; {hovered.status} &middot; {hovered.nodeCount}n
+          &middot;{' '}
+          {hovered.duration < 1000
+            ? `${hovered.duration}ms`
+            : `${(hovered.duration / 1000).toFixed(1)}s`}
           &middot; {new Date(hovered.timestamp).toLocaleString()}
         </div>
       )}

@@ -53,8 +53,14 @@ export interface GroupedAgentsResponse {
 const PURPOSE_KEYWORDS: { keywords: string[]; group: string }[] = [
   { keywords: ['email', 'mail', 'inbox', 'smtp'], group: 'Email Processors' },
   { keywords: ['monitor', 'watch', 'alert', 'surveillance'], group: 'Monitors' },
-  { keywords: ['digest', 'newsletter', 'summary', 'report', 'briefing'], group: 'Digests & Reports' },
-  { keywords: ['curator', 'janitor', 'distiller', 'surveyor', 'worker', 'indexer'], group: 'Workers' },
+  {
+    keywords: ['digest', 'newsletter', 'summary', 'report', 'briefing'],
+    group: 'Digests & Reports',
+  },
+  {
+    keywords: ['curator', 'janitor', 'distiller', 'surveyor', 'worker', 'indexer'],
+    group: 'Workers',
+  },
   { keywords: ['cron', 'schedule', 'timer', 'periodic'], group: 'Scheduled Jobs' },
   { keywords: ['search', 'scrape', 'crawl', 'fetch'], group: 'Data Collection' },
   { keywords: ['embed', 'vector', 'index'], group: 'Embeddings' },
@@ -131,7 +137,7 @@ export function deduplicateAgents(agents: AgentStats[]): AgentStats[] {
   const mergedAgents: AgentStats[] = [];
 
   for (const [_key, group] of suffixGroups) {
-    const suffix = extractSuffix(group[0]!.localId)!;
+    const suffix = extractSuffix(group[0]?.localId)!;
     if (group.length < 2) continue;
     const prefixes = new Set(group.map((a) => a.localId.split('-')[0]));
     // Only merge when prefixes are variations of the same system (e.g. "vault" + bare)
@@ -143,7 +149,7 @@ export function deduplicateAgents(agents: AgentStats[]): AgentStats[] {
 
     // Merge stats
     const merged: AgentStats = {
-      agentId: group[0]!.source === 'agentflow' ? suffix : `${group[0]!.source}:${suffix}`,
+      agentId: group[0]?.source === 'agentflow' ? suffix : `${group[0]?.source}:${suffix}`,
       displayName: suffix,
       totalExecutions: group.reduce((s, a) => s + a.totalExecutions, 0),
       successfulExecutions: group.reduce((s, a) => s + a.successfulExecutions, 0),
@@ -157,13 +163,13 @@ export function deduplicateAgents(agents: AgentStats[]): AgentStats[] {
         .sort((a, b) => b.timestamp - a.timestamp)
         .slice(0, 50),
       sources: group.map((a) => a.agentId),
-      adapterSource: group[0]!.source,
+      adapterSource: group[0]?.source,
     };
-    merged.successRate = merged.totalExecutions > 0
-      ? (merged.successfulExecutions / merged.totalExecutions) * 100
-      : 0;
+    merged.successRate =
+      merged.totalExecutions > 0 ? (merged.successfulExecutions / merged.totalExecutions) * 100 : 0;
     const totalExecTime = group.reduce((s, a) => s + a.avgExecutionTime * a.totalExecutions, 0);
-    merged.avgExecutionTime = merged.totalExecutions > 0 ? totalExecTime / merged.totalExecutions : 0;
+    merged.avgExecutionTime =
+      merged.totalExecutions > 0 ? totalExecTime / merged.totalExecutions : 0;
 
     // Merge triggers
     for (const a of group) {

@@ -147,14 +147,14 @@ describe('toReceipt', () => {
     // root-agent is still running so durationMs is null for it
     const rootStep = receipt.steps.find((s) => s.name === 'root-agent');
     expect(rootStep).toBeDefined();
-    expect(rootStep!.status).toBe('running');
-    expect(rootStep!.durationMs).toBeNull();
+    expect(rootStep?.status).toBe('running');
+    expect(rootStep?.durationMs).toBeNull();
 
     // tool-a is completed
     const toolStep = receipt.steps.find((s) => s.name === 'tool-a');
     expect(toolStep).toBeDefined();
-    expect(toolStep!.status).toBe('completed');
-    expect(toolStep!.durationMs).toBeTypeOf('number');
+    expect(toolStep?.status).toBe('completed');
+    expect(toolStep?.durationMs).toBeTypeOf('number');
   });
 
   it('failed steps are counted correctly', () => {
@@ -167,8 +167,8 @@ describe('toReceipt', () => {
 
     const failedStep = receipt.steps.find((s) => s.name === 'tool-b');
     expect(failedStep).toBeDefined();
-    expect(failedStep!.status).toBe('failed');
-    expect(failedStep!.error).toBe('connection timeout');
+    expect(failedStep?.status).toBe('failed');
+    expect(failedStep?.error).toBe('connection timeout');
   });
 });
 

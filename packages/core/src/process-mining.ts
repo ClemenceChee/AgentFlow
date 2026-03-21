@@ -147,7 +147,7 @@ export function discoverProcess(graphs: ExecutionGraph[]): ProcessModel {
     steps: [...steps].sort(),
     transitions,
     totalGraphs: graphs.length,
-    agentId: graphs[0]!.agentId,
+    agentId: graphs[0]?.agentId ?? '',
   };
 }
 

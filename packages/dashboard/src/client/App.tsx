@@ -23,7 +23,13 @@ export function App() {
   const processHealth = useProcessHealth();
   const traces = useTraces();
   const { grouped, flat: agents } = useAgents();
-  const { trace, loading: traceLoading, selectedFilename, selectTrace, clearSelection } = useSelectedTrace();
+  const {
+    trace,
+    loading: traceLoading,
+    selectedFilename,
+    selectTrace,
+    clearSelection,
+  } = useSelectedTrace();
   const somaTier = useSomaTier();
 
   const [page, setPage] = useState<Page>('agents');
@@ -40,29 +46,46 @@ export function App() {
     autoInitDone.current = true;
   }, [agents]);
 
-  const handleSelectAgent = useCallback((agentId: string) => {
-    setSelectedAgent(agentId);
-    setAgentView('profile');
-    clearSelection();
-  }, [clearSelection]);
+  const handleSelectAgent = useCallback(
+    (agentId: string) => {
+      setSelectedAgent(agentId);
+      setAgentView('profile');
+      clearSelection();
+    },
+    [clearSelection],
+  );
 
-  const handleSelectExecution = useCallback((filename: string, agentId: string) => {
-    selectTrace(filename, agentId);
-    setAgentView('execution');
-  }, [selectTrace]);
+  const handleSelectExecution = useCallback(
+    (filename: string, agentId: string) => {
+      selectTrace(filename, agentId);
+      setAgentView('execution');
+    },
+    [selectTrace],
+  );
 
   const processModel = useProcessModel(selectedAgent);
 
   return (
     <div className="dashboard">
-      <HealthBanner processHealth={processHealth} agents={agents} traces={traces} onOpenSettings={() => setShowSettings(true)} />
+      <HealthBanner
+        processHealth={processHealth}
+        agents={agents}
+        traces={traces}
+        onOpenSettings={() => setShowSettings(true)}
+      />
 
       {/* Top-level page tabs */}
       <div className="page-tabs">
-        <button className={`page-tabs__tab ${page === 'agents' ? 'page-tabs__tab--active' : ''}`} onClick={() => setPage('agents')}>
+        <button
+          className={`page-tabs__tab ${page === 'agents' ? 'page-tabs__tab--active' : ''}`}
+          onClick={() => setPage('agents')}
+        >
           {'\u{1F50D}'} Agents
         </button>
-        <button className={`page-tabs__tab ${page === 'soma' ? 'page-tabs__tab--active' : ''}`} onClick={() => setPage('soma')}>
+        <button
+          className={`page-tabs__tab ${page === 'soma' ? 'page-tabs__tab--active' : ''}`}
+          onClick={() => setPage('soma')}
+        >
           {'\u{1F9E0}'} SOMA
         </button>
       </div>

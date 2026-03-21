@@ -11,14 +11,17 @@ export function useZoomPan(minScale = 0.3, maxScale = 3) {
   const dragging = useRef(false);
   const lastPos = useRef({ x: 0, y: 0 });
 
-  const onWheel = useCallback((e: React.WheelEvent) => {
-    e.preventDefault();
-    const delta = e.deltaY > 0 ? 0.9 : 1.1;
-    setState((prev) => ({
-      ...prev,
-      scale: Math.min(maxScale, Math.max(minScale, prev.scale * delta)),
-    }));
-  }, [minScale, maxScale]);
+  const onWheel = useCallback(
+    (e: React.WheelEvent) => {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? 0.9 : 1.1;
+      setState((prev) => ({
+        ...prev,
+        scale: Math.min(maxScale, Math.max(minScale, prev.scale * delta)),
+      }));
+    },
+    [minScale, maxScale],
+  );
 
   const onMouseDown = useCallback((e: React.MouseEvent) => {
     dragging.current = true;

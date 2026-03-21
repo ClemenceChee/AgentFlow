@@ -1,8 +1,8 @@
 import { existsSync, readdirSync, readFileSync, rmSync } from 'node:fs';
-import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
-import type { ExecutionEvent, ExecutionGraph, InsightEvent, PatternEvent } from 'agentflow-core';
+import type { ExecutionGraph, InsightEvent } from 'agentflow-core';
 import {
   createEventEmitter,
   createExecutionEvent,
@@ -111,7 +111,12 @@ describe('KnowledgeStore', () => {
     it('persists a pattern event in patterns directory', () => {
       const store = createKnowledgeStore({ baseDir: testDir });
       const graphs = [buildCompletedGraph()];
-      const event = createPatternEvent('test-agent', discoverProcess(graphs), findVariants(graphs), getBottlenecks(graphs));
+      const event = createPatternEvent(
+        'test-agent',
+        discoverProcess(graphs),
+        findVariants(graphs),
+        getBottlenecks(graphs),
+      );
       store.append(event);
 
       const patternDir = join(testDir, 'patterns', 'test-agent');
@@ -135,10 +140,10 @@ describe('KnowledgeStore', () => {
 
       const profile = store.getAgentProfile('test-agent');
       expect(profile).not.toBeNull();
-      expect(profile!.totalRuns).toBe(1);
-      expect(profile!.successCount).toBe(1);
-      expect(profile!.failureCount).toBe(0);
-      expect(profile!.failureRate).toBe(0);
+      expect(profile?.totalRuns).toBe(1);
+      expect(profile?.successCount).toBe(1);
+      expect(profile?.failureCount).toBe(0);
+      expect(profile?.failureRate).toBe(0);
     });
 
     it('updates profile on subsequent events', () => {
@@ -148,9 +153,9 @@ describe('KnowledgeStore', () => {
       store.append(createExecutionEvent(buildCompletedGraph()));
 
       const profile = store.getAgentProfile('test-agent');
-      expect(profile!.totalRuns).toBe(3);
-      expect(profile!.successCount).toBe(3);
-      expect(profile!.recentDurations.length).toBe(3);
+      expect(profile?.totalRuns).toBe(3);
+      expect(profile?.successCount).toBe(3);
+      expect(profile?.recentDurations.length).toBe(3);
     });
 
     it('computes failure rate correctly', () => {
@@ -160,9 +165,9 @@ describe('KnowledgeStore', () => {
       for (let i = 0; i < 3; i++) store.append(createExecutionEvent(buildFailedGraph()));
 
       const profile = store.getAgentProfile('test-agent');
-      expect(profile!.failureRate).toBeCloseTo(0.3, 5);
-      expect(profile!.successCount).toBe(7);
-      expect(profile!.failureCount).toBe(3);
+      expect(profile?.failureRate).toBeCloseTo(0.3, 5);
+      expect(profile?.successCount).toBe(7);
+      expect(profile?.failureCount).toBe(3);
     });
 
     it('maintains rolling window of 100 durations', () => {
@@ -172,18 +177,23 @@ describe('KnowledgeStore', () => {
       }
 
       const profile = store.getAgentProfile('test-agent');
-      expect(profile!.recentDurations.length).toBe(100);
+      expect(profile?.recentDurations.length).toBe(100);
     });
 
     it('accumulates bottlenecks from pattern events', () => {
       const store = createKnowledgeStore({ baseDir: testDir });
       const graphs = [buildCompletedGraph()];
-      const event = createPatternEvent('test-agent', discoverProcess(graphs), findVariants(graphs), getBottlenecks(graphs));
+      const event = createPatternEvent(
+        'test-agent',
+        discoverProcess(graphs),
+        findVariants(graphs),
+        getBottlenecks(graphs),
+      );
       store.append(event);
 
       const profile = store.getAgentProfile('test-agent');
-      expect(profile!.knownBottlenecks.length).toBeGreaterThan(0);
-      expect(profile!.knownBottlenecks).toContain('main');
+      expect(profile?.knownBottlenecks.length).toBeGreaterThan(0);
+      expect(profile?.knownBottlenecks).toContain('main');
     });
 
     it('tracks conformance score from process context', () => {
@@ -194,7 +204,7 @@ describe('KnowledgeStore', () => {
       store.append(event);
 
       const profile = store.getAgentProfile('test-agent');
-      expect(profile!.lastConformanceScore).toBe(0.85);
+      expect(profile?.lastConformanceScore).toBe(0.85);
     });
   });
 
@@ -207,7 +217,7 @@ describe('KnowledgeStore', () => {
 
       const events = store.getRecentEvents('test-agent');
       expect(events.length).toBe(3);
-      expect(events[0]!.timestamp).toBeGreaterThanOrEqual(events[1]!.timestamp);
+      expect(events[0]?.timestamp).toBeGreaterThanOrEqual(events[1]?.timestamp);
     });
 
     it('respects limit option', () => {
@@ -253,7 +263,7 @@ describe('KnowledgeStore', () => {
 
       const history = store.getPatternHistory('test-agent');
       expect(history.length).toBe(2);
-      expect(history[0]!.timestamp).toBeGreaterThanOrEqual(history[1]!.timestamp);
+      expect(history[0]?.timestamp).toBeGreaterThanOrEqual(history[1]?.timestamp);
     });
 
     it('returns empty array for unknown agent', () => {
@@ -298,7 +308,7 @@ describe('KnowledgeStore', () => {
 
       const profile = store.getAgentProfile('test-agent');
       expect(profile).not.toBeNull();
-      expect(profile!.totalRuns).toBe(1);
+      expect(profile?.totalRuns).toBe(1);
     });
 
     it('works as an EventEmitter writer', async () => {
@@ -308,7 +318,7 @@ describe('KnowledgeStore', () => {
       await emitter.emit(createExecutionEvent(buildCompletedGraph()));
 
       const profile = store.getAgentProfile('test-agent');
-      expect(profile!.totalRuns).toBe(1);
+      expect(profile?.totalRuns).toBe(1);
     });
   });
 
@@ -321,7 +331,7 @@ describe('KnowledgeStore', () => {
       await emitter.emit(createExecutionEvent(buildCompletedGraph()));
 
       const profile = store.getAgentProfile('test-agent');
-      expect(profile!.totalRuns).toBe(2);
+      expect(profile?.totalRuns).toBe(2);
     });
 
     it('handles knowledge store errors via onError', async () => {
@@ -339,7 +349,11 @@ describe('KnowledgeStore', () => {
   });
 
   describe('insight persistence', () => {
-    function makeInsightEvent(agentId = 'test-agent', type: InsightEvent['insightType'] = 'failure-analysis', ts = Date.now()): InsightEvent {
+    function makeInsightEvent(
+      agentId = 'test-agent',
+      type: InsightEvent['insightType'] = 'failure-analysis',
+      ts = Date.now(),
+    ): InsightEvent {
       return {
         eventType: 'insight.generated',
         agentId,
@@ -359,7 +373,7 @@ describe('KnowledgeStore', () => {
 
       const insightDir = join(testDir, 'insights', 'test-agent');
       expect(existsSync(insightDir)).toBe(true);
-      const files = readdirSync(insightDir).filter(f => f.endsWith('.json'));
+      const files = readdirSync(insightDir).filter((f) => f.endsWith('.json'));
       expect(files).toHaveLength(1);
       expect(files[0]).toContain('failure-analysis');
     });
@@ -370,7 +384,7 @@ describe('KnowledgeStore', () => {
       store.appendInsight(makeInsightEvent('test-agent', 'failure-analysis', 1001));
 
       const insightDir = join(testDir, 'insights', 'test-agent');
-      const files = readdirSync(insightDir).filter(f => f.endsWith('.json'));
+      const files = readdirSync(insightDir).filter((f) => f.endsWith('.json'));
       expect(files).toHaveLength(2);
     });
 
@@ -380,7 +394,7 @@ describe('KnowledgeStore', () => {
       store.appendInsight(event);
 
       const insightDir = join(testDir, 'insights', 'test-agent');
-      const files = readdirSync(insightDir).filter(f => f.endsWith('.json'));
+      const files = readdirSync(insightDir).filter((f) => f.endsWith('.json'));
       const persisted = JSON.parse(readFileSync(join(insightDir, files[0]!), 'utf-8'));
       expect(persisted.insightType).toBe('failure-analysis');
       expect(persisted.response).toBe('test response');
@@ -389,7 +403,11 @@ describe('KnowledgeStore', () => {
   });
 
   describe('insight querying', () => {
-    function makeInsightEvent(agentId: string, type: InsightEvent['insightType'], ts: number): InsightEvent {
+    function makeInsightEvent(
+      agentId: string,
+      type: InsightEvent['insightType'],
+      ts: number,
+    ): InsightEvent {
       return {
         eventType: 'insight.generated',
         agentId,
@@ -410,8 +428,8 @@ describe('KnowledgeStore', () => {
 
       const insights = store.getRecentInsights('alfred');
       expect(insights).toHaveLength(3);
-      expect(insights[0]!.timestamp).toBe(3000);
-      expect(insights[2]!.timestamp).toBe(1000);
+      expect(insights[0]?.timestamp).toBe(3000);
+      expect(insights[2]?.timestamp).toBe(1000);
     });
 
     it('filters by insight type', () => {
@@ -485,7 +503,7 @@ describe('KnowledgeStore', () => {
 
       const remaining = store.getRecentInsights('alfred');
       expect(remaining).toHaveLength(1);
-      expect(remaining[0]!.timestamp).toBe(5000);
+      expect(remaining[0]?.timestamp).toBe(5000);
     });
   });
 });

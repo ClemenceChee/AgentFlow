@@ -42,7 +42,9 @@ function isoDate(epochMs: number): string {
  * Render a YAML frontmatter block from key-value pairs.
  * Arrays are rendered as YAML flow sequences. Undefined values are omitted.
  */
-function renderFrontmatter(fields: Record<string, string | number | boolean | string[] | undefined>): string {
+function renderFrontmatter(
+  fields: Record<string, string | number | boolean | string[] | undefined>,
+): string {
   const lines = ['---'];
   for (const [key, value] of Object.entries(fields)) {
     if (value === undefined) continue;
@@ -74,11 +76,7 @@ function executionEventToMarkdown(event: ExecutionEvent): string {
   const isCompleted = event.eventType === 'execution.completed';
   const subtype = isCompleted ? 'completed' : 'failed';
 
-  const tags: string[] = [
-    'agentflow/execution',
-    `agent/${event.agentId}`,
-    `status/${subtype}`,
-  ];
+  const tags: string[] = ['agentflow/execution', `agent/${event.agentId}`, `status/${subtype}`];
 
   if (event.processContext?.isAnomaly) {
     tags.push('agentflow/anomaly');
@@ -139,10 +137,7 @@ function executionEventToMarkdown(event: ExecutionEvent): string {
 function patternEventToMarkdown(event: PatternEvent): string {
   const { pattern } = event;
 
-  const tags: string[] = [
-    'agentflow/pattern',
-    `agent/${event.agentId}`,
-  ];
+  const tags: string[] = ['agentflow/pattern', `agent/${event.agentId}`];
 
   const frontmatter: Record<string, string | number | boolean | string[] | undefined> = {
     type: 'synthesis',
@@ -165,7 +160,8 @@ function patternEventToMarkdown(event: PatternEvent): string {
     body.push(`| Path | Count | % |`);
     body.push(`|------|-------|---|`);
     for (const v of pattern.topVariants) {
-      const sig = v.pathSignature.length > 60 ? `${v.pathSignature.slice(0, 57)}...` : v.pathSignature;
+      const sig =
+        v.pathSignature.length > 60 ? `${v.pathSignature.slice(0, 57)}...` : v.pathSignature;
       body.push(`| \`${sig}\` | ${v.count} | ${v.percentage.toFixed(1)}% |`);
     }
     body.push('');

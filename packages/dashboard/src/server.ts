@@ -3,7 +3,6 @@ import * as fs from 'node:fs';
 import { createServer } from 'node:http';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { type DashboardUserConfig, getDiscoveryPaths, getProcessPreference, getSystemdServices, loadConfig } from './config.js';
 import type { ExecutionGraph, KnowledgeStore, ProcessAuditResult } from 'agentflow-core';
 import {
   auditProcesses,
@@ -19,9 +18,16 @@ import chokidar from 'chokidar';
 import express from 'express';
 import rateLimit from 'express-rate-limit';
 import { WebSocketServer } from 'ws';
+import {
+  type DashboardUserConfig,
+  getDiscoveryPaths,
+  getProcessPreference,
+  getSystemdServices,
+  loadConfig,
+} from './config.js';
 import './adapters/index.js'; // Register all adapters
-import { deduplicateAgents, groupAgents } from './agent-clustering.js';
 import { parseOtlpPayload } from './adapters/otel.js';
+import { deduplicateAgents, groupAgents } from './agent-clustering.js';
 import { AgentStats } from './stats.js';
 import { TraceWatcher } from './watcher.js';
 
@@ -93,7 +99,9 @@ export class DashboardServer {
           if (!config.dataDirs.includes(d)) config.dataDirs.push(d);
         }
       }
-    } catch { /* ignore corrupt config, use CLI args only */ }
+    } catch {
+      /* ignore corrupt config, use CLI args only */
+    }
 
     // Auto-discover directories from user config
     for (const p of getDiscoveryPaths(this.userConfig)) {
@@ -137,12 +145,15 @@ export class DashboardServer {
 
   private setupExpress() {
     // Rate limit API endpoints to prevent abuse
-    this.app.use('/api/', rateLimit({
-      windowMs: 60 * 1000, // 1 minute
-      max: 300,            // 300 requests per minute per IP
-      standardHeaders: true,
-      legacyHeaders: false,
-    }));
+    this.app.use(
+      '/api/',
+      rateLimit({
+        windowMs: 60 * 1000, // 1 minute
+        max: 300, // 300 requests per minute per IP
+        standardHeaders: true,
+        legacyHeaders: false,
+      }),
+    );
 
     if (this.config.enableCors) {
       this.app.use((_req, res, next) => {
@@ -160,7 +171,9 @@ export class DashboardServer {
     const clientDir = path.join(pkgDir, 'dist/client');
     const clientIndex = path.join(clientDir, 'index.html');
     const srcDir = path.join(pkgDir, 'src/client');
-    const needsBuild = !fs.existsSync(clientIndex) || (fs.existsSync(srcDir) && this.isClientStale(srcDir, clientDir));
+    const needsBuild =
+      !fs.existsSync(clientIndex) ||
+      (fs.existsSync(srcDir) && this.isClientStale(srcDir, clientDir));
     if (needsBuild) {
       try {
         console.log('Building dashboard client...');
@@ -189,9 +202,8 @@ export class DashboardServer {
         const page = allTraces.slice(0, limit);
         const serialized = page.map(serializeTrace);
         const lastTrace = page[page.length - 1];
-        const nextCursor = page.length === limit && lastTrace
-          ? (lastTrace.lastModified || lastTrace.startTime)
-          : null;
+        const nextCursor =
+          page.length === limit && lastTrace ? lastTrace.lastModified || lastTrace.startTime : null;
 
         res.json({ traces: serialized, nextCursor });
       } catch (_error) {
@@ -240,7 +252,13 @@ export class DashboardServer {
             if (traces.length > 0) {
               const latest = traces[traces.length - 1];
               const name = latest?.name;
-              if (name && name !== 'default' && name !== agent.agentId && !name.startsWith('pipeline:') && name.length < 40) {
+              if (
+                name &&
+                name !== 'default' &&
+                name !== agent.agentId &&
+                !name.startsWith('pipeline:') &&
+                name.length < 40
+              ) {
                 agent.displayName = name;
               }
             }
@@ -467,15 +485,21 @@ export class DashboardServer {
           const nodes = serialized.nodes;
           if (!nodes || typeof nodes !== 'object') continue;
 
-          const nodeArr = Object.values(nodes) as { name?: string; type?: string; startTime?: number; endTime?: number; status?: string }[];
+          const nodeArr = Object.values(nodes) as {
+            name?: string;
+            type?: string;
+            startTime?: number;
+            endTime?: number;
+            status?: string;
+          }[];
           const sorted = nodeArr
             .filter((n) => n.name && typeof n.startTime === 'number' && n.startTime > 0)
             .sort((a, b) => (a.startTime ?? 0) - (b.startTime ?? 0));
 
           // Transitions (directly-follows)
           for (let i = 0; i < sorted.length - 1; i++) {
-            const from = sorted[i]!.name!;
-            const to = sorted[i + 1]!.name!;
+            const from = sorted[i]?.name!;
+            const to = sorted[i + 1]?.name!;
             const key = `${from}|||${to}`;
             transMap.set(key, (transMap.get(key) ?? 0) + 1);
           }
@@ -540,13 +564,18 @@ export class DashboardServer {
             const coreBottlenecks = getBottlenecks(graphs).map((b) => ({
               nodeName: b.nodeName,
               nodeType: b.nodeType,
-              p95: b.durations.sort((a: number, b2: number) => a - b2)[Math.floor(b.durations.length * 0.95)] ?? 0,
+              p95:
+                b.durations.sort((a: number, b2: number) => a - b2)[
+                  Math.floor(b.durations.length * 0.95)
+                ] ?? 0,
             }));
             if (coreBottlenecks.length > bottlenecks.length) {
               bottlenecks.length = 0;
               bottlenecks.push(...coreBottlenecks);
             }
-          } catch { /* use fallback */ }
+          } catch {
+            /* use fallback */
+          }
         }
 
         res.json({ model, variants, bottlenecks });
@@ -600,7 +629,11 @@ export class DashboardServer {
       try {
         const reportPath = path.join(somaVault, '..', 'soma-report.json');
         if (!fs.existsSync(reportPath)) {
-          return res.json({ available: false, teaser: false, message: 'No report file yet. Run soma watch.' });
+          return res.json({
+            available: false,
+            teaser: false,
+            message: 'No report file yet. Run soma watch.',
+          });
         }
         const report = JSON.parse(fs.readFileSync(reportPath, 'utf-8'));
         res.json(report);
@@ -627,7 +660,9 @@ export class DashboardServer {
           available: true,
           layers: report.layers ?? { archive: 0, working: 0, emerging: 0, canon: 0 },
           governance: report.governance ?? { pending: 0, promoted: 0, rejected: 0 },
-          insights: (report.insights ?? []).filter((i: any) => i.layer === 'emerging' && i.proposal_status === 'pending'),
+          insights: (report.insights ?? []).filter(
+            (i: any) => i.layer === 'emerging' && i.proposal_status === 'pending',
+          ),
           canon: (report.insights ?? []).filter((i: any) => i.layer === 'canon'),
           generatedAt: report.generatedAt,
         });
@@ -644,11 +679,17 @@ export class DashboardServer {
       const somaVault = this.config.somaVault;
       if (!somaVault) return res.status(400).json({ error: 'Soma vault not configured' });
       const { entryId } = req.body ?? {};
-      if (!entryId || !isValidId(String(entryId))) return res.status(400).json({ error: 'Invalid entryId' });
+      if (!entryId || !isValidId(String(entryId)))
+        return res.status(400).json({ error: 'Invalid entryId' });
       try {
-        const result = execFileSync('npx', ['soma', 'governance', 'promote', String(entryId), '--vault', somaVault], {
-          encoding: 'utf-8', timeout: 10000,
-        });
+        const result = execFileSync(
+          'npx',
+          ['soma', 'governance', 'promote', String(entryId), '--vault', somaVault],
+          {
+            encoding: 'utf-8',
+            timeout: 10000,
+          },
+        );
         res.json({ success: true, message: result.trim() });
       } catch (error: any) {
         res.status(400).json({ error: error.stderr?.trim() || error.message });
@@ -659,12 +700,27 @@ export class DashboardServer {
       const somaVault = this.config.somaVault;
       if (!somaVault) return res.status(400).json({ error: 'Soma vault not configured' });
       const { entryId, reason } = req.body ?? {};
-      if (!entryId || !isValidId(String(entryId))) return res.status(400).json({ error: 'Invalid entryId' });
-      if (!reason || typeof reason !== 'string') return res.status(400).json({ error: 'reason required' });
+      if (!entryId || !isValidId(String(entryId)))
+        return res.status(400).json({ error: 'Invalid entryId' });
+      if (!reason || typeof reason !== 'string')
+        return res.status(400).json({ error: 'reason required' });
       try {
-        const result = execFileSync('npx', ['soma', 'governance', 'reject', String(entryId), String(reason).slice(0, 500), '--vault', somaVault], {
-          encoding: 'utf-8', timeout: 10000,
-        });
+        const result = execFileSync(
+          'npx',
+          [
+            'soma',
+            'governance',
+            'reject',
+            String(entryId),
+            String(reason).slice(0, 500),
+            '--vault',
+            somaVault,
+          ],
+          {
+            encoding: 'utf-8',
+            timeout: 10000,
+          },
+        );
         res.json({ success: true, message: result.trim() });
       } catch (error: any) {
         res.status(400).json({ error: error.stderr?.trim() || error.message });
@@ -676,9 +732,14 @@ export class DashboardServer {
       if (!somaVault) return res.status(400).json({ error: 'Soma vault not configured' });
       if (!isValidId(String(req.params.id))) return res.status(400).json({ error: 'Invalid id' });
       try {
-        const result = execFileSync('npx', ['soma', 'governance', 'show', String(req.params.id), '--vault', somaVault], {
-          encoding: 'utf-8', timeout: 10000,
-        });
+        const result = execFileSync(
+          'npx',
+          ['soma', 'governance', 'show', String(req.params.id), '--vault', somaVault],
+          {
+            encoding: 'utf-8',
+            timeout: 10000,
+          },
+        );
         res.json({ available: true, output: result.trim() });
       } catch (error: any) {
         res.status(404).json({ error: error.stderr?.trim() || error.message });
@@ -703,11 +764,21 @@ export class DashboardServer {
       const somaVault = this.config.somaVault;
       if (!somaVault) return res.status(400).json({ error: 'Soma vault not configured' });
       const { name, enforcement, scope, conditions } = req.body ?? {};
-      if (!name || !isValidId(String(name))) return res.status(400).json({ error: 'Invalid policy name' });
+      if (!name || !isValidId(String(name)))
+        return res.status(400).json({ error: 'Invalid policy name' });
       const enf = String(enforcement || 'warn');
       if (!isValidId(enf)) return res.status(400).json({ error: 'Invalid enforcement value' });
       try {
-        const args = ['soma', 'policy', 'create', String(name), '--enforcement', enf, '--vault', somaVault];
+        const args = [
+          'soma',
+          'policy',
+          'create',
+          String(name),
+          '--enforcement',
+          enf,
+          '--vault',
+          somaVault,
+        ];
         if (scope) args.push('--scope', String(scope).slice(0, 500));
         if (conditions) args.push('--conditions', String(conditions).slice(0, 500));
         const result = execFileSync('npx', args, { encoding: 'utf-8', timeout: 10000 });
@@ -720,11 +791,17 @@ export class DashboardServer {
     this.app.delete('/api/soma/policies/:name', (req, res) => {
       const somaVault = this.config.somaVault;
       if (!somaVault) return res.status(400).json({ error: 'Soma vault not configured' });
-      if (!isValidId(String(req.params.name))) return res.status(400).json({ error: 'Invalid policy name' });
+      if (!isValidId(String(req.params.name)))
+        return res.status(400).json({ error: 'Invalid policy name' });
       try {
-        const result = execFileSync('npx', ['soma', 'policy', 'delete', String(req.params.name), '--vault', somaVault], {
-          encoding: 'utf-8', timeout: 10000,
-        });
+        const result = execFileSync(
+          'npx',
+          ['soma', 'policy', 'delete', String(req.params.name), '--vault', somaVault],
+          {
+            encoding: 'utf-8',
+            timeout: 10000,
+          },
+        );
         res.json({ success: true, message: result.trim() });
       } catch (error: any) {
         res.status(400).json({ error: error.stderr?.trim() || error.message });
@@ -742,16 +819,30 @@ export class DashboardServer {
 
         let entities: any[] = [
           ...(report.agents ?? []).map((a: any) => ({ ...a, type: 'agent', id: a.name })),
-          ...(report.insights ?? []).map((i: any, idx: number) => ({ ...i, type: i.type || 'insight', id: i.title?.replace(/\s+/g, '-').toLowerCase() || `insight-${idx}` })),
+          ...(report.insights ?? []).map((i: any, idx: number) => ({
+            ...i,
+            type: i.type || 'insight',
+            id: i.title?.replace(/\s+/g, '-').toLowerCase() || `insight-${idx}`,
+          })),
           ...(report.policies ?? []).map((p: any) => ({ ...p, type: 'policy', id: p.name })),
         ];
 
-        const { type, layer, q, limit: limitStr, offset: offsetStr } = req.query as Record<string, string>;
+        const {
+          type,
+          layer,
+          q,
+          limit: limitStr,
+          offset: offsetStr,
+        } = req.query as Record<string, string>;
         if (type) entities = entities.filter((e) => e.type === type);
         if (layer) entities = entities.filter((e) => e.layer === layer);
         if (q) {
           const lq = q.toLowerCase();
-          entities = entities.filter((e) => (e.name || e.title || '').toLowerCase().includes(lq) || (e.claim || e.body || '').toLowerCase().includes(lq));
+          entities = entities.filter(
+            (e) =>
+              (e.name || e.title || '').toLowerCase().includes(lq) ||
+              (e.claim || e.body || '').toLowerCase().includes(lq),
+          );
         }
 
         const total = entities.length;
@@ -780,8 +871,9 @@ export class DashboardServer {
         } else if (type === 'policy') {
           entity = (report.policies ?? []).find((p: any) => p.name === id);
         } else {
-          entity = (report.insights ?? []).find((i: any) =>
-            (i.title?.replace(/\s+/g, '-').toLowerCase() || '') === id || i.title === id
+          entity = (report.insights ?? []).find(
+            (i: any) =>
+              (i.title?.replace(/\s+/g, '-').toLowerCase() || '') === id || i.title === id,
           );
         }
 
@@ -858,16 +950,11 @@ export class DashboardServer {
 
         // Global orphans: not tracked by ANY service
         const orphans = uniqueProcesses.filter(
-          (p) =>
-            !allKnownPids.has(p.pid) &&
-            p.pid !== process.pid &&
-            p.pid !== process.ppid,
+          (p) => !allKnownPids.has(p.pid) && p.pid !== process.pid && p.pid !== process.ppid,
         );
 
         // Collect all problems
-        const problems = services.flatMap((s) =>
-          s.audit.problems.map((p) => `[${s.name}] ${p}`),
-        );
+        const problems = services.flatMap((s) => s.audit.problems.map((p) => `[${s.name}] ${p}`));
 
         const result = {
           // Backward-compatible fields from primary service
@@ -881,9 +968,7 @@ export class DashboardServer {
           services: services.map((s) => {
             // Match OS process metrics to this service by PID
             const mainPid = s.audit.pidFile?.pid ?? s.audit.systemd?.mainPid;
-            const osProc = mainPid
-              ? uniqueProcesses.find((p) => p.pid === mainPid)
-              : undefined;
+            const osProc = mainPid ? uniqueProcesses.find((p) => p.pid === mainPid) : undefined;
 
             return {
               name: s.name,
@@ -934,22 +1019,31 @@ export class DashboardServer {
             const cfg = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
             extraDirs = cfg.extraDirs ?? [];
           }
-        } catch { /* fresh */ }
+        } catch {
+          /* fresh */
+        }
 
-        const watched = [...new Set([
-          this.config.tracesDir,
-          ...(this.config.dataDirs || []),
-          ...extraDirs,
-        ].map((w) => path.resolve(w)))];
+        const watched = [
+          ...new Set(
+            [this.config.tracesDir, ...(this.config.dataDirs || []), ...extraDirs].map((w) =>
+              path.resolve(w),
+            ),
+          ),
+        ];
 
         // Discover from systemd (config-driven service names)
         const discovered: string[] = [];
         const svcNames = getSystemdServices(this.userConfig);
         if (svcNames.length > 0) {
           try {
-            const raw = execFileSync('systemctl', ['--user', 'show', '--property=ExecStart', '--no-pager', ...svcNames], {
-              encoding: 'utf8', timeout: 5000,
-            });
+            const raw = execFileSync(
+              'systemctl',
+              ['--user', 'show', '--property=ExecStart', '--no-pager', ...svcNames],
+              {
+                encoding: 'utf8',
+                timeout: 5000,
+              },
+            );
             for (const line of raw.split('\n')) {
               const match = line.match(/path=([^\s;]+)/);
               if (match?.[1]) {
@@ -957,7 +1051,9 @@ export class DashboardServer {
                 if (fs.existsSync(dir)) discovered.push(dir);
               }
             }
-          } catch { /* ignore */ }
+          } catch {
+            /* ignore */
+          }
         }
 
         // Check config-driven discovery paths + generic agentflow location
@@ -997,14 +1093,19 @@ export class DashboardServer {
           }
         }
 
-        const configPath = path.join(process.env.HOME ?? '/home/trader', '.agentflow/dashboard-config.json');
+        const configPath = path.join(
+          process.env.HOME ?? '/home/trader',
+          '.agentflow/dashboard-config.json',
+        );
 
         let config: { extraDirs?: string[] } = {};
         try {
           if (fs.existsSync(configPath)) {
             config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
           }
-        } catch { /* fresh config */ }
+        } catch {
+          /* fresh config */
+        }
 
         if (!config.extraDirs) config.extraDirs = [];
 
@@ -1027,61 +1128,63 @@ export class DashboardServer {
 
     // OTLP trace collector endpoint
     if (this.config.enableCollector !== false) {
-    this.app.post('/v1/traces', express.json({ limit: '10mb' }), (req, res) => {
-      try {
-        // Auth check
-        if (this.config.collectorAuthToken) {
-          const auth = req.headers.authorization;
-          if (!auth || auth !== `Bearer ${this.config.collectorAuthToken}`) {
-            return res.status(401).json({ error: 'Unauthorized — provide Authorization: Bearer <token>' });
-          }
-        }
-
-        const traces = parseOtlpPayload(req.body);
-        let ingested = 0;
-
-        for (const trace of traces) {
-          // Convert to WatchedTrace and store
-          const nodes = new Map<string, any>();
-          for (const [id, node] of Object.entries(trace.nodes)) {
-            nodes.set(id, { ...node, state: {} });
+      this.app.post('/v1/traces', express.json({ limit: '10mb' }), (req, res) => {
+        try {
+          // Auth check
+          if (this.config.collectorAuthToken) {
+            const auth = req.headers.authorization;
+            if (!auth || auth !== `Bearer ${this.config.collectorAuthToken}`) {
+              return res
+                .status(401)
+                .json({ error: 'Unauthorized — provide Authorization: Bearer <token>' });
+            }
           }
 
-          const watched = {
-            id: trace.id,
-            rootNodeId: Object.keys(trace.nodes)[0] ?? '',
-            agentId: trace.agentId,
-            name: trace.name,
-            trigger: trace.trigger,
-            startTime: trace.startTime,
-            endTime: trace.endTime,
-            status: trace.status,
-            nodes,
-            edges: [],
-            events: [],
-            metadata: { ...trace.metadata, adapterSource: 'otel' },
-            sessionEvents: [],
-            sourceType: 'session',
-            filename: `otel-${trace.id}`,
-            lastModified: Date.now(),
-            sourceDir: 'http-collector',
-          };
+          const traces = parseOtlpPayload(req.body);
+          let ingested = 0;
 
-          (this.watcher as any).traces.set(`otel:${trace.id}`, watched);
-          ingested++;
+          for (const trace of traces) {
+            // Convert to WatchedTrace and store
+            const nodes = new Map<string, any>();
+            for (const [id, node] of Object.entries(trace.nodes)) {
+              nodes.set(id, { ...node, state: {} });
+            }
+
+            const watched = {
+              id: trace.id,
+              rootNodeId: Object.keys(trace.nodes)[0] ?? '',
+              agentId: trace.agentId,
+              name: trace.name,
+              trigger: trace.trigger,
+              startTime: trace.startTime,
+              endTime: trace.endTime,
+              status: trace.status,
+              nodes,
+              edges: [],
+              events: [],
+              metadata: { ...trace.metadata, adapterSource: 'otel' },
+              sessionEvents: [],
+              sourceType: 'session',
+              filename: `otel-${trace.id}`,
+              lastModified: Date.now(),
+              sourceDir: 'http-collector',
+            };
+
+            (this.watcher as any).traces.set(`otel:${trace.id}`, watched);
+            ingested++;
+          }
+
+          // Notify connected WebSocket clients
+          if (ingested > 0) {
+            this.broadcast({ type: 'traces-updated', count: ingested });
+          }
+
+          res.json({ ok: true, tracesIngested: ingested });
+        } catch (error) {
+          console.error('OTLP collector error:', error);
+          res.status(400).json({ error: 'Failed to parse OTLP payload' });
         }
-
-        // Notify connected WebSocket clients
-        if (ingested > 0) {
-          this.broadcast({ type: 'traces-updated', count: ingested });
-        }
-
-        res.json({ ok: true, tracesIngested: ingested });
-      } catch (error) {
-        console.error('OTLP collector error:', error);
-        res.status(400).json({ error: 'Failed to parse OTLP payload' });
-      }
-    });
+      });
     } // end enableCollector
 
     // Health check endpoints
@@ -1169,7 +1272,9 @@ export class DashboardServer {
               },
             });
           }
-        } catch { /* ignore parse errors during write */ }
+        } catch {
+          /* ignore parse errors during write */
+        }
       }, 500);
     });
   }
@@ -1253,16 +1358,34 @@ export class DashboardServer {
     }
 
     // Add virtual START/END nodes
-    const rootSteps = new Set(model.steps);
-    const childSteps = new Set(model.transitions.map((t) => t.to));
-    const leafSteps = new Set(model.steps);
-    for (const t of model.transitions) {
+    const _rootSteps = new Set(model.steps);
+    const _childSteps = new Set(model.transitions.map((t) => t.to));
+    const _leafSteps = new Set(model.steps);
+    for (const _t of model.transitions) {
       // A step that appears as a target is not a root
       // A step that appears as a source is not a leaf (simplified)
     }
 
-    nodes.push({ id: '[START]', label: '[START]', count: model.totalGraphs, frequency: 1, avgDuration: 0, failRate: 0, p95Duration: 0, isVirtual: true });
-    nodes.push({ id: '[END]', label: '[END]', count: model.totalGraphs, frequency: 1, avgDuration: 0, failRate: 0, p95Duration: 0, isVirtual: true });
+    nodes.push({
+      id: '[START]',
+      label: '[START]',
+      count: model.totalGraphs,
+      frequency: 1,
+      avgDuration: 0,
+      failRate: 0,
+      p95Duration: 0,
+      isVirtual: true,
+    });
+    nodes.push({
+      id: '[END]',
+      label: '[END]',
+      count: model.totalGraphs,
+      frequency: 1,
+      avgDuration: 0,
+      failRate: 0,
+      p95Duration: 0,
+      isVirtual: true,
+    });
 
     // Build edges from transitions
     const edges = model.transitions.map((t) => ({
@@ -1289,7 +1412,10 @@ export class DashboardServer {
     }
 
     const maxEdgeCount = Math.max(...edges.map((e) => e.count), 1);
-    const maxNodeCount = Math.max(...nodes.filter((n: any) => !n.isVirtual).map((n: any) => n.count), 1);
+    const maxNodeCount = Math.max(
+      ...nodes.filter((n: any) => !n.isVirtual).map((n: any) => n.count),
+      1,
+    );
 
     return { agentId, totalTraces: model.totalGraphs, nodes, edges, maxEdgeCount, maxNodeCount };
   }
@@ -1308,7 +1434,8 @@ export class DashboardServer {
 
     for (const trace of traces) {
       totalTraces++;
-      const activities: Array<{ name: string; type: string; status: string; duration: number }> = [];
+      const activities: Array<{ name: string; type: string; status: string; duration: number }> =
+        [];
 
       if (trace.sessionEvents && trace.sessionEvents.length > 0) {
         for (const evt of trace.sessionEvents) {
@@ -1364,9 +1491,14 @@ export class DashboardServer {
       const st = activityStatuses.get(name) || { ok: 0, fail: 0 };
       const avgDuration = durs.length > 0 ? durs.reduce((a, b) => a + b, 0) / durs.length : 0;
       return {
-        id: name, label: name, count, frequency: count / totalTraces,
-        avgDuration, failRate: st.ok + st.fail > 0 ? st.fail / (st.ok + st.fail) : 0,
-        p95Duration: 0, isVirtual: name === '[START]' || name === '[END]',
+        id: name,
+        label: name,
+        count,
+        frequency: count / totalTraces,
+        avgDuration,
+        failRate: st.ok + st.fail > 0 ? st.fail / (st.ok + st.fail) : 0,
+        p95Duration: 0,
+        isVirtual: name === '[START]' || name === '[END]',
       };
     });
 

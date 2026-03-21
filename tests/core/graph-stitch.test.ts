@@ -41,8 +41,8 @@ describe('Graph Stitch', () => {
 
       const groups = groupByTraceId([g1, g2, g3]);
       expect(groups.size).toBe(2);
-      expect(groups.get('trace-1')!.length).toBe(2);
-      expect(groups.get('trace-2')!.length).toBe(1);
+      expect(groups.get('trace-1')?.length).toBe(2);
+      expect(groups.get('trace-2')?.length).toBe(1);
     });
 
     it('skips graphs without traceId', () => {
