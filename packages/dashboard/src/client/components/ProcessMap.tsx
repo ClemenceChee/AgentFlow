@@ -14,6 +14,7 @@ export function ProcessMap({ data }: { data: ProcessHealthData | null }) {
         height={Math.max(300, services.length * 60 + 100)}
         viewBox={`0 0 800 ${services.length * 60 + 80}`}
       >
+        <title>Process map visualization</title>
         {services.map((svc, i) => {
           const x = 40;
           const y = 40 + i * 56;

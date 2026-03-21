@@ -28,6 +28,7 @@ export function DottedChart({ traces }: { traces: TraceEntry[] }) {
         {sorted.length} executions over {Math.round(timeRange / 3600000)}h
       </div>
       <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`}>
+        <title>Dotted execution chart</title>
         {/* Time axis labels */}
         {[0, 0.25, 0.5, 0.75, 1].map((pct) => (
           <text
@@ -55,6 +56,7 @@ export function DottedChart({ traces }: { traces: TraceEntry[] }) {
           const color = TYPE_COLORS[t.status] ?? TYPE_COLORS.unknown;
           const r = t.status === 'failed' ? 4 : 2.5;
           return (
+            // biome-ignore lint/a11y/useSemanticElements: interactive visualization element
             <circle
               key={t.filename || i}
               cx={x}
@@ -64,6 +66,8 @@ export function DottedChart({ traces }: { traces: TraceEntry[] }) {
               opacity={hovered === t ? 1 : 0.7}
               onMouseEnter={() => setHovered(t)}
               onMouseLeave={() => setHovered(null)}
+              role="button"
+              tabIndex={0}
               style={{ cursor: 'pointer' }}
             />
           );

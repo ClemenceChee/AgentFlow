@@ -41,7 +41,7 @@ function parseWatchArgs(argv: string[]): WatchConfig {
 
   let i = 0;
   while (i < args.length) {
-    const arg = args[i]!;
+    const arg = args[i] ?? '';
 
     if (arg === '--help' || arg === '-h') {
       printWatchUsage();
@@ -118,7 +118,7 @@ function parseWatchArgs(argv: string[]): WatchConfig {
 
   // Default state file location
   if (!stateFilePath) {
-    stateFilePath = join(dirs[0]!, '.agentflow-watch-state.json');
+    stateFilePath = join(dirs[0] ?? '.', '.agentflow-watch-state.json');
   }
 
   return {

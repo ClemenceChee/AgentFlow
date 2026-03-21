@@ -85,6 +85,7 @@ function AgentCard({
 
   return (
     <button
+      type="button"
       className={`acard ${fail ? 'acard--fail' : ''} ${selected ? 'acard--sel' : ''}`}
       onClick={onClick}
     >
@@ -174,7 +175,7 @@ function GroupSection({
 
   return (
     <div className="agroup">
-      <button className="agroup__head" onClick={() => setCollapsed(!collapsed)}>
+      <button type="button" className="agroup__head" onClick={() => setCollapsed(!collapsed)}>
         <span className="agroup__expand">{collapsed ? '\u25B6' : '\u25BC'}</span>
         <span className="agroup__name">{group.displayName}</span>
         <span className="agroup__stats">

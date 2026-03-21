@@ -634,6 +634,7 @@ body {
 
 /* === VARIANTS === */
 .variants {
+  /* placeholder */
 }
 .var-row {
   padding: var(--s2) 0;
@@ -734,6 +735,7 @@ body {
   min-height: 100px;
 }
 .bottleneck-list {
+  /* placeholder */
 }
 .bn-row {
   display: flex;
@@ -845,6 +847,7 @@ body {
 
 /* === FLAME CHART === */
 .flame {
+  /* placeholder */
 }
 .flame__fail-callout {
   background: rgba(248, 81, 73, 0.08);
@@ -1081,6 +1084,7 @@ body {
 
 /* === METRICS === */
 .mview {
+  /* placeholder */
 }
 .mv-row {
   display: flex;
@@ -1482,6 +1486,7 @@ body {
 
 /* === DOTTED CHART === */
 .dotchart {
+  /* placeholder */
 }
 
 /* === SETTINGS PANEL === */
@@ -1519,6 +1524,7 @@ body {
   font-size: var(--xl);
 }
 .sp-body {
+  /* placeholder */
 }
 .sp-error {
   padding: var(--s2);
@@ -2373,4 +2379,191 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Guard Explanation Card */
+.guard-card {
+  padding: 8px 10px;
+  background: rgba(248, 81, 73, 0.08);
+  border: 1px solid var(--fail);
+  border-radius: 4px;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+.guard-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.guard-card__rule {
+  font-weight: 600;
+  color: var(--fail);
+}
+.guard-card__source {
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+.guard-source--static {
+  background: var(--bg3);
+  color: var(--t2);
+}
+.guard-source--soma {
+  background: rgba(130, 80, 223, 0.15);
+  color: #8250df;
+}
+.guard-source--adaptive {
+  background: rgba(56, 139, 253, 0.15);
+  color: #388bfd;
+}
+.guard-source--assertion {
+  background: rgba(210, 153, 34, 0.15);
+  color: #d29922;
+}
+.guard-card__comparison {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.guard-card__actual {
+  color: var(--fail);
+  font-weight: 600;
+}
+.guard-card__arrow {
+  color: var(--t3);
+}
+.guard-card__threshold {
+  color: var(--t2);
+}
+.guard-card__evidence {
+  color: var(--t3);
+  font-style: italic;
+  font-size: 11px;
+}
+.guard-card__message {
+  color: var(--t2);
+}
+.guard-card__type {
+  font-weight: 600;
+  color: var(--fail);
+  margin-bottom: 2px;
+}
+
+/* Efficiency Panel */
+.efficiency-panel {
+  margin-top: 16px;
+}
+.efficiency-panel__stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.efficiency-stat {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 10px;
+  text-align: center;
+}
+.efficiency-stat__value {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--t1);
+}
+.efficiency-stat__label {
+  font-size: 11px;
+  color: var(--t3);
+  text-transform: uppercase;
+}
+.efficiency-flag {
+  padding: 8px 10px;
+  background: rgba(210, 153, 34, 0.1);
+  border: 1px solid #d29922;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #d29922;
+  margin-bottom: 6px;
+}
+
+/* Drift Chart */
+.drift-chart {
+  margin-top: 16px;
+}
+.drift-chart__alert {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(248, 81, 73, 0.15);
+  color: var(--fail);
+  margin-bottom: 8px;
+}
+.drift-chart__stable {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(63, 185, 80, 0.15);
+  color: var(--ok);
+}
+
+/* Run Receipt */
+.receipt {
+  padding: 12px;
+}
+.receipt__header {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 13px;
+}
+.receipt__header-label {
+  color: var(--t3);
+  font-size: 11px;
+}
+.receipt__summary {
+  display: flex;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+.receipt__summary-item {
+  color: var(--t2);
+}
+.receipt__summary-item strong {
+  color: var(--t1);
+}
+.receipt__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.receipt__table th {
+  text-align: left;
+  padding: 4px 8px;
+  color: var(--t3);
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border);
+}
+.receipt__table td {
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--bg3);
+}
+.receipt__total {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--t2);
+  text-align: right;
 }

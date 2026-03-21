@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import type { SomaReport } from '../hooks/useSomaReport';
+import { EfficiencyPanel, EfficiencyTeaser } from './EfficiencyPanel';
+import { GuardExplanationCard } from './GuardExplanationCard';
 
 function timeAgo(isoDate: string): string {
   const diff = Date.now() - new Date(isoDate).getTime();
@@ -112,7 +114,21 @@ function ActiveView({ report, agentId }: { report: SomaReport; agentId: string }
           </div>
           {agentGuard && agentGuard.action === 'block' && (
             <div className="soma-intel__guard-block">
-              {'\u2718'} Guard would block: {agentGuard.reason}
+              {agentGuard.explanation ? (
+                <GuardExplanationCard
+                  violation={{
+                    type: 'high-failure-rate',
+                    nodeId: agentData?.name ?? '',
+                    message: agentGuard.reason,
+                    timestamp: Date.now(),
+                    explanation: agentGuard.explanation,
+                  }}
+                />
+              ) : (
+                <>
+                  {'\u2718'} Guard would block: {agentGuard.reason}
+                </>
+              )}
             </div>
           )}
         </div>
@@ -206,6 +222,7 @@ function ActiveView({ report, agentId }: { report: SomaReport; agentId: string }
               ))}
               {filtered.length > INSIGHT_LIMIT && (
                 <button
+                  type="button"
                   className="soma-intel__show-more"
                   onClick={() => setShowAllInsights(!showAllInsights)}
                 >
@@ -243,6 +260,7 @@ function ActiveView({ report, agentId }: { report: SomaReport; agentId: string }
               ))}
               {report.policies.length > POLICY_LIMIT && (
                 <button
+                  type="button"
                   className="soma-intel__show-more"
                   onClick={() => setShowAllPolicies(!showAllPolicies)}
                 >
@@ -252,6 +270,9 @@ function ActiveView({ report, agentId }: { report: SomaReport; agentId: string }
             </div>
           );
         })()}
+
+      {/* Efficiency Panel (premium — shows when SOMA data is available) */}
+      {report.available ? <EfficiencyPanel apiBase="" /> : <EfficiencyTeaser />}
     </div>
   );
 }

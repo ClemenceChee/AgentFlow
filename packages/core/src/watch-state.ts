@@ -20,7 +20,7 @@ export function parseDuration(input: string): number {
     const n = parseInt(input, 10);
     return Number.isNaN(n) ? 0 : n * 1000; // bare number = seconds
   }
-  const value = parseFloat(match[1]!);
+  const value = parseFloat(match[1] ?? '0');
   switch (match[2]?.toLowerCase()) {
     case 's':
       return value * 1000;
@@ -81,12 +81,12 @@ function estimateInterval(history: number[]): number {
   const sorted = [...history].sort((a, b) => a - b);
   const deltas: number[] = [];
   for (let i = 1; i < sorted.length; i++) {
-    const d = sorted[i]! - sorted[i - 1]!;
+    const d = (sorted[i] ?? 0) - (sorted[i - 1] ?? 0);
     if (d > 0) deltas.push(d);
   }
   if (deltas.length === 0) return 0;
   deltas.sort((a, b) => a - b);
-  return deltas[Math.floor(deltas.length / 2)]!; // median
+  return deltas[Math.floor(deltas.length / 2)] ?? 0; // median
 }
 
 // ---------------------------------------------------------------------------

@@ -91,13 +91,13 @@ export function ProcessMapView({ model }: { model: ProcessModelData }) {
           {nodes.length} steps, {edges.length} transitions
         </span>
         <span className="pmap__zoom">
-          <button onClick={zp.zoomOut} className="zb">
+          <button type="button" onClick={zp.zoomOut} className="zb">
             −
           </button>
-          <button onClick={zp.reset} className="zb">
+          <button type="button" onClick={zp.reset} className="zb">
             ⟲
           </button>
-          <button onClick={zp.zoomIn} className="zb">
+          <button type="button" onClick={zp.zoomIn} className="zb">
             +
           </button>
         </span>
@@ -111,6 +111,7 @@ export function ProcessMapView({ model }: { model: ProcessModelData }) {
         {...zp.handlers}
         style={{ cursor: 'grab' }}
       >
+        <title>Process map chart</title>
         <g transform={zp.svgTransform}>
           {/* Edges */}
           {edges.map((e, i) => {

@@ -61,7 +61,7 @@ function parseArgs(argv: string[]): LiveConfig {
 
   let i = 0;
   while (i < args.length) {
-    const arg = args[i]!;
+    const arg = args[i] ?? '';
     if (arg === '--help' || arg === '-h') {
       printUsage();
       process.exit(0);
@@ -460,7 +460,7 @@ export function processJsonlFile(file: ScannedFile): AgentRecord[] {
     const lineCount = lines.length;
 
     // Read last line for basic identity
-    const lastObj = JSON.parse(lines[lines.length - 1]!) as Record<string, unknown>;
+    const lastObj = JSON.parse(lines[lines.length - 1] ?? '{}') as Record<string, unknown>;
     const name = (lastObj.jobId ??
       lastObj.agentId ??
       lastObj.name ??
@@ -591,7 +591,7 @@ export function processJsonlFile(file: ScannedFile): AgentRecord[] {
 
     // Model (short name)
     if (model) {
-      const shortModel = model.includes('/') ? model.split('/').pop()! : model;
+      const shortModel = model.includes('/') ? (model.split('/').pop() ?? model) : model;
       parts.push(shortModel.slice(0, 20));
     }
 
@@ -698,7 +698,7 @@ function getRecordsCached(f: ScannedFile): { records: AgentRecord[]; traces: Exe
   const cached = fileCache.get(f.path);
   if (cached && cached.mtime === f.mtime) return cached;
   const records = f.ext === '.jsonl' ? processJsonlFile(f) : processJsonFile(f);
-  const traces = records.filter((r) => r.traceData).map((r) => r.traceData!);
+  const traces = records.filter((r) => r.traceData).map((r) => r.traceData as ExecutionGraph);
   const entry = { mtime: f.mtime, records, traces };
   fileCache.set(f.path, entry);
   return entry;
@@ -793,7 +793,7 @@ function render(config: LiveConfig): void {
 
   for (const [file, records] of byFile) {
     if (records.length === 1) {
-      const r = records[0]!;
+      const r = records[0] as AgentRecord;
       groups.push({
         name: r.id,
         source: r.source,
@@ -852,8 +852,8 @@ function render(config: LiveConfig): void {
     if (age > 3600000 || age < 0) continue;
     const idx = 11 - Math.floor(age / 300000);
     if (idx >= 0 && idx < 12) {
-      buckets[idx]!++;
-      if (r.status === 'error') failBuckets[idx]!++;
+      buckets[idx] = (buckets[idx] ?? 0) + 1;
+      if (r.status === 'error') failBuckets[idx] = (failBuckets[idx] ?? 0) + 1;
     }
   }
   const maxBucket = Math.max(...buckets, 1);
@@ -861,7 +861,7 @@ function render(config: LiveConfig): void {
   const spark = buckets
     .map((v, i) => {
       const level = Math.round((v / maxBucket) * 8);
-      return (failBuckets[i]! > 0 ? C.red : C.green) + sparkChars[level] + C.reset;
+      return ((failBuckets[i] ?? 0) > 0 ? C.red : C.green) + sparkChars[level] + C.reset;
     })
     .join('');
 
@@ -1108,7 +1108,7 @@ function render(config: LiveConfig): void {
       const kids = g.children.slice(0, 12);
       for (let i = 0; i < kids.length; i++) {
         if (lineCount > 35) break;
-        const child = kids[i]!;
+        const child = kids[i] as AgentRecord;
         const isLast = i === kids.length - 1;
         const connector = isLast ? '\u2514\u2500' : '\u251c\u2500';
         const cIcon = statusIcon(child.status, Date.now() - child.lastActive < 300000);
@@ -1149,7 +1149,7 @@ function render(config: LiveConfig): void {
 
       const tree = getTraceTree(dt);
       for (let i = 0; i < Math.min(tree.length, 6); i++) {
-        const tg = tree[i]!;
+        const tg = tree[i] as ExecutionGraph;
         const depth = getDistDepth(dt, tg.spanId);
         const indent = `     ${'\u2502  '.repeat(Math.max(0, depth - 1))}`;
         const isLast = i === tree.length - 1 || getDistDepth(dt, tree[i + 1]?.spanId) <= depth;
@@ -1211,7 +1211,8 @@ function render(config: LiveConfig): void {
   }
 
   writeLine(L, '');
-  const dirLabel = config.dirs.length === 1 ? config.dirs[0]! : `${config.dirs.length} directories`;
+  const dirLabel =
+    config.dirs.length === 1 ? (config.dirs[0] ?? '') : `${config.dirs.length} directories`;
   writeLine(L, `  ${C.dim}Watching: ${dirLabel}${C.reset}`);
   writeLine(L, `  ${C.dim}Press Ctrl+C to exit${C.reset}`);
 

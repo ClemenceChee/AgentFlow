@@ -335,7 +335,8 @@ export function discoverAllProcessConfigs(dirs: string[]): ProcessAuditConfig[] 
         if (!configs.has(name)) {
           configs.set(name, { processName: name });
         }
-        const cfg = configs.get(name)!;        if (!cfg.pidFile) cfg.pidFile = fp;
+        const cfg = configs.get(name) ?? { processName: name };
+        if (!cfg.pidFile) cfg.pidFile = fp;
       }
 
       // Worker registries
@@ -345,7 +346,8 @@ export function discoverAllProcessConfigs(dirs: string[]): ProcessAuditConfig[] 
           configs.set(name, { processName: name });
         }
         if (name) {
-          const cfg = configs.get(name)!;          if (!cfg.workersFile) cfg.workersFile = fp;
+          const cfg = configs.get(name) ?? { processName: name };
+          if (!cfg.workersFile) cfg.workersFile = fp;
         }
       }
     }
@@ -372,7 +374,8 @@ export function discoverAllProcessConfigs(dirs: string[]): ProcessAuditConfig[] 
       if (!configs.has(name)) {
         configs.set(name, { processName: name });
       }
-      const cfg = configs.get(name)!;      cfg.systemdUnit = unitName;
+      const cfg = configs.get(name) ?? { processName: name };
+      cfg.systemdUnit = unitName;
     }
   } catch {
     /* systemd not available */

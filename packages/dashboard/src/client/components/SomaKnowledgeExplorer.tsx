@@ -129,6 +129,7 @@ export function SomaKnowledgeExplorer() {
         <div className="soma-knowledge__list">
           {entities.map((e) => (
             <button
+              type="button"
               key={`${e.type}/${e.id}`}
               className={`soma-knowledge__row ${selected?.id === e.id ? 'soma-knowledge__row--sel' : ''}`}
               onClick={() => fetchDetail(e.type, e.id)}
@@ -147,7 +148,11 @@ export function SomaKnowledgeExplorer() {
           ))}
           {entities.length === 0 && <div className="soma-knowledge__empty">No entities found.</div>}
           {total > offset + limit && (
-            <button className="soma-knowledge__more" onClick={() => setOffset(offset + limit)}>
+            <button
+              type="button"
+              className="soma-knowledge__more"
+              onClick={() => setOffset(offset + limit)}
+            >
               Load more...
             </button>
           )}
@@ -169,7 +174,11 @@ export function SomaKnowledgeExplorer() {
                   {LAYER_LABELS[selected.layer] ?? selected.layer}
                 </span>
               )}
-              <button className="soma-knowledge__close" onClick={() => setSelected(null)}>
+              <button
+                type="button"
+                className="soma-knowledge__close"
+                onClick={() => setSelected(null)}
+              >
                 {'\u2715'}
               </button>
             </div>
@@ -192,6 +201,7 @@ export function SomaKnowledgeExplorer() {
                   const [rType, ...rId] = r.split('/');
                   return (
                     <button
+                      type="button"
                       key={r}
                       className="soma-knowledge__link"
                       onClick={() => fetchDetail(rType, rId.join('/'))}

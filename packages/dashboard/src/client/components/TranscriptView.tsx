@@ -166,7 +166,7 @@ export function TranscriptView({ trace }: { trace: FullTrace }) {
 
             {/* Thinking toggle */}
             {isThinking && content && (
-              <button className="tv-thinking-btn" onClick={() => toggleThinking(i)}>
+              <button type="button" className="tv-thinking-btn" onClick={() => toggleThinking(i)}>
                 {expandedThinking.has(i) ? '\u25BC Hide thinking' : '\u25B6 Show thinking'}
               </button>
             )}

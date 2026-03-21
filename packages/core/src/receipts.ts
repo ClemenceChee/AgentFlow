@@ -200,7 +200,7 @@ export function formatReceipt(receipt: RunReceipt): string {
 
   // Step rows
   for (let i = 0; i < receipt.steps.length; i++) {
-    const step = receipt.steps[i]!;
+    const step = receipt.steps[i] as StepSummary;
     const durStr = step.durationMs !== null ? `${step.durationMs}ms` : '\u2014';
     const tokStr = step.tokenCost !== null ? String(step.tokenCost) : '\u2014';
     lines.push(

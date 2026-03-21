@@ -72,6 +72,7 @@ export function ExecSidebar({
           const barW = Math.max(3, (t.duration / maxDur) * 100);
           return (
             <button
+              type="button"
               key={t.traceKey}
               className={`erow ${fail ? 'erow--fail' : ''} ${sel ? 'erow--sel' : ''}`}
               onClick={() => onSelect(t.traceKey, t.agentId)}

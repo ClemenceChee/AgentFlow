@@ -3,11 +3,13 @@ import type { FullTrace } from '../hooks/useSelectedTrace';
 import { AgentFlow } from './AgentFlow';
 import { DependencyTree } from './DependencyTree';
 import { FlameChart } from './FlameChart';
+import { GuardExplanationCard } from './GuardExplanationCard';
 import { MetricsView } from './MetricsView';
+import { RunReceiptView } from './RunReceiptView';
 import { StateMachine } from './StateMachine';
 import { TranscriptView } from './TranscriptView';
 
-type Tab = 'flame' | 'flow' | 'metrics' | 'deps' | 'state' | 'summary' | 'transcript';
+type Tab = 'flame' | 'flow' | 'metrics' | 'deps' | 'state' | 'summary' | 'transcript' | 'receipt';
 
 function fmtDur(ms: number): string {
   if (ms < 1000) return `${Math.round(ms)}ms`;
@@ -33,6 +35,7 @@ export function ExecutionDetail({ trace, loading }: { trace: FullTrace | null; l
     { id: 'state', label: 'State Machine' },
     { id: 'summary', label: 'Summary' },
     { id: 'transcript', label: 'Transcript' },
+    { id: 'receipt', label: 'Receipt' },
   ];
 
   return (
@@ -61,6 +64,7 @@ export function ExecutionDetail({ trace, loading }: { trace: FullTrace | null; l
       <div className="ed-tabs">
         {tabs.map((t) => (
           <button
+            type="button"
             key={t.id}
             className={`ed-tab ${tab === t.id ? 'ed-tab--active' : ''}`}
             onClick={() => setTab(t.id)}
@@ -78,6 +82,7 @@ export function ExecutionDetail({ trace, loading }: { trace: FullTrace | null; l
         {tab === 'state' && <StateMachine trace={trace} />}
         {tab === 'summary' && <SummaryContent trace={trace} />}
         {tab === 'transcript' && <TranscriptView trace={trace} />}
+        {tab === 'receipt' && <RunReceiptView trace={trace} />}
       </div>
     </div>
   );
@@ -128,17 +133,30 @@ function SummaryContent({ trace }: { trace: FullTrace }) {
       {failedNodes.length > 0 && (
         <div className="sc-failures">
           <h4 className="sc-failures__title">{'\u2718'} Failed Nodes</h4>
-          {failedNodes.map((n) => (
-            <div key={n.id} className="sc-failure">
-              <span className="sc-failure__type">{n.type}:</span>
-              <strong>{n.name}</strong>
-              {(n.metadata?.error ?? n.state?.error) && (
-                <span className="sc-failure__err">
-                  {String(n.metadata?.error ?? n.state?.error)}
-                </span>
-              )}
-            </div>
-          ))}
+          {failedNodes.map((n) => {
+            const violation = (n.metadata?.guardViolation ?? n.state?.guardViolation) as
+              | {
+                  type: string;
+                  nodeId: string;
+                  message: string;
+                  timestamp: number;
+                  explanation?: Record<string, unknown>;
+                }
+              | undefined;
+            return (
+              <div key={n.id} className="sc-failure">
+                <span className="sc-failure__type">{n.type}:</span>
+                <strong>{n.name}</strong>
+                {violation ? (
+                  <GuardExplanationCard violation={violation as any} />
+                ) : (n.metadata?.error ?? n.state?.error) ? (
+                  <span className="sc-failure__err">
+                    {String(n.metadata?.error ?? n.state?.error)}
+                  </span>
+                ) : null}
+              </div>
+            );
+          })}
         </div>
       )}
       <div className="sc-types">

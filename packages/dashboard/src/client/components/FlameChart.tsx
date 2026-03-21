@@ -143,6 +143,7 @@ export function FlameChart({ trace }: { trace: FullTrace }) {
               const isHov = hovered === n.id;
 
               return (
+                // biome-ignore lint/a11y/useSemanticElements: interactive visualization element
                 <div
                   key={n.id}
                   className={`flame__bar ${isHov ? 'flame__bar--hov' : ''}`}
@@ -152,6 +153,8 @@ export function FlameChart({ trace }: { trace: FullTrace }) {
                     background: color,
                     opacity: isHov ? 1 : 0.8,
                   }}
+                  role="button"
+                  tabIndex={0}
                   onMouseEnter={(e) => {
                     setHovered(n.id);
                     setMousePos({ x: e.clientX, y: e.clientY });

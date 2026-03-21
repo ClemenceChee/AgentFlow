@@ -31,7 +31,7 @@ export function stitchTrace(graphs: ExecutionGraph[]): DistributedTrace {
     }
   }
 
-  if (!rootGraph) rootGraph = graphs[0]!; // fallback
+  if (!rootGraph) rootGraph = graphs[0] as ExecutionGraph; // fallback
 
   // Aggregate status
   let status: GraphStatus = 'completed';
