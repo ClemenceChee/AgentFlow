@@ -1,9 +1,11 @@
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { type DashboardConfig, DashboardServer } from './server.js';
 
-const VERSION = '0.8.0';
+const __cliDirname = path.dirname(fileURLToPath(import.meta.url));
+const VERSION = JSON.parse(fs.readFileSync(path.resolve(__cliDirname, '../package.json'), 'utf-8')).version;
 
 function getLanAddress(): string | null {
   const interfaces = os.networkInterfaces();
