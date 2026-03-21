@@ -40,7 +40,7 @@
   "dependencies": {
     "agentflow-core": "^0.8.0",
     "chokidar": "^3.5.3",
-    "express": "^4.18.2",
+    "express": "^5.2.1",
     "express-rate-limit": "^8.3.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
@@ -48,7 +48,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.41.0",
-    "@types/express": "^4.17.21",
+    "@types/express": "^5.0.6",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
     "@types/ws": "^8.5.10",
