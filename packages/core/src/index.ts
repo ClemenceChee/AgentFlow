@@ -14,10 +14,6 @@
  * @module
  */
 
-// Drift detection
-export { detectDrift, trackConformanceTrend } from './drift.js';
-// Efficiency scoring
-export { getEfficiency } from './efficiency.js';
 // Event emission
 export { createEventEmitter, createExecutionEvent, createPatternEvent } from './event-emitter.js';
 // Graph construction

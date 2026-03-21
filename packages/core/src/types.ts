@@ -427,7 +427,14 @@ export interface OutcomeAssertion {
  * A detected guard violation.
  */
 export interface GuardViolation {
-  readonly type: 'timeout' | 'reasoning-loop' | 'spawn-explosion' | 'high-failure-rate' | 'conformance-drift' | 'known-bottleneck' | 'outcome_mismatch';
+  readonly type:
+    | 'timeout'
+    | 'reasoning-loop'
+    | 'spawn-explosion'
+    | 'high-failure-rate'
+    | 'conformance-drift'
+    | 'known-bottleneck'
+    | 'outcome_mismatch';
   readonly nodeId: string;
   readonly message: string;
   readonly timestamp: number;
@@ -737,7 +744,11 @@ export interface InsightEvent {
   readonly agentId: string;
   readonly timestamp: number;
   readonly schemaVersion: number;
-  readonly insightType: 'failure-analysis' | 'anomaly-explanation' | 'agent-summary' | 'fix-suggestion';
+  readonly insightType:
+    | 'failure-analysis'
+    | 'anomaly-explanation'
+    | 'agent-summary'
+    | 'fix-suggestion';
   /** The prompt that was sent to the AnalysisFn (for auditing). */
   readonly prompt: string;
   /** The LLM response. */

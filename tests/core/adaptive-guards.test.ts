@@ -1,6 +1,6 @@
 import { rmSync } from 'node:fs';
-import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 import type { ExecutionGraph, PolicySource } from 'agentflow-core';
 import {
@@ -44,7 +44,12 @@ function buildFailedGraph(agentId = 'test-agent'): ExecutionGraph {
     trigger: 'unit-test',
   });
   const root = builder.startNode({ type: 'agent', name: 'main' });
-  const tool = builder.startNode({ type: 'tool', name: 'fetch-data', parentId: root, metadata: { error: 'fail' } });
+  const tool = builder.startNode({
+    type: 'tool',
+    name: 'fetch-data',
+    parentId: root,
+    metadata: { error: 'fail' },
+  });
   builder.failNode(tool, 'fail');
   builder.endNode(root, 'failed');
   return builder.build();
@@ -204,7 +209,14 @@ describe('Adaptive Guards', () => {
 
       // Add bottleneck knowledge
       const graphs = [buildCompletedGraph()];
-      store.append(createPatternEvent('test-agent', discoverProcess(graphs), findVariants(graphs), getBottlenecks(graphs)));
+      store.append(
+        createPatternEvent(
+          'test-agent',
+          discoverProcess(graphs),
+          findVariants(graphs),
+          getBottlenecks(graphs),
+        ),
+      );
 
       const policy = createPolicySource(store);
 
