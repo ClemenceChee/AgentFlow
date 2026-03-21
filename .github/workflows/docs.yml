@@ -33,7 +33,7 @@ jobs:
         run: npm ci
 
       - name: Install docs dependencies
-        run: cd docs && npm ci
+        run: cd docs && npm ci --legacy-peer-deps
 
       - name: Build docs
         run: cd docs && npm run build
