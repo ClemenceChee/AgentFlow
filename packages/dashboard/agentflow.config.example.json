@@ -35,9 +35,7 @@
   ],
 
   "// skipDirectories": "Directory names to skip during recursive scanning",
-  "skipDirectories": [
-    "knowledge"
-  ],
+  "skipDirectories": ["knowledge"],
 
   "// discoveryPaths": "Additional directories to auto-discover and watch for traces",
   "discoveryPaths": [
@@ -51,10 +49,7 @@
   ],
 
   "// systemdServices": "Systemd unit names to query for process/directory discovery",
-  "systemdServices": [
-    "soma.service",
-    "openclaw-gateway.service"
-  ],
+  "systemdServices": ["soma.service", "openclaw-gateway.service"],
 
   "// agentDetection": "Rules for identifying agents from file paths and names",
   "agentDetection": {
