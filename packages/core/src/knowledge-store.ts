@@ -162,7 +162,9 @@ export function createKnowledgeStore(config?: KnowledgeStoreConfig): KnowledgeSt
   }
 
   function profilePath(agentId: string): string {
-    return join(profilesDir, `${agentId}.json`);
+    // Prevent path traversal: strip directory separators and traversal patterns
+    const safe = agentId.replace(/[/\\]/g, '_').replace(/\.\./g, '_');
+    return join(profilesDir, `${safe}.json`);
   }
 
   function appendExecutionEvent(event: ExecutionEvent): void {
