@@ -167,11 +167,6 @@ export class DashboardServer {
     }
 
     // API endpoints
-    const pkgVersion = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../package.json'), 'utf-8')).version;
-    this.app.get('/api/version', (_req, res) => {
-      res.json({ version: pkgVersion });
-    });
-
     this.app.get('/api/traces', (req, res) => {
       try {
         const limit = Math.min(Math.max(parseInt(req.query.limit as string, 10) || 50, 1), 200);
