@@ -914,6 +914,95 @@ export class DashboardServer {
       }
     });
 
+    // Ops-Intel: Efficiency (premium — reads from SOMA report)
+    this.app.get('/api/soma/efficiency', (_req, res) => {
+      const somaVault = this.config.somaVault;
+      if (!somaVault) return res.status(404).json({ error: 'Soma vault not configured' });
+      try {
+        const reportPath = path.join(somaVault, '..', 'soma-report.json');
+        if (!fs.existsSync(reportPath)) {
+          return res.status(404).json({ error: 'No SOMA report found' });
+        }
+        const report = JSON.parse(fs.readFileSync(reportPath, 'utf-8'));
+        const agents = report.agents ?? [];
+
+        // Build efficiency summary from agent data
+        const runs = agents.map((a: Record<string, unknown>) => ({
+          graphId: a.name,
+          agentId: a.name,
+          totalTokenCost: (a.totalTokenCost as number) ?? 0,
+          completedNodes: (a.totalRuns as number) ?? 0,
+          costPerNode: (a.totalTokenCost as number ?? 0) / Math.max(1, (a.totalRuns as number) ?? 1),
+        }));
+
+        const costs = runs.map((r: { costPerNode: number }) => r.costPerNode).filter((c: number) => c > 0).sort((a: number, b: number) => a - b);
+        const mean = costs.length > 0 ? costs.reduce((a: number, b: number) => a + b, 0) / costs.length : 0;
+        const median = costs.length > 0 ? costs[Math.floor(costs.length / 2)] : 0;
+        const p95 = costs.length > 0 ? costs[Math.min(costs.length - 1, Math.ceil(costs.length * 0.95) - 1)] : 0;
+
+        res.json({
+          runs,
+          aggregate: { mean, median, p95 },
+          flags: [],
+          nodeCosts: [],
+          dataCoverage: agents.length > 0 ? 1 : 0,
+        });
+      } catch {
+        res.status(500).json({ error: 'Failed to compute efficiency' });
+      }
+    });
+
+    // Ops-Intel: Drift (premium — dynamic import from SOMA)
+    this.app.get('/api/soma/drift', async (req, res) => {
+      const agentId = req.query.agentId as string;
+      if (!agentId) return res.status(400).json({ error: 'agentId query parameter required' });
+      try {
+        const somaVault = this.config.somaVault;
+        if (!somaVault) return res.status(404).json({ error: 'Soma vault not configured' });
+
+        // Read conformance history
+        const historyPath = path.join(somaVault, '..', 'conformance-history.json');
+        let history: { agentId: string; timestamp: number; score: number; runId: string }[] = [];
+        if (fs.existsSync(historyPath)) {
+          history = JSON.parse(fs.readFileSync(historyPath, 'utf-8'));
+        }
+
+        const agentHistory = history.filter((e: { agentId: string }) => e.agentId === agentId);
+
+        // Inline drift detection (simple linear regression)
+        const n = agentHistory.length;
+        if (n < 10) {
+          return res.json({ drift: { status: 'insufficient_data', slope: 0, r2: 0, windowSize: n, dataPoints: n }, points: agentHistory });
+        }
+        let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+        for (let i = 0; i < n; i++) {
+          const y = agentHistory[i].score;
+          sumX += i; sumY += y; sumXY += i * y; sumX2 += i * i;
+        }
+        const denom = n * sumX2 - sumX * sumX;
+        const slope = denom !== 0 ? (n * sumXY - sumX * sumY) / denom : 0;
+        const intercept = (sumY - slope * sumX) / n;
+        const meanY = sumY / n;
+        let ssRes = 0, ssTot = 0;
+        for (let i = 0; i < n; i++) {
+          const y = agentHistory[i].score;
+          ssRes += (y - (intercept + slope * i)) ** 2;
+          ssTot += (y - meanY) ** 2;
+        }
+        const r2 = ssTot > 0 ? 1 - ssRes / ssTot : 0;
+        const status = r2 > 0.3 ? (slope < 0 ? 'degrading' : 'improving') : 'stable';
+        const currentScore = agentHistory[n - 1].score;
+        const alert = status === 'degrading' ? {
+          type: 'conformance_trend_degradation', agentId, currentScore, trendSlope: slope, windowSize: n,
+          message: `Agent '${agentId}' conformance declining`,
+        } : undefined;
+
+        res.json({ drift: { status, slope, r2, windowSize: n, dataPoints: n, alert }, points: agentHistory });
+      } catch {
+        res.status(404).json({ error: 'Drift detection not available (SOMA not installed)' });
+      }
+    });
+
     this.app.get('/api/process-health', (_req, res) => {
       try {
         const now = Date.now();
