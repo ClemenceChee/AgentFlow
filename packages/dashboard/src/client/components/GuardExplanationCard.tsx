@@ -40,7 +40,7 @@ export function GuardExplanationCard({ violation }: { violation: Violation }) {
     );
   }
 
-  const sourceInfo = SOURCE_LABELS[explanation.source] ?? SOURCE_LABELS.static!;
+  const sourceInfo = SOURCE_LABELS[explanation.source] ?? SOURCE_LABELS.static ?? { label: 'Unknown', className: 'guard-source--unknown' };
 
   return (
     <div className="guard-card">

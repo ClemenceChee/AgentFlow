@@ -137,8 +137,9 @@ export function deduplicateAgents(agents: AgentStats[]): AgentStats[] {
   const mergedAgents: AgentStats[] = [];
 
   for (const [_key, group] of suffixGroups) {
-    const suffix = extractSuffix(group[0]?.localId)!;
     if (group.length < 2) continue;
+    const suffix = extractSuffix(group[0]?.localId ?? '');
+    if (!suffix) continue;
     const prefixes = new Set(group.map((a) => a.localId.split('-')[0]));
     // Only merge when prefixes are variations of the same system (e.g. "vault" + bare)
     // Don't merge when prefixes are distinct system names (e.g. "soma" vs "openclaw")

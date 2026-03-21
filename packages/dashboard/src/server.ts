@@ -1747,6 +1747,10 @@ export class DashboardServer {
     return this.stats.getGlobalStats();
   }
 
+  public getTrace(filename: string) {
+    return this.watcher.getTrace(filename);
+  }
+
   public getTraces() {
     return this.watcher.getAllTraces();
   }
