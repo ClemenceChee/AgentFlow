@@ -16,11 +16,12 @@ export interface TraceEntry {
 /** Map raw API trace (full ExecutionGraph) to our slim TraceEntry. */
 function mapTrace(raw: Record<string, unknown>): TraceEntry {
   const nodes = raw.nodes;
-  const nodeCount = nodes instanceof Map
-    ? nodes.size
-    : typeof nodes === 'object' && nodes !== null
-      ? Object.keys(nodes).length
-      : 0;
+  const nodeCount =
+    nodes instanceof Map
+      ? nodes.size
+      : typeof nodes === 'object' && nodes !== null
+        ? Object.keys(nodes).length
+        : 0;
 
   const startTime = typeof raw.startTime === 'number' ? raw.startTime : 0;
   const endTime = typeof raw.endTime === 'number' ? raw.endTime : startTime;

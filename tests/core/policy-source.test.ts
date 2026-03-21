@@ -1,6 +1,6 @@
 import { rmSync } from 'node:fs';
-import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 import type { ExecutionGraph } from 'agentflow-core';
 import {
@@ -43,7 +43,12 @@ function buildFailedGraph(agentId = 'test-agent'): ExecutionGraph {
     trigger: 'unit-test',
   });
   const root = builder.startNode({ type: 'agent', name: 'main' });
-  const tool = builder.startNode({ type: 'tool', name: 'fetch-data', parentId: root, metadata: { error: 'fail' } });
+  const tool = builder.startNode({
+    type: 'tool',
+    name: 'fetch-data',
+    parentId: root,
+    metadata: { error: 'fail' },
+  });
   builder.failNode(tool, 'fail');
   builder.endNode(root, 'failed');
   return builder.build();
@@ -87,7 +92,14 @@ describe('PolicySource', () => {
     it('returns true for known bottleneck', () => {
       const store = createKnowledgeStore({ baseDir: testDir });
       const graphs = [buildCompletedGraph()];
-      store.append(createPatternEvent('test-agent', discoverProcess(graphs), findVariants(graphs), getBottlenecks(graphs)));
+      store.append(
+        createPatternEvent(
+          'test-agent',
+          discoverProcess(graphs),
+          findVariants(graphs),
+          getBottlenecks(graphs),
+        ),
+      );
 
       const policy = createPolicySource(store);
       expect(policy.isKnownBottleneck('main')).toBe(true);
@@ -104,9 +116,11 @@ describe('PolicySource', () => {
 
     it('returns conformance score from profile', () => {
       const store = createKnowledgeStore({ baseDir: testDir });
-      store.append(createExecutionEvent(buildCompletedGraph(), {
-        processContext: { variant: 'A→B', conformanceScore: 0.85, isAnomaly: false },
-      }));
+      store.append(
+        createExecutionEvent(buildCompletedGraph(), {
+          processContext: { variant: 'A→B', conformanceScore: 0.85, isAnomaly: false },
+        }),
+      );
 
       const policy = createPolicySource(store);
       expect(policy.lastConformanceScore('test-agent')).toBe(0.85);
@@ -127,7 +141,7 @@ describe('PolicySource', () => {
       const policy = createPolicySource(store);
       const profile = policy.getAgentProfile('test-agent');
       expect(profile).not.toBeNull();
-      expect(profile!.agentId).toBe('test-agent');
+      expect(profile?.agentId).toBe('test-agent');
     });
   });
 });

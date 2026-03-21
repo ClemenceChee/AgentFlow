@@ -52,3 +52,4 @@ docs/docs/api/core/
 **/test-openclaw-discovery.js
 **/verify-openclaw-integration.test.ts
 **/debug.html
+tests/soma/

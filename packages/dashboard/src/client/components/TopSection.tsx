@@ -25,7 +25,8 @@ interface Props {
 
 // --- Enriched service chip with health info ---
 function ServiceChip({ svc }: { svc: ServiceAudit }) {
-  const active = svc.systemd?.activeState === 'active' || (svc.pidFile?.alive && svc.pidFile.matchesProcess);
+  const active =
+    svc.systemd?.activeState === 'active' || (svc.pidFile?.alive && svc.pidFile.matchesProcess);
   const failed = svc.systemd?.failed;
   const cls = failed ? 'chip--fail' : active ? 'chip--ok' : 'chip--off';
   const pid = svc.pidFile?.pid ?? svc.systemd?.mainPid;
@@ -38,15 +39,26 @@ function ServiceChip({ svc }: { svc: ServiceAudit }) {
       <span className="schip__name">{svc.name || `PID:${pid}`}</span>
       {pid && <span className="schip__detail">:{pid}</span>}
       {cpu && <span className="schip__detail">{cpu}%</span>}
-      {uptime && <span className="schip__detail">{'\u2191'}{uptime}</span>}
+      {uptime && (
+        <span className="schip__detail">
+          {'\u2191'}
+          {uptime}
+        </span>
+      )}
       {svc.systemd && !active && <span className="schip__state">{svc.systemd.subState}</span>}
     </span>
   );
 }
 
 // --- Infrastructure process chip ---
-function InfraChip({ proc }: { proc: { pid: number; cpu: string; mem: string; command: string; cmdline: string } }) {
-  const name = proc.cmdline.includes('milvus') ? 'milvus' : proc.command.split('/').pop()?.split(' ')[0] ?? `PID:${proc.pid}`;
+function InfraChip({
+  proc,
+}: {
+  proc: { pid: number; cpu: string; mem: string; command: string; cmdline: string };
+}) {
+  const name = proc.cmdline.includes('milvus')
+    ? 'milvus'
+    : (proc.command.split('/').pop()?.split(' ')[0] ?? `PID:${proc.pid}`);
   return (
     <span className="schip schip--infra">
       <span className="dot dot--ok" />
@@ -58,50 +70,91 @@ function InfraChip({ proc }: { proc: { pid: number; cpu: string; mem: string; co
 }
 
 // --- Agent card ---
-function AgentCard({ agent, selected, onClick }: { agent: AgentStats; selected: boolean; onClick: () => void }) {
+function AgentCard({
+  agent,
+  selected,
+  onClick,
+}: {
+  agent: AgentStats;
+  selected: boolean;
+  onClick: () => void;
+}) {
   const fail = agent.failedExecutions > 0;
   const name = agent.displayName ?? agent.agentId;
   const source = agent.adapterSource;
 
   return (
-    <button className={`acard ${fail ? 'acard--fail' : ''} ${selected ? 'acard--sel' : ''}`} onClick={onClick}>
+    <button
+      className={`acard ${fail ? 'acard--fail' : ''} ${selected ? 'acard--sel' : ''}`}
+      onClick={onClick}
+    >
       <div className="acard__r1">
         <span className={`dot ${fail ? 'dot--fail' : 'dot--ok'}`} />
         {source && source !== 'agentflow' && <span className="acard__source">{source}</span>}
         <span className="acard__name">{name}</span>
-        <span className={`acard__pct ${agent.successRate < 95 ? 'acard__pct--warn' : ''}`}>{agent.successRate.toFixed(0)}%</span>
+        <span className={`acard__pct ${agent.successRate < 95 ? 'acard__pct--warn' : ''}`}>
+          {agent.successRate.toFixed(0)}%
+        </span>
       </div>
       <div className="acard__r2">
-        <span><b>{agent.totalExecutions}</b> exec</span>
+        <span>
+          <b>{agent.totalExecutions}</b> exec
+        </span>
         {fail && <span className="acard__failn">{agent.failedExecutions} fail</span>}
         <span>{fmtCompact(agent.avgExecutionTime)} avg</span>
         <span>{fmtAgo(agent.lastExecution)} ago</span>
-        {agent.sources && agent.sources.length > 1 && <span className="acard__merged">{agent.sources.length} src</span>}
+        {agent.sources && agent.sources.length > 1 && (
+          <span className="acard__merged">{agent.sources.length} src</span>
+        )}
       </div>
     </button>
   );
 }
 
 // --- Worker card (from process health, no traces needed) ---
-function WorkerChip({ worker }: { worker: { name: string; pid: number | null; alive: boolean; stale: boolean; declaredStatus: string } }) {
+function WorkerChip({
+  worker,
+}: {
+  worker: {
+    name: string;
+    pid: number | null;
+    alive: boolean;
+    stale: boolean;
+    declaredStatus: string;
+  };
+}) {
   const cls = worker.alive ? 'ok' : worker.stale ? 'fail' : 'warn';
   return (
     <span className={`schip schip--worker schip--${cls}`}>
       <span className={`dot dot--${cls}`} />
       <span className="schip__name">{worker.name}</span>
       {worker.pid && <span className="schip__detail">:{worker.pid}</span>}
-      <span className="schip__state">{worker.alive ? 'up' : worker.stale ? 'dead' : worker.declaredStatus}</span>
+      <span className="schip__state">
+        {worker.alive ? 'up' : worker.stale ? 'dead' : worker.declaredStatus}
+      </span>
     </span>
   );
 }
 
 // --- Group section with service info ---
-function GroupSection({ group, selectedAgent, onSelectAgent, serviceInfo, workers }: {
+function GroupSection({
+  group,
+  selectedAgent,
+  onSelectAgent,
+  serviceInfo,
+  workers,
+}: {
   group: AgentGroup;
   selectedAgent: string | null;
   onSelectAgent: (id: string) => void;
   serviceInfo?: ServiceAudit;
-  workers?: { name: string; pid: number | null; alive: boolean; stale: boolean; declaredStatus: string }[];
+  workers?: {
+    name: string;
+    pid: number | null;
+    alive: boolean;
+    stale: boolean;
+    declaredStatus: string;
+  }[];
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const agentById = new Map(group.agents.map((a) => [a.agentId, a]));
@@ -109,9 +162,12 @@ function GroupSection({ group, selectedAgent, onSelectAgent, serviceInfo, worker
 
   // Find workers that don't have matching agent cards (like surveyor)
   const unmatchedWorkers = (workers ?? []).filter((w) => {
-    const hasAgent = group.agents.some((a) =>
-      a.agentId === w.name || a.displayName === w.name ||
-      a.agentId.endsWith(w.name) || (a.sources ?? []).some((s) => s.includes(w.name))
+    const hasAgent = group.agents.some(
+      (a) =>
+        a.agentId === w.name ||
+        a.displayName === w.name ||
+        a.agentId.endsWith(w.name) ||
+        (a.sources ?? []).some((s) => s.includes(w.name)),
     );
     return !hasAgent;
   });
@@ -123,12 +179,22 @@ function GroupSection({ group, selectedAgent, onSelectAgent, serviceInfo, worker
         <span className="agroup__name">{group.displayName}</span>
         <span className="agroup__stats">
           {group.totalExecutions} exec
-          {group.failedExecutions > 0 && <span className="agroup__fail"> {group.failedExecutions}!</span>}
+          {group.failedExecutions > 0 && (
+            <span className="agroup__fail"> {group.failedExecutions}!</span>
+          )}
         </span>
         {serviceInfo && (
-          <span className={`agroup__svc ${serviceInfo.systemd?.activeState === 'active' ? 'agroup__svc--ok' : ''}`}>
+          <span
+            className={`agroup__svc ${serviceInfo.systemd?.activeState === 'active' ? 'agroup__svc--ok' : ''}`}
+          >
             {serviceInfo.systemd?.activeState ?? 'unknown'}
-            {serviceInfo.metrics && <> &middot; CPU {serviceInfo.metrics.cpu}% &middot; {'\u2191'}{serviceInfo.metrics.elapsed}</>}
+            {serviceInfo.metrics && (
+              <>
+                {' '}
+                &middot; CPU {serviceInfo.metrics.cpu}% &middot; {'\u2191'}
+                {serviceInfo.metrics.elapsed}
+              </>
+            )}
           </span>
         )}
         <span className="agroup__count">{group.agents.length}</span>
@@ -136,7 +202,9 @@ function GroupSection({ group, selectedAgent, onSelectAgent, serviceInfo, worker
       {!collapsed && (
         <div className="agroup__body">
           {group.subGroups.map((sg) => {
-            const sgAgents = sg.agentIds.map((id) => agentById.get(id)).filter(Boolean) as AgentStats[];
+            const sgAgents = sg.agentIds
+              .map((id) => agentById.get(id))
+              .filter(Boolean) as AgentStats[];
             if (sgAgents.length === 0) return null;
             for (const a of sgAgents) renderedIds.add(a.agentId);
             return (
@@ -144,7 +212,12 @@ function GroupSection({ group, selectedAgent, onSelectAgent, serviceInfo, worker
                 {group.subGroups.length > 1 && <div className="asubgroup__label">{sg.name}</div>}
                 <div className="asubgroup__cards">
                   {sgAgents.map((a) => (
-                    <AgentCard key={a.agentId} agent={a} selected={selectedAgent === a.agentId} onClick={() => onSelectAgent(a.agentId)} />
+                    <AgentCard
+                      key={a.agentId}
+                      agent={a}
+                      selected={selectedAgent === a.agentId}
+                      onClick={() => onSelectAgent(a.agentId)}
+                    />
                   ))}
                 </div>
               </div>
@@ -154,9 +227,16 @@ function GroupSection({ group, selectedAgent, onSelectAgent, serviceInfo, worker
           {group.agents.filter((a) => !renderedIds.has(a.agentId)).length > 0 && (
             <div className="asubgroup">
               <div className="asubgroup__cards">
-                {group.agents.filter((a) => !renderedIds.has(a.agentId)).map((a) => (
-                  <AgentCard key={a.agentId} agent={a} selected={selectedAgent === a.agentId} onClick={() => onSelectAgent(a.agentId)} />
-                ))}
+                {group.agents
+                  .filter((a) => !renderedIds.has(a.agentId))
+                  .map((a) => (
+                    <AgentCard
+                      key={a.agentId}
+                      agent={a}
+                      selected={selectedAgent === a.agentId}
+                      onClick={() => onSelectAgent(a.agentId)}
+                    />
+                  ))}
               </div>
             </div>
           )}
@@ -186,8 +266,13 @@ export function TopSection({ processHealth, grouped, selectedAgent, onSelectAgen
       if (s.systemd?.mainPid) knownPids.add(s.systemd.mainPid);
       if (s.workers) for (const w of s.workers.workers) if (w.pid) knownPids.add(w.pid);
     }
-    return processHealth.osProcesses.filter((p) =>
-      !knownPids.has(p.pid) && !p.command.includes('tsx ') && !p.command.includes('npm ') && !p.command.includes('sh -c') && parseFloat(p.cpu) > 0
+    return processHealth.osProcesses.filter(
+      (p) =>
+        !knownPids.has(p.pid) &&
+        !p.command.includes('tsx ') &&
+        !p.command.includes('npm ') &&
+        !p.command.includes('sh -c') &&
+        parseFloat(p.cpu) > 0,
     );
   }, [processHealth]);
 
@@ -230,7 +315,7 @@ export function TopSection({ processHealth, grouped, selectedAgent, onSelectAgen
       </div>
 
       {/* Agent Sessions */}
-      {grouped && grouped.groups.map((group) => (
+      {grouped?.groups.map((group) => (
         <GroupSection
           key={group.name}
           group={group}

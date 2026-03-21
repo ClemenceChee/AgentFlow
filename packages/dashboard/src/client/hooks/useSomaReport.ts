@@ -50,7 +50,9 @@ export function useSomaReport(): { report: SomaReport | null; loading: boolean }
       if (res.ok) {
         setReport(await res.json());
       }
-    } catch { /* retry on next interval */ }
+    } catch {
+      /* retry on next interval */
+    }
     setLoading(false);
   }, []);
 

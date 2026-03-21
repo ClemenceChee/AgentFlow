@@ -1,6 +1,6 @@
 import { rmSync } from 'node:fs';
-import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 import type { ExecutionGraph, PolicySource } from 'agentflow-core';
 import {
@@ -44,7 +44,12 @@ function buildFailedGraph(agentId = 'test-agent'): ExecutionGraph {
     trigger: 'unit-test',
   });
   const root = builder.startNode({ type: 'agent', name: 'main' });
-  const tool = builder.startNode({ type: 'tool', name: 'fetch-data', parentId: root, metadata: { error: 'fail' } });
+  const tool = builder.startNode({
+    type: 'tool',
+    name: 'fetch-data',
+    parentId: root,
+    metadata: { error: 'fail' },
+  });
   builder.failNode(tool, 'fail');
   builder.endNode(root, 'failed');
   return builder.build();
@@ -93,7 +98,8 @@ describe('Adaptive Guards', () => {
 
       const hfr = violations.find((v) => v.type === 'high-failure-rate');
       expect(hfr).toBeDefined();
-      expect(hfr!.message).toContain('60%');
+      expect(hfr?.explanation.rule).toBe('max-failure-rate');
+      expect(hfr?.explanation.source).toBe('soma-policy');
     });
 
     it('does not emit when failure rate is acceptable', () => {
@@ -125,7 +131,8 @@ describe('Adaptive Guards', () => {
 
       const cd = violations.find((v) => v.type === 'conformance-drift');
       expect(cd).toBeDefined();
-      expect(cd!.message).toContain('50%');
+      expect(cd?.explanation.rule).toBe('min-conformance');
+      expect(cd?.explanation.source).toBe('soma-policy');
     });
 
     it('does not emit when conformance score is null', () => {
@@ -165,7 +172,8 @@ describe('Adaptive Guards', () => {
 
       const kb = violations.find((v) => v.type === 'known-bottleneck');
       expect(kb).toBeDefined();
-      expect(kb!.message).toContain('fetch');
+      expect(kb?.explanation.rule).toBe('known-bottleneck');
+      expect(kb?.explanation.source).toBe('soma-policy');
     });
 
     it('does not emit for completed nodes', () => {
@@ -201,7 +209,14 @@ describe('Adaptive Guards', () => {
 
       // Add bottleneck knowledge
       const graphs = [buildCompletedGraph()];
-      store.append(createPatternEvent('test-agent', discoverProcess(graphs), findVariants(graphs), getBottlenecks(graphs)));
+      store.append(
+        createPatternEvent(
+          'test-agent',
+          discoverProcess(graphs),
+          findVariants(graphs),
+          getBottlenecks(graphs),
+        ),
+      );
 
       const policy = createPolicySource(store);
 
@@ -211,7 +226,8 @@ describe('Adaptive Guards', () => {
 
       const hfr = violations.find((v) => v.type === 'high-failure-rate');
       expect(hfr).toBeDefined();
-      expect(hfr!.message).toContain('60%');
+      expect(hfr?.explanation.rule).toBe('max-failure-rate');
+      expect(hfr?.explanation.source).toBe('soma-policy');
     });
   });
 });

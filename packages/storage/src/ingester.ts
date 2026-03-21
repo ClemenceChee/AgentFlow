@@ -574,7 +574,12 @@ export class TraceIngester {
 
     // Use canonical agent IDs consistent with watcher.ts aliases
     // Old workers (curator/janitor/distiller/surveyor) keep alfred- prefix; orchestrator is soma-main
-    const canonicalId = agentPath === 'main' ? 'soma-main' : agentPath === 'unknown' ? 'soma-main' : `alfred-${agentPath}`;
+    const canonicalId =
+      agentPath === 'main'
+        ? 'soma-main'
+        : agentPath === 'unknown'
+          ? 'soma-main'
+          : `alfred-${agentPath}`;
 
     const trace = {
       agentId: canonicalId,

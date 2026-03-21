@@ -15,36 +15,43 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
   const fetchDirs = useCallback(async () => {
     try {
       const res = await fetch('/api/directories');
-      if (res.ok) { setDirs(await res.json()); setError(null); }
-      else setError(`Failed: ${res.status}`);
+      if (res.ok) {
+        setDirs(await res.json());
+        setError(null);
+      } else setError(`Failed: ${res.status}`);
     } catch (e) {
       setError(`Network error: ${e instanceof Error ? e.message : String(e)}`);
     }
   }, []);
 
-  useEffect(() => { fetchDirs(); }, [fetchDirs]);
-
-  const modifyDir = useCallback(async (action: 'add' | 'remove', dir: string) => {
-    setBusy(true);
-    setError(null);
-    try {
-      const body = action === 'add' ? { add: dir } : { remove: dir };
-      const res = await fetch('/api/directories', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        setError(`Failed: ${(data as { error?: string }).error ?? res.status}`);
-      } else {
-        await fetchDirs();
-      }
-    } catch (e) {
-      setError(`Error: ${e instanceof Error ? e.message : String(e)}`);
-    }
-    setBusy(false);
+  useEffect(() => {
+    fetchDirs();
   }, [fetchDirs]);
+
+  const modifyDir = useCallback(
+    async (action: 'add' | 'remove', dir: string) => {
+      setBusy(true);
+      setError(null);
+      try {
+        const body = action === 'add' ? { add: dir } : { remove: dir };
+        const res = await fetch('/api/directories', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          setError(`Failed: ${(data as { error?: string }).error ?? res.status}`);
+        } else {
+          await fetchDirs();
+        }
+      } catch (e) {
+        setError(`Error: ${e instanceof Error ? e.message : String(e)}`);
+      }
+      setBusy(false);
+    },
+    [fetchDirs],
+  );
 
   const handleManualAdd = useCallback(() => {
     const trimmed = manualPath.trim();
@@ -54,7 +61,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
   }, [manualPath, modifyDir]);
 
   // Derive which dirs are from config (removable) vs CLI (not removable)
-  const cliDirs = new Set<string>();
+  const _cliDirs = new Set<string>();
   // CLI dirs are the first entries (tracesDir + original dataDirs), but we can't know exactly from the API
   // So we consider "suggested" as definitely addable, and anything in watched that's also in discovered is removable
 
@@ -63,7 +70,9 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
       <div className="settings-panel" onClick={(e) => e.stopPropagation()}>
         <div className="sp-head">
           <h3>Watched Directories</h3>
-          <button className="sp-close" onClick={onClose}>{'\u00D7'}</button>
+          <button className="sp-close" onClick={onClose}>
+            {'\u00D7'}
+          </button>
         </div>
 
         {error && <div className="sp-error">{error}</div>}
@@ -78,7 +87,12 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
               <div key={d} className="sp-dir">
                 <span className="dot dot--ok" />
                 <span className="sp-dir__path">{d}</span>
-                <button className="sp-btn sp-btn--rm" disabled={busy} onClick={() => modifyDir('remove', d)} title="Remove">
+                <button
+                  className="sp-btn sp-btn--rm"
+                  disabled={busy}
+                  onClick={() => modifyDir('remove', d)}
+                  title="Remove"
+                >
                   {'\u00D7'}
                 </button>
               </div>
@@ -92,7 +106,11 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
                   <div key={d} className="sp-dir sp-dir--sug">
                     <span className="dot dot--warn" />
                     <span className="sp-dir__path">{d}</span>
-                    <button className="sp-btn sp-btn--add" disabled={busy} onClick={() => modifyDir('add', d)}>
+                    <button
+                      className="sp-btn sp-btn--add"
+                      disabled={busy}
+                      onClick={() => modifyDir('add', d)}
+                    >
                       + Add
                     </button>
                   </div>
@@ -111,7 +129,11 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
                 onChange={(e) => setManualPath(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleManualAdd()}
               />
-              <button className="sp-btn sp-btn--add" disabled={busy || !manualPath.trim()} onClick={handleManualAdd}>
+              <button
+                className="sp-btn sp-btn--add"
+                disabled={busy || !manualPath.trim()}
+                onClick={handleManualAdd}
+              >
                 Add
               </button>
             </div>

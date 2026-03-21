@@ -9,7 +9,12 @@ function fmtDur(ms: number): string {
 
 function fmtTime(ts: number): string {
   if (ts <= 0) return '';
-  return new Date(ts).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  return new Date(ts).toLocaleString([], {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 interface Props {
@@ -21,7 +26,13 @@ interface Props {
   onSelect: (filename: string, agentId: string) => void;
 }
 
-export function ExecSidebar({ agentId, sourceAgentIds, traces, selectedFilename, onSelect }: Props) {
+export function ExecSidebar({
+  agentId,
+  sourceAgentIds,
+  traces,
+  selectedFilename,
+  onSelect,
+}: Props) {
   const agentTraces = useMemo(() => {
     if (!agentId) return [];
     // Match by agentId directly, or by any of the source IDs (for merged agents)
@@ -34,7 +45,7 @@ export function ExecSidebar({ agentId, sourceAgentIds, traces, selectedFilename,
         const bEnd = b.timestamp + b.duration;
         return bEnd - aEnd;
       });
-  }, [traces, agentId]);
+  }, [traces, agentId, sourceAgentIds]);
 
   const maxDur = useMemo(() => Math.max(...agentTraces.map((t) => t.duration), 1), [agentTraces]);
   const failCount = agentTraces.filter((t) => t.status === 'failed').length;
@@ -45,7 +56,10 @@ export function ExecSidebar({ agentId, sourceAgentIds, traces, selectedFilename,
         {agentId ? (
           <>
             <span className="exec-sidebar__agent">{agentId}</span>
-            <span className="exec-sidebar__count">{agentTraces.length}{failCount > 0 && <span className="exec-sidebar__fails"> {failCount}!</span>}</span>
+            <span className="exec-sidebar__count">
+              {agentTraces.length}
+              {failCount > 0 && <span className="exec-sidebar__fails"> {failCount}!</span>}
+            </span>
           </>
         ) : (
           <span className="exec-sidebar__empty">No agent</span>
@@ -57,12 +71,21 @@ export function ExecSidebar({ agentId, sourceAgentIds, traces, selectedFilename,
           const sel = t.traceKey === selectedFilename || t.filename === selectedFilename;
           const barW = Math.max(3, (t.duration / maxDur) * 100);
           return (
-            <button key={t.traceKey} className={`erow ${fail ? 'erow--fail' : ''} ${sel ? 'erow--sel' : ''}`} onClick={() => onSelect(t.traceKey, t.agentId)}>
+            <button
+              key={t.traceKey}
+              className={`erow ${fail ? 'erow--fail' : ''} ${sel ? 'erow--sel' : ''}`}
+              onClick={() => onSelect(t.traceKey, t.agentId)}
+            >
               <span className="erow__icon">{fail ? '\u2718' : '\u2714'}</span>
               <span className="erow__time">{fmtTime(t.timestamp)}</span>
               <span className="erow__n">{t.nodeCount}n</span>
               <span className="erow__dur">{fmtDur(t.duration)}</span>
-              <span className="erow__bar"><span className={`erow__fill ${fail ? 'erow__fill--fail' : 'erow__fill--ok'}`} style={{ width: `${barW}%` }} /></span>
+              <span className="erow__bar">
+                <span
+                  className={`erow__fill ${fail ? 'erow__fill--fail' : 'erow__fill--ok'}`}
+                  style={{ width: `${barW}%` }}
+                />
+              </span>
             </button>
           );
         })}

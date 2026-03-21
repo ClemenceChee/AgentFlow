@@ -1,8 +1,8 @@
 import { existsSync, readdirSync, readFileSync, rmSync } from 'node:fs';
-import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
-import type { ExecutionEvent, ExecutionGraph, PatternEvent } from 'agentflow-core';
+import type { ExecutionGraph } from 'agentflow-core';
 import {
   createEventEmitter,
   createExecutionEvent,
@@ -83,7 +83,7 @@ function parseFrontmatter(content: string): Record<string, string> {
   const match = content.match(/^---\n([\s\S]*?)\n---/);
   if (!match) return {};
   const fields: Record<string, string> = {};
-  for (const line of match[1]!.split('\n')) {
+  for (const line of match[1]?.split('\n')) {
     const idx = line.indexOf(':');
     if (idx > 0) {
       fields[line.slice(0, idx).trim()] = line.slice(idx + 1).trim();
@@ -123,7 +123,7 @@ describe('SomaEventWriter', () => {
       const files = readInboxFiles();
       expect(files).toHaveLength(1);
 
-      const fm = parseFrontmatter(files[0]!.content);
+      const fm = parseFrontmatter(files[0]?.content);
       expect(fm.type).toBe("'execution'");
       expect(fm.subtype).toBe("'completed'");
       expect(fm.source).toBe("'agentflow'");
@@ -139,7 +139,7 @@ describe('SomaEventWriter', () => {
       const event = createExecutionEvent(buildCompletedGraph());
       await writer.writeEvent(event);
 
-      const content = readInboxFiles()[0]!.content;
+      const content = readInboxFiles()[0]?.content;
       expect(content).toContain('agent:main');
       expect(content).toContain('[[agent/test-agent]]');
     });
@@ -149,7 +149,7 @@ describe('SomaEventWriter', () => {
       const event = createExecutionEvent(buildCompletedGraph());
       await writer.writeEvent(event);
 
-      const content = readInboxFiles()[0]!.content;
+      const content = readInboxFiles()[0]?.content;
       expect(content).toContain('agentflow/execution');
       expect(content).toContain('status/completed');
       expect(content).toContain('agent/test-agent');
@@ -167,10 +167,10 @@ describe('SomaEventWriter', () => {
       const files = readInboxFiles();
       expect(files).toHaveLength(1);
 
-      const fm = parseFrontmatter(files[0]!.content);
+      const fm = parseFrontmatter(files[0]?.content);
       expect(fm.subtype).toBe("'failed'");
 
-      const content = files[0]!.content;
+      const content = files[0]?.content;
       expect(content).toContain('status/failed');
       expect(content).toContain('Failure Point');
       expect(content).toContain('fetch-data');
@@ -187,7 +187,7 @@ describe('SomaEventWriter', () => {
 
       await writer.writeEvent(event);
 
-      const fm = parseFrontmatter(readInboxFiles()[0]!.content);
+      const fm = parseFrontmatter(readInboxFiles()[0]?.content);
       expect(fm.conformance_score).toBe('0.85');
       expect(fm.is_anomaly).toBe('false');
     });
@@ -200,7 +200,7 @@ describe('SomaEventWriter', () => {
 
       await writer.writeEvent(event);
 
-      const content = readInboxFiles()[0]!.content;
+      const content = readInboxFiles()[0]?.content;
       expect(content).toContain('agentflow/anomaly');
     });
   });
@@ -219,7 +219,7 @@ describe('SomaEventWriter', () => {
       const files = readInboxFiles();
       expect(files).toHaveLength(1);
 
-      const fm = parseFrontmatter(files[0]!.content);
+      const fm = parseFrontmatter(files[0]?.content);
       expect(fm.type).toBe("'synthesis'");
       expect(fm.subtype).toBe("'pattern-discovery'");
       expect(fm.variant_count).toBeDefined();
@@ -236,7 +236,7 @@ describe('SomaEventWriter', () => {
 
       await writer.writeEvent(event);
 
-      const content = readInboxFiles()[0]!.content;
+      const content = readInboxFiles()[0]?.content;
       expect(content).toContain('Top Variants');
       expect(content).toContain('Top Bottlenecks');
       expect(content).toContain('[[agent/test-agent]]');
@@ -250,7 +250,7 @@ describe('SomaEventWriter', () => {
       await writer.writeEvent(event);
 
       const files = readInboxFiles();
-      expect(files[0]!.name).toMatch(/^execution-test-agent-\d{4}-\d{2}-\d{2}T\d{6}\.md$/);
+      expect(files[0]?.name).toMatch(/^execution-test-agent-\d{4}-\d{2}-\d{2}T\d{6}\.md$/);
     });
 
     it('pattern event files are named synthesis-{agentId}-{timestamp}.md', async () => {
@@ -265,7 +265,7 @@ describe('SomaEventWriter', () => {
       await writer.writeEvent(event);
 
       const files = readInboxFiles();
-      expect(files[0]!.name).toMatch(/^synthesis-test-agent-\d{4}-\d{2}-\d{2}T\d{6}\.md$/);
+      expect(files[0]?.name).toMatch(/^synthesis-test-agent-\d{4}-\d{2}-\d{2}T\d{6}\.md$/);
     });
   });
 
@@ -289,7 +289,7 @@ describe('SomaEventWriter', () => {
 
       const files = readInboxFiles();
       expect(files).toHaveLength(1);
-      expect(files[0]!.name).toMatch(/^execution-/);
+      expect(files[0]?.name).toMatch(/^execution-/);
     });
   });
 });

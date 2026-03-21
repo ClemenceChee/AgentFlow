@@ -7,7 +7,7 @@
  * @module
  */
 
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { NormalizedNode, NormalizedTrace, TraceAdapter } from './types.js';
 
@@ -37,9 +37,18 @@ function extractAttributes(attrs: unknown[]): Record<string, unknown> {
   const result: Record<string, unknown> = {};
   if (!Array.isArray(attrs)) return result;
   for (const attr of attrs) {
-    const a = attr as { key?: string; value?: { stringValue?: string; intValue?: number; doubleValue?: number; boolValue?: boolean } };
+    const a = attr as {
+      key?: string;
+      value?: {
+        stringValue?: string;
+        intValue?: number;
+        doubleValue?: number;
+        boolValue?: boolean;
+      };
+    };
     if (!a.key || !a.value) continue;
-    result[a.key] = a.value.stringValue ?? a.value.intValue ?? a.value.doubleValue ?? a.value.boolValue;
+    result[a.key] =
+      a.value.stringValue ?? a.value.intValue ?? a.value.doubleValue ?? a.value.boolValue;
   }
   return result;
 }
@@ -93,7 +102,9 @@ export function parseOtlpPayload(payload: OtlpPayload): NormalizedTrace[] {
 
     for (const span of spans) {
       const attrs = extractAttributes(span.attributes ?? []);
-      const startNs = span.startTimeUnixNano ? Number(BigInt(span.startTimeUnixNano) / 1_000_000n) : 0;
+      const startNs = span.startTimeUnixNano
+        ? Number(BigInt(span.startTimeUnixNano) / 1_000_000n)
+        : 0;
       const endNs = span.endTimeUnixNano ? Number(BigInt(span.endTimeUnixNano) / 1_000_000n) : null;
       const failed = span.status?.code === 2;
       if (failed) hasFailed = true;

@@ -48,7 +48,7 @@ export function createPolicySource(store: KnowledgeStore): PolicySource {
 
       for (const agentId of agentIds) {
         const profile = store.getAgentProfile(agentId);
-        if (profile && profile.knownBottlenecks.includes(nodeName)) {
+        if (profile?.knownBottlenecks.includes(nodeName)) {
           return true;
         }
       }

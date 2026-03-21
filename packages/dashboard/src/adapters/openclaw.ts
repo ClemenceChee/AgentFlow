@@ -131,7 +131,8 @@ export class OpenClawAdapter implements TraceAdapter {
           id: entry.sessionId ?? `${jobId}-${entry.ts}`,
           agentId: `openclaw:${jobId}`,
           name: jobName,
-          status: entry.status === 'ok' ? 'completed' : entry.status === 'error' ? 'failed' : 'unknown',
+          status:
+            entry.status === 'ok' ? 'completed' : entry.status === 'error' ? 'failed' : 'unknown',
           startTime,
           endTime: startTime + duration,
           trigger: 'cron',
@@ -141,7 +142,12 @@ export class OpenClawAdapter implements TraceAdapter {
               id: 'root',
               type: 'cron-job',
               name: jobName,
-              status: entry.status === 'ok' ? 'completed' : entry.status === 'error' ? 'failed' : 'unknown',
+              status:
+                entry.status === 'ok'
+                  ? 'completed'
+                  : entry.status === 'error'
+                    ? 'failed'
+                    : 'unknown',
               startTime,
               endTime: startTime + duration,
               parentId: null,

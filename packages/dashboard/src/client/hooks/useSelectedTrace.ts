@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 
 export interface TraceNode {
   id: string;
@@ -51,24 +51,27 @@ export function useSelectedTrace() {
   const [trace, setTrace] = useState<FullTrace | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const selectTrace = useCallback(async (filename: string, agentId?: string) => {
-    if (filename === selectedFilename) return;
-    setSelectedFilename(filename);
-    setLoading(true);
-    try {
-      let url = `/api/traces/${encodeURIComponent(filename)}`;
-      if (agentId) url += `?agent=${encodeURIComponent(agentId)}`;
-      const res = await fetch(url);
-      if (res.ok) {
-        const data = await res.json();
-        setTrace(data);
+  const selectTrace = useCallback(
+    async (filename: string, agentId?: string) => {
+      if (filename === selectedFilename) return;
+      setSelectedFilename(filename);
+      setLoading(true);
+      try {
+        let url = `/api/traces/${encodeURIComponent(filename)}`;
+        if (agentId) url += `?agent=${encodeURIComponent(agentId)}`;
+        const res = await fetch(url);
+        if (res.ok) {
+          const data = await res.json();
+          setTrace(data);
+        }
+      } catch {
+        // ignore
+      } finally {
+        setLoading(false);
       }
-    } catch {
-      // ignore
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedFilename]);
+    },
+    [selectedFilename],
+  );
 
   const clearSelection = useCallback(() => {
     setSelectedFilename(null);

@@ -4,8 +4,12 @@ import type { TraceEntry } from '../hooks/useTraces';
 export function ErrorHeatmap({ traces }: { traces: TraceEntry[] }) {
   const [hovered, setHovered] = useState<TraceEntry | null>(null);
 
-  const recent = useMemo(() =>
-    [...traces].sort((a, b) => b.timestamp - a.timestamp).slice(0, 200).reverse(),
+  const recent = useMemo(
+    () =>
+      [...traces]
+        .sort((a, b) => b.timestamp - a.timestamp)
+        .slice(0, 200)
+        .reverse(),
     [traces],
   );
 
@@ -13,8 +17,15 @@ export function ErrorHeatmap({ traces }: { traces: TraceEntry[] }) {
 
   return (
     <div style={{ padding: 'var(--sp-4)' }}>
-      <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginBottom: 'var(--sp-3)' }}>
-        Last {recent.length} executions &middot; Green = OK &middot; Red = Failed &middot; Brightness = node count
+      <div
+        style={{
+          fontSize: 'var(--text-xs)',
+          color: 'var(--text-muted)',
+          marginBottom: 'var(--sp-3)',
+        }}
+      >
+        Last {recent.length} executions &middot; Green = OK &middot; Red = Failed &middot;
+        Brightness = node count
       </div>
       <div className="heatmap-grid">
         {recent.map((t, i) => {
@@ -37,8 +48,23 @@ export function ErrorHeatmap({ traces }: { traces: TraceEntry[] }) {
         })}
       </div>
       {hovered && (
-        <div style={{ marginTop: 'var(--sp-2)', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', padding: 'var(--sp-2) var(--sp-3)', display: 'inline-block' }}>
-          <strong>{hovered.agentId}</strong> &middot; {hovered.status} &middot; {hovered.nodeCount} nodes &middot; {hovered.duration < 1000 ? `${hovered.duration}ms` : `${(hovered.duration / 1000).toFixed(1)}s`}
+        <div
+          style={{
+            marginTop: 'var(--sp-2)',
+            fontSize: 'var(--text-xs)',
+            color: 'var(--text-secondary)',
+            background: 'var(--bg-surface)',
+            border: '1px solid var(--border-default)',
+            borderRadius: 'var(--radius-md)',
+            padding: 'var(--sp-2) var(--sp-3)',
+            display: 'inline-block',
+          }}
+        >
+          <strong>{hovered.agentId}</strong> &middot; {hovered.status} &middot; {hovered.nodeCount}{' '}
+          nodes &middot;{' '}
+          {hovered.duration < 1000
+            ? `${hovered.duration}ms`
+            : `${(hovered.duration / 1000).toFixed(1)}s`}
         </div>
       )}
     </div>

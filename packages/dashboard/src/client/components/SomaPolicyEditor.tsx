@@ -10,7 +10,12 @@ interface Policy {
 export function SomaPolicyEditor() {
   const [policies, setPolicies] = useState<Policy[]>([]);
   const [showForm, setShowForm] = useState(false);
-  const [newPolicy, setNewPolicy] = useState({ name: '', enforcement: 'warn', scope: '', conditions: '' });
+  const [newPolicy, setNewPolicy] = useState({
+    name: '',
+    enforcement: 'warn',
+    scope: '',
+    conditions: '',
+  });
   const [deleting, setDeleting] = useState<string | null>(null);
 
   const fetchPolicies = useCallback(async () => {
@@ -20,10 +25,14 @@ export function SomaPolicyEditor() {
         const data = await res.json();
         setPolicies(data.policies ?? []);
       }
-    } catch { /* retry */ }
+    } catch {
+      /* retry */
+    }
   }, []);
 
-  useEffect(() => { fetchPolicies(); }, [fetchPolicies]);
+  useEffect(() => {
+    fetchPolicies();
+  }, [fetchPolicies]);
 
   const handleCreate = async () => {
     if (!newPolicy.name) return;
@@ -38,7 +47,9 @@ export function SomaPolicyEditor() {
         setNewPolicy({ name: '', enforcement: 'warn', scope: '', conditions: '' });
         await fetchPolicies();
       }
-    } catch { /* show error */ }
+    } catch {
+      /* show error */
+    }
   };
 
   const handleDelete = async (name: string) => {
@@ -47,7 +58,9 @@ export function SomaPolicyEditor() {
         await fetch(`/api/soma/policies/${encodeURIComponent(name)}`, { method: 'DELETE' });
         setDeleting(null);
         await fetchPolicies();
-      } catch { /* show error */ }
+      } catch {
+        /* show error */
+      }
     } else {
       setDeleting(name);
     }
@@ -67,25 +80,50 @@ export function SomaPolicyEditor() {
 
       {showForm && (
         <div className="soma-policies__form">
-          <input placeholder="Policy name" value={newPolicy.name} onChange={(e) => setNewPolicy({ ...newPolicy, name: e.target.value })} />
-          <select value={newPolicy.enforcement} onChange={(e) => setNewPolicy({ ...newPolicy, enforcement: e.target.value })}>
+          <input
+            placeholder="Policy name"
+            value={newPolicy.name}
+            onChange={(e) => setNewPolicy({ ...newPolicy, name: e.target.value })}
+          />
+          <select
+            value={newPolicy.enforcement}
+            onChange={(e) => setNewPolicy({ ...newPolicy, enforcement: e.target.value })}
+          >
             <option value="info">Info</option>
             <option value="warn">Warn</option>
             <option value="error">Error</option>
             <option value="abort">Abort</option>
           </select>
-          <input placeholder="Scope (e.g. agent:*, all)" value={newPolicy.scope} onChange={(e) => setNewPolicy({ ...newPolicy, scope: e.target.value })} />
-          <input placeholder="Conditions" value={newPolicy.conditions} onChange={(e) => setNewPolicy({ ...newPolicy, conditions: e.target.value })} />
-          <button className="soma-policies__submit" onClick={handleCreate}>Create</button>
+          <input
+            placeholder="Scope (e.g. agent:*, all)"
+            value={newPolicy.scope}
+            onChange={(e) => setNewPolicy({ ...newPolicy, scope: e.target.value })}
+          />
+          <input
+            placeholder="Conditions"
+            value={newPolicy.conditions}
+            onChange={(e) => setNewPolicy({ ...newPolicy, conditions: e.target.value })}
+          />
+          <button className="soma-policies__submit" onClick={handleCreate}>
+            Create
+          </button>
         </div>
       )}
 
       <div className="soma-policies__list">
-        {policies.length === 0 && <div className="soma-policies__empty">No policies defined yet.</div>}
+        {policies.length === 0 && (
+          <div className="soma-policies__empty">No policies defined yet.</div>
+        )}
         {policies.map((p) => (
           <div key={p.name} className="soma-policies__row">
             <span className="soma-policies__name">{p.name}</span>
-            <span className="soma-policies__badge" style={{ color: enforcementColor(p.enforcement), borderColor: enforcementColor(p.enforcement) }}>
+            <span
+              className="soma-policies__badge"
+              style={{
+                color: enforcementColor(p.enforcement),
+                borderColor: enforcementColor(p.enforcement),
+              }}
+            >
               {p.enforcement.toUpperCase()}
             </span>
             <span className="soma-policies__scope">{p.scope}</span>

@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import type { FullTrace } from '../hooks/useSelectedTrace';
-import { FlameChart } from './FlameChart';
 import { AgentFlow } from './AgentFlow';
-import { MetricsView } from './MetricsView';
 import { DependencyTree } from './DependencyTree';
+import { FlameChart } from './FlameChart';
+import { MetricsView } from './MetricsView';
 import { StateMachine } from './StateMachine';
 import { TranscriptView } from './TranscriptView';
 
@@ -42,17 +42,29 @@ export function ExecutionDetail({ trace, loading }: { trace: FullTrace | null; l
         <span className="ed-header__agent">{trace.agentId}</span>
         <span className="ed-header__meta">
           {nodes.length}n &middot; {fmtDur(duration)} &middot; {trace.status}
-          {failCount > 0 && <span style={{ color: 'var(--color-critical)' }}> &middot; {failCount} failed</span>}
+          {failCount > 0 && (
+            <span style={{ color: 'var(--color-critical)' }}> &middot; {failCount} failed</span>
+          )}
         </span>
         <span className="ed-header__ts">
-          {new Date(trace.startTime).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+          {new Date(trace.startTime).toLocaleString([], {
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+          })}
         </span>
         {trace.trigger && <span className="ed-tag">{trace.trigger}</span>}
       </div>
 
       <div className="ed-tabs">
         {tabs.map((t) => (
-          <button key={t.id} className={`ed-tab ${tab === t.id ? 'ed-tab--active' : ''}`} onClick={() => setTab(t.id)}>
+          <button
+            key={t.id}
+            className={`ed-tab ${tab === t.id ? 'ed-tab--active' : ''}`}
+            onClick={() => setTab(t.id)}
+          >
             {t.label}
           </button>
         ))}
@@ -80,19 +92,38 @@ function SummaryContent({ trace }: { trace: FullTrace }) {
   const types = new Map<string, number>();
   for (const n of nodes) types.set(n.type, (types.get(n.type) ?? 0) + 1);
   const duration = trace.endTime - trace.startTime;
-  const successRate = nodes.length > 0 ? (completed / nodes.length * 100).toFixed(1) : '0';
+  const successRate = nodes.length > 0 ? ((completed / nodes.length) * 100).toFixed(1) : '0';
 
   return (
     <div className="summary-content">
       <div className="sc-grid">
-        <div><span className="sc-label">Agent</span> {trace.agentId}</div>
-        <div><span className="sc-label">Trigger</span> {trace.trigger}</div>
-        <div><span className="sc-label">Status</span> <span className={trace.status === 'failed' ? 'c-fail' : 'c-ok'}>{trace.status}</span></div>
-        <div><span className="sc-label">Duration</span> {fmtDur(duration)}</div>
-        <div><span className="sc-label">Nodes</span> {nodes.length} ({completed} ok, {failed} fail)</div>
-        <div><span className="sc-label">Success</span> {successRate}%</div>
-        <div><span className="sc-label">Started</span> {new Date(trace.startTime).toLocaleString()}</div>
-        {trace.name && <div><span className="sc-label">Name</span> {trace.name}</div>}
+        <div>
+          <span className="sc-label">Agent</span> {trace.agentId}
+        </div>
+        <div>
+          <span className="sc-label">Trigger</span> {trace.trigger}
+        </div>
+        <div>
+          <span className="sc-label">Status</span>{' '}
+          <span className={trace.status === 'failed' ? 'c-fail' : 'c-ok'}>{trace.status}</span>
+        </div>
+        <div>
+          <span className="sc-label">Duration</span> {fmtDur(duration)}
+        </div>
+        <div>
+          <span className="sc-label">Nodes</span> {nodes.length} ({completed} ok, {failed} fail)
+        </div>
+        <div>
+          <span className="sc-label">Success</span> {successRate}%
+        </div>
+        <div>
+          <span className="sc-label">Started</span> {new Date(trace.startTime).toLocaleString()}
+        </div>
+        {trace.name && (
+          <div>
+            <span className="sc-label">Name</span> {trace.name}
+          </div>
+        )}
       </div>
       {failedNodes.length > 0 && (
         <div className="sc-failures">
@@ -101,7 +132,11 @@ function SummaryContent({ trace }: { trace: FullTrace }) {
             <div key={n.id} className="sc-failure">
               <span className="sc-failure__type">{n.type}:</span>
               <strong>{n.name}</strong>
-              {(n.metadata?.error ?? n.state?.error) && <span className="sc-failure__err">{String(n.metadata?.error ?? n.state?.error)}</span>}
+              {(n.metadata?.error ?? n.state?.error) && (
+                <span className="sc-failure__err">
+                  {String(n.metadata?.error ?? n.state?.error)}
+                </span>
+              )}
             </div>
           ))}
         </div>
@@ -109,9 +144,13 @@ function SummaryContent({ trace }: { trace: FullTrace }) {
       <div className="sc-types">
         <h4 className="sc-types__title">Node Types</h4>
         <div className="sc-types__list">
-          {[...types.entries()].sort((a, b) => b[1] - a[1]).map(([t, c]) => (
-            <span key={t} className="sc-type-badge">{t}: {c}</span>
-          ))}
+          {[...types.entries()]
+            .sort((a, b) => b[1] - a[1])
+            .map(([t, c]) => (
+              <span key={t} className="sc-type-badge">
+                {t}: {c}
+              </span>
+            ))}
         </div>
       </div>
     </div>

@@ -56,10 +56,23 @@ export function useAgents(): { grouped: GroupedAgents | null; flat: AgentStats[]
           setGrouped(json);
         } else if (Array.isArray(json)) {
           // Legacy flat response — wrap in single group
-          setGrouped({ groups: [{ name: 'agents', displayName: 'Agents', totalExecutions: 0, failedExecutions: 0, agents: json, subGroups: [] }] });
+          setGrouped({
+            groups: [
+              {
+                name: 'agents',
+                displayName: 'Agents',
+                totalExecutions: 0,
+                failedExecutions: 0,
+                agents: json,
+                subGroups: [],
+              },
+            ],
+          });
         }
       }
-    } catch { /* retry */ }
+    } catch {
+      /* retry */
+    }
   }, []);
 
   useEffect(() => {

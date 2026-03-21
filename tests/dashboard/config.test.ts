@@ -1,8 +1,14 @@
-import { describe, expect, it, beforeEach, afterEach } from 'vitest';
 import * as fs from 'node:fs';
-import * as path from 'node:path';
 import * as os from 'node:os';
-import { loadConfig, getAliases, getSkipFiles, getDiscoveryPaths, getProcessPreference } from '../../packages/dashboard/src/config';
+import * as path from 'node:path';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import {
+  getAliases,
+  getDiscoveryPaths,
+  getProcessPreference,
+  getSkipFiles,
+  loadConfig,
+} from '../../packages/dashboard/src/config';
 
 describe('Config', () => {
   let tmpDir: string;
@@ -51,11 +57,14 @@ describe('Config', () => {
 
     it('strips // comment keys from config', () => {
       const cfgPath = path.join(tmpDir, 'commented.json');
-      fs.writeFileSync(cfgPath, JSON.stringify({
-        '// this is a comment': 'ignored',
-        aliases: { a: 'b' },
-        '// another comment': true,
-      }));
+      fs.writeFileSync(
+        cfgPath,
+        JSON.stringify({
+          '// this is a comment': 'ignored',
+          aliases: { a: 'b' },
+          '// another comment': true,
+        }),
+      );
       const { config } = loadConfig(cfgPath);
       expect(config.aliases).toEqual({ a: 'b' });
       expect((config as any)['// this is a comment']).toBeUndefined();

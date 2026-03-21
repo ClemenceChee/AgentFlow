@@ -44,15 +44,23 @@ export function SomaActivityFeed() {
           eventsRef.current = [event, ...eventsRef.current].slice(0, 100);
           setEvents([...eventsRef.current]);
         }
-      } catch { /* ignore malformed messages */ }
+      } catch {
+        /* ignore malformed messages */
+      }
     };
 
-    return () => { ws.close(); };
+    return () => {
+      ws.close();
+    };
   }, []);
 
   const formatTime = (iso: string) => {
     try {
-      return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      return new Date(iso).toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      });
     } catch {
       return '';
     }
@@ -69,7 +77,10 @@ export function SomaActivityFeed() {
       <div className="soma-activity__list">
         {events.length === 0 && (
           <div className="soma-activity__empty">
-            <p>No activity yet. Events will appear here in real-time as SOMA workers harvest, synthesize, and manage knowledge.</p>
+            <p>
+              No activity yet. Events will appear here in real-time as SOMA workers harvest,
+              synthesize, and manage knowledge.
+            </p>
           </div>
         )}
         {events.map((e) => (

@@ -171,7 +171,9 @@ describe('guards', () => {
 
       const timeoutViolations = violations.filter((v) => v.type === 'timeout');
       expect(timeoutViolations).toHaveLength(1);
-      expect(timeoutViolations[0].message).toContain('exceeding timeout');
+      expect(timeoutViolations[0].message).toContain('exceeds the limit');
+      expect(timeoutViolations[0].explanation.rule).toBe('timeout');
+      expect(timeoutViolations[0].explanation.source).toBe('static');
     });
 
     it('should detect spawn explosion by depth', () => {
@@ -180,10 +182,11 @@ describe('guards', () => {
       const violations = checkGuards(graph);
 
       const depthViolations = violations.filter(
-        (v) => v.type === 'spawn-explosion' && v.message.includes('depth'),
+        (v) => v.type === 'spawn-explosion' && v.message.includes('max-depth'),
       );
       expect(depthViolations).toHaveLength(1);
-      expect(depthViolations[0].message).toContain('exceeds maximum depth');
+      expect(depthViolations[0].explanation.rule).toBe('max-depth');
+      expect(depthViolations[0].explanation.source).toBe('static');
     });
 
     it('should detect spawn explosion by agent count', () => {
@@ -192,10 +195,11 @@ describe('guards', () => {
       const violations = checkGuards(graph);
 
       const countViolations = violations.filter(
-        (v) => v.type === 'spawn-explosion' && v.message.includes('count'),
+        (v) => v.type === 'spawn-explosion' && v.message.includes('max-agent-spawns'),
       );
       expect(countViolations).toHaveLength(1);
-      expect(countViolations[0].message).toContain('agent/subagent count');
+      expect(countViolations[0].explanation.rule).toBe('max-agent-spawns');
+      expect(countViolations[0].explanation.source).toBe('static');
     });
 
     it('should detect reasoning loops', () => {
@@ -205,7 +209,8 @@ describe('guards', () => {
 
       const loopViolations = violations.filter((v) => v.type === 'reasoning-loop');
       expect(loopViolations).toHaveLength(1);
-      expect(loopViolations[0].message).toContain('consecutive');
+      expect(loopViolations[0].explanation.rule).toBe('max-reasoning-steps');
+      expect(loopViolations[0].explanation.source).toBe('static');
     });
 
     it('should respect custom config overrides', () => {

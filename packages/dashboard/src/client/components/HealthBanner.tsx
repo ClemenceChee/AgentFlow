@@ -12,32 +12,51 @@ interface StatCell {
   sparkline?: boolean[];
 }
 
-export function HealthBanner({ processHealth, agents, traces, onOpenSettings }: {
+export function HealthBanner({
+  processHealth,
+  agents,
+  traces,
+  onOpenSettings,
+}: {
   processHealth: ProcessHealthData | null;
   agents: AgentStats[];
   traces: TraceEntry[];
   onOpenSettings?: () => void;
 }) {
   const serviceCount = processHealth?.services.length ?? 0;
-  const activeServices = processHealth?.services.filter(
-    (s) => s.systemd?.activeState === 'active' || (s.pidFile?.alive && s.pidFile.matchesProcess),
-  ).length ?? 0;
+  const activeServices =
+    processHealth?.services.filter(
+      (s) => s.systemd?.activeState === 'active' || (s.pidFile?.alive && s.pidFile.matchesProcess),
+    ).length ?? 0;
   const failedServices = processHealth?.services.filter((s) => s.systemd?.failed).length ?? 0;
 
   const totalExec = traces.length;
   const failedExec = traces.filter((t) => t.status === 'failed').length;
-  const successRate = totalExec > 0 ? ((totalExec - failedExec) / totalExec * 100).toFixed(1) : '—';
+  const successRate =
+    totalExec > 0 ? (((totalExec - failedExec) / totalExec) * 100).toFixed(1) : '—';
   const orphans = processHealth?.orphans.length ?? 0;
 
   // Sparkline: last 30 executions pass/fail
   const recentSparkline = traces.slice(0, 30).map((t) => t.status !== 'failed');
 
   const stats: StatCell[] = [
-    { label: 'Services', value: `${activeServices}/${serviceCount}`, color: failedServices > 0 ? 'var(--color-critical)' : 'var(--color-ok)' },
+    {
+      label: 'Services',
+      value: `${activeServices}/${serviceCount}`,
+      color: failedServices > 0 ? 'var(--color-critical)' : 'var(--color-ok)',
+    },
     { label: 'Agents', value: agents.length },
     { label: 'Executions', value: totalExec, sparkline: recentSparkline },
-    { label: 'Success', value: `${successRate}%`, color: parseFloat(String(successRate)) < 95 ? 'var(--color-warn)' : 'var(--color-ok)' },
-    { label: 'Failures', value: failedExec, color: failedExec > 0 ? 'var(--color-critical)' : 'var(--color-ok)' },
+    {
+      label: 'Success',
+      value: `${successRate}%`,
+      color: parseFloat(String(successRate)) < 95 ? 'var(--color-warn)' : 'var(--color-ok)',
+    },
+    {
+      label: 'Failures',
+      value: failedExec,
+      color: failedExec > 0 ? 'var(--color-critical)' : 'var(--color-ok)',
+    },
     { label: 'Orphans', value: orphans, color: orphans > 0 ? 'var(--color-warn)' : undefined },
   ];
 
@@ -48,7 +67,7 @@ export function HealthBanner({ processHealth, agents, traces, onOpenSettings }: 
   useEffect(() => {
     setLastUpdate(Date.now());
     setConnected(true);
-  }, [processHealth, traces]);
+  }, []);
 
   useEffect(() => {
     const check = setInterval(() => {
@@ -62,7 +81,10 @@ export function HealthBanner({ processHealth, agents, traces, onOpenSettings }: 
     <header className="health-banner">
       <span className="health-banner__title">AgentFlow</span>
       <span className="hb-version">v{__APP_VERSION__}</span>
-      <span className={`hb-live ${connected ? 'hb-live--on' : 'hb-live--off'}`} title={connected ? 'Connected — scanning live' : 'Disconnected'}>
+      <span
+        className={`hb-live ${connected ? 'hb-live--on' : 'hb-live--off'}`}
+        title={connected ? 'Connected — scanning live' : 'Disconnected'}
+      >
         <span className={`hb-live__dot ${connected ? 'hb-live__dot--pulse' : ''}`} />
         {connected ? 'LIVE' : 'OFFLINE'}
       </span>
@@ -84,7 +106,19 @@ export function HealthBanner({ processHealth, agents, traces, onOpenSettings }: 
         ))}
       </div>
       {onOpenSettings && (
-        <button onClick={onOpenSettings} style={{ marginLeft: 'auto', background: 'transparent', border: 'none', color: 'var(--t3)', cursor: 'pointer', fontSize: 'var(--base)', padding: '0 var(--s2)' }} title="Settings">
+        <button
+          onClick={onOpenSettings}
+          style={{
+            marginLeft: 'auto',
+            background: 'transparent',
+            border: 'none',
+            color: 'var(--t3)',
+            cursor: 'pointer',
+            fontSize: 'var(--base)',
+            padding: '0 var(--s2)',
+          }}
+          title="Settings"
+        >
           {'\u2699'}
         </button>
       )}

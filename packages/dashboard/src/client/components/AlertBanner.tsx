@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import type { ProcessHealthData, ServiceAudit } from '../hooks/useProcessHealth';
+import type { ProcessHealthData } from '../hooks/useProcessHealth';
 
 interface Alert {
   id: string;
@@ -36,9 +36,7 @@ function deriveAlerts(data: ProcessHealthData): Alert[] {
         severity: 'warn',
         title: `Stale PID file: ${svc.name || 'unnamed'}`,
         description: svc.pidFile.reason,
-        actions: [
-          { label: 'Remove PID file', command: `rm ${svc.pidFile.path}` },
-        ],
+        actions: [{ label: 'Remove PID file', command: `rm ${svc.pidFile.path}` }],
       });
     }
   }
@@ -69,7 +67,10 @@ function deriveAlerts(data: ProcessHealthData): Alert[] {
       description: `PIDs: ${pids}`,
       actions: [
         { label: 'Kill all', command: `kill ${data.orphans.map((o) => o.pid).join(' ')}` },
-        { label: 'Investigate', command: `ps -p ${data.orphans.map((o) => o.pid).join(',')} -o pid,ppid,etime,cmd` },
+        {
+          label: 'Investigate',
+          command: `ps -p ${data.orphans.map((o) => o.pid).join(',')} -o pid,ppid,etime,cmd`,
+        },
       ],
     });
   }

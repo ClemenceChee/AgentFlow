@@ -1,8 +1,8 @@
 import type { AgentProfile, ExecutionEvent, PatternEvent } from 'agentflow-core';
 import {
-  buildFailureAnalysisPrompt,
-  buildAnomalyExplanationPrompt,
   buildAgentSummaryPrompt,
+  buildAnomalyExplanationPrompt,
+  buildFailureAnalysisPrompt,
   buildFixSuggestionPrompt,
 } from 'agentflow-core';
 import { describe, expect, it } from 'vitest';
@@ -116,7 +116,15 @@ describe('Prompt Builders', () => {
     it('includes multiple failures', () => {
       const events = [
         makeFailedEvent({ timestamp: 1000 }),
-        makeFailedEvent({ timestamp: 2000, failurePoint: { nodeId: 'n3', nodeName: 'parse', nodeType: 'tool', error: 'Invalid JSON' } }),
+        makeFailedEvent({
+          timestamp: 2000,
+          failurePoint: {
+            nodeId: 'n3',
+            nodeName: 'parse',
+            nodeType: 'tool',
+            error: 'Invalid JSON',
+          },
+        }),
       ];
       const prompt = buildFailureAnalysisPrompt(events, makeProfile());
       expect(prompt).toContain('Failure 1');
@@ -192,9 +200,21 @@ describe('Prompt Builders', () => {
   describe('buildFixSuggestionPrompt', () => {
     it('groups failures by error type', () => {
       const events = [
-        makeFailedEvent({ failurePoint: { nodeId: 'n1', nodeName: 'fetch', nodeType: 'tool', error: 'timeout' } }),
-        makeFailedEvent({ failurePoint: { nodeId: 'n1', nodeName: 'fetch', nodeType: 'tool', error: 'timeout' }, timestamp: 2000 }),
-        makeFailedEvent({ failurePoint: { nodeId: 'n2', nodeName: 'parse', nodeType: 'tool', error: 'invalid json' } }),
+        makeFailedEvent({
+          failurePoint: { nodeId: 'n1', nodeName: 'fetch', nodeType: 'tool', error: 'timeout' },
+        }),
+        makeFailedEvent({
+          failurePoint: { nodeId: 'n1', nodeName: 'fetch', nodeType: 'tool', error: 'timeout' },
+          timestamp: 2000,
+        }),
+        makeFailedEvent({
+          failurePoint: {
+            nodeId: 'n2',
+            nodeName: 'parse',
+            nodeType: 'tool',
+            error: 'invalid json',
+          },
+        }),
       ];
       const prompt = buildFixSuggestionPrompt(events, makeProfile(), []);
       expect(prompt).toContain('"timeout" — 2 occurrence');
@@ -233,8 +253,12 @@ describe('Prompt Builders', () => {
     });
 
     it('all prompts contain a Question section', () => {
-      expect(buildFailureAnalysisPrompt([makeFailedEvent()], makeProfile())).toContain('## Question');
-      expect(buildAnomalyExplanationPrompt(makeCompletedEvent(), makeProfile())).toContain('## Question');
+      expect(buildFailureAnalysisPrompt([makeFailedEvent()], makeProfile())).toContain(
+        '## Question',
+      );
+      expect(buildAnomalyExplanationPrompt(makeCompletedEvent(), makeProfile())).toContain(
+        '## Question',
+      );
       expect(buildAgentSummaryPrompt(makeProfile(), [], [])).toContain('## Question');
       expect(buildFixSuggestionPrompt([], makeProfile(), [])).toContain('## Question');
     });

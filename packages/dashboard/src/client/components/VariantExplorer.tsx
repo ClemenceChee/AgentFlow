@@ -1,6 +1,15 @@
 import type { ProcessVariant } from '../hooks/useProcessModel';
 
-const STEP_COLORS = ['#58a6ff', '#bc8cff', '#d29922', '#56d364', '#f0883e', '#ff7b72', '#a5d6ff', '#ffa657'];
+const STEP_COLORS = [
+  '#58a6ff',
+  '#bc8cff',
+  '#d29922',
+  '#56d364',
+  '#f0883e',
+  '#ff7b72',
+  '#a5d6ff',
+  '#ffa657',
+];
 
 export function VariantExplorer({ variants }: { variants: ProcessVariant[] }) {
   if (variants.length === 0) return <div className="workspace__empty">No variants discovered</div>;
@@ -15,7 +24,9 @@ export function VariantExplorer({ variants }: { variants: ProcessVariant[] }) {
             <div className="var-row__header">
               <span className="var-row__rank">#{i + 1}</span>
               {isHappy && <span className="var-row__badge">Happy Path</span>}
-              <span className="var-row__count">{v.count} ({v.percentage.toFixed(1)}%)</span>
+              <span className="var-row__count">
+                {v.count} ({v.percentage.toFixed(1)}%)
+              </span>
               <span className="var-row__pct-bar">
                 <span className="var-row__pct-fill" style={{ width: `${v.percentage}%` }} />
               </span>
@@ -24,7 +35,10 @@ export function VariantExplorer({ variants }: { variants: ProcessVariant[] }) {
               {steps.map((step, si) => (
                 <span key={si}>
                   {si > 0 && <span className="var-row__arrow">{'\u2192'}</span>}
-                  <span className="var-row__step" style={{ borderColor: STEP_COLORS[si % STEP_COLORS.length] }}>
+                  <span
+                    className="var-row__step"
+                    style={{ borderColor: STEP_COLORS[si % STEP_COLORS.length] }}
+                  >
                     {step}
                   </span>
                 </span>
