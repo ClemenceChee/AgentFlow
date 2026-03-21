@@ -87,7 +87,7 @@ describe('OpenClaw Trace Discovery', () => {
     const traces = watcher.getAllTraces();
     expect(traces.length).toBeGreaterThan(0);
 
-    const openclawTrace = traces.find((t) => t.agentId?.includes('openclaw-main'));
+    const openclawTrace = traces.find((t) => t.agentId?.includes('main'));
     expect(openclawTrace).toBeDefined();
     expect(openclawTrace?.sourceType).toBe('session');
     expect(openclawTrace?.filename).toBe(`${sessionId}.jsonl`);
@@ -97,15 +97,15 @@ describe('OpenClaw Trace Discovery', () => {
     const testCases = [
       {
         agent: 'main',
-        expected: 'openclaw-main',
+        expected: 'main',
       },
       {
         agent: 'vault-curator',
-        expected: 'openclaw-vault-curator',
+        expected: 'vault-curator',
       },
       {
         agent: 'claude-code',
-        expected: 'openclaw-claude-code',
+        expected: 'claude-code',
       },
     ];
 
@@ -223,7 +223,7 @@ describe('OpenClaw Trace Discovery', () => {
 
     let traceAdded = false;
     watcher.on('trace-added', (trace) => {
-      if (trace.agentId?.includes('openclaw-test-agent')) {
+      if (trace.agentId?.includes('test-agent')) {
         traceAdded = true;
       }
     });
@@ -250,7 +250,7 @@ describe('OpenClaw Trace Discovery', () => {
     const traces = watcher.getAllTraces();
     const newTrace = traces.find((t) => t.filename === 'new-session.jsonl');
     expect(newTrace).toBeDefined();
-    expect(newTrace?.agentId).toBe('openclaw-test-agent');
+    expect(newTrace?.agentId).toBe('test-agent');
   });
 
   it('should provide comprehensive stats for OpenClaw agents', async () => {
@@ -289,12 +289,12 @@ describe('OpenClaw Trace Discovery', () => {
     expect(stats.agentCount).toBe(3);
 
     // Check that all OpenClaw agents are discovered
-    expect(agentIds).toContain('openclaw-main');
-    expect(agentIds).toContain('openclaw-vault-curator');
-    expect(agentIds).toContain('openclaw-vault-janitor');
+    expect(agentIds).toContain('main');
+    expect(agentIds).toContain('vault-curator');
+    expect(agentIds).toContain('vault-janitor');
 
     // Test agent-specific trace retrieval
-    const mainAgentTraces = watcher.getTracesByAgent('openclaw-main');
+    const mainAgentTraces = watcher.getTracesByAgent('main');
     expect(mainAgentTraces.length).toBe(3);
   });
 });

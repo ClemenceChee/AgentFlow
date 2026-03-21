@@ -474,12 +474,12 @@ export class TraceIngester {
     }
   }
 
-  // Parse Alfred workers.json
+  // Parse workers.json (soma/alfred orchestrator registry)
   private parseAlfredWorkers(content: string, _filePath: string): any[] {
     const data = JSON.parse(content);
     const trace = {
-      agentId: `alfred-orchestrator-${data.pid}`,
-      name: `Alfred Orchestrator (PID ${data.pid})`,
+      agentId: `soma-orchestrator-${data.pid}`,
+      name: `SOMA Orchestrator (PID ${data.pid})`,
       trigger: 'worker-status',
       timestamp: new Date(data.started_at).getTime(),
       nodes: {},
@@ -490,7 +490,7 @@ export class TraceIngester {
     trace.nodes[orchestratorId] = {
       id: orchestratorId,
       type: 'orchestrator',
-      name: 'Alfred Orchestrator',
+      name: 'SOMA Orchestrator',
       status: 'running',
       startTime: trace.timestamp,
       endTime: null,
@@ -507,7 +507,7 @@ export class TraceIngester {
       trace.nodes[workerId] = {
         id: workerId,
         type: 'worker',
-        name: `Alfred ${workerName}`,
+        name: `SOMA ${workerName}`,
         status: workerData.status === 'running' ? 'running' : 'failed',
         startTime: trace.timestamp,
         endTime: null,
@@ -562,18 +562,19 @@ export class TraceIngester {
     const sessionId = sessionEvent.id;
     const agentPath = filePath.includes('/main/')
       ? 'main'
-      : filePath.includes('/vault-curator/')
-        ? 'vault-curator'
-        : filePath.includes('/vault-janitor/')
-          ? 'vault-janitor'
-          : filePath.includes('/vault-distiller/')
-            ? 'vault-distiller'
-            : filePath.includes('/vault-surveyor/')
-              ? 'vault-surveyor'
+      : filePath.includes('/vault-curator/') || filePath.includes('/curator/')
+        ? 'curator'
+        : filePath.includes('/vault-janitor/') || filePath.includes('/janitor/')
+          ? 'janitor'
+          : filePath.includes('/vault-distiller/') || filePath.includes('/distiller/')
+            ? 'distiller'
+            : filePath.includes('/vault-surveyor/') || filePath.includes('/surveyor/')
+              ? 'surveyor'
               : 'unknown';
 
-    // Use canonical agent IDs consistent with watcher.ts
-    const canonicalId = agentPath === 'main' ? 'alfred-main' : agentPath.startsWith('vault-') ? agentPath : `alfred-${agentPath}`;
+    // Use canonical agent IDs consistent with watcher.ts aliases
+    // Old workers (curator/janitor/distiller/surveyor) keep alfred- prefix; orchestrator is soma-main
+    const canonicalId = agentPath === 'main' ? 'soma-main' : agentPath === 'unknown' ? 'soma-main' : `alfred-${agentPath}`;
 
     const trace = {
       agentId: canonicalId,

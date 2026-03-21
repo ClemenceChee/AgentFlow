@@ -11,10 +11,12 @@ import { useAgents } from './hooks/useAgents';
 import { useProcessHealth } from './hooks/useProcessHealth';
 import { useProcessModel } from './hooks/useProcessModel';
 import { useSelectedTrace } from './hooks/useSelectedTrace';
+import { useSomaGovernance } from './hooks/useSomaGovernance';
 import { useTraces } from './hooks/useTraces';
+import { SomaGovernance } from './components/SomaGovernance';
 import { pickInitialAgent } from './state';
 
-type ViewMode = 'profile' | 'execution';
+type ViewMode = 'profile' | 'execution' | 'governance';
 
 export function App() {
   const processHealth = useProcessHealth();
@@ -25,6 +27,7 @@ export function App() {
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('profile');
   const [showSettings, setShowSettings] = useState(false);
+  const somaGov = useSomaGovernance();
   const autoInitDone = useRef(false);
 
   // Auto-select first agent on load
@@ -51,6 +54,13 @@ export function App() {
   return (
     <div className="dashboard">
       <HealthBanner processHealth={processHealth} agents={agents} traces={traces} onOpenSettings={() => setShowSettings(true)} />
+      <div style={{ display: 'flex', gap: 8, padding: '4px 12px', background: 'var(--bg2)', borderBottom: '1px solid var(--bd)' }}>
+        <button
+          style={{ fontSize: 11, padding: '3px 10px', background: viewMode !== 'governance' ? 'transparent' : 'var(--bg3)', color: 'var(--t1)', border: '1px solid var(--bd)', borderRadius: 3, cursor: 'pointer' }}
+          onClick={() => setViewMode(viewMode === 'governance' ? 'profile' : 'governance')}>
+          {'\u{1F3DB}'} Governance
+        </button>
+      </div>
       <AlertBanner processHealth={processHealth} />
 
       <TopSection
@@ -70,7 +80,10 @@ export function App() {
           onSelect={handleSelectExecution}
         />
         <div className="workspace__main">
-          {!selectedAgent && (
+          {viewMode === 'governance' && (
+            <SomaGovernance data={somaGov.data} onPromote={somaGov.promote} onReject={somaGov.reject} />
+          )}
+          {viewMode !== 'governance' && !selectedAgent && (
             <div className="workspace__empty">Select an agent above to inspect</div>
           )}
           {selectedAgent && viewMode === 'profile' && (

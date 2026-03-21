@@ -17,12 +17,10 @@
   },
   "files": [
     "dist",
-    "bin",
-    "public"
+    "bin"
   ],
   "scripts": {
-    "build": "tsup src/index.ts src/cli.ts src/server.ts --format esm,cjs --clean && npm run build:public && npm run build:client",
-    "build:public": "cp -r public dist/",
+    "build": "tsup src/index.ts src/cli.ts src/server.ts --format esm,cjs --clean && npm run build:client",
     "build:client": "vite build",
     "dev": "tsx src/server.ts",
     "dev:client": "vite",

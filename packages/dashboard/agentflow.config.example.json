@@ -1,0 +1,78 @@
+{
+  "// README": "Copy this file to agentflow.config.json and customize for your setup.",
+  "// docs": "All fields are optional. Remove sections you don't need.",
+
+  "// aliases": "Map raw agent IDs to canonical names (deduplication across renames)",
+  "aliases": {
+    "alfred-main": "soma-main",
+    "alfred": "soma-main",
+    "openclaw-main": "soma-main",
+    "vault-curator": "alfred-curator",
+    "vault-janitor": "alfred-janitor",
+    "vault-distiller": "alfred-distiller",
+    "vault-surveyor": "alfred-surveyor",
+    "curator": "alfred-curator",
+    "janitor": "alfred-janitor",
+    "distiller": "alfred-distiller",
+    "surveyor": "alfred-surveyor"
+  },
+
+  "// skipFiles": "Filenames to skip during trace scanning (operational logs, not traces)",
+  "skipFiles": [
+    "harvester.log",
+    "reconciler.log",
+    "synthesizer.log",
+    "cartographer.log",
+    "curator.log",
+    "janitor.log",
+    "distiller.log",
+    "surveyor.log",
+    "soma.log",
+    "soma-systemd.log",
+    "soma-cron.log",
+    "soma-copy.log",
+    "vault_audit.log"
+  ],
+
+  "// skipDirectories": "Directory names to skip during recursive scanning",
+  "skipDirectories": [
+    "knowledge"
+  ],
+
+  "// discoveryPaths": "Additional directories to auto-discover and watch for traces",
+  "discoveryPaths": [
+    "~/.soma/traces",
+    "~/.soma/data",
+    "~/.openclaw/workspace/traces",
+    "~/.openclaw/subagents",
+    "~/.openclaw/cron/runs",
+    "~/.openclaw/cron",
+    "~/.openclaw/agents/main/sessions"
+  ],
+
+  "// systemdServices": "Systemd unit names to query for process/directory discovery",
+  "systemdServices": [
+    "soma.service",
+    "openclaw-gateway.service"
+  ],
+
+  "// agentDetection": "Rules for identifying agents from file paths and names",
+  "agentDetection": {
+    "// pathPatterns": "Map path substrings to agent IDs",
+    "pathPatterns": {
+      ".soma/": "soma-main",
+      ".alfred/": "alfred"
+    },
+    "// filePatterns": "Map filename regex to agent IDs (${match} = first capture group)",
+    "filePatterns": {
+      "harvester|reconciler|synthesizer|cartographer": "soma-${match}",
+      "curator|janitor|distiller|surveyor": "alfred-${match}"
+    }
+  },
+
+  "// processPreference": "When multiple process registries exist, prefer one over another",
+  "processPreference": {
+    "prefer": "soma",
+    "over": "alfred"
+  }
+}

@@ -1,7 +1,9 @@
+import { execSync } from 'node:child_process';
 import * as fs from 'node:fs';
 import { createServer } from 'node:http';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { type DashboardUserConfig, getDiscoveryPaths, getProcessPreference, getSystemdServices, loadConfig } from './config.js';
 import type { ExecutionGraph, KnowledgeStore, ProcessAuditResult } from 'agentflow-core';
 import {
   auditProcesses,
@@ -36,6 +38,8 @@ export interface DashboardConfig {
   collectorAuthToken?: string;
   /** Path to Soma vault directory. Enables Intelligence tab in dashboard. */
   somaVault?: string;
+  /** Explicit path to agentflow.config.json */
+  configPath?: string;
 }
 
 import { startDashboard } from './cli.js';
@@ -66,14 +70,22 @@ export class DashboardServer {
   };
   private knowledgeStore: KnowledgeStore;
 
+  private userConfig: DashboardUserConfig;
+  private configPath: string | null;
+
   constructor(private config: DashboardConfig) {
-    // Merge extra dirs from saved config (persisted via Settings panel)
-    const home = process.env.HOME ?? '/home/trader';
-    const configPath = path.join(home, '.agentflow/dashboard-config.json');
+    // Load user config
+    const { config: userCfg, configPath: cfgPath } = loadConfig(config.configPath);
+    this.userConfig = userCfg;
+    this.configPath = cfgPath;
+
+    // Merge extra dirs from saved dashboard config (persisted via Settings panel)
+    const home = process.env.HOME ?? process.env.USERPROFILE ?? '/tmp';
+    const dashConfigPath = path.join(home, '.agentflow/dashboard-config.json');
     if (!config.dataDirs) config.dataDirs = [];
     try {
-      if (fs.existsSync(configPath)) {
-        const saved = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+      if (fs.existsSync(dashConfigPath)) {
+        const saved = JSON.parse(fs.readFileSync(dashConfigPath, 'utf-8'));
         const extraDirs: string[] = saved.extraDirs ?? [];
         for (const d of extraDirs) {
           if (!config.dataDirs.includes(d)) config.dataDirs.push(d);
@@ -81,15 +93,8 @@ export class DashboardServer {
       }
     } catch { /* ignore corrupt config, use CLI args only */ }
 
-    // Auto-discover known agent framework directories
-    const autoDiscoverPaths = [
-      path.join(home, '.openclaw/cron/runs'),
-      path.join(home, '.openclaw/workspace/traces'),
-      path.join(home, '.openclaw/subagents'),
-      path.join(home, '.openclaw/agents/main/sessions'),
-      path.join(home, '.agentflow/traces'),
-    ];
-    for (const p of autoDiscoverPaths) {
+    // Auto-discover directories from user config
+    for (const p of getDiscoveryPaths(this.userConfig)) {
       if (fs.existsSync(p) && !config.dataDirs.includes(p)) {
         config.dataDirs.push(p);
       }
@@ -98,6 +103,7 @@ export class DashboardServer {
     this.watcher = new TraceWatcher({
       tracesDir: config.tracesDir,
       dataDirs: config.dataDirs,
+      userConfig: this.userConfig,
     });
     this.stats = new AgentStats();
     this.knowledgeStore = createKnowledgeStore({
@@ -138,23 +144,45 @@ export class DashboardServer {
       });
     }
 
-    // Serve React dashboard (primary)
-    const clientDir = path.join(__dirname, '../dist/client');
+    // Build React client if stale or missing
+    const pkgDir = path.join(__dirname, '..');
+    const clientDir = path.join(pkgDir, 'dist/client');
+    const clientIndex = path.join(clientDir, 'index.html');
+    const srcDir = path.join(pkgDir, 'src/client');
+    const needsBuild = !fs.existsSync(clientIndex) || (fs.existsSync(srcDir) && this.isClientStale(srcDir, clientDir));
+    if (needsBuild) {
+      try {
+        console.log('Building dashboard client...');
+        execSync('npm run build:client', { cwd: pkgDir, stdio: 'inherit', timeout: 30_000 });
+      } catch (err) {
+        console.warn('Client build failed — dashboard UI may be stale:', (err as Error).message);
+      }
+    }
+
+    // Serve React dashboard
     if (fs.existsSync(clientDir)) {
       this.app.use(express.static(clientDir));
     }
 
-    // Serve legacy dashboard at /v1
-    const publicDir = path.join(__dirname, '../public');
-    if (fs.existsSync(publicDir)) {
-      this.app.use('/v1', express.static(publicDir));
-    }
-
     // API endpoints
-    this.app.get('/api/traces', (_req, res) => {
+    this.app.get('/api/traces', (req, res) => {
       try {
-        const traces = this.watcher.getAllTraces().map(serializeTrace);
-        res.json(traces);
+        const limit = Math.min(Math.max(parseInt(req.query.limit as string, 10) || 50, 1), 200);
+        const cursor = req.query.cursor ? parseFloat(req.query.cursor as string) : undefined;
+
+        let allTraces = this.watcher.getAllTraces(); // already sorted by lastModified desc
+        if (cursor) {
+          allTraces = allTraces.filter((t) => (t.lastModified || t.startTime) < cursor);
+        }
+
+        const page = allTraces.slice(0, limit);
+        const serialized = page.map(serializeTrace);
+        const lastTrace = page[page.length - 1];
+        const nextCursor = page.length === limit && lastTrace
+          ? (lastTrace.lastModified || lastTrace.startTime)
+          : null;
+
+        res.json({ traces: serialized, nextCursor });
       } catch (_error) {
         res.status(500).json({ error: 'Failed to load traces' });
       }
@@ -547,6 +575,87 @@ export class DashboardServer {
       }
     });
 
+    // Soma Governance API
+    this.app.get('/api/soma/governance', (_req, res) => {
+      const somaVault = this.config.somaVault;
+      if (!somaVault) {
+        return res.json({ available: false });
+      }
+      try {
+        // Read governance data from soma-report.json (which now includes layer/governance fields)
+        const reportPath = path.join(somaVault, '..', 'soma-report.json');
+        if (!fs.existsSync(reportPath)) {
+          return res.json({ available: false, message: 'No report file. Run soma report.' });
+        }
+        const report = JSON.parse(fs.readFileSync(reportPath, 'utf-8'));
+        res.json({
+          available: true,
+          layers: report.layers ?? { archive: 0, working: 0, emerging: 0, canon: 0 },
+          governance: report.governance ?? { pending: 0, promoted: 0, rejected: 0 },
+          insights: (report.insights ?? []).filter((i: any) => i.layer === 'emerging' && i.proposal_status === 'pending'),
+          canon: (report.insights ?? []).filter((i: any) => i.layer === 'canon'),
+          generatedAt: report.generatedAt,
+        });
+      } catch (error) {
+        console.error('Soma governance error:', error);
+        res.status(500).json({ available: false, message: 'Failed to read governance data' });
+      }
+    });
+
+    // Sanitize shell arguments to prevent command injection
+    const sanitizeArg = (s: string) => s.replace(/[^a-zA-Z0-9_\-.:]/g, '');
+    const sanitizeReason = (s: string) => s.replace(/["`$\\]/g, '').slice(0, 500);
+
+    this.app.post('/api/soma/governance/promote', (req, res) => {
+      const somaVault = this.config.somaVault;
+      if (!somaVault) return res.status(400).json({ error: 'Soma vault not configured' });
+      const { entryId } = req.body ?? {};
+      if (!entryId) return res.status(400).json({ error: 'entryId required' });
+      try {
+        const { execSync } = require('node:child_process');
+        const safeId = sanitizeArg(String(entryId));
+        const result = execSync(`npx soma governance promote ${safeId} --vault "${somaVault}"`, {
+          encoding: 'utf-8', timeout: 10000,
+        });
+        res.json({ success: true, message: result.trim() });
+      } catch (error: any) {
+        res.status(400).json({ error: error.stderr?.trim() || error.message });
+      }
+    });
+
+    this.app.post('/api/soma/governance/reject', (req, res) => {
+      const somaVault = this.config.somaVault;
+      if (!somaVault) return res.status(400).json({ error: 'Soma vault not configured' });
+      const { entryId, reason } = req.body ?? {};
+      if (!entryId || !reason) return res.status(400).json({ error: 'entryId and reason required' });
+      try {
+        const { execSync } = require('node:child_process');
+        const safeId = sanitizeArg(String(entryId));
+        const safeReason = sanitizeReason(String(reason));
+        const result = execSync(`npx soma governance reject ${safeId} "${safeReason}" --vault "${somaVault}"`, {
+          encoding: 'utf-8', timeout: 10000,
+        });
+        res.json({ success: true, message: result.trim() });
+      } catch (error: any) {
+        res.status(400).json({ error: error.stderr?.trim() || error.message });
+      }
+    });
+
+    this.app.get('/api/soma/governance/evidence/:id', (req, res) => {
+      const somaVault = this.config.somaVault;
+      if (!somaVault) return res.status(400).json({ error: 'Soma vault not configured' });
+      try {
+        const { execSync } = require('node:child_process');
+        const safeId = sanitizeArg(String(req.params.id));
+        const result = execSync(`npx soma governance show ${safeId} --vault "${somaVault}"`, {
+          encoding: 'utf-8', timeout: 10000,
+        });
+        res.json({ available: true, output: result.trim() });
+      } catch (error: any) {
+        res.status(404).json({ error: error.stderr?.trim() || error.message });
+      }
+    });
+
     this.app.get('/api/process-health', (_req, res) => {
       try {
         const now = Date.now();
@@ -562,7 +671,15 @@ export class DashboardServer {
         ];
 
         // Discover all services (PID files + systemd units)
-        const configs = discoverAllProcessConfigs(discoveryDirs);
+        let configs = discoverAllProcessConfigs(discoveryDirs);
+        // Apply config-driven process preference (e.g. prefer soma over alfred)
+        const pref = getProcessPreference(this.userConfig);
+        if (pref) {
+          const hasPreferred = configs.some((c) => c.processName === pref.prefer);
+          if (hasPreferred) {
+            configs = configs.filter((c) => c.processName !== pref.over);
+          }
+        }
         if (configs.length === 0) {
           return res.json(null);
         }
@@ -682,32 +799,29 @@ export class DashboardServer {
           ...extraDirs,
         ];
 
-        // Discover from systemd
+        // Discover from systemd (config-driven service names)
         const discovered: string[] = [];
-        try {
-          const { execSync } = require('node:child_process');
-          const raw = execSync(
-            'systemctl --user show --property=ExecStart --no-pager alfred.service openclaw-gateway.service 2>/dev/null',
-            { encoding: 'utf8', timeout: 5000 },
-          );
-          for (const line of raw.split('\n')) {
-            const match = line.match(/path=([^\s;]+)/);
-            if (match?.[1]) {
-              const dir = path.dirname(match[1]);
-              if (fs.existsSync(dir)) discovered.push(dir);
+        const svcNames = getSystemdServices(this.userConfig);
+        if (svcNames.length > 0) {
+          try {
+            const { execSync } = require('node:child_process');
+            const raw = execSync(
+              `systemctl --user show --property=ExecStart --no-pager ${svcNames.join(' ')} 2>/dev/null`,
+              { encoding: 'utf8', timeout: 5000 },
+            );
+            for (const line of raw.split('\n')) {
+              const match = line.match(/path=([^\s;]+)/);
+              if (match?.[1]) {
+                const dir = path.dirname(match[1]);
+                if (fs.existsSync(dir)) discovered.push(dir);
+              }
             }
-          }
-        } catch { /* ignore */ }
+          } catch { /* ignore */ }
+        }
 
-        // Check common locations
+        // Check config-driven discovery paths + generic agentflow location
         const commonPaths = [
-          path.join(home, '.alfred/traces'),
-          path.join(home, '.alfred/data'),
-          path.join(home, '.openclaw/workspace/traces'),
-          path.join(home, '.openclaw/subagents'),
-          path.join(home, '.openclaw/cron/runs'),
-          path.join(home, '.openclaw/cron'),
-          path.join(home, '.openclaw/agents/main/sessions'),
+          ...getDiscoveryPaths(this.userConfig),
           path.join(home, '.agentflow/traces'),
         ];
         for (const p of commonPaths) {
@@ -835,16 +949,6 @@ export class DashboardServer {
 
     this.app.get('/ready', (_req, res) => {
       res.json({ status: 'ready' });
-    });
-
-    // SPA fallback for /v1 legacy dashboard
-    this.app.get('/v1/*', (_req, res) => {
-      const legacyIndex = path.join(__dirname, '../public/index.html');
-      if (fs.existsSync(legacyIndex)) {
-        res.sendFile(legacyIndex);
-      } else {
-        res.status(404).send('Legacy dashboard not found');
-      }
     });
 
     // SPA fallback — serve React dashboard
@@ -1154,6 +1258,29 @@ export class DashboardServer {
     });
   }
 
+  /** Check if any src/client file is newer than the built bundle. */
+  private isClientStale(srcDir: string, distDir: string): boolean {
+    try {
+      const distIndex = path.join(distDir, 'index.html');
+      if (!fs.existsSync(distIndex)) return true;
+      const distMtime = fs.statSync(distIndex).mtimeMs;
+      const check = (dir: string): boolean => {
+        for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+          const full = path.join(dir, entry.name);
+          if (entry.isDirectory()) {
+            if (check(full)) return true;
+          } else if (fs.statSync(full).mtimeMs > distMtime) {
+            return true;
+          }
+        }
+        return false;
+      };
+      return check(srcDir);
+    } catch {
+      return false;
+    }
+  }
+
   public async stop(): Promise<void> {
     return new Promise((resolve) => {
       this.watcher.stop();
@@ -1162,6 +1289,10 @@ export class DashboardServer {
         resolve();
       });
     });
+  }
+
+  public getConfigPath(): string | null {
+    return this.configPath;
   }
 
   public getStats() {

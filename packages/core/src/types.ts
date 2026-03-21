@@ -76,6 +76,26 @@ export interface TraceEvent {
   readonly data: Readonly<Record<string, unknown>>;
 }
 
+/**
+ * Optional typed data for `decision` trace events.
+ * Frameworks can emit these to provide richer decision data than graph inference.
+ * SOMA will use these fields if present, falling back to graph-structure inference.
+ */
+export interface DecisionTraceData {
+  /** What was selected */
+  readonly choice: string;
+  /** Other options available */
+  readonly alternatives?: readonly string[];
+  /** Why this choice was made */
+  readonly rationale?: string;
+  /** Confidence in the decision (0.0-1.0) */
+  readonly confidence?: number;
+  /** Arbitrary context */
+  readonly context?: Readonly<Record<string, unknown>>;
+  /** Decision outcome */
+  readonly outcome?: string;
+}
+
 /** The complete execution graph for one agent run. */
 export interface ExecutionGraph {
   readonly id: string;

@@ -5,6 +5,8 @@ import type { ExecutionGraph, ExecutionNode } from 'agentflow-core';
 import { loadGraph } from 'agentflow-core';
 import chokidar from 'chokidar';
 import { findAdapter, type NormalizedTrace } from './adapters/index.js';
+import type { DashboardUserConfig } from './config.js';
+import { getAgentDetection, getAliases, getSkipDirectories, getSkipFiles } from './config.js';
 import {
   detectActivityPattern,
   detectTrigger,
@@ -59,6 +61,10 @@ export interface TraceWatcherOptions {
   tracesDir: string;
   /** Additional directories to scan for JSON and JSONL files */
   dataDirs?: string[];
+  /** Maximum age of trace files to load at startup (in ms). Default: 48 hours. */
+  maxAgeMs?: number;
+  /** User config for aliases, skip files, agent detection, etc. */
+  userConfig?: DashboardUserConfig;
 }
 
 export class TraceWatcher extends EventEmitter {
@@ -67,20 +73,100 @@ export class TraceWatcher extends EventEmitter {
   private tracesDir: string;
   private dataDirs: string[];
   private allWatchDirs: string[];
+  private maxAgeMs: number;
+  private userConfig: DashboardUserConfig;
 
   constructor(tracesDirOrOptions: string | TraceWatcherOptions) {
     super();
+    const defaultMaxAgeMs = 48 * 60 * 60 * 1000;
+    const envHours = process.env.AGENTFLOW_TRACE_WINDOW_HOURS;
+    const envMaxAgeMs = envHours ? parseFloat(envHours) * 60 * 60 * 1000 : undefined;
+
     if (typeof tracesDirOrOptions === 'string') {
       this.tracesDir = path.resolve(tracesDirOrOptions);
       this.dataDirs = [];
+      this.maxAgeMs = envMaxAgeMs ?? defaultMaxAgeMs;
+      this.userConfig = {};
     } else {
       this.tracesDir = path.resolve(tracesDirOrOptions.tracesDir);
       this.dataDirs = (tracesDirOrOptions.dataDirs || []).map((d) => path.resolve(d));
+      this.maxAgeMs = envMaxAgeMs ?? tracesDirOrOptions.maxAgeMs ?? defaultMaxAgeMs;
+      this.userConfig = tracesDirOrOptions.userConfig ?? {};
     }
+    // Merge structural skip files with user-configured ones
+    this.skipFiles = new Set([
+      ...TraceWatcher.STRUCTURAL_SKIP_FILES,
+      ...getSkipFiles(this.userConfig),
+    ]);
+    this.userSkipDirs = new Set(getSkipDirectories(this.userConfig));
     this.allWatchDirs = [this.tracesDir, ...this.dataDirs];
     this.ensureTracesDir();
     this.loadExistingFiles();
+    this.archiveOldTraces();
     this.startWatching();
+    // Schedule periodic archival every 6 hours
+    setInterval(() => this.archiveOldTraces(), 6 * 60 * 60 * 1000);
+  }
+
+  /** Move trace files older than maxAgeMs into archive/YYYY-MM/ subdirectories. */
+  private archiveOldTraces() {
+    const cutoff = Date.now() - this.maxAgeMs;
+    let archived = 0;
+
+    for (const dir of this.allWatchDirs) {
+      if (!fs.existsSync(dir)) continue;
+      try {
+        this.archiveDirectory(dir, cutoff, 0);
+      } catch (error) {
+        console.warn(`Archival error in ${dir}:`, (error as Error).message);
+      }
+    }
+  }
+
+  private archiveDirectory(dir: string, cutoff: number, depth: number): number {
+    if (depth > 10) return 0;
+    // Never recurse into archive directories
+    if (path.basename(dir) === 'archive') return 0;
+
+    let archived = 0;
+    try {
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (entry.name.startsWith('.') || entry.name === 'archive' || this.userSkipDirs.has(entry.name)) continue;
+        const fullPath = path.join(dir, entry.name);
+
+        if (entry.isDirectory()) {
+          archived += this.archiveDirectory(fullPath, cutoff, depth + 1);
+          continue;
+        }
+
+        if (!entry.isFile() || !this.isSupportedFile(entry.name)) continue;
+
+        try {
+          const stats = fs.statSync(fullPath);
+          if (stats.mtimeMs >= cutoff) continue;
+
+          // Determine archive destination: <tracesDir>/archive/YYYY-MM/
+          const mtime = new Date(stats.mtimeMs);
+          const yearMonth = `${mtime.getFullYear()}-${String(mtime.getMonth() + 1).padStart(2, '0')}`;
+          const archiveDir = path.join(this.tracesDir, 'archive', yearMonth);
+          fs.mkdirSync(archiveDir, { recursive: true });
+
+          const dest = path.join(archiveDir, entry.name);
+          fs.renameSync(fullPath, dest);
+
+          // Remove from in-memory traces map
+          const key = this.traceKey(fullPath);
+          this.traces.delete(key);
+          archived++;
+        } catch {
+          // File may have been removed or is locked — skip
+        }
+      }
+    } catch {
+      // Directory unreadable — skip
+    }
+    return archived;
   }
 
   private ensureTracesDir() {
@@ -122,11 +208,20 @@ export class TraceWatcher extends EventEmitter {
 
       for (const entry of entries) {
         if (entry.name.startsWith('.')) continue; // Skip hidden files/dirs
+        if (entry.name === 'archive') continue; // Skip archive directories (structural)
+        if (this.userSkipDirs.has(entry.name)) continue; // Skip user-configured directories
 
         const fullPath = path.join(dir, entry.name);
 
         if (entry.isFile()) {
           if (this.isSupportedFile(entry.name)) {
+            // Skip files older than the configured time window
+            try {
+              const mtime = fs.statSync(fullPath).mtimeMs;
+              if (Date.now() - mtime > this.maxAgeMs) continue;
+            } catch {
+              continue;
+            }
             if (this.loadFile(fullPath)) {
               fileCount++;
             }
@@ -153,8 +248,8 @@ export class TraceWatcher extends EventEmitter {
     );
   }
 
-  /** File names that are config/state, not traces — skip them. */
-  private static SKIP_FILES = new Set([
+  /** Structural file names that are never trace data — always skipped. */
+  private static STRUCTURAL_SKIP_FILES = new Set([
     'workers.json',
     'package.json',
     'package-lock.json',
@@ -169,6 +264,10 @@ export class TraceWatcher extends EventEmitter {
     'update-check.json',
     'exec-approvals.json',
   ]);
+  /** Skip files = structural + user config */
+  private skipFiles: Set<string>;
+  /** Skip directories from user config */
+  private userSkipDirs: Set<string>;
   private static SKIP_SUFFIXES = [
     '-state.json',
     '-config.json',
@@ -183,7 +282,7 @@ export class TraceWatcher extends EventEmitter {
     const filename = path.basename(filePath);
 
     // Skip known non-trace files
-    if (TraceWatcher.SKIP_FILES.has(filename)) return false;
+    if (this.skipFiles.has(filename)) return false;
     if (TraceWatcher.SKIP_SUFFIXES.some((s) => filename.endsWith(s))) return false;
 
     // Try adapter registry — non-agentflow adapters handle their own parsing
@@ -406,51 +505,32 @@ export class TraceWatcher extends EventEmitter {
     return traces;
   }
 
-  /**
-   * Normalise agent identifiers so that the same worker is never shown
-   * under two different names (e.g. "vault-curator" vs "openclaw-vault-curator").
-   *
-   * Canonical names:  alfred-main, vault-curator, vault-janitor,
-   *                   vault-distiller, vault-surveyor
-   */
-  private static readonly AGENT_ALIASES: Record<string, string> = {
-    'openclaw-main': 'alfred-main',
-    'openclaw-vault-curator': 'vault-curator',
-    'openclaw-vault-janitor': 'vault-janitor',
-    'openclaw-vault-distiller': 'vault-distiller',
-    'openclaw-vault-surveyor': 'vault-surveyor',
-    'alfred-curator': 'vault-curator',
-    'alfred-janitor': 'vault-janitor',
-    'alfred-distiller': 'vault-distiller',
-    'alfred-surveyor': 'vault-surveyor',
-    curator: 'vault-curator',
-    janitor: 'vault-janitor',
-    distiller: 'vault-distiller',
-    surveyor: 'vault-surveyor',
-  };
-
+  /** Normalise agent identifiers using config-driven alias map. */
   private normaliseAgentId(raw: string): string {
-    return TraceWatcher.AGENT_ALIASES[raw] ?? raw;
+    const aliases = getAliases(this.userConfig);
+    return aliases[raw] ?? raw;
   }
 
   private detectAgentIdentifier(activity: any, _filename: string, filePath: string): string {
-    // Use agent_id from log fields if available (Alfred pipeline.llm_call has this)
+    // Use agent_id from log fields if available
     if (activity.agent_id) {
-      const agentId = activity.agent_id;
-      // Ensure proper prefixing for known agent types
-      if (agentId === 'main' && filePath.includes('.alfred/')) return this.normaliseAgentId('alfred-main');
-      return this.normaliseAgentId(agentId);
+      return this.normaliseAgentId(activity.agent_id);
     }
 
     // Use path-based detection as primary
     const pathAgent = this.extractAgentFromPath(filePath);
 
-    // For log files named like "janitor.log" → "alfred-janitor"
-    if (filePath.includes('.alfred/') && !pathAgent.startsWith('alfred-')) {
+    // Apply config-driven file pattern matching
+    const detection = getAgentDetection(this.userConfig);
+    if (detection.filePatterns) {
       const basename = path.basename(filePath, path.extname(filePath));
-      if (basename.match(/^(janitor|curator|distiller|surveyor|alfred)$/)) {
-        const raw = basename === 'alfred' ? 'alfred' : `alfred-${basename}`;
-        return this.normaliseAgentId(raw);
+      for (const [pattern, template] of Object.entries(detection.filePatterns)) {
+        const re = new RegExp(`^(${pattern})$`);
+        const match = basename.match(re);
+        if (match) {
+          const resolved = template.replace('${match}', match[1]);
+          return this.normaliseAgentId(resolved);
+        }
       }
     }
 
@@ -461,27 +541,24 @@ export class TraceWatcher extends EventEmitter {
     const filename = path.basename(filePath, path.extname(filePath));
     const pathParts = filePath.split(path.sep);
 
-    // OpenClaw-specific detection
-    if (filePath.includes('.openclaw/')) {
-      // OpenClaw agent sessions: /home/trader/.openclaw/agents/AGENT_NAME/sessions/
-      const agentsIndex = pathParts.lastIndexOf('agents');
-      if (agentsIndex !== -1 && agentsIndex + 1 < pathParts.length) {
-        return `openclaw-${pathParts[agentsIndex + 1]}`;
+    // Config-driven path pattern matching
+    const detection = getAgentDetection(this.userConfig);
+    if (detection.pathPatterns) {
+      for (const [pathSubstring, agentId] of Object.entries(detection.pathPatterns)) {
+        if (filePath.includes(pathSubstring)) {
+          return agentId;
+        }
       }
-      // OpenClaw logs: /tmp/openclaw/openclaw-*.log
-      if (filename.startsWith('openclaw-')) {
-        return 'openclaw-gateway';
-      }
-      return 'openclaw';
     }
 
-    // Alfred-specific detection
-    if (filePath.includes('.alfred/') || filename.includes('alfred')) {
-      return 'alfred';
+    // Generic: look for agents/AGENT_NAME/sessions/ pattern (common convention)
+    const agentsIndex = pathParts.lastIndexOf('agents');
+    if (agentsIndex !== -1 && agentsIndex + 1 < pathParts.length) {
+      return pathParts[agentsIndex + 1];
     }
 
     // Look for agent-related terms in path (reversed for inner-most first)
-    for (const part of pathParts.reverse()) {
+    for (const part of [...pathParts].reverse()) {
       if (part.match(/agent|worker|service|daemon|bot|ai|llm/i)) {
         return part;
       }
@@ -1421,6 +1498,9 @@ export class TraceWatcher extends EventEmitter {
           /\.git/, // Ignore git directories
           /\.vscode/, // Ignore vscode
           /\.idea/, // Ignore idea
+          /\/archive\//, // Ignore archived trace files
+          // Ignore user-configured skip directories
+          ...getSkipDirectories(this.userConfig).map((d) => new RegExp(`/${d}/`)),
         ],
         persistent: true,
         ignoreInitial: true,

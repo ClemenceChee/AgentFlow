@@ -3,7 +3,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { type DashboardConfig, DashboardServer } from './server.js';
 
-const VERSION = '0.4.0';
+const VERSION = '0.7.1';
 
 function getLanAddress(): string | null {
   const interfaces = os.networkInterfaces();
@@ -26,6 +26,7 @@ function printBanner(
     globalSuccessRate: number;
     activeAgents: number;
   },
+  configPath: string | null,
 ) {
   const lan = getLanAddress();
   const host = config.host || 'localhost';
@@ -42,24 +43,21 @@ function printBanner(
 
   See your agents think.
 
-  \u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510              \u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510              \u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510
-  \u2502  \ud83e\udd16 Agents          \u2502  TRACE FILES \u2502  \ud83d\udcca AgentFlow      \u2502  SHOWS YOU   \u2502  \ud83c\udf10 Your browser   \u2502
-  \u2502  Execute tasks,   \u2502 \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500> \u2502  Reads traces,    \u2502 \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500> \u2502  Interactive      \u2502
-  \u2502  write JSON       \u2502              \u2502  builds graphs,  \u2502              \u2502  graph, timeline, \u2502
-  \u2502  trace files.     \u2502              \u2502  serves dashboard.\u2502              \u2502  metrics, health. \u2502
-  \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518              \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518              \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518
-
-  Runs locally. Your data never leaves your machine.
-
-  Tabs: \ud83c\udfaf Graph \u00b7 \u23f1\ufe0f  Timeline \u00b7 \ud83d\udcca Metrics \u00b7 \ud83d\udee0\ufe0f  Process Health \u00b7 \u26a0\ufe0f  Errors
-
   Traces:     ${config.tracesDir}${config.dataDirs?.length ? `\n  Data dirs:  ${config.dataDirs.join('\n              ')}` : ''}
   Loaded:     ${traceCount} traces \u00b7 ${stats.totalAgents} agents \u00b7 ${stats.totalExecutions} executions
   Success:    ${stats.globalSuccessRate.toFixed(1)}%${stats.activeAgents > 0 ? ` \u00b7 ${stats.activeAgents} active now` : ''}
+  Config:     ${configPath ?? 'none (using defaults)'}
   CORS:       ${config.enableCors ? 'enabled' : 'disabled'}
   WebSocket:  live updates enabled
+  Window:     ${process.env.AGENTFLOW_TRACE_WINDOW_HOURS ?? '48'}h (set AGENTFLOW_TRACE_WINDOW_HOURS to change)
 
   \u2192 http://localhost:${port}${isPublic && lan ? `\n  \u2192 http://${lan}:${port}  (LAN)` : ''}
+
+  Views:  Agent Profile \u00b7 Execution Detail \u00b7 Governance
+  Tabs:   Flame Chart \u00b7 Agent Flow \u00b7 Metrics \u00b7 Dependencies
+          State Machine \u00b7 Summary \u00b7 Transcript
+
+  Runs locally. Your data never leaves your machine.
 `);
 }
 
@@ -102,6 +100,9 @@ export async function startDashboard() {
         break;
       case '--soma-vault':
         config.somaVault = args[++i];
+        break;
+      case '--config':
+        config.configPath = args[++i];
         break;
       case '--help':
         printHelp();
@@ -148,7 +149,7 @@ export async function startDashboard() {
     setTimeout(() => {
       const stats = dashboard.getStats();
       const traces = dashboard.getTraces();
-      printBanner(config, traces.length, stats);
+      printBanner(config, traces.length, stats, dashboard.getConfigPath());
     }, 1500);
   } catch (error) {
     console.error('\u274c Failed to start dashboard:', error);
@@ -158,7 +159,7 @@ export async function startDashboard() {
 
 function printHelp() {
   console.log(`
-\ud83d\udcca AgentFlow Dashboard v${VERSION} \u2014 See your agents think.
+AgentFlow Dashboard v${VERSION} — See your agents think.
 
 Usage:
   agentflow-dashboard [options]
@@ -169,21 +170,33 @@ Options:
   -t, --traces <path>     Traces directory (default: ./traces)
   -h, --host <address>    Host address (default: localhost)
   --data-dir <path>       Extra data directory for process discovery (repeatable)
+  --config <path>         Path to agentflow.config.json (aliases, skip files, etc.)
+  --soma-vault <path>     SOMA vault directory for intelligence data
   --cors                  Enable CORS headers
   --no-collector          Disable OTLP trace collector (POST /v1/traces)
   --collector-token <tok> Require auth token for collector (or set AGENTFLOW_COLLECTOR_TOKEN)
   --help                  Show this help message
 
-Examples:
-  agentflow-dashboard --traces ./traces --host 0.0.0.0 --cors
-  agentflow-dashboard -p 8080 -t /var/log/agentflow
-  agentflow-dashboard --traces ./traces --data-dir ./workers --data-dir ./cron
+Config file:
+  The dashboard loads agentflow.config.json for agent aliases, skip files,
+  discovery paths, and systemd services. Resolution order:
+    1. --config flag
+    2. AGENTFLOW_CONFIG env var
+    3. ./agentflow.config.json
+    4. ~/.config/agentflow/config.json
 
-Tabs:
-  \ud83c\udfaf Graph            Interactive Cytoscape.js execution graph
-  \u23f1\ufe0f  Timeline          Waterfall view of node durations
-  \ud83d\udcca Metrics           Success rates, durations, node breakdown
-  \ud83d\udee0\ufe0f  Process Health    PID files, systemd, workers, orphans
-  \u26a0\ufe0f  Errors            Failed and hung nodes with metadata
+  See agentflow.config.example.json for a complete reference.
+
+Environment:
+  AGENTFLOW_CONFIG               Path to config file
+  AGENTFLOW_TRACE_WINDOW_HOURS   Max age of traces to load (default: 48)
+  AGENTFLOW_COLLECTOR_TOKEN      Auth token for OTLP collector
+  AGENTFLOW_NO_COLLECTOR=true    Disable OTLP collector
+  SOMA_VAULT                     SOMA vault directory
+
+Examples:
+  agentflow-dashboard --traces ./traces --host 0.0.0.0
+  agentflow-dashboard --traces ./traces --config ./agentflow.config.json
+  agentflow-dashboard -p 8080 -t /var/log/agentflow --cors
 `);
 }
