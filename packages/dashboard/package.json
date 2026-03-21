@@ -34,7 +34,8 @@
     "test:e2e": "playwright test",
     "test:e2e:server": "tsx tests/e2e/test-server.ts",
     "test:all": "npm run test:unit && npm run test:integration && npm run test:performance && npm run test:e2e",
-    "test:ci": "npm run test:unit && npm run test:integration"
+    "test:ci": "npm run test:unit && npm run test:integration",
+    "prepublishOnly": "npm run build && npm run test:ci"
   },
   "dependencies": {
     "agentflow-core": "^0.8.0",
@@ -70,5 +71,17 @@
     "observability",
     "real-time"
   ],
-  "license": "MIT"
+  "license": "Apache-2.0 WITH Commons-Clause-1.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ClemenceChee/AgentFlow.git"
+  },
+  "homepage": "https://github.com/ClemenceChee/AgentFlow#readme",
+  "bugs": {
+    "url": "https://github.com/ClemenceChee/AgentFlow/issues"
+  },
+  "author": "Clemence Chee",
+  "engines": {
+    "node": ">=20"
+  }
 }

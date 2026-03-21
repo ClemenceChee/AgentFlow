@@ -17,7 +17,8 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsup src/index.ts src/cli.ts --format esm,cjs --dts --clean --tsconfig tsconfig.build.json"
+    "build": "tsup src/index.ts src/cli.ts --format esm,cjs --dts --clean --tsconfig tsconfig.build.json",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {},
   "keywords": [
@@ -43,12 +44,15 @@
     "orphan-detection",
     "systemd"
   ],
-  "license": "MIT",
+  "license": "Apache-2.0 WITH Commons-Clause-1.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/ClemenceChee/AgentFlow.git"
   },
   "homepage": "https://github.com/ClemenceChee/AgentFlow#readme",
+  "bugs": {
+    "url": "https://github.com/ClemenceChee/AgentFlow/issues"
+  },
   "author": "Clemence Chee",
   "engines": {
     "node": ">=20"
