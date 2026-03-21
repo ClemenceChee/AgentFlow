@@ -65,6 +65,20 @@ Soma has four workers that operate on the vault:
 
 The **Policy Bridge** (`createSomaPolicySource`) connects the vault back to AgentFlow by implementing the `PolicySource` interface. Guards can query it for `recentFailureRate`, `isKnownBottleneck`, and `lastConformanceScore` — all derived from live vault data.
 
+## The Full Stack
+
+SOMA is one layer in a five-layer architecture for agent governance: SPE (agent-local memory) at the bottom, AgentFlow (execution observability) as the foundation, SOMA (knowledge synthesis and governance) in the middle, Operational Intelligence (per-run enforcement and visibility) as SOMA's enforcement complement, and AICP (organizational policy authority) at the top. Each layer operates at a different timescale — from millisecond-level per-run checks to month-level organizational policy adjustments. Operational Intelligence enforces the thresholds that SOMA discovers: SOMA learns from many runs, Ops Intel acts on each one.
+
+```
+L4  AICP ──────────── Organizational policy authority
+L3  Ops Intel ──────── Per-run enforcement & receipts
+L2  SOMA ──────────── Knowledge synthesis & governance    ◄── you are here
+L1  AgentFlow ──────── Execution observability
+L0  SPE ───────────── Agent-local memory
+```
+
+For the full picture — data flow, feedback loops, and status of each layer — see the [Full Stack Architecture](https://openclaw.github.io/soma/architecture/full-stack) page in the SOMA documentation.
+
 ## Why It Exists
 
 ### Agents Are Stateless by Default
