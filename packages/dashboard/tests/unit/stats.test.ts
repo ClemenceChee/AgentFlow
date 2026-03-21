@@ -68,10 +68,10 @@ describe('AgentStats', () => {
 
       // Second trace with 4 second duration
       const nodes2 = Array.from(trace2.nodes.values());
-      nodes2[0].startTime = 1000;
-      nodes2[0].endTime = 5000; // 4 second duration
-      trace2.startTime = 1000;
-      trace2.endTime = 5000;
+      nodes2[0].startTime = 10000;
+      nodes2[0].endTime = 14000; // 4 second duration
+      trace2.startTime = 10000;
+      trace2.endTime = 14000;
 
       stats.processTrace(trace1);
       stats.processTrace(trace2);
@@ -326,6 +326,9 @@ describe('AgentStats', () => {
         agentId: 'no-timing-agent',
         includeTimings: false,
       });
+      // Zero out times to simulate no timing data
+      trace.startTime = 0;
+      trace.endTime = 0;
 
       stats.processTrace(trace);
 
