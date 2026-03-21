@@ -1,4 +1,4 @@
-import { execSync } from 'node:child_process';
+import { execFileSync, execSync } from 'node:child_process';
 import * as fs from 'node:fs';
 import { createServer } from 'node:http';
 import * as path from 'node:path';
@@ -628,19 +628,16 @@ export class DashboardServer {
       }
     });
 
-    // Sanitize shell arguments to prevent command injection
-    const sanitizeArg = (s: string) => s.replace(/[^a-zA-Z0-9_\-.:]/g, '');
-    const sanitizeReason = (s: string) => s.replace(/["`$\\]/g, '').slice(0, 500);
+    // Validate string contains only safe identifier characters
+    const isValidId = (s: string) => /^[a-zA-Z0-9_\-.:]+$/.test(s);
 
     this.app.post('/api/soma/governance/promote', (req, res) => {
       const somaVault = this.config.somaVault;
       if (!somaVault) return res.status(400).json({ error: 'Soma vault not configured' });
       const { entryId } = req.body ?? {};
-      if (!entryId) return res.status(400).json({ error: 'entryId required' });
+      if (!entryId || !isValidId(String(entryId))) return res.status(400).json({ error: 'Invalid entryId' });
       try {
-        const { execSync } = require('node:child_process');
-        const safeId = sanitizeArg(String(entryId));
-        const result = execSync(`npx soma governance promote ${safeId} --vault "${somaVault}"`, {
+        const result = execFileSync('npx', ['soma', 'governance', 'promote', String(entryId), '--vault', somaVault], {
           encoding: 'utf-8', timeout: 10000,
         });
         res.json({ success: true, message: result.trim() });
@@ -653,12 +650,10 @@ export class DashboardServer {
       const somaVault = this.config.somaVault;
       if (!somaVault) return res.status(400).json({ error: 'Soma vault not configured' });
       const { entryId, reason } = req.body ?? {};
-      if (!entryId || !reason) return res.status(400).json({ error: 'entryId and reason required' });
+      if (!entryId || !isValidId(String(entryId))) return res.status(400).json({ error: 'Invalid entryId' });
+      if (!reason || typeof reason !== 'string') return res.status(400).json({ error: 'reason required' });
       try {
-        const { execSync } = require('node:child_process');
-        const safeId = sanitizeArg(String(entryId));
-        const safeReason = sanitizeReason(String(reason));
-        const result = execSync(`npx soma governance reject ${safeId} "${safeReason}" --vault "${somaVault}"`, {
+        const result = execFileSync('npx', ['soma', 'governance', 'reject', String(entryId), String(reason).slice(0, 500), '--vault', somaVault], {
           encoding: 'utf-8', timeout: 10000,
         });
         res.json({ success: true, message: result.trim() });
@@ -670,10 +665,9 @@ export class DashboardServer {
     this.app.get('/api/soma/governance/evidence/:id', (req, res) => {
       const somaVault = this.config.somaVault;
       if (!somaVault) return res.status(400).json({ error: 'Soma vault not configured' });
+      if (!isValidId(String(req.params.id))) return res.status(400).json({ error: 'Invalid id' });
       try {
-        const { execSync } = require('node:child_process');
-        const safeId = sanitizeArg(String(req.params.id));
-        const result = execSync(`npx soma governance show ${safeId} --vault "${somaVault}"`, {
+        const result = execFileSync('npx', ['soma', 'governance', 'show', String(req.params.id), '--vault', somaVault], {
           encoding: 'utf-8', timeout: 10000,
         });
         res.json({ available: true, output: result.trim() });
@@ -700,16 +694,14 @@ export class DashboardServer {
       const somaVault = this.config.somaVault;
       if (!somaVault) return res.status(400).json({ error: 'Soma vault not configured' });
       const { name, enforcement, scope, conditions } = req.body ?? {};
-      if (!name) return res.status(400).json({ error: 'name required' });
+      if (!name || !isValidId(String(name))) return res.status(400).json({ error: 'Invalid policy name' });
+      const enf = String(enforcement || 'warn');
+      if (!isValidId(enf)) return res.status(400).json({ error: 'Invalid enforcement value' });
       try {
-        const safeName = sanitizeArg(String(name));
-        const safeEnf = sanitizeArg(String(enforcement || 'warn'));
-        const safeScope = sanitizeReason(String(scope || 'all'));
-        const safeCond = sanitizeReason(String(conditions || ''));
-        const result = execSync(
-          `npx soma policy create "${safeName}" --enforcement ${safeEnf} --scope "${safeScope}" --conditions "${safeCond}" --vault "${somaVault}"`,
-          { encoding: 'utf-8', timeout: 10000 },
-        );
+        const args = ['soma', 'policy', 'create', String(name), '--enforcement', enf, '--vault', somaVault];
+        if (scope) args.push('--scope', String(scope).slice(0, 500));
+        if (conditions) args.push('--conditions', String(conditions).slice(0, 500));
+        const result = execFileSync('npx', args, { encoding: 'utf-8', timeout: 10000 });
         res.json({ success: true, message: result.trim() });
       } catch (error: any) {
         res.status(400).json({ error: error.stderr?.trim() || error.message });
@@ -719,12 +711,11 @@ export class DashboardServer {
     this.app.delete('/api/soma/policies/:name', (req, res) => {
       const somaVault = this.config.somaVault;
       if (!somaVault) return res.status(400).json({ error: 'Soma vault not configured' });
+      if (!isValidId(String(req.params.name))) return res.status(400).json({ error: 'Invalid policy name' });
       try {
-        const safeName = sanitizeArg(String(req.params.name));
-        const result = execSync(
-          `npx soma policy delete "${safeName}" --vault "${somaVault}"`,
-          { encoding: 'utf-8', timeout: 10000 },
-        );
+        const result = execFileSync('npx', ['soma', 'policy', 'delete', String(req.params.name), '--vault', somaVault], {
+          encoding: 'utf-8', timeout: 10000,
+        });
         res.json({ success: true, message: result.trim() });
       } catch (error: any) {
         res.status(400).json({ error: error.stderr?.trim() || error.message });
@@ -947,10 +938,8 @@ export class DashboardServer {
         const svcNames = getSystemdServices(this.userConfig);
         if (svcNames.length > 0) {
           try {
-            const { execSync } = require('node:child_process');
-            const raw = execSync(
-              `systemctl --user show --property=ExecStart --no-pager ${svcNames.join(' ')} 2>/dev/null`,
-              { encoding: 'utf8', timeout: 5000 },
+            const raw = execFileSync('systemctl', ['--user', 'show', '--property=ExecStart', '--no-pager', ...svcNames], {
+              encoding: 'utf8', timeout: 5000,
             );
             for (const line of raw.split('\n')) {
               const match = line.match(/path=([^\s;]+)/);
@@ -988,9 +977,15 @@ export class DashboardServer {
       try {
         const { add, remove } = req.body as { add?: string; remove?: string };
 
-        // Validate path exists for add
-        if (add && !fs.existsSync(add)) {
-          return res.status(400).json({ error: `Directory does not exist: ${add}` });
+        // Validate path: must be absolute, no traversal
+        if (add) {
+          const resolved = path.resolve(add);
+          if (resolved !== add || add.includes('..')) {
+            return res.status(400).json({ error: 'Invalid directory path' });
+          }
+          if (!fs.existsSync(resolved)) {
+            return res.status(400).json({ error: `Directory does not exist: ${add}` });
+          }
         }
 
         const configPath = path.join(process.env.HOME ?? '/home/trader', '.agentflow/dashboard-config.json');
