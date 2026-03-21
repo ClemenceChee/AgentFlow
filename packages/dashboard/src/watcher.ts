@@ -99,7 +99,8 @@ export class TraceWatcher extends EventEmitter {
       ...getSkipFiles(this.userConfig),
     ]);
     this.userSkipDirs = new Set(getSkipDirectories(this.userConfig));
-    this.allWatchDirs = [this.tracesDir, ...this.dataDirs];
+    // Deduplicate watch directories (config discoveryPaths may overlap with CLI --data-dir)
+    this.allWatchDirs = [...new Set([this.tracesDir, ...this.dataDirs].map((d) => path.resolve(d)))];
     this.ensureTracesDir();
     this.loadExistingFiles();
     this.archiveOldTraces();
