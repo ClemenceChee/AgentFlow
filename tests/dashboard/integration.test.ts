@@ -135,7 +135,7 @@ describe('Integration: Full Pipeline', () => {
 
     const { status, body } = await httpGet(`${baseUrl}/api/traces`);
     expect(status).toBe(200);
-    const found = body.find((t: any) => t.id === 'int-1');
+    const found = body.traces.find((t: any) => t.id === 'int-1');
     expect(found).toBeDefined();
     expect(found.agentId).toBe('int-agent');
   }, 10000);
@@ -151,7 +151,7 @@ describe('Integration: Full Pipeline', () => {
 
     const { status, body } = await httpGet(`${baseUrl}/api/traces`);
     expect(status).toBe(200);
-    const found = body.find((t: any) => t.id === 'int-session-1');
+    const found = body.traces.find((t: any) => t.id === 'int-session-1');
     expect(found).toBeDefined();
     // agentId should be extracted from path
     expect(found.agentId).toContain('test-worker');
@@ -166,7 +166,7 @@ describe('Integration: Full Pipeline', () => {
     const { status, body } = await httpGet(`${baseUrl}/api/traces`);
     expect(status).toBe(200);
     // Should have loaded the log file in some form
-    const logTraces = body.filter((t: any) => t.filename === 'openclaw-integration.log');
+    const logTraces = body.traces.filter((t: any) => t.filename === 'openclaw-integration.log');
     expect(logTraces.length).toBeGreaterThanOrEqual(1);
   }, 10000);
 
@@ -186,7 +186,7 @@ describe('Integration: Full Pipeline', () => {
     const { status, body } = await httpGet(`${baseUrl}/api/traces`);
     expect(status).toBe(200);
 
-    const agentIds = new Set(body.map((t: any) => t.agentId));
+    const agentIds = new Set(body.traces.map((t: any) => t.agentId));
     expect(agentIds.has('alpha')).toBe(true);
     // Beta should appear with some form of agent id containing 'beta'
     const hasBeta = Array.from(agentIds).some((id: string) => id.includes('beta'));

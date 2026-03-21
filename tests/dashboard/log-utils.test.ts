@@ -241,19 +241,19 @@ describe('Log Utils', () => {
   });
 
   describe('openClawSessionIdToAgent', () => {
-    it('maps janitor prefix', () => {
-      expect(openClawSessionIdToAgent('janitor-abc')).toBe('vault-janitor');
+    it('extracts janitor prefix', () => {
+      expect(openClawSessionIdToAgent('janitor-abc')).toBe('janitor');
     });
 
-    it('maps curator prefix', () => {
-      expect(openClawSessionIdToAgent('curator-xyz')).toBe('vault-curator');
+    it('extracts curator prefix', () => {
+      expect(openClawSessionIdToAgent('curator-xyz')).toBe('curator');
     });
 
-    it('maps distiller prefix', () => {
-      expect(openClawSessionIdToAgent('distiller-123')).toBe('vault-distiller');
+    it('extracts distiller prefix', () => {
+      expect(openClawSessionIdToAgent('distiller-123')).toBe('distiller');
     });
 
-    it('maps main prefix', () => {
+    it('extracts main prefix', () => {
       expect(openClawSessionIdToAgent('main-session')).toBe('main');
     });
 

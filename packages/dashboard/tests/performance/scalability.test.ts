@@ -76,7 +76,8 @@ describe('Performance and Scalability Tests', () => {
       // API performance test
       const apiStartTime = Date.now();
       const response = await fetch(`http://localhost:${port}/api/traces`);
-      const traces = await response.json();
+      const json = await response.json();
+      const traces = json.traces ?? json;
       const apiTime = Date.now() - apiStartTime;
 
       expect(traces.length).toBe(loadedTraces);
@@ -221,7 +222,8 @@ describe('Performance and Scalability Tests', () => {
       // API should still be responsive
       const apiStartTime = Date.now();
       const response = await fetch(`http://localhost:${port}/api/traces`);
-      const traces = await response.json();
+      const json2 = await response.json();
+      const traces = json2.traces ?? json2;
       const apiResponseTime = Date.now() - apiStartTime;
 
       expect(traces.length).toBeGreaterThanOrEqual(finalCount);
@@ -336,7 +338,8 @@ describe('Performance and Scalability Tests', () => {
       // API performance should remain good
       const apiStart = Date.now();
       const response = await fetch(`http://localhost:${port}/api/traces`);
-      const traces = await response.json();
+      const json3 = await response.json();
+      const traces = json3.traces ?? json3;
       const apiTime = Date.now() - apiStart;
 
       expect(traces.length).toBe(5);

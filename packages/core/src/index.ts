@@ -126,6 +126,7 @@ export type {
   ProcessTransition,
   SemanticContext,
   StartNodeOptions,
+  DecisionTraceData,
   TraceEvent,
   TraceEventType,
   Variant,

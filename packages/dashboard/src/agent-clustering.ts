@@ -64,19 +64,17 @@ const PURPOSE_KEYWORDS: { keywords: string[]; group: string }[] = [
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Extract adapter source from agentId prefix (openclaw:foo → openclaw, otel:bar → otel, foo → agentflow) */
+/** Extract adapter source from agentId prefix (prefix:localId → { source: prefix, localId }) */
 function extractSource(agentId: string): { source: string; localId: string } {
   const colonIdx = agentId.indexOf(':');
   if (colonIdx > 0 && colonIdx < 20) {
     const prefix = agentId.slice(0, colonIdx);
-    if (['openclaw', 'otel', 'langchain', 'crewai', 'mastra'].includes(prefix)) {
-      return { source: prefix, localId: agentId.slice(colonIdx + 1) };
-    }
+    return { source: prefix, localId: agentId.slice(colonIdx + 1) };
   }
   return { source: 'agentflow', localId: agentId };
 }
 
-/** Extract the role suffix from an agentId (e.g., "alfred-curator" → "curator") */
+/** Extract the role suffix from an agentId (e.g., "myapp-worker" → "worker") */
 function extractSuffix(localId: string): string | null {
   // Try dash-separated: "system-role" → "role"
   const dashIdx = localId.indexOf('-');
@@ -126,7 +124,7 @@ export function deduplicateAgents(agents: AgentStats[]): AgentStats[] {
     suffixGroups.set(suffix, group);
   }
 
-  // Merge groups that span multiple sources within "agentflow" (e.g., alfred-curator + vault-curator)
+  // Merge groups that share the same role suffix within "agentflow" (e.g., "app-worker" + "worker")
   const mergedIds = new Set<string>();
   const mergedAgents: AgentStats[] = [];
 
@@ -203,12 +201,10 @@ export function groupAgents(agents: AgentStats[]): GroupedAgentsResponse {
     sourceMap.set(source, list);
   }
 
+  // Well-known display names; unknown sources get title-cased automatically
   const SOURCE_DISPLAY: Record<string, string> = {
     agentflow: 'AgentFlow',
-    openclaw: 'OpenClaw',
     otel: 'OpenTelemetry',
-    langchain: 'LangChain',
-    crewai: 'CrewAI',
   };
 
   const groups: AgentGroup[] = [];

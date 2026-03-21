@@ -17,6 +17,33 @@ function StatusBadge({ status }: { status: string }) {
   return <span style={{ color, fontWeight: 600, fontSize: 12 }}>{label}</span>;
 }
 
+function LayerBadge({ layer, status }: { layer?: string; status?: string }) {
+  if (!layer) return null;
+  const colors: Record<string, string> = {
+    canon: '#3fb950',
+    emerging: '#58a6ff',
+    working: '#d29922',
+    archive: '#8b949e',
+  };
+  const labels: Record<string, string> = {
+    canon: 'L4 Canon',
+    emerging: 'L3 Emerging',
+    working: 'L2 Working',
+    archive: 'L1 Archive',
+  };
+  const color = colors[layer] ?? '#8b949e';
+  const label = labels[layer] ?? layer;
+  const statusSuffix = status === 'promoted' ? ' \u2714' : status === 'rejected' ? ' \u2718' : status === 'pending' ? ' \u25CB' : '';
+  return (
+    <span style={{
+      color, fontSize: 10, fontWeight: 600, border: `1px solid ${color}`,
+      borderRadius: 3, padding: '1px 4px', marginLeft: 4,
+    }}>
+      {label}{statusSuffix}
+    </span>
+  );
+}
+
 /** Active state — shows real Soma intelligence data */
 function ActiveView({ report, agentId }: { report: SomaReport; agentId: string }) {
   const agentData = report.agents?.find((a) => a.name === agentId);
@@ -120,6 +147,12 @@ function ActiveView({ report, agentId }: { report: SomaReport; agentId: string }
                 <span className="soma-intel__insight-type">{ins.type}</span>
                 <strong>{ins.title}</strong>
                 <span className="soma-intel__insight-conf">{ins.confidence}</span>
+                <LayerBadge layer={(ins as any).layer} status={(ins as any).proposal_status} />
+                {(ins as any).confidence_score != null && (
+                  <span style={{ fontSize: 10, color: '#8b949e', marginLeft: 4 }}>
+                    ({((ins as any).confidence_score * 100).toFixed(0)}%)
+                  </span>
+                )}
                 {ins.claim && <div className="soma-intel__insight-claim">{ins.claim}</div>}
               </div>
             ))}

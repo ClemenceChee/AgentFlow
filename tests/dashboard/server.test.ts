@@ -123,8 +123,8 @@ describe('DashboardServer API', () => {
     it('returns all traces', async () => {
       const { status, body } = await httpGet(`${baseUrl}/api/traces`);
       expect(status).toBe(200);
-      expect(Array.isArray(body)).toBe(true);
-      expect(body.length).toBeGreaterThanOrEqual(2);
+      expect(Array.isArray(body.traces)).toBe(true);
+      expect(body.traces.length).toBeGreaterThanOrEqual(2);
     });
   });
 

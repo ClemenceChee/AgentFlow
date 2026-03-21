@@ -56,13 +56,21 @@ export function useTraces(): TraceEntry[] {
 
   const fetchTraces = useCallback(async () => {
     try {
-      const res = await fetch('/api/traces');
-      if (res.ok) {
+      const all: TraceEntry[] = [];
+      let cursor: string | undefined;
+      // Paginate through all traces (slim TraceEntry objects, not full graphs)
+      do {
+        const url = cursor ? `/api/traces?limit=200&cursor=${cursor}` : '/api/traces?limit=200';
+        const res = await fetch(url);
+        if (!res.ok) break;
         const json = await res.json();
-        if (Array.isArray(json)) {
-          setTraces(json.map(mapTrace));
+        const list = Array.isArray(json) ? json : json.traces;
+        if (Array.isArray(list)) {
+          all.push(...list.map(mapTrace));
         }
-      }
+        cursor = json.nextCursor ?? undefined;
+      } while (cursor);
+      setTraces(all);
     } catch {
       // Retry on next interval
     }
