@@ -5,29 +5,31 @@ import { ExecSidebar } from './components/ExecSidebar';
 import { ExecutionDetail } from './components/ExecutionDetail';
 import { HealthBanner } from './components/HealthBanner';
 import { SettingsPanel } from './components/SettingsPanel';
+import { SomaPage } from './components/SomaPage';
 import { SummaryBar } from './components/SummaryBar';
 import { TopSection } from './components/TopSection';
 import { useAgents } from './hooks/useAgents';
 import { useProcessHealth } from './hooks/useProcessHealth';
 import { useProcessModel } from './hooks/useProcessModel';
 import { useSelectedTrace } from './hooks/useSelectedTrace';
-import { useSomaGovernance } from './hooks/useSomaGovernance';
+import { useSomaTier } from './hooks/useSomaTier';
 import { useTraces } from './hooks/useTraces';
-import { SomaGovernance } from './components/SomaGovernance';
 import { pickInitialAgent } from './state';
 
-type ViewMode = 'profile' | 'execution' | 'governance';
+type Page = 'agents' | 'soma';
+type AgentView = 'profile' | 'execution';
 
 export function App() {
   const processHealth = useProcessHealth();
   const traces = useTraces();
   const { grouped, flat: agents } = useAgents();
   const { trace, loading: traceLoading, selectedFilename, selectTrace, clearSelection } = useSelectedTrace();
+  const somaTier = useSomaTier();
 
+  const [page, setPage] = useState<Page>('agents');
+  const [agentView, setAgentView] = useState<AgentView>('profile');
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>('profile');
   const [showSettings, setShowSettings] = useState(false);
-  const somaGov = useSomaGovernance();
   const autoInitDone = useRef(false);
 
   // Auto-select first agent on load
@@ -40,13 +42,13 @@ export function App() {
 
   const handleSelectAgent = useCallback((agentId: string) => {
     setSelectedAgent(agentId);
-    setViewMode('profile');
+    setAgentView('profile');
     clearSelection();
   }, [clearSelection]);
 
   const handleSelectExecution = useCallback((filename: string) => {
     selectTrace(filename);
-    setViewMode('execution');
+    setAgentView('execution');
   }, [selectTrace]);
 
   const processModel = useProcessModel(selectedAgent);
@@ -54,58 +56,66 @@ export function App() {
   return (
     <div className="dashboard">
       <HealthBanner processHealth={processHealth} agents={agents} traces={traces} onOpenSettings={() => setShowSettings(true)} />
-      <div style={{ display: 'flex', gap: 8, padding: '4px 12px', background: 'var(--bg2)', borderBottom: '1px solid var(--bd)' }}>
-        <button
-          style={{ fontSize: 11, padding: '3px 10px', background: viewMode !== 'governance' ? 'transparent' : 'var(--bg3)', color: 'var(--t1)', border: '1px solid var(--bd)', borderRadius: 3, cursor: 'pointer' }}
-          onClick={() => setViewMode(viewMode === 'governance' ? 'profile' : 'governance')}>
-          {'\u{1F3DB}'} Governance
+
+      {/* Top-level page tabs */}
+      <div className="page-tabs">
+        <button className={`page-tabs__tab ${page === 'agents' ? 'page-tabs__tab--active' : ''}`} onClick={() => setPage('agents')}>
+          {'\u{1F50D}'} Agents
+        </button>
+        <button className={`page-tabs__tab ${page === 'soma' ? 'page-tabs__tab--active' : ''}`} onClick={() => setPage('soma')}>
+          {'\u{1F9E0}'} SOMA
         </button>
       </div>
+
       <AlertBanner processHealth={processHealth} />
 
-      <TopSection
-        processHealth={processHealth}
-        grouped={grouped}
-        selectedAgent={selectedAgent}
-        onSelectAgent={handleSelectAgent}
-      />
-
-      <div className="workspace">
-        <ExecSidebar
-          key={selectedAgent ?? '__none__'}
-          agentId={selectedAgent}
-          sourceAgentIds={agents.find((a) => a.agentId === selectedAgent)?.sources}
-          traces={traces}
-          selectedFilename={selectedFilename}
-          onSelect={handleSelectExecution}
-        />
-        <div className="workspace__main">
-          {viewMode === 'governance' && (
-            <SomaGovernance data={somaGov.data} onPromote={somaGov.promote} onReject={somaGov.reject} />
-          )}
-          {viewMode !== 'governance' && !selectedAgent && (
-            <div className="workspace__empty">Select an agent above to inspect</div>
-          )}
-          {selectedAgent && viewMode === 'profile' && (
-            <AgentProfile
+      {/* Agents page */}
+      {page === 'agents' && (
+        <>
+          <TopSection
+            processHealth={processHealth}
+            grouped={grouped}
+            selectedAgent={selectedAgent}
+            onSelectAgent={handleSelectAgent}
+          />
+          <div className="workspace">
+            <ExecSidebar
+              key={selectedAgent ?? '__none__'}
               agentId={selectedAgent}
-              agents={agents}
+              sourceAgentIds={agents.find((a) => a.agentId === selectedAgent)?.sources}
               traces={traces}
-              processModel={processModel.data}
-              processModelLoading={processModel.loading}
+              selectedFilename={selectedFilename}
+              onSelect={handleSelectExecution}
             />
-          )}
-          {selectedAgent && viewMode === 'execution' && trace && (
-            <ExecutionDetail trace={trace} loading={traceLoading} />
-          )}
-          {selectedAgent && viewMode === 'execution' && !trace && !traceLoading && (
-            <div className="workspace__empty">Select an execution from the sidebar</div>
-          )}
-          {selectedAgent && viewMode === 'execution' && traceLoading && (
-            <div className="workspace__empty">Loading execution...</div>
-          )}
-        </div>
-      </div>
+            <div className="workspace__main">
+              {!selectedAgent && (
+                <div className="workspace__empty">Select an agent above to inspect</div>
+              )}
+              {selectedAgent && agentView === 'profile' && (
+                <AgentProfile
+                  agentId={selectedAgent}
+                  agents={agents}
+                  traces={traces}
+                  processModel={processModel.data}
+                  processModelLoading={processModel.loading}
+                />
+              )}
+              {selectedAgent && agentView === 'execution' && trace && (
+                <ExecutionDetail trace={trace} loading={traceLoading} />
+              )}
+              {selectedAgent && agentView === 'execution' && !trace && !traceLoading && (
+                <div className="workspace__empty">Select an execution from the sidebar</div>
+              )}
+              {selectedAgent && agentView === 'execution' && traceLoading && (
+                <div className="workspace__empty">Loading execution...</div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* SOMA page */}
+      {page === 'soma' && <SomaPage tier={somaTier} />}
 
       <SummaryBar processHealth={processHealth} traces={traces} />
       {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}

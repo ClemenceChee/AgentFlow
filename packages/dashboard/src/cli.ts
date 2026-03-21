@@ -53,7 +53,9 @@ function printBanner(
 
   \u2192 http://localhost:${port}${isPublic && lan ? `\n  \u2192 http://${lan}:${port}  (LAN)` : ''}
 
-  Views:  Agent Profile \u00b7 Execution Detail \u00b7 Governance
+  Pages:  Agents \u00b7 SOMA
+  Agent:  Profile \u00b7 Execution Detail
+  SOMA:   Intelligence \u00b7 Review \u00b7 Policies \u00b7 Knowledge \u00b7 Activity
   Tabs:   Flame Chart \u00b7 Agent Flow \u00b7 Metrics \u00b7 Dependencies
           State Machine \u00b7 Summary \u00b7 Transcript
 

@@ -15,6 +15,7 @@ import {
   getBottlenecks,
   loadGraph,
 } from 'agentflow-core';
+import chokidar from 'chokidar';
 import express from 'express';
 import { WebSocketServer } from 'ws';
 import './adapters/index.js'; // Register all adapters
@@ -112,6 +113,7 @@ export class DashboardServer {
     this.setupExpress();
     this.setupWebSocket();
     this.setupTraceWatcher();
+    this.setupSomaReportWatcher();
 
     // Process all existing traces for stats and knowledge store
     let knowledgeCount = 0;
@@ -556,6 +558,29 @@ export class DashboardServer {
       }
     });
 
+    // Soma tier detection — determines free/paid feature gating
+    this.app.get('/api/soma/tier', (_req, res) => {
+      const somaVault = this.config.somaVault;
+      if (!somaVault) {
+        return res.json({ tier: 'teaser', somaVault: false, governanceAvailable: false });
+      }
+      try {
+        const reportPath = path.join(somaVault, '..', 'soma-report.json');
+        if (!fs.existsSync(reportPath)) {
+          return res.json({ tier: 'free', somaVault: true, governanceAvailable: false });
+        }
+        const report = JSON.parse(fs.readFileSync(reportPath, 'utf-8'));
+        const hasGovernance = report.governance && typeof report.governance.pending === 'number';
+        return res.json({
+          tier: hasGovernance ? 'pro' : 'free',
+          somaVault: true,
+          governanceAvailable: !!hasGovernance,
+        });
+      } catch {
+        return res.json({ tier: 'free', somaVault: true, governanceAvailable: false });
+      }
+    });
+
     // Soma Intelligence API
     this.app.get('/api/soma/report', (_req, res) => {
       const somaVault = this.config.somaVault;
@@ -653,6 +678,123 @@ export class DashboardServer {
         res.json({ available: true, output: result.trim() });
       } catch (error: any) {
         res.status(404).json({ error: error.stderr?.trim() || error.message });
+      }
+    });
+
+    // Soma Policy CRUD
+    this.app.get('/api/soma/policies', (_req, res) => {
+      const somaVault = this.config.somaVault;
+      if (!somaVault) return res.json({ policies: [] });
+      try {
+        const reportPath = path.join(somaVault, '..', 'soma-report.json');
+        if (!fs.existsSync(reportPath)) return res.json({ policies: [] });
+        const report = JSON.parse(fs.readFileSync(reportPath, 'utf-8'));
+        res.json({ policies: report.policies ?? [] });
+      } catch {
+        res.json({ policies: [] });
+      }
+    });
+
+    this.app.post('/api/soma/policies', express.json(), (req, res) => {
+      const somaVault = this.config.somaVault;
+      if (!somaVault) return res.status(400).json({ error: 'Soma vault not configured' });
+      const { name, enforcement, scope, conditions } = req.body ?? {};
+      if (!name) return res.status(400).json({ error: 'name required' });
+      try {
+        const safeName = sanitizeArg(String(name));
+        const safeEnf = sanitizeArg(String(enforcement || 'warn'));
+        const safeScope = sanitizeReason(String(scope || 'all'));
+        const safeCond = sanitizeReason(String(conditions || ''));
+        const result = execSync(
+          `npx soma policy create "${safeName}" --enforcement ${safeEnf} --scope "${safeScope}" --conditions "${safeCond}" --vault "${somaVault}"`,
+          { encoding: 'utf-8', timeout: 10000 },
+        );
+        res.json({ success: true, message: result.trim() });
+      } catch (error: any) {
+        res.status(400).json({ error: error.stderr?.trim() || error.message });
+      }
+    });
+
+    this.app.delete('/api/soma/policies/:name', (req, res) => {
+      const somaVault = this.config.somaVault;
+      if (!somaVault) return res.status(400).json({ error: 'Soma vault not configured' });
+      try {
+        const safeName = sanitizeArg(String(req.params.name));
+        const result = execSync(
+          `npx soma policy delete "${safeName}" --vault "${somaVault}"`,
+          { encoding: 'utf-8', timeout: 10000 },
+        );
+        res.json({ success: true, message: result.trim() });
+      } catch (error: any) {
+        res.status(400).json({ error: error.stderr?.trim() || error.message });
+      }
+    });
+
+    // Soma Vault Entity browsing
+    this.app.get('/api/soma/vault/entities', (req, res) => {
+      const somaVault = this.config.somaVault;
+      if (!somaVault) return res.json({ entities: [], total: 0 });
+      try {
+        const reportPath = path.join(somaVault, '..', 'soma-report.json');
+        if (!fs.existsSync(reportPath)) return res.json({ entities: [], total: 0 });
+        const report = JSON.parse(fs.readFileSync(reportPath, 'utf-8'));
+
+        let entities: any[] = [
+          ...(report.agents ?? []).map((a: any) => ({ ...a, type: 'agent', id: a.name })),
+          ...(report.insights ?? []).map((i: any, idx: number) => ({ ...i, type: i.type || 'insight', id: i.title?.replace(/\s+/g, '-').toLowerCase() || `insight-${idx}` })),
+          ...(report.policies ?? []).map((p: any) => ({ ...p, type: 'policy', id: p.name })),
+        ];
+
+        const { type, layer, q, limit: limitStr, offset: offsetStr } = req.query as Record<string, string>;
+        if (type) entities = entities.filter((e) => e.type === type);
+        if (layer) entities = entities.filter((e) => e.layer === layer);
+        if (q) {
+          const lq = q.toLowerCase();
+          entities = entities.filter((e) => (e.name || e.title || '').toLowerCase().includes(lq) || (e.claim || e.body || '').toLowerCase().includes(lq));
+        }
+
+        const total = entities.length;
+        const offset = parseInt(offsetStr || '0', 10);
+        const limit = Math.min(parseInt(limitStr || '50', 10), 200);
+        entities = entities.slice(offset, offset + limit);
+
+        res.json({ entities, total });
+      } catch (error) {
+        console.error('Vault entities error:', error);
+        res.json({ entities: [], total: 0 });
+      }
+    });
+
+    this.app.get('/api/soma/vault/entities/:type/:id', (req, res) => {
+      const somaVault = this.config.somaVault;
+      if (!somaVault) return res.status(404).json({ error: 'Soma vault not configured' });
+      try {
+        const reportPath = path.join(somaVault, '..', 'soma-report.json');
+        const report = JSON.parse(fs.readFileSync(reportPath, 'utf-8'));
+        const { type, id } = req.params;
+
+        let entity: any = null;
+        if (type === 'agent') {
+          entity = (report.agents ?? []).find((a: any) => a.name === id);
+        } else if (type === 'policy') {
+          entity = (report.policies ?? []).find((p: any) => p.name === id);
+        } else {
+          entity = (report.insights ?? []).find((i: any) =>
+            (i.title?.replace(/\s+/g, '-').toLowerCase() || '') === id || i.title === id
+          );
+        }
+
+        if (!entity) return res.status(404).json({ error: 'Entity not found' });
+        res.json({
+          ...entity,
+          type,
+          id,
+          body: entity.claim || entity.conditions || '',
+          tags: entity.tags ?? [],
+          related: entity.related ?? [],
+        });
+      } catch {
+        res.status(404).json({ error: 'Entity not found' });
       }
     });
 
@@ -984,6 +1126,46 @@ export class DashboardServer {
       ws.on('error', (error) => {
         console.error('WebSocket error:', error);
       });
+    });
+  }
+
+  /** Watch soma-report.json for changes and broadcast updates via WebSocket. */
+  private setupSomaReportWatcher() {
+    const somaVault = this.config.somaVault;
+    if (!somaVault) return;
+
+    const reportPath = path.join(somaVault, '..', 'soma-report.json');
+    const reportDir = path.dirname(reportPath);
+    if (!fs.existsSync(reportDir)) return;
+
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const watcher = chokidar.watch(reportPath, {
+      ignoreInitial: true,
+      persistent: true,
+      awaitWriteFinish: { stabilityThreshold: 500 },
+    });
+
+    watcher.on('change', () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        try {
+          const report = JSON.parse(fs.readFileSync(reportPath, 'utf-8'));
+          this.broadcast({ type: 'soma-report-updated', data: report });
+
+          // Extract activity events from report changes
+          if (report.generatedAt) {
+            this.broadcast({
+              type: 'soma-activity',
+              data: {
+                action: 'report-updated',
+                description: `Report updated: ${report.totals?.agents ?? 0} agents, ${report.totals?.insights ?? 0} insights`,
+                timestamp: report.generatedAt,
+              },
+            });
+          }
+        } catch { /* ignore parse errors during write */ }
+      }, 500);
     });
   }
 
