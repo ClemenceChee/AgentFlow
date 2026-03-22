@@ -240,6 +240,56 @@ export class DashboardServer {
       }
     });
 
+    // Run receipt endpoint — builds receipt from trace graph
+    this.app.get('/api/traces/:filename/receipt', (req, res) => {
+      try {
+        const trace = this.watcher.getTrace(req.params.filename);
+        if (!trace) {
+          return res.status(404).json({ error: 'Trace not found' });
+        }
+        const serialized = serializeTrace(trace);
+        const graph = loadGraph(serialized);
+        const nodes = [...graph.nodes.values()].sort((a, b) => (a.startTime ?? 0) - (b.startTime ?? 0));
+
+        const steps = nodes.map((n, i) => {
+          const dur = n.endTime != null ? n.endTime - n.startTime : null;
+          const sem = (n.metadata as Record<string, unknown>)?.semantic as Record<string, unknown> | undefined;
+          const tokenCost = (sem?.tokenCost as number) ?? (n.state as Record<string, unknown>)?.tokenCost as number ?? null;
+          return {
+            index: i + 1,
+            nodeId: n.id,
+            name: n.name,
+            type: n.type,
+            status: n.status,
+            durationMs: dur,
+            tokenCost,
+          };
+        });
+
+        const succeeded = steps.filter((s) => s.status === 'completed' || s.status === 'success').length;
+        const failed = steps.filter((s) => s.status === 'failed').length;
+        const totalDur = graph.endTime != null ? graph.endTime - graph.startTime : null;
+        const totalCost = steps.reduce((sum, s) => sum + (s.tokenCost ?? 0), 0) || null;
+
+        res.json({
+          runId: graph.id,
+          agentId: graph.agentId,
+          status: graph.status,
+          durationMs: totalDur,
+          steps,
+          aggregate: {
+            attempted: steps.length,
+            succeeded,
+            failed,
+            skipped: steps.length - succeeded - failed,
+          },
+          totalTokenCost: totalCost,
+        });
+      } catch (_error) {
+        res.status(500).json({ error: 'Failed to generate receipt' });
+      }
+    });
+
     this.app.get('/api/agents', (req, res) => {
       try {
         const raw = this.stats.getAgentsList();
@@ -411,20 +461,39 @@ export class DashboardServer {
       }
     });
 
-    // Variant analysis endpoint
-    this.app.get('/api/agents/:agentId/variants', (req, res) => {
+    // Variant analysis endpoint — supports ?by=model for model-aware variants
+    this.app.get('/api/agents/:agentId/variants', async (req, res) => {
       try {
         const agentId = req.params.agentId;
+        const byModel = req.query.by === 'model';
         const graphs = this.getGraphTraces(agentId);
         if (graphs.length === 0) {
-          return res.json({ agentId, totalTraces: 0, variants: [] });
+          return res.json({ agentId, totalTraces: 0, variants: [], modelVariants: [] });
         }
         const variants = findVariants(graphs).map((v) => ({
           pathSignature: v.pathSignature,
           count: v.count,
           percentage: v.percentage,
         }));
-        res.json({ agentId, totalTraces: graphs.length, variants });
+
+        // Model-aware variants (SOMA premium)
+        let modelVariants: typeof variants = [];
+        if (byModel) {
+          try {
+            const { findVariantsWithModel } = await import(
+              /* webpackIgnore: true */ '../../../soma/src/ops-intel/variants.js'
+            );
+            modelVariants = findVariantsWithModel(graphs, { includeModel: true }).map((v: { pathSignature: string; count: number; percentage: number }) => ({
+              pathSignature: v.pathSignature,
+              count: v.count,
+              percentage: v.percentage,
+            }));
+          } catch {
+            // SOMA not available — return empty model variants
+          }
+        }
+
+        res.json({ agentId, totalTraces: graphs.length, variants, modelVariants });
       } catch (error) {
         console.error('Variants error:', error);
         res.status(500).json({ error: 'Failed to compute variants' });
@@ -914,45 +983,57 @@ export class DashboardServer {
       }
     });
 
-    // Ops-Intel: Efficiency (premium — reads from SOMA report)
-    this.app.get('/api/soma/efficiency', (_req, res) => {
-      const somaVault = this.config.somaVault;
-      if (!somaVault) return res.status(404).json({ error: 'Soma vault not configured' });
+    // Ops-Intel: Efficiency (premium — calls SOMA getEfficiency with fallback)
+    this.app.get('/api/soma/efficiency', async (_req, res) => {
       try {
+        // Try SOMA ops-intel library first — collect all graph traces across agents
+        const allTraces = this.watcher.getAllTraces().map(serializeTrace);
+        const graphs: ExecutionGraph[] = [];
+        for (const t of allTraces) {
+          try {
+            if (t.sourceType === 'session' || t.sourceType === 'log') continue;
+            if (!t.rootNodeId && !t.rootId) continue;
+            const nodes = t.nodes;
+            if (!nodes || (typeof nodes === 'object' && Object.keys(nodes).length === 0)) continue;
+            graphs.push(loadGraph(t));
+          } catch { /* skip non-graph traces */ }
+        }
+        try {
+          const { getEfficiency } = await import(
+            /* webpackIgnore: true */ '../../../soma/src/ops-intel/efficiency.js'
+          );
+          const report = getEfficiency(graphs);
+          return res.json(report);
+        } catch {
+          // SOMA not available — fallback to inline computation from report
+        }
+
+        // Fallback: read from soma-report.json
+        const somaVault = this.config.somaVault;
+        if (!somaVault) return res.status(404).json({ error: 'Soma vault not configured' });
         const reportPath = path.join(somaVault, '..', 'soma-report.json');
         if (!fs.existsSync(reportPath)) {
           return res.status(404).json({ error: 'No SOMA report found' });
         }
         const report = JSON.parse(fs.readFileSync(reportPath, 'utf-8'));
         const agents = report.agents ?? [];
-
-        // Build efficiency summary from agent data
         const runs = agents.map((a: Record<string, unknown>) => ({
-          graphId: a.name,
-          agentId: a.name,
+          graphId: a.name, agentId: a.name,
           totalTokenCost: (a.totalTokenCost as number) ?? 0,
           completedNodes: (a.totalRuns as number) ?? 0,
           costPerNode: (a.totalTokenCost as number ?? 0) / Math.max(1, (a.totalRuns as number) ?? 1),
         }));
-
         const costs = runs.map((r: { costPerNode: number }) => r.costPerNode).filter((c: number) => c > 0).sort((a: number, b: number) => a - b);
         const mean = costs.length > 0 ? costs.reduce((a: number, b: number) => a + b, 0) / costs.length : 0;
         const median = costs.length > 0 ? costs[Math.floor(costs.length / 2)] : 0;
         const p95 = costs.length > 0 ? costs[Math.min(costs.length - 1, Math.ceil(costs.length * 0.95) - 1)] : 0;
-
-        res.json({
-          runs,
-          aggregate: { mean, median, p95 },
-          flags: [],
-          nodeCosts: [],
-          dataCoverage: agents.length > 0 ? 1 : 0,
-        });
+        res.json({ runs, aggregate: { mean, median, p95 }, flags: [], nodeCosts: [], dataCoverage: agents.length > 0 ? 1 : 0 });
       } catch {
         res.status(500).json({ error: 'Failed to compute efficiency' });
       }
     });
 
-    // Ops-Intel: Drift (premium — dynamic import from SOMA)
+    // Ops-Intel: Drift (premium — calls SOMA detectDrift with fallback)
     this.app.get('/api/soma/drift', async (req, res) => {
       const agentId = req.query.agentId as string;
       if (!agentId) return res.status(400).json({ error: 'agentId query parameter required' });
@@ -969,14 +1050,25 @@ export class DashboardServer {
 
         const agentHistory = history.filter((e: { agentId: string }) => e.agentId === agentId);
 
-        // Inline drift detection (simple linear regression)
+        // Try SOMA ops-intel library
+        try {
+          const { detectDrift } = await import(
+            /* webpackIgnore: true */ '../../../soma/src/ops-intel/drift.js'
+          );
+          const driftReport = detectDrift(agentHistory);
+          return res.json({ drift: driftReport, points: agentHistory });
+        } catch {
+          // SOMA not available — fallback to inline
+        }
+
+        // Fallback: inline regression
         const n = agentHistory.length;
         if (n < 10) {
           return res.json({ drift: { status: 'insufficient_data', slope: 0, r2: 0, windowSize: n, dataPoints: n }, points: agentHistory });
         }
         let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
         for (let i = 0; i < n; i++) {
-          const y = agentHistory[i].score;
+          const y = agentHistory[i]!.score;
           sumX += i; sumY += y; sumXY += i * y; sumX2 += i * i;
         }
         const denom = n * sumX2 - sumX * sumX;
@@ -985,21 +1077,15 @@ export class DashboardServer {
         const meanY = sumY / n;
         let ssRes = 0, ssTot = 0;
         for (let i = 0; i < n; i++) {
-          const y = agentHistory[i].score;
+          const y = agentHistory[i]!.score;
           ssRes += (y - (intercept + slope * i)) ** 2;
           ssTot += (y - meanY) ** 2;
         }
         const r2 = ssTot > 0 ? 1 - ssRes / ssTot : 0;
         const status = r2 > 0.3 ? (slope < 0 ? 'degrading' : 'improving') : 'stable';
-        const currentScore = agentHistory[n - 1].score;
-        const alert = status === 'degrading' ? {
-          type: 'conformance_trend_degradation', agentId, currentScore, trendSlope: slope, windowSize: n,
-          message: `Agent '${agentId}' conformance declining`,
-        } : undefined;
-
-        res.json({ drift: { status, slope, r2, windowSize: n, dataPoints: n, alert }, points: agentHistory });
+        res.json({ drift: { status, slope, r2, windowSize: n, dataPoints: n }, points: agentHistory });
       } catch {
-        res.status(404).json({ error: 'Drift detection not available (SOMA not installed)' });
+        res.status(404).json({ error: 'Drift detection not available' });
       }
     });
 
