@@ -896,27 +896,44 @@ export class DashboardServer {
       const somaVault = this.config.somaVault;
       if (!somaVault) return res.json({ entities: [], total: 0 });
       try {
-        const reportPath = path.join(somaVault, '..', 'soma-report.json');
-        if (!fs.existsSync(reportPath)) return res.json({ entities: [], total: 0 });
-        const report = JSON.parse(fs.readFileSync(reportPath, 'utf-8'));
+        // Read entities directly from vault directory (markdown files with YAML frontmatter)
+        const entityTypes = ['agent', 'decision', 'insight', 'constraint', 'contradiction', 'policy', 'archetype'];
+        let entities: Record<string, unknown>[] = [];
 
-        let entities: Record<string, unknown>[] = [
-          ...(report.agents ?? []).map((a: Record<string, unknown>) => ({
-            ...a,
-            type: 'agent',
-            id: a.name,
-          })),
-          ...(report.insights ?? []).map((i: Record<string, unknown>, idx: number) => ({
-            ...i,
-            type: i.type || 'insight',
-            id: (i.title as string)?.replace(/\s+/g, '-').toLowerCase() || `insight-${idx}`,
-          })),
-          ...(report.policies ?? []).map((p: Record<string, unknown>) => ({
-            ...p,
-            type: 'policy',
-            id: p.name,
-          })),
-        ];
+        for (const entityType of entityTypes) {
+          const dir = path.join(somaVault, entityType);
+          if (!fs.existsSync(dir)) continue;
+          for (const file of fs.readdirSync(dir)) {
+            if (!file.endsWith('.md')) continue;
+            try {
+              const content = fs.readFileSync(path.join(dir, file), 'utf-8');
+              const fmMatch = content.match(/^---\n([\s\S]*?)\n---/);
+              if (!fmMatch) continue;
+              // Parse YAML frontmatter (simple key: value parsing)
+              const fm: Record<string, unknown> = {};
+              for (const line of fmMatch[1]!.split('\n')) {
+                const colonIdx = line.indexOf(':');
+                if (colonIdx === -1) continue;
+                const key = line.slice(0, colonIdx).trim();
+                let val: unknown = line.slice(colonIdx + 1).trim();
+                if (val === 'true') val = true;
+                else if (val === 'false') val = false;
+                else if (typeof val === 'string' && val.startsWith('"') && val.endsWith('"')) val = val.slice(1, -1);
+                else if (typeof val === 'string' && val.startsWith("'") && val.endsWith("'")) val = val.slice(1, -1);
+                fm[key] = val;
+              }
+              // Extract body (after frontmatter)
+              const body = content.slice(fmMatch[0].length).trim().slice(0, 500);
+              entities.push({
+                ...fm,
+                type: fm.type || entityType,
+                id: fm.id || file.replace('.md', ''),
+                name: fm.name || file.replace('.md', ''),
+                body,
+              });
+            } catch { /* skip unparseable files */ }
+          }
+        }
 
         const {
           type,
@@ -952,31 +969,36 @@ export class DashboardServer {
       const somaVault = this.config.somaVault;
       if (!somaVault) return res.status(404).json({ error: 'Soma vault not configured' });
       try {
-        const reportPath = path.join(somaVault, '..', 'soma-report.json');
-        const report = JSON.parse(fs.readFileSync(reportPath, 'utf-8'));
         const { type, id } = req.params;
+        const filePath = path.join(somaVault, type, `${id}.md`);
+        if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'Entity not found' });
 
-        let entity: Record<string, unknown> | undefined;
-        if (type === 'agent') {
-          entity = (report.agents ?? []).find((a: Record<string, unknown>) => a.name === id);
-        } else if (type === 'policy') {
-          entity = (report.policies ?? []).find((p: Record<string, unknown>) => p.name === id);
-        } else {
-          entity = (report.insights ?? []).find(
-            (i: Record<string, unknown>) =>
-              ((i.title as string)?.replace(/\s+/g, '-').toLowerCase() || '') === id ||
-              i.title === id,
-          );
+        const content = fs.readFileSync(filePath, 'utf-8');
+        const fmMatch = content.match(/^---\n([\s\S]*?)\n---/);
+        const fm: Record<string, unknown> = {};
+        if (fmMatch) {
+          for (const line of fmMatch[1]!.split('\n')) {
+            const colonIdx = line.indexOf(':');
+            if (colonIdx === -1) continue;
+            const key = line.slice(0, colonIdx).trim();
+            let val: unknown = line.slice(colonIdx + 1).trim();
+            if (val === 'true') val = true;
+            else if (val === 'false') val = false;
+            else if (typeof val === 'string' && val.startsWith('"') && val.endsWith('"')) val = val.slice(1, -1);
+            else if (typeof val === 'string' && val.startsWith("'") && val.endsWith("'")) val = val.slice(1, -1);
+            fm[key] = val;
+          }
         }
+        const body = content.slice(fmMatch ? fmMatch[0].length : 0).trim();
 
-        if (!entity) return res.status(404).json({ error: 'Entity not found' });
         res.json({
-          ...entity,
+          ...fm,
           type,
           id,
-          body: entity.claim || entity.conditions || '',
-          tags: entity.tags ?? [],
-          related: entity.related ?? [],
+          name: fm.name || id,
+          body,
+          tags: fm.tags ?? [],
+          related: fm.related ?? [],
         });
       } catch {
         res.status(404).json({ error: 'Entity not found' });
