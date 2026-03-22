@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { AgentStats } from '../hooks/useAgents';
-import type { ProcessModelData } from '../hooks/useProcessModel';
+import type { ProcessModelData, ProcessVariant } from '../hooks/useProcessModel';
 import { useSomaReport } from '../hooks/useSomaReport';
 import type { TraceEntry } from '../hooks/useTraces';
 import { BottleneckView } from './BottleneckView';
@@ -36,6 +36,14 @@ export function AgentProfile({
   const [tab, setTab] = useState<Tab>('process-map');
   const { report: somaReport } = useSomaReport();
   const agent = agents.find((a) => a.agentId === agentId);
+  const [modelVariants, setModelVariants] = useState<ProcessVariant[] | undefined>();
+
+  useEffect(() => {
+    fetch(`/api/agents/${encodeURIComponent(agentId)}/variants?by=model`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (d?.modelVariants?.length > 0) setModelVariants(d.modelVariants); })
+      .catch(() => {});
+  }, [agentId]);
 
   return (
     <div className="agent-profile">
@@ -106,7 +114,7 @@ export function AgentProfile({
           <ProcessMapView model={processModel} />
         )}
         {!processModelLoading && processModel && tab === 'variants' && (
-          <VariantExplorer variants={processModel.variants} />
+          <VariantExplorer variants={processModel.variants} modelVariants={modelVariants} isPro={!!somaReport} />
         )}
         {!processModelLoading && processModel && tab === 'bottlenecks' && (
           <BottleneckView model={processModel} />
