@@ -8,8 +8,9 @@ import { DottedChart } from './DottedChart';
 import { ProcessMapView } from './ProcessMapView';
 import { SomaIntelligence } from './SomaIntelligence';
 import { VariantExplorer } from './VariantExplorer';
+import { AgentHealthBriefing } from './AgentHealthBriefing';
 
-type Tab = 'process-map' | 'variants' | 'bottlenecks' | 'dotted' | 'intelligence';
+type Tab = 'process-map' | 'variants' | 'bottlenecks' | 'dotted' | 'intelligence' | 'briefing';
 
 function fmtDur(ms: number): string {
   if (ms < 1000) return `${Math.round(ms)}ms`;
@@ -90,6 +91,7 @@ export function AgentProfile({
           { id: 'bottlenecks' as const, label: 'Bottlenecks' },
           { id: 'dotted' as const, label: 'Dotted Chart' },
           { id: 'intelligence' as const, label: '\u{1F9E0} Intelligence' },
+          { id: 'briefing' as const, label: '\u{1F4CB} Briefing' },
         ].map((t) => (
           <button
             type="button"
@@ -121,6 +123,7 @@ export function AgentProfile({
         )}
         {tab === 'dotted' && <DottedChart traces={agentTraces} />}
         {tab === 'intelligence' && <SomaIntelligence report={somaReport} agentId={agentId} />}
+        {tab === 'briefing' && <AgentHealthBriefing agentId={agentId} />}
       </div>
     </div>
   );

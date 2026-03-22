@@ -6,10 +6,11 @@ import { FlameChart } from './FlameChart';
 import { GuardExplanationCard, type Violation } from './GuardExplanationCard';
 import { MetricsView } from './MetricsView';
 import { RunReceiptView } from './RunReceiptView';
+import { DecisionReplay } from './DecisionReplay';
 import { StateMachine } from './StateMachine';
 import { TranscriptView } from './TranscriptView';
 
-type Tab = 'flame' | 'flow' | 'metrics' | 'deps' | 'state' | 'summary' | 'transcript' | 'receipt';
+type Tab = 'flame' | 'flow' | 'metrics' | 'deps' | 'state' | 'summary' | 'transcript' | 'receipt' | 'decisions';
 
 function fmtDur(ms: number): string {
   if (ms < 1000) return `${Math.round(ms)}ms`;
@@ -36,6 +37,7 @@ export function ExecutionDetail({ trace, loading }: { trace: FullTrace | null; l
     { id: 'summary', label: 'Summary' },
     { id: 'transcript', label: 'Transcript' },
     { id: 'receipt', label: 'Receipt' },
+    { id: 'decisions', label: 'Decisions' },
   ];
 
   return (
@@ -83,6 +85,7 @@ export function ExecutionDetail({ trace, loading }: { trace: FullTrace | null; l
         {tab === 'summary' && <SummaryContent trace={trace} />}
         {tab === 'transcript' && <TranscriptView trace={trace} />}
         {tab === 'receipt' && <RunReceiptView trace={trace} />}
+        {tab === 'decisions' && <DecisionReplay filename={trace.filename} />}
       </div>
     </div>
   );
