@@ -481,7 +481,7 @@ export class DashboardServer {
         if (byModel) {
           try {
             const { findVariantsWithModel } = await import(
-              /* webpackIgnore: true */ '../../../soma/src/ops-intel/variants.js'
+              /* webpackIgnore: true */ 'soma/ops-intel/variants.js'
             );
             modelVariants = findVariantsWithModel(graphs, { includeModel: true }).map((v: { pathSignature: string; count: number; percentage: number }) => ({
               pathSignature: v.pathSignature,
@@ -1000,7 +1000,7 @@ export class DashboardServer {
         }
         try {
           const { getEfficiency } = await import(
-            /* webpackIgnore: true */ '../../../soma/src/ops-intel/efficiency.js'
+            /* webpackIgnore: true */ 'soma/ops-intel/efficiency.js'
           );
           const report = getEfficiency(graphs);
           return res.json(report);
@@ -1053,7 +1053,7 @@ export class DashboardServer {
         // Try SOMA ops-intel library
         try {
           const { detectDrift } = await import(
-            /* webpackIgnore: true */ '../../../soma/src/ops-intel/drift.js'
+            /* webpackIgnore: true */ 'soma/ops-intel/drift.js'
           );
           const driftReport = detectDrift(agentHistory);
           return res.json({ drift: driftReport, points: agentHistory });
