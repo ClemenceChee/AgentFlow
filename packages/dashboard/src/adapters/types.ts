@@ -76,4 +76,24 @@ export interface TraceAdapter {
    * Returns an empty array if the file can't be parsed.
    */
   parse(filePath: string): NormalizedTrace[];
+
+  /**
+   * Extract agent decisions from a normalized trace.
+   * Optional — not all formats capture decision-level data.
+   * Returns tool calls, reasoning, and outcomes as NormalizedDecision[].
+   */
+  extractDecisions?(trace: NormalizedTrace): NormalizedDecision[];
+}
+
+/** A single decision made by an agent during execution — agent-agnostic. */
+export interface NormalizedDecision {
+  action: string;
+  reasoning?: string;
+  tool?: string;
+  args?: Record<string, unknown>;
+  outcome: 'ok' | 'failed' | 'timeout' | 'skipped';
+  output?: string;
+  error?: string;
+  durationMs?: number;
+  index: number;
 }
