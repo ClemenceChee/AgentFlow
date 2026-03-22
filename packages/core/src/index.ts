@@ -110,6 +110,7 @@ export type {
   DriftOptions,
   DriftReport,
   EdgeType,
+  NormalizedDecision,
   EfficiencyFlag,
   EfficiencyReport,
   EventEmitter,

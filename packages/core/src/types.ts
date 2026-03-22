@@ -551,6 +551,32 @@ export interface DriftReport {
 }
 
 // ---------------------------------------------------------------------------
+// Decision intelligence
+// ---------------------------------------------------------------------------
+
+/** A single decision made by an agent during execution — agent-agnostic. */
+export interface NormalizedDecision {
+  /** What was decided (tool name, function call, task). */
+  readonly action: string;
+  /** Why the agent made this decision (thinking block, chain description). */
+  readonly reasoning?: string;
+  /** Specific tool or function used. */
+  readonly tool?: string;
+  /** Parameters passed to the tool/function. */
+  readonly args?: Record<string, unknown>;
+  /** Outcome of the decision. */
+  readonly outcome: 'ok' | 'failed' | 'timeout' | 'skipped';
+  /** Result summary (truncated). */
+  readonly output?: string;
+  /** Error message if failed. */
+  readonly error?: string;
+  /** Time taken in milliseconds. */
+  readonly durationMs?: number;
+  /** Position in the decision chain (0-indexed). */
+  readonly index: number;
+}
+
+// ---------------------------------------------------------------------------
 // Variant options
 // ---------------------------------------------------------------------------
 
