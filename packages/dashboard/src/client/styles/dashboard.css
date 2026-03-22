@@ -2348,6 +2348,69 @@ body {
   line-height: 1.4;
 }
 
+/* === AGENT HEALTH BRIEFING === */
+.briefing { padding: 12px; }
+.briefing__status {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px; border-left: 4px solid; border-radius: 4px;
+  background: var(--bg2); margin-bottom: 12px;
+}
+.briefing__section { margin-bottom: 12px; }
+.briefing__section-header {
+  font-weight: 600; font-size: 13px; margin-bottom: 6px;
+  color: var(--t1); border-bottom: 1px solid var(--border); padding-bottom: 4px;
+}
+.briefing__count { color: var(--t3); font-weight: normal; }
+.briefing__item {
+  padding: 6px 8px; border-radius: 4px; margin-bottom: 4px;
+  background: var(--bg2); font-size: 13px;
+}
+.briefing__item-name { font-weight: 500; }
+.briefing__item-claim { color: var(--t2); font-size: 12px; margin-top: 2px; }
+.briefing__more { font-size: 12px; color: var(--t3); padding: 4px 8px; }
+.briefing__peer {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px; padding: 3px 0;
+}
+.briefing__peer--me { font-weight: 600; }
+.briefing__peer-name { width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.briefing__peer-bar {
+  flex: 1; height: 10px; background: var(--bg3); border-radius: 5px; overflow: hidden;
+}
+.briefing__peer-fill { display: block; height: 100%; border-radius: 5px; }
+.briefing__peer-pct { width: 36px; text-align: right; }
+
+/* === DECISION REPLAY === */
+.decision-replay { padding: 12px; }
+.decision-replay__summary { font-size: 13px; margin-bottom: 8px; }
+.decision-replay__pattern {
+  font-size: 12px; color: var(--t2); margin-bottom: 12px;
+  word-break: break-all;
+}
+.decision-replay__pattern code {
+  background: var(--bg2); padding: 2px 6px; border-radius: 3px; font-size: 11px;
+}
+.decision-replay__step {
+  padding: 6px 8px; border-radius: 4px; margin-bottom: 2px;
+  cursor: pointer; border-left: 3px solid var(--ok);
+}
+.decision-replay__step:hover { background: var(--bg2); }
+.decision-replay__step.dr-fail { border-left-color: var(--fail); }
+.decision-replay__step.dr-skip { border-left-color: var(--t3); }
+.decision-replay__step-header {
+  display: flex; align-items: center; gap: 8px; font-size: 13px;
+}
+.decision-replay__idx { color: var(--t3); min-width: 20px; }
+.decision-replay__action { font-weight: 500; flex: 1; }
+.decision-replay__dur { color: var(--t3); font-size: 12px; }
+.decision-replay__detail {
+  padding: 6px 28px; font-size: 12px; color: var(--t2); line-height: 1.5;
+}
+.decision-replay__error { color: var(--fail); }
+.dr-ok { color: var(--ok); }
+.dr-fail { color: var(--fail); }
+.dr-skip { color: var(--t3); }
+
 /* === SOMA ACTIVITY FEED === */
 .soma-activity {
   padding: var(--s3);

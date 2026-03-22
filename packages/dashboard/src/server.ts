@@ -593,6 +593,158 @@ export class DashboardServer {
       }
     });
 
+    // Agent health briefing — synthesizes all SOMA intelligence for an agent
+    this.app.get('/api/agents/:agentId/health-briefing', async (req, res) => {
+      const somaVault = this.config.somaVault;
+      if (!somaVault) return res.status(404).json({ error: 'Soma vault not configured' });
+      try {
+        const agentId = req.params.agentId;
+
+        // Read agent entity
+        const agentFile = path.join(somaVault, 'agent', `${agentId.replace(/:/g, '-')}.md`);
+        let agentData: Record<string, unknown> = {};
+        if (fs.existsSync(agentFile)) {
+          agentData = parseVaultFrontmatter(fs.readFileSync(agentFile, 'utf-8')) ?? {};
+        }
+
+        const totalExecutions = Number(agentData.totalExecutions ?? 0);
+        const failureRate = Number(agentData.failureRate ?? 0);
+        const failureCount = Number(agentData.failureCount ?? 0);
+        const status = failureRate > 0.5 ? 'critical' : failureRate > 0.1 ? 'degraded' : 'healthy';
+
+        // Gather related intelligence from vault
+        const knowledgeTypes = ['decision', 'insight', 'constraint', 'contradiction', 'policy'];
+        const intelligence: { type: string; name: string; claim: string; confidence?: string }[] = [];
+
+        for (const kt of knowledgeTypes) {
+          const dir = path.join(somaVault, kt);
+          if (!fs.existsSync(dir)) continue;
+          for (const f of fs.readdirSync(dir)) {
+            if (!f.endsWith('.md')) continue;
+            try {
+              const content = fs.readFileSync(path.join(dir, f), 'utf-8');
+              if (!content.includes(agentId) && !content.includes(agentId.replace(/:/g, '-'))) continue;
+              const parsed = parseVaultFrontmatter(content);
+              if (!parsed) continue;
+              intelligence.push({
+                type: String(parsed.type ?? kt),
+                name: String(parsed.name ?? f.replace('.md', '')),
+                claim: String(parsed.claim ?? '').slice(0, 150),
+                confidence: parsed.confidence as string | undefined,
+              });
+            } catch { /* skip */ }
+          }
+        }
+
+        // Peer comparison
+        const agentDir = path.join(somaVault, 'agent');
+        const peers: { name: string; successRate: number; runs: number }[] = [];
+        if (fs.existsSync(agentDir)) {
+          for (const f of fs.readdirSync(agentDir)) {
+            if (!f.endsWith('.md')) continue;
+            const p = parseVaultFrontmatter(fs.readFileSync(path.join(agentDir, f), 'utf-8'));
+            if (!p) continue;
+            const runs = Number(p.totalExecutions ?? 0);
+            if (runs > 0) {
+              peers.push({
+                name: String(p.name ?? p.agentId ?? f.replace('.md', '')),
+                successRate: 1 - Number(p.failureRate ?? 0),
+                runs,
+              });
+            }
+          }
+        }
+        peers.sort((a, b) => b.successRate - a.successRate);
+
+        // Read drift data
+        let drift = null;
+        try {
+          const historyPath = path.join(somaVault, '..', 'conformance-history.json');
+          if (fs.existsSync(historyPath)) {
+            const history = JSON.parse(fs.readFileSync(historyPath, 'utf-8'));
+            const agentHistory = history.filter((e: { agentId: string }) => e.agentId === agentId);
+            if (agentHistory.length >= 10) {
+              try {
+                const { detectDrift: dd } = await import(
+                  /* webpackIgnore: true */ 'soma/ops-intel/drift.js'
+                );
+                drift = dd(agentHistory);
+              } catch {
+                drift = { status: 'stable', dataPoints: agentHistory.length };
+              }
+            } else {
+              drift = { status: 'insufficient_data', dataPoints: agentHistory.length };
+            }
+          }
+        } catch { /* no drift data */ }
+
+        res.json({
+          agentId,
+          status,
+          totalExecutions,
+          failureRate,
+          failureCount,
+          intelligence: {
+            total: intelligence.length,
+            byType: Object.fromEntries(
+              knowledgeTypes.map((t) => [t, intelligence.filter((i) => i.type === t)])
+            ),
+          },
+          peers,
+          drift,
+        });
+      } catch (error) {
+        console.error('Health briefing error:', error);
+        res.status(500).json({ error: 'Failed to generate briefing' });
+      }
+    });
+
+    // Agent decisions endpoint — returns NormalizedDecision[] for a trace
+    this.app.get('/api/traces/:filename/decisions', (req, res) => {
+      try {
+        const trace = this.watcher.getTrace(req.params.filename);
+        if (!trace) return res.status(404).json({ error: 'Trace not found' });
+
+        const serialized = serializeTrace(trace);
+        const sessionEvents = (trace as Record<string, unknown>).sessionEvents as unknown[];
+
+        let decisions: unknown[] = [];
+
+        if (sessionEvents && sessionEvents.length > 0) {
+          // Session trace — extract from session events
+          try {
+            import('soma/ops-intel/decision-extraction.js').then(({ extractDecisionsFromSession, computePatternSignature }) => {
+              decisions = extractDecisionsFromSession(sessionEvents as Record<string, unknown>[]);
+              res.json({ decisions, pattern: computePatternSignature(decisions as { action: string; index: number; outcome: string }[]) });
+            }).catch(() => {
+              res.json({ decisions: [], pattern: '' });
+            });
+            return;
+          } catch { /* fallback */ }
+        }
+
+        // JSON trace — extract from nodes
+        const graph = loadGraph(serialized);
+        const nodes = [...graph.nodes.values()];
+        const toolNodes = nodes
+          .filter((n) => n.type === 'tool' || n.type === 'action')
+          .sort((a, b) => (a.startTime ?? 0) - (b.startTime ?? 0));
+
+        decisions = toolNodes.map((n, i) => ({
+          action: n.name,
+          tool: n.name,
+          outcome: n.status === 'failed' ? 'failed' : 'ok',
+          durationMs: n.endTime != null ? n.endTime - n.startTime : undefined,
+          index: i,
+        }));
+
+        const pattern = decisions.map((d: unknown) => (d as { action: string }).action).join('\u2192');
+        res.json({ decisions, pattern });
+      } catch {
+        res.status(500).json({ error: 'Failed to extract decisions' });
+      }
+    });
+
     // Agent profile endpoint (from knowledge store)
     this.app.get('/api/agents/:agentId/profile', (req, res) => {
       try {
