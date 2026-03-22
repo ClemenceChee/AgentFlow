@@ -8,6 +8,7 @@ import { SomaGovernance } from './SomaGovernance';
 import { SomaIntelligence } from './SomaIntelligence';
 import { SomaKnowledgeExplorer } from './SomaKnowledgeExplorer';
 import { SomaPolicyEditor } from './SomaPolicyEditor';
+import { CrossAgentView } from './CrossAgentView';
 
 export type SomaView = 'intelligence' | 'review' | 'policies' | 'knowledge' | 'activity';
 
@@ -119,6 +120,9 @@ export function SomaPage({ tier }: Props) {
             ))}
           </div>
         )}
+
+        {/* Cross-agent knowledge flow (shown on intelligence view when data exists) */}
+        {activeView === 'intelligence' && isPro && <CrossAgentView />}
 
         {PAID_VIEWS.includes(activeView) && !isPro && (
           <div className="soma-page__locked">
