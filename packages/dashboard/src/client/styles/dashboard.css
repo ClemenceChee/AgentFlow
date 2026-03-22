@@ -2316,6 +2316,38 @@ body {
   margin-left: 4px;
 }
 
+.soma-knowledge__agent-intel {
+  margin-top: 12px;
+  font-size: 13px;
+}
+.soma-knowledge__intel-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 8px 10px;
+  margin-top: 6px;
+  cursor: pointer;
+}
+.soma-knowledge__intel-item:hover { border-color: var(--accent); }
+.soma-knowledge__intel-name { font-weight: 500; margin-left: 6px; }
+.soma-knowledge__intel-conf {
+  float: right;
+  font-size: 11px;
+  color: var(--t3);
+  background: var(--bg3);
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+.soma-knowledge__intel-claim {
+  font-size: 12px;
+  color: var(--t2);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
 /* === SOMA ACTIVITY FEED === */
 .soma-activity {
   padding: var(--s3);
