@@ -41,7 +41,7 @@ export class AgentStats {
   private processedTraces = new Set<string>();
 
   public processTrace(trace: WatchedTrace) {
-    const traceKey = `${trace.filename || trace.agentId}-${trace.startTime}`;
+    const traceKey = `${trace.agentId}#${trace.filename || trace.id}-${trace.startTime}`;
     if (this.processedTraces.has(traceKey)) {
       return;
     }

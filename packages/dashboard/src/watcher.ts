@@ -405,8 +405,9 @@ export class TraceWatcher extends EventEmitter {
         trace.sourceDir = path.dirname(filePath);
 
         // Create unique key for each trace from the same file
+        const traceAgentId = (trace as WatchedTrace).agentId;
         const key =
-          traces.length === 1 ? this.traceKey(filePath) : `${this.traceKey(filePath)}-${i}`;
+          traces.length === 1 ? this.traceKey(filePath, traceAgentId) : `${this.traceKey(filePath, traceAgentId)}-${i}`;
         this.traces.set(key, trace as WatchedTrace);
       }
 
@@ -859,7 +860,7 @@ export class TraceWatcher extends EventEmitter {
       } as WatchedTrace;
 
       const key =
-        sessions.size === 1 ? this.traceKey(filePath) : `${this.traceKey(filePath)}-${traceIndex}`;
+        sessions.size === 1 ? this.traceKey(filePath, agentId) : `${this.traceKey(filePath, agentId)}-${traceIndex}`;
       this.traces.set(key, trace);
       traceIndex++;
     }
@@ -885,6 +886,11 @@ export class TraceWatcher extends EventEmitter {
       graph.sourceType = 'trace';
       graph.sourceDir = path.dirname(filePath);
 
+      // Extract agent identity from file path when not set in the trace data
+      if (!graph.agentId || graph.agentId === 'unknown') {
+        graph.agentId = this.extractAgentFromPath(filePath);
+      }
+
       // Ensure all nodes have children arrays (prevents getStats() crash)
       if (graph.nodes instanceof Map) {
         for (const node of graph.nodes.values()) {
@@ -892,7 +898,7 @@ export class TraceWatcher extends EventEmitter {
         }
       }
 
-      this.traces.set(this.traceKey(filePath), graph);
+      this.traces.set(this.traceKey(filePath, graph.agentId), graph);
       return true;
     } catch {
       // Silently skip malformed trace files
@@ -979,7 +985,7 @@ export class TraceWatcher extends EventEmitter {
           },
         } as WatchedTrace;
 
-        const key = `${this.traceKey(filePath)}-${sessionId.slice(0, 12)}`;
+        const key = `${this.traceKey(filePath, agentId)}-${sessionId.slice(0, 12)}`;
         this.traces.set(key, trace);
         loaded++;
       }
@@ -1425,7 +1431,7 @@ export class TraceWatcher extends EventEmitter {
         },
       } as WatchedTrace;
 
-      this.traces.set(this.traceKey(filePath), trace);
+      this.traces.set(this.traceKey(filePath, agentId), trace);
       return true;
     } catch {
       return false;
@@ -1495,15 +1501,16 @@ export class TraceWatcher extends EventEmitter {
         metadata: { jobId, source: 'cron-run' },
       } as WatchedTrace;
 
-      this.traces.set(this.traceKey(filePath), trace);
+      this.traces.set(this.traceKey(filePath, agentId), trace);
       return true;
     } catch {
       return false;
     }
   }
 
-  /** Unique key for a file across directories. */
-  private traceKey(filePath: string): string {
+  /** Unique key for a file across directories. Includes agentId to prevent collisions between agents. */
+  private traceKey(filePath: string, agentId?: string): string {
+    let fileKey: string;
     // Use relative path from any watched dir, or absolute path as fallback
     for (const dir of this.allWatchDirs) {
       if (filePath.startsWith(dir)) {
@@ -1511,10 +1518,12 @@ export class TraceWatcher extends EventEmitter {
         // e.g., agents/main/sessions → "main/sessions" instead of just "sessions"
         const dirParts = dir.split(path.sep).filter(Boolean);
         const dirSuffix = dirParts.slice(-2).join('/');
-        return `${path.relative(dir, filePath).replace(/\\/g, '/')}@${dirSuffix}`;
+        fileKey = `${path.relative(dir, filePath).replace(/\\/g, '/')}@${dirSuffix}`;
+        return agentId ? `${fileKey}#${agentId}` : fileKey;
       }
     }
-    return filePath;
+    fileKey = filePath;
+    return agentId ? `${fileKey}#${agentId}` : fileKey;
   }
 
   private startWatching() {
@@ -1599,12 +1608,18 @@ export class TraceWatcher extends EventEmitter {
   }
 
   public getTrace(filename: string, agentId?: string): WatchedTrace | undefined {
-    // Collect all candidates, then return the richest (most nodes)
+    // Collect all candidates via multi-stage lookup
     let candidates: WatchedTrace[] = [];
 
-    // Try exact key match
+    // Try exact key match (may include #agentId suffix from new key format)
     const exact = this.traces.get(filename);
     if (exact) candidates.push(exact);
+
+    // If agentId provided, also try key with agent suffix
+    if (agentId && !filename.includes('#')) {
+      const agentKeyed = this.traces.get(`${filename}#${agentId}`);
+      if (agentKeyed) candidates.push(agentKeyed);
+    }
 
     // Handle composite key: "filename::startTime"
     if (filename.includes('::')) {
@@ -1632,20 +1647,22 @@ export class TraceWatcher extends EventEmitter {
       }
     }
 
+    // Deduplicate candidates
+    candidates = [...new Set(candidates)];
+
     if (candidates.length === 0) return undefined;
     if (candidates.length === 1) return candidates[0];
 
-    // When an agent hint is provided, prefer candidates matching that agent
+    // When agentId is specified, filter to matching traces FIRST.
+    // Never return a trace from a different agent when agentId is known.
     if (agentId) {
       const agentMatches = candidates.filter((c) => c.agentId === agentId);
-      if (agentMatches.length > 0) {
-        candidates = agentMatches;
-      }
+      if (agentMatches.length === 1) return agentMatches[0];
+      if (agentMatches.length > 1) candidates = agentMatches;
+      if (agentMatches.length === 0) return undefined;
     }
 
-    if (candidates.length === 1) return candidates[0];
-
-    // When multiple traces remain, prefer the one with more nodes (richer data)
+    // When multiple traces remain (same agent), prefer the one with more nodes (richer data)
     let best = candidates[0];
     if (!best) return undefined;
     let bestNodeCount =
