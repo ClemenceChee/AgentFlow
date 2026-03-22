@@ -11,10 +11,20 @@ interface EntitySummary {
   tags: string[];
 }
 
+interface KnowledgeItem {
+  type: string;
+  id: string;
+  name: string;
+  claim?: string;
+  confidence?: string;
+  layer?: string;
+}
+
 interface EntityDetail extends EntitySummary {
   body: string;
   related: string[];
   metadata?: Record<string, unknown>;
+  knowledge?: KnowledgeItem[];
 }
 
 const LAYER_COLORS: Record<string, string> = {
@@ -210,6 +220,28 @@ export function SomaKnowledgeExplorer() {
                     </button>
                   );
                 })}
+              </div>
+            )}
+            {selected.knowledge && selected.knowledge.length > 0 && (
+              <div className="soma-knowledge__agent-intel">
+                <strong>SOMA Intelligence ({selected.knowledge.length}):</strong>
+                {selected.knowledge.map((k) => (
+                  <button
+                    type="button"
+                    key={`${k.type}/${k.id}`}
+                    className="soma-knowledge__intel-item"
+                    onClick={() => fetchDetail(k.type, k.id)}
+                  >
+                    <span className="soma-knowledge__type">{k.type}</span>
+                    <span className="soma-knowledge__intel-name">{k.name}</span>
+                    {k.confidence && (
+                      <span className="soma-knowledge__intel-conf">{k.confidence}</span>
+                    )}
+                    {k.claim && (
+                      <div className="soma-knowledge__intel-claim">{k.claim.slice(0, 120)}</div>
+                    )}
+                  </button>
+                ))}
               </div>
             )}
           </div>

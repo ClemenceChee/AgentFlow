@@ -1036,12 +1036,44 @@ export class DashboardServer {
         if (!fm) return res.status(404).json({ error: 'Entity not found' });
         const body = content.slice(content.indexOf('---', 4) + 3).trim();
 
+        // For agent entities, gather related intelligence from the vault
+        let agentKnowledge: Record<string, unknown>[] = [];
+        if (type === 'agent') {
+          const agentName = fm.name || fm.agentId || id;
+          const knowledgeTypes = ['decision', 'insight', 'constraint', 'contradiction', 'policy'];
+          for (const kt of knowledgeTypes) {
+            const ktDir = path.join(somaVault, kt);
+            if (!fs.existsSync(ktDir)) continue;
+            for (const f of fs.readdirSync(ktDir)) {
+              if (!f.endsWith('.md')) continue;
+              try {
+                const c = fs.readFileSync(path.join(ktDir, f), 'utf-8');
+                // Quick check: does this file mention the agent?
+                if (!c.includes(String(agentName))) continue;
+                const parsed = parseVaultFrontmatter(c);
+                if (!parsed) continue;
+                agentKnowledge.push({
+                  type: parsed.type || kt,
+                  id: parsed.id || f.replace('.md', ''),
+                  name: parsed.name || f.replace('.md', ''),
+                  claim: parsed.claim || '',
+                  confidence: parsed.confidence || '',
+                  layer: parsed.layer || '',
+                });
+              } catch { /* skip */ }
+            }
+          }
+        }
+
         res.json({
           ...fm,
           type,
           id,
           name: fm.name || id,
-          body,
+          body: type === 'agent' && !body
+            ? `Agent with ${fm.totalExecutions ?? 0} executions, ${((1 - Number(fm.failureRate || 0)) * 100).toFixed(1)}% success rate.`
+            : body,
+          knowledge: agentKnowledge,
         });
       } catch {
         res.status(404).json({ error: 'Entity not found' });
