@@ -53,6 +53,78 @@ export interface DashboardConfig {
 import { startDashboard } from './cli.js';
 
 /** Convert a WatchedTrace for JSON serialization (Map → Object). */
+/** Parse YAML frontmatter from a vault markdown file into a plain object. */
+function parseVaultFrontmatter(content: string): Record<string, unknown> | null {
+  const fmMatch = content.match(/^---\n([\s\S]*?)\n---/);
+  if (!fmMatch) return null;
+  const fm: Record<string, unknown> = {};
+  const lines = fmMatch[1]!.split('\n');
+  let currentKey = '';
+  let collectingList: string[] | null = null;
+
+  for (const line of lines) {
+    // YAML list item (- value)
+    if (line.match(/^\s*-\s/) && currentKey) {
+      if (!collectingList) collectingList = [];
+      const val = line.replace(/^\s*-\s*/, '').trim().replace(/^["']|["']$/g, '');
+      collectingList.push(val);
+      continue;
+    }
+
+    // Flush any collected list
+    if (collectingList && currentKey) {
+      fm[currentKey] = collectingList;
+      collectingList = null;
+    }
+
+    const colonIdx = line.indexOf(':');
+    if (colonIdx === -1 || line.startsWith(' ')) continue;
+
+    currentKey = line.slice(0, colonIdx).trim();
+    let val: string = line.slice(colonIdx + 1).trim();
+
+    if (val === '') continue; // Key with no inline value — next lines may be list items
+
+    // Inline JSON array: ["a", "b"]
+    if (val.startsWith('[') && val.endsWith(']')) {
+      try { fm[currentKey] = JSON.parse(val); } catch { fm[currentKey] = val; }
+      currentKey = '';
+      continue;
+    }
+
+    // Strip quotes
+    if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+      val = val.slice(1, -1);
+    }
+
+    if (val === 'true') fm[currentKey] = true;
+    else if (val === 'false') fm[currentKey] = false;
+    else if (/^\d+(\.\d+)?$/.test(val)) fm[currentKey] = Number(val);
+    else fm[currentKey] = val;
+    currentKey = '';
+  }
+
+  // Flush final list
+  if (collectingList && currentKey) {
+    fm[currentKey] = collectingList;
+  }
+
+  // Ensure tags and related are always arrays
+  for (const key of ['tags', 'related', 'evidence', 'evidence_links', 'sourceIds']) {
+    if (fm[key] && !Array.isArray(fm[key])) {
+      const str = String(fm[key]);
+      if (str.startsWith('[')) {
+        try { fm[key] = JSON.parse(str); } catch { fm[key] = [str]; }
+      } else {
+        fm[key] = [str];
+      }
+    }
+    if (!fm[key]) fm[key] = [];
+  }
+
+  return fm;
+}
+
 function serializeTrace(trace: WatchedTrace): Record<string, unknown> {
   if (!trace) return trace;
   const obj: Record<string, unknown> = { ...trace };
@@ -907,28 +979,14 @@ export class DashboardServer {
             if (!file.endsWith('.md')) continue;
             try {
               const content = fs.readFileSync(path.join(dir, file), 'utf-8');
-              const fmMatch = content.match(/^---\n([\s\S]*?)\n---/);
-              if (!fmMatch) continue;
-              // Parse YAML frontmatter (simple key: value parsing)
-              const fm: Record<string, unknown> = {};
-              for (const line of fmMatch[1]!.split('\n')) {
-                const colonIdx = line.indexOf(':');
-                if (colonIdx === -1) continue;
-                const key = line.slice(0, colonIdx).trim();
-                let val: unknown = line.slice(colonIdx + 1).trim();
-                if (val === 'true') val = true;
-                else if (val === 'false') val = false;
-                else if (typeof val === 'string' && val.startsWith('"') && val.endsWith('"')) val = val.slice(1, -1);
-                else if (typeof val === 'string' && val.startsWith("'") && val.endsWith("'")) val = val.slice(1, -1);
-                fm[key] = val;
-              }
-              // Extract body (after frontmatter)
-              const body = content.slice(fmMatch[0].length).trim().slice(0, 500);
+              const parsed = parseVaultFrontmatter(content);
+              if (!parsed) continue;
+              const body = content.slice(content.indexOf('---', 4) + 3).trim().slice(0, 500);
               entities.push({
-                ...fm,
-                type: fm.type || entityType,
-                id: fm.id || file.replace('.md', ''),
-                name: fm.name || file.replace('.md', ''),
+                ...parsed,
+                type: parsed.type || entityType,
+                id: parsed.id || file.replace('.md', ''),
+                name: parsed.name || file.replace('.md', ''),
                 body,
               });
             } catch { /* skip unparseable files */ }
@@ -974,22 +1032,9 @@ export class DashboardServer {
         if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'Entity not found' });
 
         const content = fs.readFileSync(filePath, 'utf-8');
-        const fmMatch = content.match(/^---\n([\s\S]*?)\n---/);
-        const fm: Record<string, unknown> = {};
-        if (fmMatch) {
-          for (const line of fmMatch[1]!.split('\n')) {
-            const colonIdx = line.indexOf(':');
-            if (colonIdx === -1) continue;
-            const key = line.slice(0, colonIdx).trim();
-            let val: unknown = line.slice(colonIdx + 1).trim();
-            if (val === 'true') val = true;
-            else if (val === 'false') val = false;
-            else if (typeof val === 'string' && val.startsWith('"') && val.endsWith('"')) val = val.slice(1, -1);
-            else if (typeof val === 'string' && val.startsWith("'") && val.endsWith("'")) val = val.slice(1, -1);
-            fm[key] = val;
-          }
-        }
-        const body = content.slice(fmMatch ? fmMatch[0].length : 0).trim();
+        const fm = parseVaultFrontmatter(content);
+        if (!fm) return res.status(404).json({ error: 'Entity not found' });
+        const body = content.slice(content.indexOf('---', 4) + 3).trim();
 
         res.json({
           ...fm,
@@ -997,8 +1042,6 @@ export class DashboardServer {
           id,
           name: fm.name || id,
           body,
-          tags: fm.tags ?? [],
-          related: fm.related ?? [],
         });
       } catch {
         res.status(404).json({ error: 'Entity not found' });
