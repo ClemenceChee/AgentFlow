@@ -1338,6 +1338,54 @@ export class DashboardServer {
       }
     });
 
+    // Cross-agent knowledge flow — insights with source_agents from 2+ agents
+    this.app.get('/api/soma/cross-agent', (_req, res) => {
+      const somaVault = this.config.somaVault;
+      if (!somaVault) return res.json({ insights: [], pairs: [] });
+      try {
+        const insightDir = path.join(somaVault, 'insight');
+        if (!fs.existsSync(insightDir)) return res.json({ insights: [], pairs: [] });
+
+        const crossAgent: { name: string; claim: string; sourceAgents: string[]; tags: string[] }[] = [];
+
+        for (const file of fs.readdirSync(insightDir)) {
+          if (!file.endsWith('.md')) continue;
+          try {
+            const content = fs.readFileSync(path.join(insightDir, file), 'utf-8');
+            const parsed = parseVaultFrontmatter(content);
+            if (!parsed) continue;
+            const sa = parsed.source_agents as string[] | undefined;
+            if (!sa || !Array.isArray(sa) || sa.length < 2) continue;
+
+            crossAgent.push({
+              name: String(parsed.name ?? file.replace('.md', '')),
+              claim: String(parsed.claim ?? '').slice(0, 200),
+              sourceAgents: sa,
+              tags: (parsed.tags as string[]) ?? [],
+            });
+          } catch { /* skip */ }
+        }
+
+        // Group by agent pair
+        const pairMap = new Map<string, typeof crossAgent>();
+        for (const insight of crossAgent) {
+          const key = [...insight.sourceAgents].sort().join(' \u2194 ');
+          if (!pairMap.has(key)) pairMap.set(key, []);
+          pairMap.get(key)!.push(insight);
+        }
+
+        const pairs = [...pairMap.entries()].map(([agents, insights]) => ({
+          agents,
+          count: insights.length,
+          insights: insights.slice(0, 5),
+        }));
+
+        res.json({ total: crossAgent.length, pairs });
+      } catch {
+        res.json({ insights: [], pairs: [] });
+      }
+    });
+
     this.app.get('/api/process-health', (_req, res) => {
       try {
         const now = Date.now();

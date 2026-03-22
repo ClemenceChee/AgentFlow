@@ -2380,6 +2380,22 @@ body {
 .briefing__peer-fill { display: block; height: 100%; border-radius: 5px; }
 .briefing__peer-pct { width: 36px; text-align: right; }
 
+/* === CROSS-AGENT VIEW === */
+.cross-agent { padding: 12px; }
+.cross-agent__summary { font-size: 13px; color: var(--t2); margin-bottom: 12px; }
+.cross-agent__pair {
+  margin-bottom: 12px; border: 1px solid var(--border);
+  border-radius: 6px; overflow: hidden;
+}
+.cross-agent__pair-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 12px; background: var(--bg2); font-size: 13px;
+}
+.cross-agent__pair-count { color: var(--t3); font-size: 12px; }
+.cross-agent__insight { padding: 6px 12px; border-top: 1px solid var(--border); }
+.cross-agent__insight-name { font-size: 13px; font-weight: 500; }
+.cross-agent__insight-claim { font-size: 12px; color: var(--t2); margin-top: 2px; }
+
 /* === DECISION REPLAY === */
 .decision-replay { padding: 12px; }
 .decision-replay__summary { font-size: 13px; margin-bottom: 8px; }
