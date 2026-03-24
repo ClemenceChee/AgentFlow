@@ -151,7 +151,11 @@ export function App() {
       {page === 'soma' && <SomaPage tier={somaTier} />}
 
       {/* AICP page */}
-      {page === 'aicp' && <AicpPage />}
+      {page === 'aicp' && (
+        <div className="workspace__main">
+          <AicpPage />
+        </div>
+      )}
 
       <SummaryBar processHealth={processHealth} traces={traces} />
       {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}

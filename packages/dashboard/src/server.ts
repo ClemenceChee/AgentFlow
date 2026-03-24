@@ -1185,7 +1185,10 @@ export class DashboardServer {
           entities = entities.filter(
             (e) =>
               (e.name || e.title || '').toLowerCase().includes(lq) ||
-              (e.claim || e.body || '').toLowerCase().includes(lq),
+              (e.claim || e.body || '').toLowerCase().includes(lq) ||
+              (((e as Record<string, unknown>).sourceIds as string[]) || []).some((id: string) =>
+                id.toLowerCase().includes(lq),
+              ),
           );
         }
 

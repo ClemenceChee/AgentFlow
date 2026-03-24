@@ -637,6 +637,14 @@ export interface ExecutionEvent {
   readonly processContext?: ProcessContext;
   readonly semantic?: SemanticContext;
   readonly violations: readonly GuardViolation[];
+  /** Execution summary (e.g., OpenClaw cron run summary or SOMA worker stage info). */
+  readonly summary?: string;
+  /** Error message if the execution failed. */
+  readonly error?: string;
+  /** Token usage from LLM calls. */
+  readonly usage?: { readonly input_tokens?: number; readonly output_tokens?: number; readonly total_tokens?: number };
+  /** Model used for the execution. */
+  readonly model?: string;
 }
 
 /** A structured event emitted when process mining discovers a pattern. */

@@ -9,6 +9,7 @@ import { useAgentBriefing } from '../hooks/useAgentBriefing';
 import { useAgentDrift } from '../hooks/useAgentDrift';
 import type { PreflightRecommendation, PreflightWarning } from '../hooks/useAicpPreflight';
 import { useAicpPreflight } from '../hooks/useAicpPreflight';
+import { IntelligencePanel } from './IntelligencePanel';
 
 interface AgentOption {
   agentId: string;
@@ -32,19 +33,38 @@ function ProceedBadge({ proceed, latencyMs }: { proceed: boolean; latencyMs: num
   );
 }
 
-function WarningCard({ warning }: { warning: PreflightWarning }) {
+function WarningCard({
+  warning,
+  expanded,
+  onToggle,
+  agentId,
+}: {
+  warning: PreflightWarning;
+  expanded: boolean;
+  onToggle: () => void;
+  agentId: string | null;
+}) {
   const isL4 = warning.source.includes('L4');
   const isAdvisory = warning.source.includes('L3') || warning.rule === 'max-failure-rate';
   const severity = isL4 ? 'critical' : isAdvisory ? 'advisory' : 'info';
+  const drilldownAgent = warning.sourceAgents?.[0] ?? agentId;
 
   return (
     <div className={`aicp-warning aicp-warning--${severity}`}>
-      <div className="aicp-warning__header">
+      <div
+        className="aicp-warning__header"
+        role="button"
+        tabIndex={0}
+        onClick={onToggle}
+        onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onToggle()}
+        style={{ cursor: 'pointer' }}
+      >
         <span className="aicp-warning__icon">
           {isL4 ? '\u26D4' : isAdvisory ? '\u26A0' : '\u2139'}
         </span>
         <span className="aicp-warning__rule">{warning.rule}</span>
         <span className="aicp-warning__source">{warning.source}</span>
+        <span className="aicp-intelligence__chevron">{expanded ? '\u25BE' : '\u25B8'}</span>
       </div>
       <div className="aicp-warning__message">{warning.message}</div>
       {warning.threshold != null && warning.actual != null && (
@@ -60,6 +80,11 @@ function WarningCard({ warning }: { warning: PreflightWarning }) {
           </span>
         </div>
       )}
+      {expanded && drilldownAgent && (
+        <div className="aicp-intelligence__drilldown">
+          <IntelligencePanel agentId={drilldownAgent} />
+        </div>
+      )}
     </div>
   );
 }
@@ -67,20 +92,41 @@ function WarningCard({ warning }: { warning: PreflightWarning }) {
 function RecommendationCard({
   rec,
   onSelectAgent,
+  expanded,
+  onToggle,
+  agentId,
 }: {
   rec: PreflightRecommendation;
   onSelectAgent: (id: string) => void;
+  expanded: boolean;
+  onToggle: () => void;
+  agentId: string | null;
 }) {
+  const drilldownAgent = rec.sourceAgents.length > 0 ? rec.sourceAgents[0] : agentId;
+
   return (
     <div className="aicp-rec">
-      <div className="aicp-rec__insight">{rec.insight}</div>
+      <div
+        className="aicp-rec__insight"
+        role="button"
+        tabIndex={0}
+        onClick={onToggle}
+        onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onToggle()}
+        style={{ cursor: 'pointer' }}
+      >
+        {rec.insight}
+        <span className="aicp-intelligence__chevron">{expanded ? '\u25BE' : '\u25B8'}</span>
+      </div>
       <div className="aicp-rec__meta">
         {rec.sourceAgents.map((a) => (
           <button
             type="button"
             key={a}
             className="aicp-rec__agent-link"
-            onClick={() => onSelectAgent(a)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelectAgent(a);
+            }}
           >
             {a}
           </button>
@@ -95,6 +141,11 @@ function RecommendationCard({
           style={{ width: `${Math.round(rec.confidence * 100)}%` }}
         />
       </div>
+      {expanded && drilldownAgent && (
+        <div className="aicp-intelligence__drilldown">
+          <IntelligencePanel agentId={drilldownAgent} />
+        </div>
+      )}
     </div>
   );
 }
@@ -131,6 +182,8 @@ export function AicpPage() {
   const [agents, setAgents] = useState<AgentOption[]>([]);
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
   const [warningsExpanded, setWarningsExpanded] = useState(false);
+  const [expandedWarningIdx, setExpandedWarningIdx] = useState<number | null>(null);
+  const [expandedRecIdx, setExpandedRecIdx] = useState<number | null>(null);
 
   const preflight = useAicpPreflight(selectedAgent);
   const briefing = useAgentBriefing(selectedAgent);
@@ -186,6 +239,8 @@ export function AicpPage() {
             onChange={(e) => {
               setSelectedAgent(e.target.value || null);
               setWarningsExpanded(false);
+              setExpandedWarningIdx(null);
+              setExpandedRecIdx(null);
             }}
           >
             <option value="">Select an agent...</option>
@@ -311,7 +366,13 @@ export function AicpPage() {
               <h3 className="aicp-section__title">Warnings ({warnings.length})</h3>
               <div className="aicp-warnings">
                 {visibleWarnings.map((w, i) => (
-                  <WarningCard key={`${w.rule}-${i}`} warning={w} />
+                  <WarningCard
+                    key={`${w.rule}-${i}`}
+                    warning={w}
+                    expanded={expandedWarningIdx === i}
+                    onToggle={() => setExpandedWarningIdx(expandedWarningIdx === i ? null : i)}
+                    agentId={selectedAgent}
+                  />
                 ))}
                 {!warningsExpanded && hiddenCount > 0 && (
                   <button
@@ -338,6 +399,9 @@ export function AicpPage() {
                     key={`rec-${i}`}
                     rec={r}
                     onSelectAgent={(id) => setSelectedAgent(id)}
+                    expanded={expandedRecIdx === i}
+                    onToggle={() => setExpandedRecIdx(expandedRecIdx === i ? null : i)}
+                    agentId={selectedAgent}
                   />
                 ))}
               </div>
