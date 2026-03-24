@@ -1466,71 +1466,150 @@ export class TraceWatcher extends EventEmitter {
     }
   }
 
-  /** Parse cron run JSONL files (ts, jobId, action, status format). */
+  /** Parse cron run JSONL files — creates one trace per execution run. */
   private loadCronRunFile(rawEvents: Array<Record<string, unknown>>, filePath: string): boolean {
     try {
       const filename = path.basename(filePath);
-      const jobId = rawEvents[0]?.jobId || path.basename(filePath, '.jsonl');
+      const fileJobId = String(rawEvents[0]?.jobId || path.basename(filePath, '.jsonl'));
       const fileStat = fs.statSync(filePath);
-
-      const sessionEvents: SessionEvent[] = [];
-      let lastStatus = 'completed';
+      const agentId = `openclaw:${fileJobId}`;
+      let loaded = 0;
 
       for (const evt of rawEvents) {
-        const ts = evt.ts || Date.now();
-        const action = evt.action || 'unknown';
-        const status = evt.status || 'ok';
+        const ts = (evt.ts as number) || Date.now();
+        const runAtMs = (evt.runAtMs as number) || ts;
+        const durationMs = (evt.durationMs as number) || 0;
+        const status = evt.status === 'ok' ? 'completed' : 'failed';
+        const sessionId = String(evt.sessionId || `${fileJobId}-${ts}`);
+        const summary = String(evt.summary || evt.error || '');
+        const model = String(evt.model || '');
+        const usage = (evt.usage as Record<string, number>) || {};
 
-        if (status !== 'ok') lastStatus = 'failed';
+        const rootId = `cron-${sessionId.slice(0, 12)}`;
+        const nodes = new Map<string, Record<string, unknown>>();
+        const children: string[] = [];
 
-        sessionEvents.push({
-          type: action === 'finished' ? 'assistant' : 'system',
-          timestamp: ts,
-          name: `${jobId}: ${action}`,
-          content: evt.summary || evt.error || `${action} (${status})`,
-          id: `cron-${ts}`,
+        // Root node: the execution
+        nodes.set(rootId, {
+          id: rootId,
+          type: 'agent',
+          name: `${fileJobId} run`,
+          startTime: runAtMs,
+          endTime: runAtMs + durationMs,
+          status,
+          parentId: undefined,
+          children,
+          metadata: {
+            jobId: fileJobId,
+            model,
+            sessionId,
+            durationMs,
+          },
         });
+
+        // Parse summary markdown for execution steps (tables with step/status)
+        // Match step tables: | **1. Step Name** | ✅ | Details |
+        const stepPattern =
+          /\|\s*\*?\*?(\d+)\.\s*\*?\*?([^|]+)\*?\*?\s*\|\s*([^|]+)\s*\|\s*([^|]*)\|/g;
+        let stepMatch: RegExpExecArray | null;
+        let stepIdx = 0;
+        // biome-ignore lint: regex exec loop
+        while ((stepMatch = stepPattern.exec(summary)) !== null) {
+          stepIdx++;
+          const stepName = stepMatch[2]?.trim() || `Step ${stepIdx}`;
+          const stepStatusText = stepMatch[3]?.trim() || '';
+          const stepStatus =
+            stepStatusText.includes('\u2705') ||
+            stepStatusText.includes('OK') ||
+            stepStatusText.includes('Pass')
+              ? 'completed'
+              : 'failed';
+          const stepDetail = stepMatch[4]?.trim() || '';
+          const nodeId = `step-${stepIdx}`;
+          children.push(nodeId);
+          nodes.set(nodeId, {
+            id: nodeId,
+            type: 'tool',
+            name: stepName,
+            startTime: runAtMs + (stepIdx - 1) * Math.floor(durationMs / Math.max(1, stepIdx + 1)),
+            endTime: runAtMs + stepIdx * Math.floor(durationMs / Math.max(1, stepIdx + 1)),
+            status: stepStatus,
+            parentId: rootId,
+            children: [],
+            metadata: { detail: stepDetail },
+          });
+        }
+
+        // If no steps parsed from summary, create a single summary node
+        if (stepIdx === 0 && summary) {
+          const sumId = 'summary-0';
+          children.push(sumId);
+          nodes.set(sumId, {
+            id: sumId,
+            type: 'tool',
+            name:
+              status === 'completed' ? 'Execution' : evt.error ? String(evt.error) : 'Execution',
+            startTime: runAtMs,
+            endTime: runAtMs + durationMs,
+            status,
+            parentId: rootId,
+            children: [],
+            metadata: { summary: summary.slice(0, 500) },
+          });
+        }
+
+        // Build session events for timeline
+        const sessionEvents: SessionEvent[] = [
+          {
+            type: 'system',
+            timestamp: runAtMs,
+            name: `${fileJobId} started`,
+            content: `Model: ${model}`,
+            id: `start-${ts}`,
+          },
+        ];
+
+        if (summary) {
+          sessionEvents.push({
+            type: 'assistant',
+            timestamp: runAtMs + durationMs,
+            name: status === 'completed' ? 'Completed' : 'Failed',
+            content: summary,
+            id: `result-${ts}`,
+          });
+        }
+
+        const trace: WatchedTrace = {
+          id: sessionId,
+          nodes,
+          edges: [],
+          events: [],
+          startTime: runAtMs,
+          agentId,
+          trigger: 'cron',
+          name: `${fileJobId} ${new Date(runAtMs).toISOString().slice(0, 16)}`,
+          traceId: sessionId,
+          spanId: sessionId,
+          filename,
+          lastModified: fileStat.mtime.getTime(),
+          sourceType: 'session',
+          sourceDir: path.dirname(filePath),
+          sessionEvents,
+          tokenUsage: {
+            input: usage.promptTokens || usage.input || 0,
+            output: usage.completionTokens || usage.output || 0,
+            total: usage.totalTokens || usage.total || 0,
+            cost: 0,
+          },
+          metadata: { jobId: fileJobId, model, source: 'cron-run', sessionId },
+        } as WatchedTrace;
+
+        const key = `${this.traceKey(filePath, agentId)}-${sessionId.slice(0, 12)}`;
+        this.traces.set(key, trace);
+        loaded++;
       }
 
-      const firstTs = rawEvents[0]?.ts || fileStat.mtime.getTime();
-      const lastTs = rawEvents[rawEvents.length - 1]?.ts || fileStat.mtime.getTime();
-      const rootId = `cron-${jobId.slice(0, 12)}`;
-      const nodes = new Map<string, Record<string, unknown>>();
-
-      nodes.set(rootId, {
-        id: rootId,
-        type: 'agent',
-        name: jobId,
-        startTime: firstTs,
-        endTime: lastTs,
-        status: lastStatus,
-        parentId: undefined,
-        children: [],
-        metadata: { jobId, runs: rawEvents.length },
-      });
-
-      const trace: WatchedTrace = {
-        id: jobId,
-        nodes,
-        edges: [],
-        events: [],
-        startTime: firstTs,
-        agentId: `openclaw:${String(jobId)}`,
-        trigger: 'cron',
-        name: jobId,
-        traceId: jobId,
-        spanId: jobId,
-        filename,
-        lastModified: fileStat.mtime.getTime(),
-        sourceType: 'session',
-        sourceDir: path.dirname(filePath),
-        sessionEvents,
-        tokenUsage: { input: 0, output: 0, total: 0, cost: 0 },
-        metadata: { jobId, source: 'cron-run' },
-      } as WatchedTrace;
-
-      this.traces.set(this.traceKey(filePath, agentId), trace);
-      return true;
+      return loaded > 0;
     } catch {
       return false;
     }
