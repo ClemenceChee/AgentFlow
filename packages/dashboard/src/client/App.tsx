@@ -6,6 +6,7 @@ import { ExecutionDetail } from './components/ExecutionDetail';
 import { HealthBanner } from './components/HealthBanner';
 import { SettingsPanel } from './components/SettingsPanel';
 import { SomaPage } from './components/SomaPage';
+import { AicpPage } from './components/AicpPage';
 import { SummaryBar } from './components/SummaryBar';
 import { TopSection } from './components/TopSection';
 import { useAgents } from './hooks/useAgents';
@@ -16,7 +17,7 @@ import { useSomaTier } from './hooks/useSomaTier';
 import { useTraces } from './hooks/useTraces';
 import { pickInitialAgent } from './state';
 
-type Page = 'agents' | 'soma';
+type Page = 'agents' | 'soma' | 'aicp';
 type AgentView = 'profile' | 'execution';
 
 export function App() {
@@ -90,6 +91,13 @@ export function App() {
         >
           {'\u{1F9E0}'} SOMA
         </button>
+        <button
+          type="button"
+          className={`page-tabs__tab ${page === 'aicp' ? 'page-tabs__tab--active' : ''}`}
+          onClick={() => setPage('aicp')}
+        >
+          {'\u{1F4C8}'} AICP
+        </button>
       </div>
 
       <AlertBanner processHealth={processHealth} />
@@ -141,6 +149,9 @@ export function App() {
 
       {/* SOMA page */}
       {page === 'soma' && <SomaPage tier={somaTier} />}
+
+      {/* AICP page */}
+      {page === 'aicp' && <AicpPage />}
 
       <SummaryBar processHealth={processHealth} traces={traces} />
       {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
