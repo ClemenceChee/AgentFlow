@@ -1,5 +1,80 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { GovernanceData } from '../hooks/useSomaGovernance';
+
+// Types for agentic governance data
+interface AgenticGovernanceData {
+  agent_performance: {
+    accuracy: number;
+    decision_speed_avg: number; // ms
+    auto_promotion_rate: number;
+    human_escalation_rate: number;
+    meta_learning_score: number;
+  };
+  active_queue: {
+    auto_processing: number;
+    human_escalation: number;
+    total_pending: number;
+  };
+  promotion_pipeline: {
+    avg_review_time: number; // hours
+    efficiency_score: number;
+    policy_effectiveness: number;
+  };
+  governance_config: {
+    auto_promotion_threshold: number;
+    escalation_threshold: number;
+    meta_learning_enabled: boolean;
+    feedback_loop_active: boolean;
+  };
+  agentflow_feedback: {
+    policy_enforcements: number;
+    violations_prevented: number;
+    feedback_score: number;
+  };
+}
+
+// Hook to fetch agentic governance data
+function useAgenticGovernance(): AgenticGovernanceData | null {
+  const [agenticData, setAgenticData] = useState<AgenticGovernanceData | null>(null);
+
+  useEffect(() => {
+    // Mock data for now - in real implementation, this would fetch from API
+    // TODO: Replace with actual API call to SOMA governance endpoint
+    const mockData: AgenticGovernanceData = {
+      agent_performance: {
+        accuracy: 0.94,
+        decision_speed_avg: 1200,
+        auto_promotion_rate: 0.78,
+        human_escalation_rate: 0.22,
+        meta_learning_score: 0.87,
+      },
+      active_queue: {
+        auto_processing: 8,
+        human_escalation: 4,
+        total_pending: 12,
+      },
+      promotion_pipeline: {
+        avg_review_time: 2.3,
+        efficiency_score: 0.91,
+        policy_effectiveness: 0.89,
+      },
+      governance_config: {
+        auto_promotion_threshold: 0.85,
+        escalation_threshold: 0.65,
+        meta_learning_enabled: true,
+        feedback_loop_active: true,
+      },
+      agentflow_feedback: {
+        policy_enforcements: 156,
+        violations_prevented: 23,
+        feedback_score: 0.92,
+      },
+    };
+    setAgenticData(mockData);
+  }, []);
+
+  return agenticData;
+}
 
 function LayerBar({ layers }: { layers: GovernanceData['layers'] }) {
   const _total = layers.archive + layers.working + layers.emerging + layers.canon;
@@ -47,6 +122,259 @@ function GovStats({ gov }: { gov: GovernanceData['governance'] }) {
   );
 }
 
+// Agentic Governance Control Center
+function AgenticControlCenter({ agenticData }: { agenticData: AgenticGovernanceData | null }) {
+  if (!agenticData) return null;
+
+  const { agent_performance, active_queue, promotion_pipeline } = agenticData;
+
+  return (
+    <div style={{ marginBottom: 20 }}>
+      <h4 style={{ color: 'var(--t1)', margin: '0 0 12px', fontSize: 14 }}>
+        📋 Agentic Governance Control Center
+      </h4>
+
+      {/* Active Governance Queue */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 16 }}>
+        <div style={{
+          padding: 12,
+          background: 'var(--bg2)',
+          border: '1px solid #58a6ff33',
+          borderRadius: 6
+        }}>
+          <div style={{ fontSize: 11, color: '#58a6ff', fontWeight: 600 }}>Auto-Processing</div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--t1)' }}>
+            {active_queue.auto_processing}
+          </div>
+          <div style={{ fontSize: 10, color: 'var(--t3)' }}>of {active_queue.total_pending} total</div>
+        </div>
+
+        <div style={{
+          padding: 12,
+          background: 'var(--bg2)',
+          border: '1px solid #d2992233',
+          borderRadius: 6
+        }}>
+          <div style={{ fontSize: 11, color: '#d29922', fontWeight: 600 }}>Human Escalation</div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--t1)' }}>
+            {active_queue.human_escalation}
+          </div>
+          <div style={{ fontSize: 10, color: 'var(--t3)' }}>require manual review</div>
+        </div>
+
+        <div style={{
+          padding: 12,
+          background: 'var(--bg2)',
+          border: '1px solid #3fb95033',
+          borderRadius: 6
+        }}>
+          <div style={{ fontSize: 11, color: '#3fb950', fontWeight: 600 }}>Pipeline Efficiency</div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--t1)' }}>
+            {(promotion_pipeline.efficiency_score * 100).toFixed(0)}%
+          </div>
+          <div style={{ fontSize: 10, color: 'var(--t3)' }}>
+            avg {promotion_pipeline.avg_review_time}h review
+          </div>
+        </div>
+      </div>
+
+      {/* Governance Agent Performance */}
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ fontSize: 12, color: 'var(--t2)', marginBottom: 8 }}>
+          Governance Agent Performance & Meta-Learning
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, fontSize: 11 }}>
+          <div>
+            <span style={{ color: 'var(--t3)' }}>Accuracy:</span>{' '}
+            <span style={{ fontWeight: 600, color: 'var(--t1)' }}>
+              {(agent_performance.accuracy * 100).toFixed(1)}%
+            </span>
+          </div>
+          <div>
+            <span style={{ color: 'var(--t3)' }}>Avg Speed:</span>{' '}
+            <span style={{ fontWeight: 600, color: 'var(--t1)' }}>
+              {agent_performance.decision_speed_avg}ms
+            </span>
+          </div>
+          <div>
+            <span style={{ color: 'var(--t3)' }}>Auto Rate:</span>{' '}
+            <span style={{ fontWeight: 600, color: 'var(--t1)' }}>
+              {(agent_performance.auto_promotion_rate * 100).toFixed(0)}%
+            </span>
+          </div>
+          <div>
+            <span style={{ color: 'var(--t3)' }}>Learning:</span>{' '}
+            <span style={{ fontWeight: 600, color: agent_performance.meta_learning_score > 0.8 ? '#3fb950' : '#d29922' }}>
+              {(agent_performance.meta_learning_score * 100).toFixed(0)}%
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Governance Configuration Panel
+function GovernanceConfiguration({
+  agenticData,
+  onConfigUpdate
+}: {
+  agenticData: AgenticGovernanceData | null;
+  onConfigUpdate: (config: Partial<AgenticGovernanceData['governance_config']>) => void;
+}) {
+  const [showConfig, setShowConfig] = useState(false);
+
+  if (!agenticData) return null;
+
+  const { governance_config } = agenticData;
+
+  return (
+    <div style={{ marginBottom: 20 }}>
+      <div
+        style={{ cursor: 'pointer', fontSize: 14, color: 'var(--t1)', marginBottom: 8 }}
+        onClick={() => setShowConfig(!showConfig)}
+      >
+        ⚙️ Governance Configuration {showConfig ? '▼' : '▶'}
+      </div>
+
+      {showConfig && (
+        <div style={{
+          padding: 12,
+          background: 'var(--bg2)',
+          border: '1px solid var(--bd)',
+          borderRadius: 6,
+          fontSize: 12
+        }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div>
+              <label style={{ display: 'block', color: 'var(--t2)', marginBottom: 4 }}>
+                Auto-Promotion Threshold
+              </label>
+              <input
+                type="range"
+                min="0.5"
+                max="1"
+                step="0.05"
+                value={governance_config.auto_promotion_threshold}
+                onChange={(e) =>
+                  onConfigUpdate({ auto_promotion_threshold: parseFloat(e.target.value) })
+                }
+                style={{ width: '100%' }}
+              />
+              <span style={{ color: 'var(--t3)', fontSize: 10 }}>
+                {(governance_config.auto_promotion_threshold * 100).toFixed(0)}%
+              </span>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', color: 'var(--t2)', marginBottom: 4 }}>
+                Escalation Threshold
+              </label>
+              <input
+                type="range"
+                min="0.3"
+                max="0.8"
+                step="0.05"
+                value={governance_config.escalation_threshold}
+                onChange={(e) =>
+                  onConfigUpdate({ escalation_threshold: parseFloat(e.target.value) })
+                }
+                style={{ width: '100%' }}
+              />
+              <span style={{ color: 'var(--t3)', fontSize: 10 }}>
+                {(governance_config.escalation_threshold * 100).toFixed(0)}%
+              </span>
+            </div>
+          </div>
+
+          <div style={{ marginTop: 12, display: 'flex', gap: 16 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <input
+                type="checkbox"
+                checked={governance_config.meta_learning_enabled}
+                onChange={(e) =>
+                  onConfigUpdate({ meta_learning_enabled: e.target.checked })
+                }
+              />
+              <span>Meta-Learning Enabled</span>
+            </label>
+
+            <label style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <input
+                type="checkbox"
+                checked={governance_config.feedback_loop_active}
+                onChange={(e) =>
+                  onConfigUpdate({ feedback_loop_active: e.target.checked })
+                }
+              />
+              <span>Policy Bridge Feedback Loop</span>
+            </label>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Governance Analytics
+function GovernanceAnalytics({ agenticData }: { agenticData: AgenticGovernanceData | null }) {
+  if (!agenticData) return null;
+
+  const { agentflow_feedback } = agenticData;
+
+  return (
+    <div style={{ marginBottom: 20 }}>
+      <h4 style={{ color: 'var(--t1)', margin: '0 0 12px', fontSize: 14 }}>
+        📊 Governance Analytics
+      </h4>
+
+      <div style={{
+        padding: 12,
+        background: 'var(--bg2)',
+        border: '1px solid var(--bd)',
+        borderRadius: 6
+      }}>
+        <div style={{ fontSize: 12, color: 'var(--t2)', marginBottom: 8 }}>
+          Real-time AgentFlow Policy Enforcement Feedback
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, fontSize: 11 }}>
+          <div>
+            <span style={{ color: 'var(--t3)' }}>Enforcements:</span>{' '}
+            <span style={{ fontWeight: 600, color: 'var(--t1)' }}>
+              {agentflow_feedback.policy_enforcements}
+            </span>
+          </div>
+          <div>
+            <span style={{ color: 'var(--t3)' }}>Violations Prevented:</span>{' '}
+            <span style={{ fontWeight: 600, color: '#3fb950' }}>
+              {agentflow_feedback.violations_prevented}
+            </span>
+          </div>
+          <div>
+            <span style={{ color: 'var(--t3)' }}>Feedback Score:</span>{' '}
+            <span style={{
+              fontWeight: 600,
+              color: agentflow_feedback.feedback_score > 0.9 ? '#3fb950' : '#d29922'
+            }}>
+              {(agentflow_feedback.feedback_score * 100).toFixed(0)}%
+            </span>
+          </div>
+        </div>
+
+        <div style={{
+          marginTop: 8,
+          fontSize: 10,
+          color: 'var(--t3)',
+          fontStyle: 'italic'
+        }}>
+          Policy effectiveness measured through closed feedback loop with AgentFlow guards
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function SomaGovernance({
   data,
   onPromote,
@@ -59,6 +387,12 @@ export function SomaGovernance({
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
+  const agenticData = useAgenticGovernance();
+
+  const handleConfigUpdate = (config: Partial<AgenticGovernanceData['governance_config']>) => {
+    // TODO: Implement API call to update governance configuration
+    console.log('Updating governance config:', config);
+  };
 
   if (!data) return <div className="workspace__empty">Loading governance data...</div>;
   if (!data.available)
@@ -66,10 +400,15 @@ export function SomaGovernance({
 
   return (
     <div style={{ padding: 16, maxWidth: 900 }}>
-      <h3 style={{ margin: '0 0 12px', color: 'var(--t1)' }}>SOMA Governance</h3>
+      <h3 style={{ margin: '0 0 12px', color: 'var(--t1)' }}>🏛️ SOMA Governance</h3>
 
       <LayerBar layers={data.layers} />
       <GovStats gov={data.governance} />
+
+      {/* Agentic Governance Features */}
+      <AgenticControlCenter agenticData={agenticData} />
+      <GovernanceConfiguration agenticData={agenticData} onConfigUpdate={handleConfigUpdate} />
+      <GovernanceAnalytics agenticData={agenticData} />
 
       {/* Pending proposals */}
       {data.insights.length > 0 && (

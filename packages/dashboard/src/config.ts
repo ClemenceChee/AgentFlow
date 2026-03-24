@@ -29,6 +29,40 @@ export interface ProcessPreference {
   over: string;
 }
 
+export interface ExternalCommand {
+  /** Human-readable name for the command */
+  name: string;
+  /** Command executable */
+  command: string;
+  /** Command arguments (optional) */
+  args?: string[];
+  /** Working directory for command execution (tilde-expanded) */
+  cwd?: string;
+  /** Environment variables to set */
+  env?: Record<string, string>;
+  /** Timeout in milliseconds (default: 60000) */
+  timeout?: number;
+  /** Command description for UI display */
+  description?: string;
+  /** Command category for grouping in UI */
+  category?: string;
+  /** Whether command can run concurrently with itself */
+  allowConcurrent?: boolean;
+}
+
+export interface ExternalCommandsConfig {
+  /** Map of command IDs to command configurations */
+  commands?: Record<string, ExternalCommand>;
+  /** Global timeout for all commands in milliseconds */
+  globalTimeout?: number;
+  /** Global working directory (tilde-expanded) */
+  globalCwd?: string;
+  /** Global environment variables for all commands */
+  globalEnv?: Record<string, string>;
+  /** Maximum number of concurrent command executions */
+  maxConcurrentExecutions?: number;
+}
+
 export interface DashboardUserConfig {
   /** Map raw agent identifiers to canonical names */
   aliases?: Record<string, string>;
@@ -44,6 +78,8 @@ export interface DashboardUserConfig {
   agentDetection?: AgentDetectionConfig;
   /** When multiple process registries exist, prefer one over another */
   processPreference?: ProcessPreference;
+  /** External commands that can be triggered from the dashboard */
+  externalCommands?: ExternalCommandsConfig;
 }
 
 // ---------------------------------------------------------------------------
@@ -149,4 +185,102 @@ export function getAgentDetection(config: DashboardUserConfig): AgentDetectionCo
 
 export function getProcessPreference(config: DashboardUserConfig): ProcessPreference | null {
   return config.processPreference ?? null;
+}
+
+export function getExternalCommands(config: DashboardUserConfig): ExternalCommandsConfig {
+  return config.externalCommands ?? {};
+}
+
+/**
+ * Get validated external commands with expanded paths and merged global settings
+ */
+export function getValidatedExternalCommands(config: DashboardUserConfig): {
+  commands: Record<string, ExternalCommand>;
+  errors: string[];
+} {
+  const externalCommands = getExternalCommands(config);
+  const errors: string[] = [];
+  const validatedCommands: Record<string, ExternalCommand> = {};
+
+  if (!externalCommands.commands) {
+    return { commands: {}, errors: [] };
+  }
+
+  // Apply global settings and validate each command
+  for (const [commandId, command] of Object.entries(externalCommands.commands)) {
+    try {
+      // Validate command ID
+      if (!commandId.match(/^[a-z][a-z0-9-_]*$/i)) {
+        errors.push(`Invalid command ID "${commandId}": must start with letter and contain only letters, numbers, hyphens, and underscores`);
+        continue;
+      }
+
+      // Validate required fields
+      if (!command.name?.trim()) {
+        errors.push(`Command "${commandId}": name is required`);
+        continue;
+      }
+
+      if (!command.command?.trim()) {
+        errors.push(`Command "${commandId}": command is required`);
+        continue;
+      }
+
+      // Create validated command with global defaults
+      const validatedCommand: ExternalCommand = {
+        name: command.name.trim(),
+        command: command.command.trim(),
+        args: command.args ?? [],
+        cwd: expandTilde(command.cwd ?? externalCommands.globalCwd ?? process.cwd()),
+        env: { ...externalCommands.globalEnv, ...command.env },
+        timeout: command.timeout ?? externalCommands.globalTimeout ?? 60000,
+        description: command.description?.trim() ?? '',
+        category: command.category?.trim() ?? 'general',
+        allowConcurrent: command.allowConcurrent ?? false,
+      };
+
+      // Validate timeout
+      if (validatedCommand.timeout <= 0 || validatedCommand.timeout > 600000) {
+        errors.push(`Command "${commandId}": timeout must be between 1ms and 600000ms (10 minutes)`);
+        continue;
+      }
+
+      // Validate working directory exists (if absolute path)
+      if (validatedCommand.cwd.startsWith('/')) {
+        try {
+          const fs = require('node:fs');
+          const stats = fs.statSync(validatedCommand.cwd);
+          if (!stats.isDirectory()) {
+            errors.push(`Command "${commandId}": cwd "${validatedCommand.cwd}" is not a directory`);
+            continue;
+          }
+        } catch (err) {
+          errors.push(`Command "${commandId}": cwd "${validatedCommand.cwd}" does not exist or is not accessible`);
+          continue;
+        }
+      }
+
+      validatedCommands[commandId] = validatedCommand;
+    } catch (error) {
+      errors.push(`Command "${commandId}": validation error - ${(error as Error).message}`);
+    }
+  }
+
+  return { commands: validatedCommands, errors };
+}
+
+/**
+ * Check if a command ID is valid and exists in the configuration
+ */
+export function isValidCommandId(config: DashboardUserConfig, commandId: string): boolean {
+  const { commands } = getValidatedExternalCommands(config);
+  return commandId in commands;
+}
+
+/**
+ * Get a specific validated external command
+ */
+export function getExternalCommand(config: DashboardUserConfig, commandId: string): ExternalCommand | null {
+  const { commands } = getValidatedExternalCommands(config);
+  return commands[commandId] ?? null;
 }

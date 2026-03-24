@@ -1,5 +1,46 @@
 import { useCallback, useEffect, useState } from 'react';
 
+// Types for contextual operational data
+interface OperationalContext {
+  vault_health: {
+    total_entities: number;
+    layer_distribution: Record<string, number>;
+    last_updated: number;
+    indexing_status: 'idle' | 'indexing' | 'error';
+  };
+  knowledge_freshness: {
+    stale_entities: number;
+    recent_updates: number;
+    avg_age_hours: number;
+  };
+}
+
+// Hook to fetch operational context for knowledge explorer
+function useKnowledgeOperationalContext(): OperationalContext | null {
+  const [opContext, setOpContext] = useState<OperationalContext | null>(null);
+
+  useEffect(() => {
+    // Mock data for now - in real implementation, this would fetch from API
+    // TODO: Replace with actual API call to SOMA operational context endpoint
+    const mockData: OperationalContext = {
+      vault_health: {
+        total_entities: 8342,
+        layer_distribution: { canon: 47, emerging: 156, working: 1238, archive: 6901 },
+        last_updated: Date.now() - 15 * 60 * 1000, // 15min ago
+        indexing_status: 'idle',
+      },
+      knowledge_freshness: {
+        stale_entities: 23,
+        recent_updates: 147,
+        avg_age_hours: 72.5,
+      },
+    };
+    setOpContext(mockData);
+  }, []);
+
+  return opContext;
+}
+
 interface EntitySummary {
   id: string;
   type: string;
@@ -40,6 +81,218 @@ const LAYER_LABELS: Record<string, string> = {
   archive: 'L1 Archive',
 };
 
+// Contextual Status Indicators component
+function KnowledgeStatusIndicators({ opContext }: { opContext: OperationalContext | null }) {
+  if (!opContext) return null;
+
+  const { vault_health, knowledge_freshness } = opContext;
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'idle': return '#3fb950';
+      case 'indexing': return '#d29922';
+      case 'error': return '#f85149';
+      default: return '#8b949e';
+    }
+  };
+
+  const formatTime = (timestamp: number) => {
+    const diff = Date.now() - timestamp;
+    const minutes = Math.floor(diff / 60000);
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    return `${hours}h ago`;
+  };
+
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: 12,
+      fontSize: 11,
+      color: 'var(--t3)',
+      padding: '4px 0',
+      borderBottom: '1px solid var(--bd)',
+      marginBottom: 8,
+    }}>
+      {/* Indexing Status */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        <div
+          style={{
+            width: 6,
+            height: 6,
+            borderRadius: '50%',
+            backgroundColor: getStatusColor(vault_health.indexing_status),
+          }}
+        />
+        <span>Index {vault_health.indexing_status}</span>
+      </div>
+
+      {/* Last Update */}
+      <span>Updated {formatTime(vault_health.last_updated)}</span>
+
+      {/* Knowledge Freshness */}
+      <span>{knowledge_freshness.stale_entities} stale</span>
+      <span>{knowledge_freshness.recent_updates} recent</span>
+
+      {/* Avg Age */}
+      <span>Avg age: {knowledge_freshness.avg_age_hours.toFixed(1)}h</span>
+    </div>
+  );
+}
+
+// Contextual Smart Actions component
+function KnowledgeSmartActions() {
+  const [operationRunning, setOperationRunning] = useState<string | null>(null);
+
+  const executeOperation = async (operation: string) => {
+    setOperationRunning(operation);
+    try {
+      // TODO: Call external command API to execute knowledge operation
+      // await fetch('/api/external/commands/execute', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ command: operation }),
+      // });
+
+      // Mock delay for demo
+      await new Promise(resolve => setTimeout(resolve, 1500));
+    } catch (error) {
+      console.error(`Failed to execute ${operation}:`, error);
+    } finally {
+      setOperationRunning(null);
+    }
+  };
+
+  const smartActions = [
+    { key: 'refresh-knowledge-graph', label: 'Refresh Graph', icon: '🔄' },
+    { key: 'trigger-synthesis', label: 'Trigger Synthesis', icon: '🧪' },
+    { key: 'rebuild-index', label: 'Rebuild Index', icon: '🔍' },
+  ];
+
+  return (
+    <div style={{
+      display: 'flex',
+      gap: 6,
+      alignItems: 'center',
+    }}>
+      <span style={{ fontSize: 11, color: 'var(--t3)', marginRight: 4 }}>⚡</span>
+      {smartActions.map(action => (
+        <button
+          key={action.key}
+          onClick={() => executeOperation(action.key)}
+          disabled={operationRunning === action.key}
+          style={{
+            padding: '2px 6px',
+            fontSize: 10,
+            background: operationRunning === action.key ? '#8b949e' : 'var(--bg2)',
+            color: operationRunning === action.key ? 'white' : 'var(--t2)',
+            border: '1px solid var(--bd)',
+            borderRadius: 3,
+            cursor: operationRunning === action.key ? 'not-allowed' : 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 2,
+          }}
+        >
+          <span>{action.icon}</span>
+          <span>{operationRunning === action.key ? 'Running...' : action.label}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// Contextual Detail Drawer - Enhanced entity detail with operational context
+function OperationalEntityDetail({ entity, opContext }: {
+  entity: EntityDetail | null;
+  opContext: OperationalContext | null;
+}) {
+  const [showOpDetail, setShowOpDetail] = useState(false);
+
+  if (!entity) return null;
+
+  // Mock operational data for the selected entity
+  const entityOpData = {
+    processing_history: [
+      { worker: 'harvester', timestamp: Date.now() - 120000, action: 'indexed' },
+      { worker: 'synthesizer', timestamp: Date.now() - 3600000, action: 'analyzed' },
+    ],
+    related_operations: 2,
+    governance_status: entity.layer === 'emerging' ? 'pending-review' : 'stable',
+  };
+
+  return (
+    <div style={{ position: 'relative' }}>
+      {/* Operational Context Toggle */}
+      <div style={{
+        position: 'absolute',
+        top: -2,
+        right: 32,
+        zIndex: 10,
+      }}>
+        <button
+          onClick={() => setShowOpDetail(!showOpDetail)}
+          style={{
+            padding: '2px 4px',
+            fontSize: 10,
+            background: showOpDetail ? 'var(--bg3)' : 'transparent',
+            border: '1px solid var(--bd)',
+            borderRadius: 3,
+            color: 'var(--t3)',
+            cursor: 'pointer',
+          }}
+        >
+          📊 {showOpDetail ? 'Hide' : 'Ops'}
+        </button>
+      </div>
+
+      {/* Operational Details Drawer */}
+      {showOpDetail && (
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          right: -200,
+          width: 180,
+          padding: 8,
+          background: 'var(--bg2)',
+          border: '1px solid var(--bd)',
+          borderRadius: 4,
+          fontSize: 10,
+          color: 'var(--t2)',
+          zIndex: 20,
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+        }}>
+          <div style={{ fontWeight: 600, marginBottom: 6, color: 'var(--t1)' }}>
+            Operational Context
+          </div>
+
+          <div style={{ marginBottom: 4 }}>
+            <span style={{ color: 'var(--t3)' }}>Processing:</span>
+          </div>
+          {entityOpData.processing_history.map((h, i) => (
+            <div key={i} style={{ fontSize: 9, paddingLeft: 8, marginBottom: 2 }}>
+              {h.worker}: {h.action}
+            </div>
+          ))}
+
+          <div style={{ marginBottom: 2, marginTop: 6 }}>
+            <span style={{ color: 'var(--t3)' }}>Related Ops:</span> {entityOpData.related_operations}
+          </div>
+
+          <div style={{ marginBottom: 2 }}>
+            <span style={{ color: 'var(--t3)' }}>Gov Status:</span>{' '}
+            <span style={{
+              color: entityOpData.governance_status === 'pending-review' ? '#d29922' : '#3fb950'
+            }}>
+              {entityOpData.governance_status}
+            </span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function SomaKnowledgeExplorer() {
   const [entities, setEntities] = useState<EntitySummary[]>([]);
   const [total, setTotal] = useState(0);
@@ -48,6 +301,7 @@ export function SomaKnowledgeExplorer() {
   const [query, setQuery] = useState('');
   const [offset, setOffset] = useState(0);
   const [selected, setSelected] = useState<EntityDetail | null>(null);
+  const opContext = useKnowledgeOperationalContext();
   const limit = 50;
 
   const fetchEntities = useCallback(async () => {
@@ -84,6 +338,9 @@ export function SomaKnowledgeExplorer() {
 
   return (
     <div className="soma-knowledge">
+      {/* Contextual Status Indicators */}
+      <KnowledgeStatusIndicators opContext={opContext} />
+
       <div className="soma-knowledge__filters">
         <input
           className="soma-knowledge__search"
@@ -133,6 +390,11 @@ export function SomaKnowledgeExplorer() {
           <option value="archive">L1 Archive</option>
         </select>
         <span className="soma-knowledge__count">{total} entities</span>
+
+        {/* Smart Actions */}
+        <div style={{ marginLeft: 'auto' }}>
+          <KnowledgeSmartActions />
+        </div>
       </div>
 
       <div className="soma-knowledge__body">
@@ -184,6 +446,10 @@ export function SomaKnowledgeExplorer() {
                   {LAYER_LABELS[selected.layer] ?? selected.layer}
                 </span>
               )}
+
+              {/* Operational Context Drawer */}
+              <OperationalEntityDetail entity={selected} opContext={opContext} />
+
               <button
                 type="button"
                 className="soma-knowledge__close"

@@ -24,11 +24,13 @@ import {
   getDiscoveryPaths,
   getProcessPreference,
   getSystemdServices,
+  getValidatedExternalCommands,
   loadConfig,
 } from './config.js';
 import './adapters/index.js'; // Register all adapters
 import { parseOtlpPayload } from './adapters/otel.js';
 import { deduplicateAgents, groupAgents } from './agent-clustering.js';
+import { createCommandExecutor, type CommandExecutor } from './command-executor.js';
 import { AgentStats } from './stats.js';
 import { TraceWatcher, type WatchedTrace } from './watcher.js';
 
@@ -169,6 +171,7 @@ export class DashboardServer {
     ts: 0,
   };
   private knowledgeStore: KnowledgeStore;
+  private commandExecutor: CommandExecutor;
 
   private userConfig: DashboardUserConfig;
   private configPath: string | null;
@@ -211,6 +214,7 @@ export class DashboardServer {
     this.knowledgeStore = createKnowledgeStore({
       baseDir: path.join(config.tracesDir, '..', '.agentflow', 'knowledge'),
     });
+    this.commandExecutor = createCommandExecutor(this.userConfig);
     this.setupExpress();
     this.setupWebSocket();
     this.setupTraceWatcher();
@@ -1478,6 +1482,217 @@ export class DashboardServer {
         res.json({ total: crossAgent.length, pairs });
       } catch {
         res.json({ insights: [], pairs: [] });
+      }
+    });
+
+    // External Command Execution API
+
+    // Get all available external commands
+    this.app.get('/api/external/commands', (_req, res) => {
+      try {
+        const { commands, errors } = getValidatedExternalCommands(this.userConfig);
+
+        // Transform to API-friendly format
+        const commandList = Object.entries(commands).map(([id, command]) => ({
+          id,
+          name: command.name,
+          description: command.description,
+          category: command.category,
+          allowConcurrent: command.allowConcurrent,
+          timeout: command.timeout,
+        }));
+
+        res.json({
+          commands: commandList,
+          configErrors: errors,
+          total: commandList.length,
+        });
+      } catch (error) {
+        res.status(500).json({
+          error: 'Failed to load external commands',
+          message: (error as Error).message,
+        });
+      }
+    });
+
+    // Execute an external command
+    this.app.post('/api/external/commands/:commandId/execute', express.json(), async (req, res) => {
+      try {
+        const { commandId } = req.params;
+        const { additionalArgs, timeout, context } = req.body;
+
+        if (!isValidId(commandId)) {
+          return res.status(400).json({ error: 'Invalid command ID' });
+        }
+
+        const executionResult = await this.commandExecutor.executeCommand({
+          commandId,
+          additionalArgs: Array.isArray(additionalArgs) ? additionalArgs : undefined,
+          timeout: typeof timeout === 'number' ? timeout : undefined,
+          context: context && typeof context === 'object' ? context : undefined,
+        });
+
+        // Return execution result without potentially sensitive data
+        res.json({
+          executionId: executionResult.executionId,
+          started: executionResult.started,
+          status: executionResult.status,
+          commandName: executionResult.command.name,
+          pid: executionResult.pid,
+          startedAt: executionResult.startedAt,
+          error: executionResult.error,
+        });
+      } catch (error) {
+        res.status(500).json({
+          error: 'Command execution failed',
+          message: (error as Error).message,
+        });
+      }
+    });
+
+    // Get execution status by ID
+    this.app.get('/api/external/executions/:executionId', (req, res) => {
+      try {
+        const { executionId } = req.params;
+
+        if (!isValidId(executionId)) {
+          return res.status(400).json({ error: 'Invalid execution ID' });
+        }
+
+        const execution = this.commandExecutor.getExecution(executionId);
+        if (!execution) {
+          return res.status(404).json({ error: 'Execution not found' });
+        }
+
+        // Return execution details with output limited for security
+        res.json({
+          executionId: execution.executionId,
+          started: execution.started,
+          status: execution.status,
+          commandName: execution.command.name,
+          pid: execution.pid,
+          startedAt: execution.startedAt,
+          completedAt: execution.completedAt,
+          duration: execution.duration,
+          exitCode: execution.exitCode,
+          hasOutput: execution.stdout.length > 0,
+          hasError: execution.stderr.length > 0,
+          // Limit output size for API response
+          stdout: execution.stdout.slice(-2000), // Last 2KB
+          stderr: execution.stderr.slice(-1000), // Last 1KB
+          error: execution.error,
+        });
+      } catch (error) {
+        res.status(500).json({
+          error: 'Failed to get execution status',
+          message: (error as Error).message,
+        });
+      }
+    });
+
+    // Kill a running execution
+    this.app.post('/api/external/executions/:executionId/kill', (req, res) => {
+      try {
+        const { executionId } = req.params;
+
+        if (!isValidId(executionId)) {
+          return res.status(400).json({ error: 'Invalid execution ID' });
+        }
+
+        const killed = this.commandExecutor.killExecution(executionId, 'manual');
+
+        if (!killed) {
+          return res.status(404).json({ error: 'Execution not found or not running' });
+        }
+
+        res.json({ success: true, message: 'Execution killed' });
+      } catch (error) {
+        res.status(500).json({
+          error: 'Failed to kill execution',
+          message: (error as Error).message,
+        });
+      }
+    });
+
+    // Get all executions (recent first)
+    this.app.get('/api/external/executions', (req, res) => {
+      try {
+        const limit = Math.min(parseInt(String(req.query.limit)) || 50, 100);
+        const status = req.query.status as string;
+
+        let executions = this.commandExecutor.getAllExecutions(limit);
+
+        // Filter by status if requested
+        if (status && ['running', 'completed', 'failed', 'timeout', 'killed'].includes(status)) {
+          executions = executions.filter(exec => exec.status === status);
+        }
+
+        // Return summary data only
+        const executionSummaries = executions.map(exec => ({
+          executionId: exec.executionId,
+          commandName: exec.command.name,
+          status: exec.status,
+          startedAt: exec.startedAt,
+          completedAt: exec.completedAt,
+          duration: exec.duration,
+          exitCode: exec.exitCode,
+          hasOutput: exec.stdout.length > 0,
+          hasError: exec.stderr.length > 0,
+          error: exec.error,
+        }));
+
+        res.json({
+          executions: executionSummaries,
+          total: executionSummaries.length,
+          running: this.commandExecutor.getRunningExecutions().length,
+        });
+      } catch (error) {
+        res.status(500).json({
+          error: 'Failed to get executions',
+          message: (error as Error).message,
+        });
+      }
+    });
+
+    // Get audit trail for a specific execution
+    this.app.get('/api/external/executions/:executionId/audit', (req, res) => {
+      try {
+        const { executionId } = req.params;
+
+        if (!isValidId(executionId)) {
+          return res.status(400).json({ error: 'Invalid execution ID' });
+        }
+
+        const auditTrail = this.commandExecutor.getAuditTrail(executionId);
+
+        res.json({
+          executionId,
+          auditEntries: auditTrail,
+          total: auditTrail.length,
+        });
+      } catch (error) {
+        res.status(500).json({
+          error: 'Failed to get audit trail',
+          message: (error as Error).message,
+        });
+      }
+    });
+
+    // Get audit statistics
+    this.app.get('/api/external/audit/stats', (req, res) => {
+      try {
+        const days = Math.min(parseInt(String(req.query.days)) || 7, 30);
+        const stats = this.commandExecutor.getAuditStats(days);
+
+        res.json({
+          period: `${days} days`,
+          ...stats,
+        });
+      } catch (error) {
+        res.status(500).json({
+          error: 'Failed to get audit statistics',
+          message: (error as Error).message,
+        });
       }
     });
 
