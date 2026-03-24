@@ -1075,6 +1075,11 @@ export class TraceWatcher extends EventEmitter {
         }
       }
 
+      // Try to resolve via session manifest (more granular than path-based)
+      if (this.sessionAgentMap.has(sessionId)) {
+        agentId = this.sessionAgentMap.get(sessionId)!;
+      }
+
       // Extract model info from model_change events
       const modelEvent = rawEvents.find((e) => e.type === 'model_change');
       const provider = modelEvent?.provider || '';
