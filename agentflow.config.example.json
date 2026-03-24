@@ -1,0 +1,108 @@
+{
+  "// Comment": "AgentFlow Dashboard Configuration Example",
+  "// Documentation": "All fields are optional. Remove sections you don't need.",
+
+  "aliases": {
+    "soma-harvester": "SOMA Harvester",
+    "soma-synthesizer": "SOMA Synthesizer",
+    "soma-reconciler": "SOMA Reconciler",
+    "soma-cartographer": "SOMA Cartographer"
+  },
+
+  "discoveryPaths": [
+    "~/.soma/traces",
+    "/path/to/other/trace/directory"
+  ],
+
+  "externalCommands": {
+    "// Description": "External commands that can be triggered from the dashboard",
+
+    "globalTimeout": 300000,
+    "globalCwd": "~",
+    "globalEnv": {
+      "PATH": "/usr/local/bin:/usr/bin:/bin"
+    },
+    "maxConcurrentExecutions": 3,
+
+    "commands": {
+      "soma-harvest": {
+        "name": "SOMA Harvester",
+        "command": "python",
+        "args": ["-m", "soma.harvester"],
+        "cwd": "~/soma",
+        "description": "Scan inbox and ingest new documents into SOMA vault",
+        "category": "SOMA Workers",
+        "timeout": 120000,
+        "allowConcurrent": false
+      },
+
+      "soma-synthesize": {
+        "name": "SOMA Synthesizer",
+        "command": "python",
+        "args": ["-m", "soma.synthesizer"],
+        "cwd": "~/soma",
+        "description": "Analyze candidates and create insights through LLM synthesis",
+        "category": "SOMA Workers",
+        "timeout": 180000,
+        "allowConcurrent": false
+      },
+
+      "soma-reconcile": {
+        "name": "SOMA Reconciler",
+        "command": "python",
+        "args": ["-m", "soma.reconciler"],
+        "cwd": "~/soma",
+        "description": "Detect issues and merge duplicate entities in the vault",
+        "category": "SOMA Workers",
+        "timeout": 240000,
+        "allowConcurrent": false
+      },
+
+      "soma-cartograph": {
+        "name": "SOMA Cartographer",
+        "command": "python",
+        "args": ["-m", "soma.cartographer"],
+        "cwd": "~/soma",
+        "description": "Generate embeddings and discover entity archetypes",
+        "category": "SOMA Workers",
+        "timeout": 300000,
+        "allowConcurrent": false
+      },
+
+      "soma-full-cycle": {
+        "name": "SOMA Full Cycle",
+        "command": "python",
+        "args": ["-m", "soma.run_all"],
+        "cwd": "~/soma",
+        "description": "Run all SOMA workers in sequence: harvest → synthesize → reconcile → cartograph",
+        "category": "SOMA Workflows",
+        "timeout": 600000,
+        "allowConcurrent": false
+      },
+
+      "soma-status": {
+        "name": "SOMA Status Check",
+        "command": "python",
+        "args": ["-m", "soma.status", "--detailed"],
+        "cwd": "~/soma",
+        "description": "Check status of all SOMA workers and vault health",
+        "category": "SOMA Diagnostics",
+        "timeout": 30000,
+        "allowConcurrent": true
+      }
+    }
+  },
+
+  "skipFiles": ["*.log", "*.tmp"],
+  "skipDirectories": ["node_modules", ".git", "archive"],
+
+  "agentDetection": {
+    "pathPatterns": {
+      ".soma/": "soma-worker",
+      "/myagent/": "myagent-main"
+    },
+    "filePatterns": {
+      "soma-(.+)\\.json$": "soma-${match}"
+    }
+  }
+}
