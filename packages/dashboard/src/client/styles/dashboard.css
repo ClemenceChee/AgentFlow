@@ -3119,3 +3119,137 @@ body {
   font-size: 12px;
   color: var(--t2);
 }
+
+/* ── AICP Intelligence Panel (drilldown) ────────────────────────── */
+.aicp-intelligence__drilldown {
+  margin-top: var(--s3);
+  padding: var(--s3);
+  background: var(--bg2);
+  border-left: 3px solid var(--info);
+  border-radius: var(--r);
+}
+.aicp-intelligence { font-size: var(--xs); }
+.aicp-intelligence--loading,
+.aicp-intelligence--error {
+  padding: var(--s3);
+  color: var(--t2);
+  font-style: italic;
+}
+.aicp-intelligence__section { margin-bottom: var(--s4); }
+.aicp-intelligence__section-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--t2);
+  margin: 0 0 var(--s2);
+}
+.aicp-intelligence__group { margin-bottom: var(--s3); }
+.aicp-intelligence__group-header {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  margin-bottom: var(--s1);
+}
+.aicp-intelligence__type-badge {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--info);
+}
+.aicp-intelligence__count {
+  font-size: 10px;
+  color: var(--t3);
+}
+.aicp-intelligence__entity {
+  padding: var(--s2) var(--s3);
+  margin-bottom: var(--s1);
+  background: var(--bg3);
+  border-radius: var(--r);
+}
+.aicp-intelligence__entity-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--s2);
+}
+.aicp-intelligence__entity-name {
+  font-weight: 500;
+  color: var(--t1);
+  font-size: 12px;
+}
+.aicp-intelligence__confidence {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+.aicp-intelligence__claim {
+  font-size: 11px;
+  color: var(--t2);
+  margin-top: 2px;
+  line-height: 1.4;
+}
+.aicp-intelligence__empty {
+  color: var(--t3);
+  font-style: italic;
+  font-size: 11px;
+}
+.aicp-intelligence__more {
+  font-size: 10px;
+  color: var(--t3);
+  padding-left: var(--s3);
+}
+.aicp-intelligence__execution {
+  margin-bottom: var(--s1);
+  background: var(--bg3);
+  border-radius: var(--r);
+  overflow: hidden;
+}
+.aicp-intelligence__execution-header {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: var(--s1) var(--s3);
+  cursor: pointer;
+}
+.aicp-intelligence__status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.aicp-intelligence__execution-ts {
+  font-size: 11px;
+  color: var(--t2);
+}
+.aicp-intelligence__execution-dur {
+  font-size: 10px;
+  color: var(--t3);
+  margin-left: auto;
+}
+.aicp-intelligence__chevron {
+  font-size: 10px;
+  color: var(--t3);
+  margin-left: var(--s1);
+}
+.aicp-intelligence__execution-preview {
+  padding: 0 var(--s3) var(--s2);
+  font-size: 11px;
+  color: var(--t3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.aicp-intelligence__execution-body {
+  padding: var(--s2) var(--s3);
+  font-size: 11px;
+  font-family: var(--fm);
+  color: var(--t2);
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.5;
+  max-height: 300px;
+  overflow-y: auto;
+  margin: 0;
+  background: var(--bg);
+}
