@@ -198,6 +198,65 @@ Each step is independently valuable. Use what you need:
 
 ---
 
+## Multi-Agent Environments *(Optional)*
+
+AgentFlow can monitor multiple agents across different frameworks and provide centralized operational control:
+
+### External Trace Discovery
+
+Monitor agents that create traces outside your main traces directory:
+
+```json
+{
+  "discoveryPaths": [
+    "~/.soma/traces",
+    "~/other-agents/*/traces"
+  ]
+}
+```
+
+- **Zero configuration**: Automatically discovers JSON trace files
+- **Real-time updates**: File system watching for new/modified traces
+- **Agent detection**: Automatically identifies agents from paths and filenames
+- **Framework agnostic**: Works with any agent that outputs JSON execution traces
+
+### External Command Execution
+
+Trigger agent operations directly from the AgentFlow dashboard:
+
+```json
+{
+  "externalCommands": {
+    "commands": {
+      "soma-harvest": {
+        "name": "SOMA Harvester",
+        "command": "soma",
+        "args": ["harvest"],
+        "description": "Scan inbox and ingest documents"
+      }
+    }
+  }
+}
+```
+
+- **Security-first**: Explicit allowlist of pre-configured commands only
+- **Audit logging**: All executions logged with timestamps and results
+- **Resource limits**: Timeouts, concurrency controls, and sandboxed execution
+- **Real-time monitoring**: Live execution status and log streaming
+
+### SOMA Integration
+
+First-class integration with [SOMA](https://github.com/ClemenceChee/soma) (Structured Organizational Memory Architecture):
+
+- **Enhanced traces**: Operational context from SOMA vault data
+- **Manual triggers**: Start SOMA workers (harvest, synthesize, reconcile, cartograph)
+- **Governance dashboard**: Agentic governance controls and meta-learning visibility
+- **Operational intelligence**: Multi-layer dashboard combining execution and organizational data
+
+**All external features are completely optional.** AgentFlow works perfectly for single-agent setups without any external configuration.
+
+---
+
 ## Packages
 
 ```
