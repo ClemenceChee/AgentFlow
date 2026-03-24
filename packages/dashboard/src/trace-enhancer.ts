@@ -1,13 +1,9 @@
-/**
- * Trace Enhancement Service
- *
- * Enhances basic SOMA traces with detailed execution steps by reading
- * operational data from state files and vault changes.
- */
-import * as fs from 'node:fs';
-import * as path from 'node:path';
+import {
+  createSOMADataReader,
+  type SOMADataReader,
+  type SOMAOperationalData,
+} from './soma-data-reader.js';
 import type { TraceGraph } from './trace-graph.js';
-import { createSOMADataReader, type SOMADataReader, type SOMAOperationalData } from './soma-data-reader.js';
 
 export interface TraceEnhancementOptions {
   /** Include detailed step breakdown */
@@ -61,14 +57,19 @@ export interface TraceEnhancementResult {
 
 export class TraceEnhancementService {
   private somaDataReader: SOMADataReader;
-  private cache = new Map<string, { result: EnhancedTraceGraph; timestamp: number; dataHash: string }>();
+  private cache = new Map<
+    string,
+    { result: EnhancedTraceGraph; timestamp: number; dataHash: string }
+  >();
   private cacheTimeout: number;
   private lastDataSnapshot?: SOMAOperationalData;
 
-  constructor(options: {
-    somaDataReader?: SOMADataReader;
-    cacheTimeoutMs?: number;
-  } = {}) {
+  constructor(
+    options: {
+      somaDataReader?: SOMADataReader;
+      cacheTimeoutMs?: number;
+    } = {},
+  ) {
     this.somaDataReader = options.somaDataReader ?? createSOMADataReader();
     this.cacheTimeout = options.cacheTimeoutMs ?? 5 * 60 * 1000; // 5 minutes default
   }
@@ -78,7 +79,7 @@ export class TraceEnhancementService {
    */
   async enhanceTrace(
     trace: TraceGraph,
-    options: TraceEnhancementOptions = {}
+    options: TraceEnhancementOptions = {},
   ): Promise<TraceEnhancementResult> {
     const {
       includeDetailedSteps = true,
@@ -126,7 +127,9 @@ export class TraceEnhancementService {
 
       // Check operational data quality
       if (operationalData.successRate < 0.5) {
-        errors.push(`Operational data quality low (${Math.round(operationalData.successRate * 100)}% success rate)`);
+        errors.push(
+          `Operational data quality low (${Math.round(operationalData.successRate * 100)}% success rate)`,
+        );
 
         if (!includeMetrics && !includeDetailedSteps) {
           // If enhancement requirements are minimal, proceed with partial data
@@ -149,11 +152,10 @@ export class TraceEnhancementService {
       // Attempt enhancement with error handling
       let enhancedTrace: EnhancedTraceGraph;
       try {
-        enhancedTrace = await this.performEnhancement(
-          trace,
-          operationalData,
-          { includeDetailedSteps, includeMetrics }
-        );
+        enhancedTrace = await this.performEnhancement(trace, operationalData, {
+          includeDetailedSteps,
+          includeMetrics,
+        });
       } catch (enhancementError) {
         errors.push(`Enhancement processing failed: ${(enhancementError as Error).message}`);
 
@@ -161,13 +163,14 @@ export class TraceEnhancementService {
         if (includeDetailedSteps || includeMetrics) {
           try {
             errors.push('Retrying with basic enhancement...');
-            enhancedTrace = await this.performEnhancement(
-              trace,
-              operationalData,
-              { includeDetailedSteps: false, includeMetrics: false }
-            );
+            enhancedTrace = await this.performEnhancement(trace, operationalData, {
+              includeDetailedSteps: false,
+              includeMetrics: false,
+            });
           } catch (basicEnhancementError) {
-            errors.push(`Basic enhancement also failed: ${(basicEnhancementError as Error).message}`);
+            errors.push(
+              `Basic enhancement also failed: ${(basicEnhancementError as Error).message}`,
+            );
             return this.createFallbackTrace(trace, errors, 'enhancement_processing_failed');
           }
         } else {
@@ -251,21 +254,21 @@ export class TraceEnhancementService {
 
         return {
           invalidatedEntries,
-          reason: `Operational data changes detected for workers: ${affectedWorkers.join(', ')}`
+          reason: `Operational data changes detected for workers: ${affectedWorkers.join(', ')}`,
         };
       }
 
       // Check for recent vault changes that might affect traces
       const recentChanges = operationalData.vaultChanges.filter(
-        change => currentTime - change.timestamp < this.cacheTimeout
+        (change) => currentTime - change.timestamp < this.cacheTimeout,
       );
 
       if (recentChanges.length > 0) {
         // Selective invalidation based on entity types that changed
-        const changedEntityTypes = new Set(recentChanges.map(c => c.entityType));
+        const changedEntityTypes = new Set(recentChanges.map((c) => c.entityType));
         let selectiveInvalidations = 0;
 
-        for (const [key, cached] of this.cache.entries()) {
+        for (const [key, _cached] of this.cache.entries()) {
           // If trace might be affected by these entity changes, invalidate it
           if (this.traceAffectedByEntityChanges(key, changedEntityTypes)) {
             this.cache.delete(key);
@@ -277,18 +280,24 @@ export class TraceEnhancementService {
 
         return {
           invalidatedEntries,
-          reason: `Recent vault changes in entity types: ${Array.from(changedEntityTypes).join(', ')}`
+          reason: `Recent vault changes in entity types: ${Array.from(changedEntityTypes).join(', ')}`,
         };
       }
 
       this.lastDataSnapshot = operationalData;
 
-      return { invalidatedEntries, reason: invalidatedEntries > 0 ? 'Timeout-based cleanup' : 'No invalidation needed' };
+      return {
+        invalidatedEntries,
+        reason: invalidatedEntries > 0 ? 'Timeout-based cleanup' : 'No invalidation needed',
+      };
     } catch (error) {
       // If we can't check for changes, clear the cache to be safe
       const cacheSize = this.cache.size;
       this.cache.clear();
-      return { invalidatedEntries: cacheSize, reason: `Error checking data changes: ${(error as Error).message}` };
+      return {
+        invalidatedEntries: cacheSize,
+        reason: `Error checking data changes: ${(error as Error).message}`,
+      };
     }
   }
 
@@ -325,15 +334,19 @@ export class TraceEnhancementService {
     if (!rootNode) return false;
 
     const agentId = trace.agentId || rootNode.name;
-    return agentId.includes('soma-') || agentId.includes('harvester') ||
-           agentId.includes('synthesizer') || agentId.includes('reconciler') ||
-           agentId.includes('cartographer');
+    return (
+      agentId.includes('soma-') ||
+      agentId.includes('harvester') ||
+      agentId.includes('synthesizer') ||
+      agentId.includes('reconciler') ||
+      agentId.includes('cartographer')
+    );
   }
 
   private async performEnhancement(
     trace: TraceGraph,
     operationalData: SOMAOperationalData,
-    options: { includeDetailedSteps: boolean; includeMetrics: boolean }
+    options: { includeDetailedSteps: boolean; includeMetrics: boolean },
   ): Promise<EnhancedTraceGraph> {
     const enhanced: EnhancedTraceGraph = {
       ...trace,
@@ -365,10 +378,12 @@ export class TraceEnhancementService {
         };
 
         if (workerState.errors) {
-          enhancedNode.operationalData.errors = [{
-            message: workerState.errors.lastError || 'Unknown error',
-            timestamp: workerState.errors.timestamp || Date.now(),
-          }];
+          enhancedNode.operationalData.errors = [
+            {
+              message: workerState.errors.lastError || 'Unknown error',
+              timestamp: workerState.errors.timestamp || Date.now(),
+            },
+          ];
         }
       }
 
@@ -384,7 +399,7 @@ export class TraceEnhancementService {
             nodeId,
             workerType,
             operationalData.workerStates[workerType],
-            operationalData.vaultChanges
+            operationalData.vaultChanges,
           );
 
           // Add detailed steps as child nodes
@@ -406,7 +421,7 @@ export class TraceEnhancementService {
     parentNodeId: string,
     workerType: string,
     workerState: any,
-    vaultChanges: any[]
+    vaultChanges: any[],
   ): Promise<EnhancedTraceNode[]> {
     const steps: EnhancedTraceNode[] = [];
 
@@ -430,7 +445,7 @@ export class TraceEnhancementService {
   private createHarvesterSteps(
     parentNodeId: string,
     harvesterState: any,
-    vaultChanges: any[]
+    vaultChanges: any[],
   ): EnhancedTraceNode[] {
     const steps: EnhancedTraceNode[] = [];
     const baseTime = harvesterState.lastRun || Date.now();
@@ -441,7 +456,9 @@ export class TraceEnhancementService {
       type: 'step',
       name: 'Inbox Scanning',
       startTime: baseTime,
-      endTime: baseTime + (harvesterState.processingDuration ? harvesterState.processingDuration * 0.1 : 1000),
+      endTime:
+        baseTime +
+        (harvesterState.processingDuration ? harvesterState.processingDuration * 0.1 : 1000),
       status: harvesterState.inboxStats?.errorFiles > 0 ? 'error' : 'success',
       parentId: parentNodeId,
       children: [],
@@ -460,7 +477,9 @@ export class TraceEnhancementService {
       operationalData: {
         workerType: 'harvester',
         filesProcessed: harvesterState.inboxStats?.totalFiles || 0,
-        duration: harvesterState.processingDuration ? harvesterState.processingDuration * 0.1 : 1000,
+        duration: harvesterState.processingDuration
+          ? harvesterState.processingDuration * 0.1
+          : 1000,
       },
     });
 
@@ -470,8 +489,12 @@ export class TraceEnhancementService {
         id: `${parentNodeId}_file_parsing`,
         type: 'step',
         name: 'File Parsing',
-        startTime: baseTime + (harvesterState.processingDuration ? harvesterState.processingDuration * 0.1 : 1000),
-        endTime: baseTime + (harvesterState.processingDuration ? harvesterState.processingDuration * 0.6 : 6000),
+        startTime:
+          baseTime +
+          (harvesterState.processingDuration ? harvesterState.processingDuration * 0.1 : 1000),
+        endTime:
+          baseTime +
+          (harvesterState.processingDuration ? harvesterState.processingDuration * 0.6 : 6000),
         status: harvesterState.errors?.count > 0 ? 'error' : 'success',
         parentId: parentNodeId,
         children: [],
@@ -489,10 +512,18 @@ export class TraceEnhancementService {
         operationalData: {
           workerType: 'harvester',
           filesProcessed: harvesterState.filesProcessed,
-          duration: harvesterState.processingDuration ? harvesterState.processingDuration * 0.5 : 5000,
-          errors: harvesterState.errors?.count > 0 ? [
-            { message: harvesterState.errors.lastError || 'Parsing error', timestamp: harvesterState.errors.timestamp || Date.now() }
-          ] : undefined,
+          duration: harvesterState.processingDuration
+            ? harvesterState.processingDuration * 0.5
+            : 5000,
+          errors:
+            harvesterState.errors?.count > 0
+              ? [
+                  {
+                    message: harvesterState.errors.lastError || 'Parsing error',
+                    timestamp: harvesterState.errors.timestamp || Date.now(),
+                  },
+                ]
+              : undefined,
         },
       });
     }
@@ -503,8 +534,12 @@ export class TraceEnhancementService {
         id: `${parentNodeId}_event_ingestion`,
         type: 'step',
         name: 'Event Ingestion',
-        startTime: baseTime + (harvesterState.processingDuration ? harvesterState.processingDuration * 0.6 : 6000),
-        endTime: baseTime + (harvesterState.processingDuration ? harvesterState.processingDuration * 0.9 : 9000),
+        startTime:
+          baseTime +
+          (harvesterState.processingDuration ? harvesterState.processingDuration * 0.6 : 6000),
+        endTime:
+          baseTime +
+          (harvesterState.processingDuration ? harvesterState.processingDuration * 0.9 : 9000),
         status: 'success',
         parentId: parentNodeId,
         children: [],
@@ -522,15 +557,18 @@ export class TraceEnhancementService {
         operationalData: {
           workerType: 'harvester',
           entitiesProcessed: harvesterState.eventsIngested,
-          duration: harvesterState.processingDuration ? harvesterState.processingDuration * 0.3 : 3000,
+          duration: harvesterState.processingDuration
+            ? harvesterState.processingDuration * 0.3
+            : 3000,
         },
       });
     }
 
     // Step 4: Entity Updates
-    const relevantVaultChanges = vaultChanges.filter(change =>
-      change.timestamp >= (baseTime - 60000) && // Within 1 minute of harvester run
-      change.timestamp <= (baseTime + (harvesterState.processingDuration || 10000))
+    const relevantVaultChanges = vaultChanges.filter(
+      (change) =>
+        change.timestamp >= baseTime - 60000 && // Within 1 minute of harvester run
+        change.timestamp <= baseTime + (harvesterState.processingDuration || 10000),
     );
 
     if (relevantVaultChanges.length > 0 || harvesterState.entityCount > 0) {
@@ -538,17 +576,19 @@ export class TraceEnhancementService {
         id: `${parentNodeId}_entity_updates`,
         type: 'step',
         name: 'Entity Updates',
-        startTime: baseTime + (harvesterState.processingDuration ? harvesterState.processingDuration * 0.9 : 9000),
+        startTime:
+          baseTime +
+          (harvesterState.processingDuration ? harvesterState.processingDuration * 0.9 : 9000),
         endTime: baseTime + (harvesterState.processingDuration || 10000),
         status: 'success',
         parentId: parentNodeId,
         children: [],
         metadata: {
           description: 'Updating entity vault with new and modified entities',
-          entitiesCreated: relevantVaultChanges.filter(c => c.changeType === 'created').length,
-          entitiesUpdated: relevantVaultChanges.filter(c => c.changeType === 'updated').length,
+          entitiesCreated: relevantVaultChanges.filter((c) => c.changeType === 'created').length,
+          entitiesUpdated: relevantVaultChanges.filter((c) => c.changeType === 'updated').length,
           totalEntityCount: harvesterState.entityCount || 0,
-          vaultChanges: relevantVaultChanges.map(c => ({
+          vaultChanges: relevantVaultChanges.map((c) => ({
             entityId: c.entityId,
             entityType: c.entityType,
             changeType: c.changeType,
@@ -562,7 +602,9 @@ export class TraceEnhancementService {
         operationalData: {
           workerType: 'harvester',
           entitiesProcessed: relevantVaultChanges.length || harvesterState.entityCount || 0,
-          duration: harvesterState.processingDuration ? harvesterState.processingDuration * 0.1 : 1000,
+          duration: harvesterState.processingDuration
+            ? harvesterState.processingDuration * 0.1
+            : 1000,
         },
       });
     }
@@ -576,7 +618,7 @@ export class TraceEnhancementService {
   private createSynthesizerSteps(
     parentNodeId: string,
     synthesizerState: any,
-    vaultChanges: any[]
+    vaultChanges: any[],
   ): EnhancedTraceNode[] {
     const steps: EnhancedTraceNode[] = [];
     const baseTime = synthesizerState.lastRun || Date.now();
@@ -588,7 +630,9 @@ export class TraceEnhancementService {
         type: 'step',
         name: 'Candidate Scoring',
         startTime: baseTime,
-        endTime: baseTime + (synthesizerState.processingDuration ? synthesizerState.processingDuration * 0.2 : 2000),
+        endTime:
+          baseTime +
+          (synthesizerState.processingDuration ? synthesizerState.processingDuration * 0.2 : 2000),
         status: synthesizerState.scoringStats?.averageScore > 0 ? 'success' : 'error',
         parentId: parentNodeId,
         children: [],
@@ -609,7 +653,9 @@ export class TraceEnhancementService {
         operationalData: {
           workerType: 'synthesizer',
           entitiesProcessed: synthesizerState.candidatesAnalyzed,
-          duration: synthesizerState.processingDuration ? synthesizerState.processingDuration * 0.2 : 2000,
+          duration: synthesizerState.processingDuration
+            ? synthesizerState.processingDuration * 0.2
+            : 2000,
         },
       });
     }
@@ -620,8 +666,12 @@ export class TraceEnhancementService {
         id: `${parentNodeId}_llm_analysis`,
         type: 'step',
         name: 'LLM Analysis',
-        startTime: baseTime + (synthesizerState.processingDuration ? synthesizerState.processingDuration * 0.2 : 2000),
-        endTime: baseTime + (synthesizerState.processingDuration ? synthesizerState.processingDuration * 0.7 : 7000),
+        startTime:
+          baseTime +
+          (synthesizerState.processingDuration ? synthesizerState.processingDuration * 0.2 : 2000),
+        endTime:
+          baseTime +
+          (synthesizerState.processingDuration ? synthesizerState.processingDuration * 0.7 : 7000),
         status: synthesizerState.llmStats.failedCalls > 0 ? 'error' : 'success',
         parentId: parentNodeId,
         children: [],
@@ -631,9 +681,11 @@ export class TraceEnhancementService {
           successfulCalls: synthesizerState.llmStats.successfulCalls,
           failedCalls: synthesizerState.llmStats.failedCalls,
           averageLatency: synthesizerState.llmStats.averageLatency,
-          successRate: synthesizerState.llmStats.totalCalls > 0
-            ? (synthesizerState.llmStats.successfulCalls / synthesizerState.llmStats.totalCalls) * 100
-            : 0,
+          successRate:
+            synthesizerState.llmStats.totalCalls > 0
+              ? (synthesizerState.llmStats.successfulCalls / synthesizerState.llmStats.totalCalls) *
+                100
+              : 0,
         },
         state: {
           phase: 'llm_processing',
@@ -645,22 +697,37 @@ export class TraceEnhancementService {
         operationalData: {
           workerType: 'synthesizer',
           entitiesProcessed: synthesizerState.llmStats.successfulCalls,
-          duration: synthesizerState.processingDuration ? synthesizerState.processingDuration * 0.5 : 5000,
-          errors: synthesizerState.llmStats.failedCalls > 0 ? [
-            { message: `${synthesizerState.llmStats.failedCalls} LLM calls failed`, timestamp: Date.now() }
-          ] : undefined,
+          duration: synthesizerState.processingDuration
+            ? synthesizerState.processingDuration * 0.5
+            : 5000,
+          errors:
+            synthesizerState.llmStats.failedCalls > 0
+              ? [
+                  {
+                    message: `${synthesizerState.llmStats.failedCalls} LLM calls failed`,
+                    timestamp: Date.now(),
+                  },
+                ]
+              : undefined,
         },
       });
     }
 
     // Step 3: Deduplication
-    if (synthesizerState.deduplicationStats && synthesizerState.deduplicationStats.duplicatesFound > 0) {
+    if (
+      synthesizerState.deduplicationStats &&
+      synthesizerState.deduplicationStats.duplicatesFound > 0
+    ) {
       steps.push({
         id: `${parentNodeId}_deduplication`,
         type: 'step',
         name: 'Deduplication',
-        startTime: baseTime + (synthesizerState.processingDuration ? synthesizerState.processingDuration * 0.7 : 7000),
-        endTime: baseTime + (synthesizerState.processingDuration ? synthesizerState.processingDuration * 0.85 : 8500),
+        startTime:
+          baseTime +
+          (synthesizerState.processingDuration ? synthesizerState.processingDuration * 0.7 : 7000),
+        endTime:
+          baseTime +
+          (synthesizerState.processingDuration ? synthesizerState.processingDuration * 0.85 : 8500),
         status: synthesizerState.deduplicationStats.duplicatesRemoved > 0 ? 'success' : 'error',
         parentId: parentNodeId,
         children: [],
@@ -669,9 +736,12 @@ export class TraceEnhancementService {
           duplicatesFound: synthesizerState.deduplicationStats.duplicatesFound,
           duplicatesRemoved: synthesizerState.deduplicationStats.duplicatesRemoved,
           uniqueInsights: synthesizerState.deduplicationStats.uniqueInsights,
-          deduplicationRate: synthesizerState.deduplicationStats.duplicatesFound > 0
-            ? (synthesizerState.deduplicationStats.duplicatesRemoved / synthesizerState.deduplicationStats.duplicatesFound) * 100
-            : 0,
+          deduplicationRate:
+            synthesizerState.deduplicationStats.duplicatesFound > 0
+              ? (synthesizerState.deduplicationStats.duplicatesRemoved /
+                  synthesizerState.deduplicationStats.duplicatesFound) *
+                100
+              : 0,
         },
         state: {
           phase: 'deduplication',
@@ -682,17 +752,20 @@ export class TraceEnhancementService {
         operationalData: {
           workerType: 'synthesizer',
           entitiesProcessed: synthesizerState.deduplicationStats.duplicatesFound,
-          duration: synthesizerState.processingDuration ? synthesizerState.processingDuration * 0.15 : 1500,
+          duration: synthesizerState.processingDuration
+            ? synthesizerState.processingDuration * 0.15
+            : 1500,
         },
       });
     }
 
     // Step 4: Insight Creation
-    const relevantVaultChanges = vaultChanges.filter(change =>
-      change.entityType === 'insight' &&
-      change.changeType === 'created' &&
-      change.timestamp >= (baseTime - 60000) &&
-      change.timestamp <= (baseTime + (synthesizerState.processingDuration || 10000))
+    const relevantVaultChanges = vaultChanges.filter(
+      (change) =>
+        change.entityType === 'insight' &&
+        change.changeType === 'created' &&
+        change.timestamp >= baseTime - 60000 &&
+        change.timestamp <= baseTime + (synthesizerState.processingDuration || 10000),
     );
 
     if (synthesizerState.insightsCreated > 0 || relevantVaultChanges.length > 0) {
@@ -700,7 +773,9 @@ export class TraceEnhancementService {
         id: `${parentNodeId}_insight_creation`,
         type: 'step',
         name: 'Insight Creation',
-        startTime: baseTime + (synthesizerState.processingDuration ? synthesizerState.processingDuration * 0.85 : 8500),
+        startTime:
+          baseTime +
+          (synthesizerState.processingDuration ? synthesizerState.processingDuration * 0.85 : 8500),
         endTime: baseTime + (synthesizerState.processingDuration || 10000),
         status: synthesizerState.insightsCreated > 0 ? 'success' : 'error',
         parentId: parentNodeId,
@@ -708,8 +783,9 @@ export class TraceEnhancementService {
         metadata: {
           description: 'Creating and persisting new insights from synthesized analysis',
           insightsCreated: synthesizerState.insightsCreated || relevantVaultChanges.length,
-          lastCreatedInsights: synthesizerState.lastCreatedInsights || relevantVaultChanges.map(c => c.entityId),
-          vaultChanges: relevantVaultChanges.map(c => ({
+          lastCreatedInsights:
+            synthesizerState.lastCreatedInsights || relevantVaultChanges.map((c) => c.entityId),
+          vaultChanges: relevantVaultChanges.map((c) => ({
             entityId: c.entityId,
             changeType: c.changeType,
             timestamp: c.timestamp,
@@ -725,10 +801,18 @@ export class TraceEnhancementService {
         operationalData: {
           workerType: 'synthesizer',
           entitiesProcessed: synthesizerState.insightsCreated || relevantVaultChanges.length,
-          duration: synthesizerState.processingDuration ? synthesizerState.processingDuration * 0.15 : 1500,
-          errors: synthesizerState.errors?.count > 0 ? [
-            { message: synthesizerState.errors.lastError || 'Insight creation error', timestamp: synthesizerState.errors.timestamp || Date.now() }
-          ] : undefined,
+          duration: synthesizerState.processingDuration
+            ? synthesizerState.processingDuration * 0.15
+            : 1500,
+          errors:
+            synthesizerState.errors?.count > 0
+              ? [
+                  {
+                    message: synthesizerState.errors.lastError || 'Insight creation error',
+                    timestamp: synthesizerState.errors.timestamp || Date.now(),
+                  },
+                ]
+              : undefined,
         },
       });
     }
@@ -742,7 +826,7 @@ export class TraceEnhancementService {
   private createReconcilerSteps(
     parentNodeId: string,
     reconcilerState: any,
-    vaultChanges: any[]
+    vaultChanges: any[],
   ): EnhancedTraceNode[] {
     const steps: EnhancedTraceNode[] = [];
     const baseTime = reconcilerState.lastRun || Date.now();
@@ -754,7 +838,9 @@ export class TraceEnhancementService {
         type: 'step',
         name: 'Issue Detection',
         startTime: baseTime,
-        endTime: baseTime + (reconcilerState.processingDuration ? reconcilerState.processingDuration * 0.3 : 3000),
+        endTime:
+          baseTime +
+          (reconcilerState.processingDuration ? reconcilerState.processingDuration * 0.3 : 3000),
         status: reconcilerState.consistencyChecks?.failedChecks > 0 ? 'error' : 'success',
         parentId: parentNodeId,
         children: [],
@@ -769,7 +855,7 @@ export class TraceEnhancementService {
             'entity_references',
             'schema_validation',
             'duplicate_detection',
-            'orphaned_relationships'
+            'orphaned_relationships',
           ],
         },
         state: {
@@ -781,10 +867,18 @@ export class TraceEnhancementService {
         operationalData: {
           workerType: 'reconciler',
           entitiesProcessed: reconcilerState.entityCount || 0,
-          duration: reconcilerState.processingDuration ? reconcilerState.processingDuration * 0.3 : 3000,
-          errors: reconcilerState.consistencyChecks?.failedChecks > 0 ? [
-            { message: `${reconcilerState.consistencyChecks.failedChecks} consistency checks failed`, timestamp: Date.now() }
-          ] : undefined,
+          duration: reconcilerState.processingDuration
+            ? reconcilerState.processingDuration * 0.3
+            : 3000,
+          errors:
+            reconcilerState.consistencyChecks?.failedChecks > 0
+              ? [
+                  {
+                    message: `${reconcilerState.consistencyChecks.failedChecks} consistency checks failed`,
+                    timestamp: Date.now(),
+                  },
+                ]
+              : undefined,
         },
       });
     }
@@ -795,8 +889,12 @@ export class TraceEnhancementService {
         id: `${parentNodeId}_entity_merging`,
         type: 'step',
         name: 'Entity Merging',
-        startTime: baseTime + (reconcilerState.processingDuration ? reconcilerState.processingDuration * 0.3 : 3000),
-        endTime: baseTime + (reconcilerState.processingDuration ? reconcilerState.processingDuration * 0.7 : 7000),
+        startTime:
+          baseTime +
+          (reconcilerState.processingDuration ? reconcilerState.processingDuration * 0.3 : 3000),
+        endTime:
+          baseTime +
+          (reconcilerState.processingDuration ? reconcilerState.processingDuration * 0.7 : 7000),
         status: reconcilerState.mergeStats.mergeConflicts > 0 ? 'error' : 'success',
         parentId: parentNodeId,
         children: [],
@@ -806,9 +904,12 @@ export class TraceEnhancementService {
           successfulMerges: reconcilerState.mergeStats.successfulMerges,
           failedMerges: reconcilerState.mergeStats.failedMerges,
           mergeConflicts: reconcilerState.mergeStats.mergeConflicts,
-          mergeSuccessRate: reconcilerState.mergeStats.duplicatesFound > 0
-            ? (reconcilerState.mergeStats.successfulMerges / reconcilerState.mergeStats.duplicatesFound) * 100
-            : 0,
+          mergeSuccessRate:
+            reconcilerState.mergeStats.duplicatesFound > 0
+              ? (reconcilerState.mergeStats.successfulMerges /
+                  reconcilerState.mergeStats.duplicatesFound) *
+                100
+              : 0,
           lastMergedEntities: reconcilerState.lastMergedEntities || [],
         },
         state: {
@@ -823,10 +924,18 @@ export class TraceEnhancementService {
         operationalData: {
           workerType: 'reconciler',
           entitiesProcessed: reconcilerState.mergeStats.duplicatesFound,
-          duration: reconcilerState.processingDuration ? reconcilerState.processingDuration * 0.4 : 4000,
-          errors: reconcilerState.mergeStats.mergeConflicts > 0 ? [
-            { message: `${reconcilerState.mergeStats.mergeConflicts} merge conflicts encountered`, timestamp: Date.now() }
-          ] : undefined,
+          duration: reconcilerState.processingDuration
+            ? reconcilerState.processingDuration * 0.4
+            : 4000,
+          errors:
+            reconcilerState.mergeStats.mergeConflicts > 0
+              ? [
+                  {
+                    message: `${reconcilerState.mergeStats.mergeConflicts} merge conflicts encountered`,
+                    timestamp: Date.now(),
+                  },
+                ]
+              : undefined,
         },
       });
     }
@@ -837,7 +946,9 @@ export class TraceEnhancementService {
         id: `${parentNodeId}_consistency_fixes`,
         type: 'step',
         name: 'Data Consistency Fixes',
-        startTime: baseTime + (reconcilerState.processingDuration ? reconcilerState.processingDuration * 0.7 : 7000),
+        startTime:
+          baseTime +
+          (reconcilerState.processingDuration ? reconcilerState.processingDuration * 0.7 : 7000),
         endTime: baseTime + (reconcilerState.processingDuration || 10000),
         status: reconcilerState.resolutionStats.criticalIssues > 0 ? 'error' : 'success',
         parentId: parentNodeId,
@@ -848,14 +959,20 @@ export class TraceEnhancementService {
           issuesPending: reconcilerState.resolutionStats.issuesPending || 0,
           criticalIssues: reconcilerState.resolutionStats.criticalIssues || 0,
           warningIssues: reconcilerState.resolutionStats.warningIssues || 0,
-          resolutionRate: (reconcilerState.resolutionStats.issuesResolved + reconcilerState.resolutionStats.issuesPending) > 0
-            ? (reconcilerState.resolutionStats.issuesResolved / (reconcilerState.resolutionStats.issuesResolved + reconcilerState.resolutionStats.issuesPending)) * 100
-            : 0,
+          resolutionRate:
+            reconcilerState.resolutionStats.issuesResolved +
+              reconcilerState.resolutionStats.issuesPending >
+            0
+              ? (reconcilerState.resolutionStats.issuesResolved /
+                  (reconcilerState.resolutionStats.issuesResolved +
+                    reconcilerState.resolutionStats.issuesPending)) *
+                100
+              : 0,
           fixTypes: [
             'reference_repair',
             'schema_normalization',
             'orphan_cleanup',
-            'duplicate_removal'
+            'duplicate_removal',
           ],
         },
         state: {
@@ -867,19 +984,28 @@ export class TraceEnhancementService {
         operationalData: {
           workerType: 'reconciler',
           entitiesProcessed: reconcilerState.resolutionStats.issuesResolved || 0,
-          duration: reconcilerState.processingDuration ? reconcilerState.processingDuration * 0.3 : 3000,
-          errors: reconcilerState.errors?.count > 0 ? [
-            { message: reconcilerState.errors.lastError || 'Consistency fix error', timestamp: reconcilerState.errors.timestamp || Date.now() }
-          ] : undefined,
+          duration: reconcilerState.processingDuration
+            ? reconcilerState.processingDuration * 0.3
+            : 3000,
+          errors:
+            reconcilerState.errors?.count > 0
+              ? [
+                  {
+                    message: reconcilerState.errors.lastError || 'Consistency fix error',
+                    timestamp: reconcilerState.errors.timestamp || Date.now(),
+                  },
+                ]
+              : undefined,
         },
       });
     }
 
     // Step 4: Vault Update
-    const relevantVaultChanges = vaultChanges.filter(change =>
-      (change.changeType === 'updated' || change.changeType === 'deleted') &&
-      change.timestamp >= (baseTime - 60000) &&
-      change.timestamp <= (baseTime + (reconcilerState.processingDuration || 10000))
+    const relevantVaultChanges = vaultChanges.filter(
+      (change) =>
+        (change.changeType === 'updated' || change.changeType === 'deleted') &&
+        change.timestamp >= baseTime - 60000 &&
+        change.timestamp <= baseTime + (reconcilerState.processingDuration || 10000),
     );
 
     if (relevantVaultChanges.length > 0 || reconcilerState.entitiesMerged > 0) {
@@ -887,7 +1013,9 @@ export class TraceEnhancementService {
         id: `${parentNodeId}_vault_update`,
         type: 'step',
         name: 'Vault Update',
-        startTime: baseTime + (reconcilerState.processingDuration ? reconcilerState.processingDuration * 0.9 : 9000),
+        startTime:
+          baseTime +
+          (reconcilerState.processingDuration ? reconcilerState.processingDuration * 0.9 : 9000),
         endTime: baseTime + (reconcilerState.processingDuration || 10000),
         status: 'success',
         parentId: parentNodeId,
@@ -895,14 +1023,14 @@ export class TraceEnhancementService {
         metadata: {
           description: 'Persisting reconciliation changes to the vault',
           entitiesMerged: reconcilerState.entitiesMerged || 0,
-          vaultChanges: relevantVaultChanges.map(c => ({
+          vaultChanges: relevantVaultChanges.map((c) => ({
             entityId: c.entityId,
             entityType: c.entityType,
             changeType: c.changeType,
             timestamp: c.timestamp,
           })),
-          totalUpdates: relevantVaultChanges.filter(c => c.changeType === 'updated').length,
-          totalDeletions: relevantVaultChanges.filter(c => c.changeType === 'deleted').length,
+          totalUpdates: relevantVaultChanges.filter((c) => c.changeType === 'updated').length,
+          totalDeletions: relevantVaultChanges.filter((c) => c.changeType === 'deleted').length,
           indexRebuild: relevantVaultChanges.length > 10,
         },
         state: {
@@ -914,7 +1042,9 @@ export class TraceEnhancementService {
         operationalData: {
           workerType: 'reconciler',
           entitiesProcessed: relevantVaultChanges.length || reconcilerState.entitiesMerged || 0,
-          duration: reconcilerState.processingDuration ? reconcilerState.processingDuration * 0.1 : 1000,
+          duration: reconcilerState.processingDuration
+            ? reconcilerState.processingDuration * 0.1
+            : 1000,
         },
       });
     }
@@ -928,7 +1058,7 @@ export class TraceEnhancementService {
   private createCartographerSteps(
     parentNodeId: string,
     cartographerState: any,
-    vaultChanges: any[]
+    vaultChanges: any[],
   ): EnhancedTraceNode[] {
     const steps: EnhancedTraceNode[] = [];
     const baseTime = cartographerState.lastRun || Date.now();
@@ -940,7 +1070,11 @@ export class TraceEnhancementService {
         type: 'step',
         name: 'Entity Embedding',
         startTime: baseTime,
-        endTime: baseTime + (cartographerState.processingDuration ? cartographerState.processingDuration * 0.4 : 4000),
+        endTime:
+          baseTime +
+          (cartographerState.processingDuration
+            ? cartographerState.processingDuration * 0.4
+            : 4000),
         status: cartographerState.embeddingStats?.vectorsGenerated > 0 ? 'success' : 'error',
         parentId: parentNodeId,
         children: [],
@@ -963,7 +1097,9 @@ export class TraceEnhancementService {
         operationalData: {
           workerType: 'cartographer',
           entitiesProcessed: cartographerState.entitiesEmbedded || 0,
-          duration: cartographerState.processingDuration ? cartographerState.processingDuration * 0.4 : 4000,
+          duration: cartographerState.processingDuration
+            ? cartographerState.processingDuration * 0.4
+            : 4000,
         },
       });
     }
@@ -974,8 +1110,16 @@ export class TraceEnhancementService {
         id: `${parentNodeId}_archetype_discovery`,
         type: 'step',
         name: 'Archetype Discovery',
-        startTime: baseTime + (cartographerState.processingDuration ? cartographerState.processingDuration * 0.4 : 4000),
-        endTime: baseTime + (cartographerState.processingDuration ? cartographerState.processingDuration * 0.7 : 7000),
+        startTime:
+          baseTime +
+          (cartographerState.processingDuration
+            ? cartographerState.processingDuration * 0.4
+            : 4000),
+        endTime:
+          baseTime +
+          (cartographerState.processingDuration
+            ? cartographerState.processingDuration * 0.7
+            : 7000),
         status: cartographerState.archetypesDiscovered > 0 ? 'success' : 'error',
         parentId: parentNodeId,
         children: [],
@@ -999,7 +1143,9 @@ export class TraceEnhancementService {
         operationalData: {
           workerType: 'cartographer',
           entitiesProcessed: cartographerState.archetypesDiscovered || 0,
-          duration: cartographerState.processingDuration ? cartographerState.processingDuration * 0.3 : 3000,
+          duration: cartographerState.processingDuration
+            ? cartographerState.processingDuration * 0.3
+            : 3000,
         },
       });
     }
@@ -1010,18 +1156,29 @@ export class TraceEnhancementService {
         id: `${parentNodeId}_relationship_mapping`,
         type: 'step',
         name: 'Relationship Mapping',
-        startTime: baseTime + (cartographerState.processingDuration ? cartographerState.processingDuration * 0.7 : 7000),
-        endTime: baseTime + (cartographerState.processingDuration ? cartographerState.processingDuration * 0.9 : 9000),
+        startTime:
+          baseTime +
+          (cartographerState.processingDuration
+            ? cartographerState.processingDuration * 0.7
+            : 7000),
+        endTime:
+          baseTime +
+          (cartographerState.processingDuration
+            ? cartographerState.processingDuration * 0.9
+            : 9000),
         status: cartographerState.relationshipsMapped > 0 ? 'success' : 'error',
         parentId: parentNodeId,
         children: [],
         metadata: {
-          description: 'Mapping relationships between entities based on semantic similarity and references',
+          description:
+            'Mapping relationships between entities based on semantic similarity and references',
           relationshipsMapped: cartographerState.relationshipsMapped || 0,
           newRelationships: cartographerState.relationshipStats?.newRelationships || 0,
-          strengthenedRelationships: cartographerState.relationshipStats?.strengthenedRelationships || 0,
+          strengthenedRelationships:
+            cartographerState.relationshipStats?.strengthenedRelationships || 0,
           weakenedRelationships: cartographerState.relationshipStats?.weakenedRelationships || 0,
-          averageRelationshipStrength: cartographerState.relationshipStats?.averageRelationshipStrength || 0,
+          averageRelationshipStrength:
+            cartographerState.relationshipStats?.averageRelationshipStrength || 0,
           lastMappedRelationships: cartographerState.lastMappedRelationships || [],
           relationshipTypes: ['semantic', 'reference', 'temporal', 'causal'],
         },
@@ -1035,16 +1192,19 @@ export class TraceEnhancementService {
         operationalData: {
           workerType: 'cartographer',
           entitiesProcessed: cartographerState.relationshipsMapped || 0,
-          duration: cartographerState.processingDuration ? cartographerState.processingDuration * 0.2 : 2000,
+          duration: cartographerState.processingDuration
+            ? cartographerState.processingDuration * 0.2
+            : 2000,
         },
       });
     }
 
     // Step 4: Knowledge Graph Update
-    const relevantVaultChanges = vaultChanges.filter(change =>
-      (change.entityType === 'archetype' || change.changeType === 'updated') &&
-      change.timestamp >= (baseTime - 60000) &&
-      change.timestamp <= (baseTime + (cartographerState.processingDuration || 10000))
+    const relevantVaultChanges = vaultChanges.filter(
+      (change) =>
+        (change.entityType === 'archetype' || change.changeType === 'updated') &&
+        change.timestamp >= baseTime - 60000 &&
+        change.timestamp <= baseTime + (cartographerState.processingDuration || 10000),
     );
 
     if (relevantVaultChanges.length > 0 || cartographerState.archetypesDiscovered > 0) {
@@ -1052,16 +1212,24 @@ export class TraceEnhancementService {
         id: `${parentNodeId}_knowledge_graph_update`,
         type: 'step',
         name: 'Knowledge Graph Update',
-        startTime: baseTime + (cartographerState.processingDuration ? cartographerState.processingDuration * 0.9 : 9000),
+        startTime:
+          baseTime +
+          (cartographerState.processingDuration
+            ? cartographerState.processingDuration * 0.9
+            : 9000),
         endTime: baseTime + (cartographerState.processingDuration || 10000),
         status: 'success',
         parentId: parentNodeId,
         children: [],
         metadata: {
           description: 'Updating the knowledge graph with new archetypes and relationships',
-          archetypesCreated: relevantVaultChanges.filter(c => c.entityType === 'archetype' && c.changeType === 'created').length,
-          archetypesUpdated: relevantVaultChanges.filter(c => c.entityType === 'archetype' && c.changeType === 'updated').length,
-          vaultChanges: relevantVaultChanges.map(c => ({
+          archetypesCreated: relevantVaultChanges.filter(
+            (c) => c.entityType === 'archetype' && c.changeType === 'created',
+          ).length,
+          archetypesUpdated: relevantVaultChanges.filter(
+            (c) => c.entityType === 'archetype' && c.changeType === 'updated',
+          ).length,
+          vaultChanges: relevantVaultChanges.map((c) => ({
             entityId: c.entityId,
             entityType: c.entityType,
             changeType: c.changeType,
@@ -1078,16 +1246,26 @@ export class TraceEnhancementService {
           phase: 'persistence',
           vaultPath: 'vault/archetype',
           graphDatabase: 'neo4j',
-          writeOperations: relevantVaultChanges.length + (cartographerState.relationshipsMapped || 0),
+          writeOperations:
+            relevantVaultChanges.length + (cartographerState.relationshipsMapped || 0),
           transactionMode: true,
         },
         operationalData: {
           workerType: 'cartographer',
-          entitiesProcessed: relevantVaultChanges.length || cartographerState.archetypesDiscovered || 0,
-          duration: cartographerState.processingDuration ? cartographerState.processingDuration * 0.1 : 1000,
-          errors: cartographerState.errors?.count > 0 ? [
-            { message: cartographerState.errors.lastError || 'Graph update error', timestamp: cartographerState.errors.timestamp || Date.now() }
-          ] : undefined,
+          entitiesProcessed:
+            relevantVaultChanges.length || cartographerState.archetypesDiscovered || 0,
+          duration: cartographerState.processingDuration
+            ? cartographerState.processingDuration * 0.1
+            : 1000,
+          errors:
+            cartographerState.errors?.count > 0
+              ? [
+                  {
+                    message: cartographerState.errors.lastError || 'Graph update error',
+                    timestamp: cartographerState.errors.timestamp || Date.now(),
+                  },
+                ]
+              : undefined,
         },
       });
     }
@@ -1147,7 +1325,7 @@ export class TraceEnhancementService {
           errors: (state as any).errors?.count || 0,
         })),
         vaultChangesCount: operationalData.vaultChanges.length,
-        recentVaultChanges: operationalData.vaultChanges.slice(0, 10).map(change => ({
+        recentVaultChanges: operationalData.vaultChanges.slice(0, 10).map((change) => ({
           entityType: change.entityType,
           changeType: change.changeType,
           timestamp: Math.floor(change.timestamp / 1000), // Round to seconds
@@ -1155,7 +1333,7 @@ export class TraceEnhancementService {
       };
 
       return crypto.createHash('sha256').update(JSON.stringify(dataForHashing)).digest('hex');
-    } catch (error) {
+    } catch (_error) {
       // Fallback to timestamp-based hash if crypto fails
       return `timestamp_${operationalData.collectedAt}`;
     }
@@ -1197,10 +1375,11 @@ export class TraceEnhancementService {
 
     // Check for new vault changes
     const newChanges = operationalData.vaultChanges.filter(
-      change => !this.lastDataSnapshot!.vaultChanges.some(
-        prevChange => prevChange.entityId === change.entityId &&
-                      prevChange.timestamp === change.timestamp
-      )
+      (change) =>
+        !this.lastDataSnapshot?.vaultChanges.some(
+          (prevChange) =>
+            prevChange.entityId === change.entityId && prevChange.timestamp === change.timestamp,
+        ),
     );
 
     return newChanges.length > 0;
@@ -1219,9 +1398,11 @@ export class TraceEnhancementService {
     for (const [workerType, currentState] of Object.entries(operationalData.workerStates)) {
       const previousState = this.lastDataSnapshot.workerStates[workerType];
 
-      if (!previousState ||
-          (currentState.lastRun || 0) !== (previousState.lastRun || 0) ||
-          (currentState.entityCount || 0) !== (previousState.entityCount || 0)) {
+      if (
+        !previousState ||
+        (currentState.lastRun || 0) !== (previousState.lastRun || 0) ||
+        (currentState.entityCount || 0) !== (previousState.entityCount || 0)
+      ) {
         affectedWorkers.push(workerType);
       }
     }
@@ -1235,7 +1416,7 @@ export class TraceEnhancementService {
   private traceAffectedByEntityChanges(cacheKey: string, changedEntityTypes: Set<string>): boolean {
     // Extract worker type from cache key if possible
     const workerTypes = ['harvester', 'synthesizer', 'reconciler', 'cartographer'];
-    const traceWorkerType = workerTypes.find(type => cacheKey.includes(type));
+    const traceWorkerType = workerTypes.find((type) => cacheKey.includes(type));
 
     if (!traceWorkerType) {
       // If we can't determine the worker type, assume it might be affected
@@ -1253,8 +1434,7 @@ export class TraceEnhancementService {
     const dependencies = workerEntityDependencies[traceWorkerType] || [];
 
     // Check if any changed entity type affects this worker
-    return dependencies.includes('*') ||
-           dependencies.some(dep => changedEntityTypes.has(dep));
+    return dependencies.includes('*') || dependencies.some((dep) => changedEntityTypes.has(dep));
   }
 
   /**
@@ -1263,7 +1443,7 @@ export class TraceEnhancementService {
   private createFallbackTrace(
     originalTrace: TraceGraph,
     errors: string[],
-    fallbackReason: string
+    fallbackReason: string,
   ): TraceEnhancementResult {
     // Create a minimally enhanced trace that maintains the original structure
     // but adds some metadata about why enhancement failed
@@ -1346,7 +1526,7 @@ export class TraceEnhancementService {
       if (!['basic', 'detailed', 'full'].includes(info.enhancementLevel)) return false;
 
       return true;
-    } catch (error) {
+    } catch (_error) {
       return false;
     }
   }

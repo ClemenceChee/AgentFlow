@@ -6,7 +6,7 @@
     "build": "npm run build --workspaces",
     "test": "vitest run",
     "test:watch": "vitest",
-    "lint": "biome check packages/ tests/",
+    "lint": "biome check --diagnostic-level=error packages/ tests/",
     "lint:fix": "biome check --write packages/ tests/",
     "typecheck": "tsc -b",
     "docs:dev": "npm run start --prefix docs",

@@ -214,7 +214,13 @@ export interface SOMADataReaderConfig {
 
 export interface SOMADataReaderError {
   /** Error type */
-  type: 'file_not_found' | 'parse_error' | 'permission_error' | 'corruption_error' | 'timeout_error' | 'unknown_error';
+  type:
+    | 'file_not_found'
+    | 'parse_error'
+    | 'permission_error'
+    | 'corruption_error'
+    | 'timeout_error'
+    | 'unknown_error';
   /** Error message */
   message: string;
   /** File path where error occurred */
@@ -269,7 +275,10 @@ export interface SOMADataReader {
   /**
    * Read recent vault changes with enhanced detection including deletions
    */
-  readVaultChangesDetailed(timestamp: number, options?: { includeDeletions?: boolean; includeHashes?: boolean }): Promise<SOMAVaultChange[]>;
+  readVaultChangesDetailed(
+    timestamp: number,
+    options?: { includeDeletions?: boolean; includeHashes?: boolean },
+  ): Promise<SOMAVaultChange[]>;
 
   /**
    * Check if SOMA data is available at configured paths
@@ -284,7 +293,9 @@ export interface SOMADataReader {
   /**
    * Validate state file structure and content
    */
-  validateStateFile(workerType: string): Promise<{ isValid: boolean; errors: SOMADataReaderError[] }>;
+  validateStateFile(
+    workerType: string,
+  ): Promise<{ isValid: boolean; errors: SOMADataReaderError[] }>;
 
   /**
    * Attempt to repair corrupted state files
@@ -347,9 +358,9 @@ export class DefaultSOMADataReader implements SOMADataReader {
 
     // Read recent vault changes (last hour by default)
     totalOperations++;
-    const oneHourAgo = Date.now() - (60 * 60 * 1000);
+    const oneHourAgo = Date.now() - 60 * 60 * 1000;
     try {
-      vaultChanges.push(...await this.readVaultChangesSince(oneHourAgo));
+      vaultChanges.push(...(await this.readVaultChangesSince(oneHourAgo)));
       successfulOperations++;
     } catch (error) {
       const errorType = this.classifyError(error as Error);
@@ -396,7 +407,7 @@ export class DefaultSOMADataReader implements SOMADataReader {
       return {
         type: workerType as SOMAWorkerState['type'],
         lastRun: stats.mtime.getTime(),
-        ...stateData
+        ...stateData,
       };
     } catch (error) {
       console.warn(`Failed to read ${workerType} state file:`, error);
@@ -426,11 +437,18 @@ export class DefaultSOMADataReader implements SOMADataReader {
         type: 'harvester',
         lastRun: stats.mtime.getTime(),
         entityCount: typeof rawData.entityCount === 'number' ? rawData.entityCount : undefined,
-        processedEventIds: Array.isArray(rawData.processedEventIds) ? rawData.processedEventIds : [],
-        filesProcessed: typeof rawData.filesProcessed === 'number' ? rawData.filesProcessed : undefined,
-        eventsIngested: typeof rawData.eventsIngested === 'number' ? rawData.eventsIngested : undefined,
-        lastProcessedFiles: Array.isArray(rawData.lastProcessedFiles) ? rawData.lastProcessedFiles : [],
-        processingDuration: typeof rawData.processingDuration === 'number' ? rawData.processingDuration : undefined,
+        processedEventIds: Array.isArray(rawData.processedEventIds)
+          ? rawData.processedEventIds
+          : [],
+        filesProcessed:
+          typeof rawData.filesProcessed === 'number' ? rawData.filesProcessed : undefined,
+        eventsIngested:
+          typeof rawData.eventsIngested === 'number' ? rawData.eventsIngested : undefined,
+        lastProcessedFiles: Array.isArray(rawData.lastProcessedFiles)
+          ? rawData.lastProcessedFiles
+          : [],
+        processingDuration:
+          typeof rawData.processingDuration === 'number' ? rawData.processingDuration : undefined,
       };
 
       // Parse inbox statistics if available
@@ -490,11 +508,18 @@ export class DefaultSOMADataReader implements SOMADataReader {
         type: 'synthesizer',
         lastRun: stats.mtime.getTime(),
         entityCount: typeof rawData.entityCount === 'number' ? rawData.entityCount : undefined,
-        processedEventIds: Array.isArray(rawData.processedEventIds) ? rawData.processedEventIds : [],
-        candidatesAnalyzed: typeof rawData.candidatesAnalyzed === 'number' ? rawData.candidatesAnalyzed : undefined,
-        insightsCreated: typeof rawData.insightsCreated === 'number' ? rawData.insightsCreated : undefined,
-        lastCreatedInsights: Array.isArray(rawData.lastCreatedInsights) ? rawData.lastCreatedInsights : [],
-        processingDuration: typeof rawData.processingDuration === 'number' ? rawData.processingDuration : undefined,
+        processedEventIds: Array.isArray(rawData.processedEventIds)
+          ? rawData.processedEventIds
+          : [],
+        candidatesAnalyzed:
+          typeof rawData.candidatesAnalyzed === 'number' ? rawData.candidatesAnalyzed : undefined,
+        insightsCreated:
+          typeof rawData.insightsCreated === 'number' ? rawData.insightsCreated : undefined,
+        lastCreatedInsights: Array.isArray(rawData.lastCreatedInsights)
+          ? rawData.lastCreatedInsights
+          : [],
+        processingDuration:
+          typeof rawData.processingDuration === 'number' ? rawData.processingDuration : undefined,
       };
 
       // Parse LLM analysis statistics if available
@@ -504,7 +529,8 @@ export class DefaultSOMADataReader implements SOMADataReader {
           totalCalls: typeof stats.totalCalls === 'number' ? stats.totalCalls : 0,
           successfulCalls: typeof stats.successfulCalls === 'number' ? stats.successfulCalls : 0,
           failedCalls: typeof stats.failedCalls === 'number' ? stats.failedCalls : 0,
-          averageLatency: typeof stats.averageLatency === 'number' ? stats.averageLatency : undefined,
+          averageLatency:
+            typeof stats.averageLatency === 'number' ? stats.averageLatency : undefined,
         };
       }
 
@@ -524,7 +550,8 @@ export class DefaultSOMADataReader implements SOMADataReader {
         const stats = rawData.deduplicationStats;
         synthesizerState.deduplicationStats = {
           duplicatesFound: typeof stats.duplicatesFound === 'number' ? stats.duplicatesFound : 0,
-          duplicatesRemoved: typeof stats.duplicatesRemoved === 'number' ? stats.duplicatesRemoved : 0,
+          duplicatesRemoved:
+            typeof stats.duplicatesRemoved === 'number' ? stats.duplicatesRemoved : 0,
           uniqueInsights: typeof stats.uniqueInsights === 'number' ? stats.uniqueInsights : 0,
         };
       }
@@ -575,10 +602,15 @@ export class DefaultSOMADataReader implements SOMADataReader {
         type: 'reconciler',
         lastRun: stats.mtime.getTime(),
         entityCount: typeof rawData.entityCount === 'number' ? rawData.entityCount : undefined,
-        processedEventIds: Array.isArray(rawData.processedEventIds) ? rawData.processedEventIds : [],
-        issuesDetected: typeof rawData.issuesDetected === 'number' ? rawData.issuesDetected : undefined,
-        entitiesMerged: typeof rawData.entitiesMerged === 'number' ? rawData.entitiesMerged : undefined,
-        processingDuration: typeof rawData.processingDuration === 'number' ? rawData.processingDuration : undefined,
+        processedEventIds: Array.isArray(rawData.processedEventIds)
+          ? rawData.processedEventIds
+          : [],
+        issuesDetected:
+          typeof rawData.issuesDetected === 'number' ? rawData.issuesDetected : undefined,
+        entitiesMerged:
+          typeof rawData.entitiesMerged === 'number' ? rawData.entitiesMerged : undefined,
+        processingDuration:
+          typeof rawData.processingDuration === 'number' ? rawData.processingDuration : undefined,
       };
 
       // Parse consistency check statistics if available
@@ -616,8 +648,12 @@ export class DefaultSOMADataReader implements SOMADataReader {
 
       // Parse last merged entities if available
       if (Array.isArray(rawData.lastMergedEntities)) {
-        reconcilerState.lastMergedEntities = rawData.lastMergedEntities.filter((merge: any) =>
-          merge && typeof merge.original === 'string' && typeof merge.target === 'string' && typeof merge.mergedId === 'string'
+        reconcilerState.lastMergedEntities = rawData.lastMergedEntities.filter(
+          (merge: any) =>
+            merge &&
+            typeof merge.original === 'string' &&
+            typeof merge.target === 'string' &&
+            typeof merge.mergedId === 'string',
         );
       }
 
@@ -667,12 +703,22 @@ export class DefaultSOMADataReader implements SOMADataReader {
         type: 'cartographer',
         lastRun: stats.mtime.getTime(),
         entityCount: typeof rawData.entityCount === 'number' ? rawData.entityCount : undefined,
-        processedEventIds: Array.isArray(rawData.processedEventIds) ? rawData.processedEventIds : [],
-        entitiesEmbedded: typeof rawData.entitiesEmbedded === 'number' ? rawData.entitiesEmbedded : undefined,
-        archetypesDiscovered: typeof rawData.archetypesDiscovered === 'number' ? rawData.archetypesDiscovered : undefined,
-        relationshipsMapped: typeof rawData.relationshipsMapped === 'number' ? rawData.relationshipsMapped : undefined,
-        lastDiscoveredArchetypes: Array.isArray(rawData.lastDiscoveredArchetypes) ? rawData.lastDiscoveredArchetypes : [],
-        processingDuration: typeof rawData.processingDuration === 'number' ? rawData.processingDuration : undefined,
+        processedEventIds: Array.isArray(rawData.processedEventIds)
+          ? rawData.processedEventIds
+          : [],
+        entitiesEmbedded:
+          typeof rawData.entitiesEmbedded === 'number' ? rawData.entitiesEmbedded : undefined,
+        archetypesDiscovered:
+          typeof rawData.archetypesDiscovered === 'number'
+            ? rawData.archetypesDiscovered
+            : undefined,
+        relationshipsMapped:
+          typeof rawData.relationshipsMapped === 'number' ? rawData.relationshipsMapped : undefined,
+        lastDiscoveredArchetypes: Array.isArray(rawData.lastDiscoveredArchetypes)
+          ? rawData.lastDiscoveredArchetypes
+          : [],
+        processingDuration:
+          typeof rawData.processingDuration === 'number' ? rawData.processingDuration : undefined,
       };
 
       // Parse embedding statistics if available
@@ -680,8 +726,10 @@ export class DefaultSOMADataReader implements SOMADataReader {
         const stats = rawData.embeddingStats;
         cartographerState.embeddingStats = {
           vectorsGenerated: typeof stats.vectorsGenerated === 'number' ? stats.vectorsGenerated : 0,
-          embeddingDimensions: typeof stats.embeddingDimensions === 'number' ? stats.embeddingDimensions : 0,
-          averageSimilarity: typeof stats.averageSimilarity === 'number' ? stats.averageSimilarity : 0,
+          embeddingDimensions:
+            typeof stats.embeddingDimensions === 'number' ? stats.embeddingDimensions : 0,
+          averageSimilarity:
+            typeof stats.averageSimilarity === 'number' ? stats.averageSimilarity : 0,
           totalClusters: typeof stats.totalClusters === 'number' ? stats.totalClusters : 0,
         };
       }
@@ -691,8 +739,10 @@ export class DefaultSOMADataReader implements SOMADataReader {
         const stats = rawData.archetypeStats;
         cartographerState.archetypeStats = {
           newArchetypes: typeof stats.newArchetypes === 'number' ? stats.newArchetypes : 0,
-          updatedArchetypes: typeof stats.updatedArchetypes === 'number' ? stats.updatedArchetypes : 0,
-          archetypeConfidence: typeof stats.archetypeConfidence === 'number' ? stats.archetypeConfidence : 0,
+          updatedArchetypes:
+            typeof stats.updatedArchetypes === 'number' ? stats.updatedArchetypes : 0,
+          archetypeConfidence:
+            typeof stats.archetypeConfidence === 'number' ? stats.archetypeConfidence : 0,
           patternStrength: typeof stats.patternStrength === 'number' ? stats.patternStrength : 0,
         };
       }
@@ -702,16 +752,28 @@ export class DefaultSOMADataReader implements SOMADataReader {
         const stats = rawData.relationshipStats;
         cartographerState.relationshipStats = {
           newRelationships: typeof stats.newRelationships === 'number' ? stats.newRelationships : 0,
-          strengthenedRelationships: typeof stats.strengthenedRelationships === 'number' ? stats.strengthenedRelationships : 0,
-          weakenedRelationships: typeof stats.weakenedRelationships === 'number' ? stats.weakenedRelationships : 0,
-          averageRelationshipStrength: typeof stats.averageRelationshipStrength === 'number' ? stats.averageRelationshipStrength : 0,
+          strengthenedRelationships:
+            typeof stats.strengthenedRelationships === 'number'
+              ? stats.strengthenedRelationships
+              : 0,
+          weakenedRelationships:
+            typeof stats.weakenedRelationships === 'number' ? stats.weakenedRelationships : 0,
+          averageRelationshipStrength:
+            typeof stats.averageRelationshipStrength === 'number'
+              ? stats.averageRelationshipStrength
+              : 0,
         };
       }
 
       // Parse last mapped relationships if available
       if (Array.isArray(rawData.lastMappedRelationships)) {
-        cartographerState.lastMappedRelationships = rawData.lastMappedRelationships.filter((rel: any) =>
-          rel && typeof rel.from === 'string' && typeof rel.to === 'string' && typeof rel.type === 'string' && typeof rel.strength === 'number'
+        cartographerState.lastMappedRelationships = rawData.lastMappedRelationships.filter(
+          (rel: any) =>
+            rel &&
+            typeof rel.from === 'string' &&
+            typeof rel.to === 'string' &&
+            typeof rel.type === 'string' &&
+            typeof rel.strength === 'number',
         );
       }
 
@@ -769,7 +831,7 @@ export class DefaultSOMADataReader implements SOMADataReader {
               entityType,
               changeType: stats.birthtime.getTime() > timestamp ? 'created' : 'updated',
               timestamp: stats.mtime.getTime(),
-              filePath
+              filePath,
             });
           }
         }
@@ -784,7 +846,10 @@ export class DefaultSOMADataReader implements SOMADataReader {
     return changes;
   }
 
-  async readVaultChangesDetailed(timestamp: number, options: { includeDeletions?: boolean; includeHashes?: boolean } = {}): Promise<SOMAVaultChange[]> {
+  async readVaultChangesDetailed(
+    timestamp: number,
+    options: { includeDeletions?: boolean; includeHashes?: boolean } = {},
+  ): Promise<SOMAVaultChange[]> {
     const changes: SOMAVaultChange[] = [];
     const { includeDeletions = false, includeHashes = false } = options;
 
@@ -884,10 +949,17 @@ export class DefaultSOMADataReader implements SOMADataReader {
 
           // Update snapshot for next time
           try {
-            await fs.promises.writeFile(stateFile, JSON.stringify({
-              files: Array.from(currentFiles),
-              timestamp: Date.now()
-            }, null, 2));
+            await fs.promises.writeFile(
+              stateFile,
+              JSON.stringify(
+                {
+                  files: Array.from(currentFiles),
+                  timestamp: Date.now(),
+                },
+                null,
+                2,
+              ),
+            );
           } catch (writeError) {
             console.warn('Failed to update vault snapshot:', writeError);
           }
@@ -950,13 +1022,15 @@ export class DefaultSOMADataReader implements SOMADataReader {
     if (error.message.includes('timeout') || error.message.includes('TIMEOUT')) {
       return 'timeout_error';
     }
-    if (filePath && error.message.includes('invalid') || error.message.includes('corrupt')) {
+    if ((filePath && error.message.includes('invalid')) || error.message.includes('corrupt')) {
       return 'corruption_error';
     }
     return 'unknown_error';
   }
 
-  async validateStateFile(workerType: string): Promise<{ isValid: boolean; errors: SOMADataReaderError[] }> {
+  async validateStateFile(
+    workerType: string,
+  ): Promise<{ isValid: boolean; errors: SOMADataReaderError[] }> {
     const stateFile = path.join(this.config.statePath, `${workerType}-state.json`);
     const validationErrors: SOMADataReaderError[] = [];
 

@@ -4,11 +4,12 @@
  * Provides secure execution of configured external commands with validation,
  * sanitization, timeout handling, and audit logging.
  */
+
+import { type ChildProcess, spawn } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { spawn, type ChildProcess } from 'node:child_process';
 import type { DashboardUserConfig, ExternalCommand } from './config.js';
-import { getValidatedExternalCommands, getExternalCommand } from './config.js';
+import { getExternalCommand, getValidatedExternalCommands } from './config.js';
 
 export interface CommandExecutionRequest {
   /** Command ID from configuration */
@@ -64,11 +65,14 @@ export class CommandExecutor {
   private executionCounter = 0;
   private readonly maxConcurrentExecutions: number;
 
-  constructor(private config: DashboardUserConfig, options: {
-    maxConcurrentExecutions?: number;
-  } = {}) {
-    this.maxConcurrentExecutions = options.maxConcurrentExecutions ??
-      config.externalCommands?.maxConcurrentExecutions ?? 5;
+  constructor(
+    private config: DashboardUserConfig,
+    options: {
+      maxConcurrentExecutions?: number;
+    } = {},
+  ) {
+    this.maxConcurrentExecutions =
+      options.maxConcurrentExecutions ?? config.externalCommands?.maxConcurrentExecutions ?? 5;
   }
 
   /**
@@ -87,13 +91,20 @@ export class CommandExecutor {
       // Get validated command configuration
       const command = getExternalCommand(this.config, request.commandId);
       if (!command) {
-        return this.createFailedResult(executionId, request.commandId, `Command "${request.commandId}" not found in configuration`);
+        return this.createFailedResult(
+          executionId,
+          request.commandId,
+          `Command "${request.commandId}" not found in configuration`,
+        );
       }
 
       // Check concurrent execution limits
       if (!this.canStartExecution(command)) {
-        return this.createFailedResult(executionId, request.commandId,
-          `Cannot start command: ${command.allowConcurrent ? 'concurrent execution limit reached' : 'command already running'}`);
+        return this.createFailedResult(
+          executionId,
+          request.commandId,
+          `Cannot start command: ${command.allowConcurrent ? 'concurrent execution limit reached' : 'command already running'}`,
+        );
       }
 
       // Create execution result
@@ -112,7 +123,7 @@ export class CommandExecutor {
       // Sanitize and prepare execution parameters
       const sanitizedArgs = this.sanitizeArguments([
         ...command.args,
-        ...(request.additionalArgs ?? [])
+        ...(request.additionalArgs ?? []),
       ]);
 
       const executionTimeout = request.timeout ?? command.timeout;
@@ -182,8 +193,11 @@ export class CommandExecutor {
 
       return result;
     } catch (error) {
-      return this.createFailedResult(executionId, request.commandId,
-        `Execution setup failed: ${(error as Error).message}`);
+      return this.createFailedResult(
+        executionId,
+        request.commandId,
+        `Execution setup failed: ${(error as Error).message}`,
+      );
     }
   }
 
@@ -243,14 +257,14 @@ export class CommandExecutor {
    * Get currently running executions
    */
   getRunningExecutions(): CommandExecutionResult[] {
-    return Array.from(this.executions.values())
-      .filter(exec => exec.status === 'running');
+    return Array.from(this.executions.values()).filter((exec) => exec.status === 'running');
   }
 
   /**
    * Clean up old execution records
    */
-  cleanupExecutions(maxAge = 24 * 60 * 60 * 1000): number { // 24 hours default
+  cleanupExecutions(maxAge = 24 * 60 * 60 * 1000): number {
+    // 24 hours default
     const cutoff = Date.now() - maxAge;
     let cleaned = 0;
 
@@ -323,32 +337,34 @@ export class CommandExecutor {
   private containsUnsafeContent(content: string): boolean {
     // Check for command injection patterns
     const dangerousPatterns = [
-      /[;&|`$(){}[\]]/,  // Shell metacharacters
-      /\.\./,             // Directory traversal
-      /\/dev\/|\/proc\/|\/sys\//,  // System paths
-      /rm\s+-rf|rm\s+-f/i,  // Dangerous rm commands
-      /chmod|chown|sudo/i,   // Privilege escalation
+      /[;&|`$(){}[\]]/, // Shell metacharacters
+      /\.\./, // Directory traversal
+      /\/dev\/|\/proc\/|\/sys\//, // System paths
+      /rm\s+-rf|rm\s+-f/i, // Dangerous rm commands
+      /chmod|chown|sudo/i, // Privilege escalation
       /curl|wget|nc|telnet/i, // Network commands
     ];
 
-    return dangerousPatterns.some(pattern => pattern.test(content));
+    return dangerousPatterns.some((pattern) => pattern.test(content));
   }
 
   private sanitizeArguments(args: string[]): string[] {
-    return args.map(arg => {
-      // Remove null bytes and control characters
-      let sanitized = arg.replace(/[\x00-\x1f\x7f]/g, '');
+    return args
+      .map((arg) => {
+        // Remove null bytes and control characters
+        let sanitized = arg.replace(/[\x00-\x1f\x7f]/g, '');
 
-      // Trim whitespace
-      sanitized = sanitized.trim();
+        // Trim whitespace
+        sanitized = sanitized.trim();
 
-      // Limit length
-      if (sanitized.length > 1000) {
-        sanitized = sanitized.substring(0, 1000);
-      }
+        // Limit length
+        if (sanitized.length > 1000) {
+          sanitized = sanitized.substring(0, 1000);
+        }
 
-      return sanitized;
-    }).filter(arg => arg.length > 0);
+        return sanitized;
+      })
+      .filter((arg) => arg.length > 0);
   }
 
   private sanitizeEnvironment(env?: Record<string, string>): Record<string, string> {
@@ -383,9 +399,7 @@ export class CommandExecutor {
 
     // Check command-specific concurrent limit
     if (!command.allowConcurrent) {
-      const commandRunning = running.some(exec =>
-        exec.command.name === command.name
-      );
+      const commandRunning = running.some((exec) => exec.command.name === command.name);
 
       if (commandRunning) {
         return false;
@@ -399,7 +413,11 @@ export class CommandExecutor {
     return `exec_${Date.now()}_${++this.executionCounter}`;
   }
 
-  private createFailedResult(executionId: string, commandId: string, error: string): CommandExecutionResult {
+  private createFailedResult(
+    executionId: string,
+    commandId: string,
+    error: string,
+  ): CommandExecutionResult {
     const result: CommandExecutionResult = {
       executionId,
       started: false,
@@ -421,7 +439,10 @@ export class CommandExecutor {
     return result;
   }
 
-  private logExecution(result: CommandExecutionResult, context?: CommandExecutionRequest['context']): void {
+  private logExecution(
+    result: CommandExecutionResult,
+    context?: CommandExecutionRequest['context'],
+  ): void {
     const logEntry = {
       timestamp: new Date().toISOString(),
       executionId: result.executionId,
@@ -457,7 +478,10 @@ export class CommandExecutor {
   private writeAuditLog(logEntry: any, result: CommandExecutionResult): void {
     try {
       const auditDir = path.join(process.cwd(), '.agentflow', 'audit');
-      const auditFile = path.join(auditDir, `command-executions-${new Date().toISOString().slice(0, 10)}.jsonl`);
+      const auditFile = path.join(
+        auditDir,
+        `command-executions-${new Date().toISOString().slice(0, 10)}.jsonl`,
+      );
 
       // Ensure audit directory exists
       if (!fs.existsSync(auditDir)) {
@@ -475,16 +499,20 @@ export class CommandExecutor {
         category: result.command.category,
         description: result.command.description,
         // Include first/last lines of output for audit trail
-        outputPreview: result.stdout ? {
-          firstLine: result.stdout.split('\n')[0]?.slice(0, 200) || '',
-          lastLine: result.stdout.split('\n').slice(-1)[0]?.slice(0, 200) || '',
-          totalLines: result.stdout.split('\n').length,
-        } : null,
-        errorPreview: result.stderr ? {
-          firstLine: result.stderr.split('\n')[0]?.slice(0, 200) || '',
-          lastLine: result.stderr.split('\n').slice(-1)[0]?.slice(0, 200) || '',
-          totalLines: result.stderr.split('\n').length,
-        } : null,
+        outputPreview: result.stdout
+          ? {
+              firstLine: result.stdout.split('\n')[0]?.slice(0, 200) || '',
+              lastLine: result.stdout.split('\n').slice(-1)[0]?.slice(0, 200) || '',
+              totalLines: result.stdout.split('\n').length,
+            }
+          : null,
+        errorPreview: result.stderr
+          ? {
+              firstLine: result.stderr.split('\n')[0]?.slice(0, 200) || '',
+              lastLine: result.stderr.split('\n').slice(-1)[0]?.slice(0, 200) || '',
+              totalLines: result.stderr.split('\n').length,
+            }
+          : null,
       };
 
       // Append to audit log file (JSONL format)
@@ -507,8 +535,9 @@ export class CommandExecutor {
       }
 
       // Search through recent audit files (last 7 days)
-      const files = fs.readdirSync(auditDir)
-        .filter(f => f.startsWith('command-executions-') && f.endsWith('.jsonl'))
+      const files = fs
+        .readdirSync(auditDir)
+        .filter((f) => f.startsWith('command-executions-') && f.endsWith('.jsonl'))
         .sort()
         .slice(-7); // Last 7 days
 
@@ -516,7 +545,10 @@ export class CommandExecutor {
         const filePath = path.join(auditDir, file);
         try {
           const content = fs.readFileSync(filePath, 'utf-8');
-          const lines = content.trim().split('\n').filter(line => line.trim());
+          const lines = content
+            .trim()
+            .split('\n')
+            .filter((line) => line.trim());
 
           for (const line of lines) {
             try {
@@ -533,7 +565,9 @@ export class CommandExecutor {
         }
       }
 
-      return auditEntries.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+      return auditEntries.sort(
+        (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+      );
     } catch (error) {
       console.warn(`[CommandExecutor] Failed to get audit trail: ${(error as Error).message}`);
       return [];
@@ -566,11 +600,12 @@ export class CommandExecutor {
         return stats;
       }
 
-      const cutoff = Date.now() - (days * 24 * 60 * 60 * 1000);
+      const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
       let totalDuration = 0;
 
-      const files = fs.readdirSync(auditDir)
-        .filter(f => f.startsWith('command-executions-') && f.endsWith('.jsonl'))
+      const files = fs
+        .readdirSync(auditDir)
+        .filter((f) => f.startsWith('command-executions-') && f.endsWith('.jsonl'))
         .sort()
         .slice(-days);
 
@@ -578,7 +613,10 @@ export class CommandExecutor {
         const filePath = path.join(auditDir, file);
         try {
           const content = fs.readFileSync(filePath, 'utf-8');
-          const lines = content.trim().split('\n').filter(line => line.trim());
+          const lines = content
+            .trim()
+            .split('\n')
+            .filter((line) => line.trim());
 
           for (const line of lines) {
             try {
@@ -635,8 +673,11 @@ export class CommandExecutor {
 /**
  * Create a command executor instance
  */
-export function createCommandExecutor(config: DashboardUserConfig, options?: {
-  maxConcurrentExecutions?: number;
-}): CommandExecutor {
+export function createCommandExecutor(
+  config: DashboardUserConfig,
+  options?: {
+    maxConcurrentExecutions?: number;
+  },
+): CommandExecutor {
   return new CommandExecutor(config, options);
 }

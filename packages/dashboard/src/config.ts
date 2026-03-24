@@ -211,7 +211,9 @@ export function getValidatedExternalCommands(config: DashboardUserConfig): {
     try {
       // Validate command ID
       if (!commandId.match(/^[a-z][a-z0-9-_]*$/i)) {
-        errors.push(`Invalid command ID "${commandId}": must start with letter and contain only letters, numbers, hyphens, and underscores`);
+        errors.push(
+          `Invalid command ID "${commandId}": must start with letter and contain only letters, numbers, hyphens, and underscores`,
+        );
         continue;
       }
 
@@ -241,7 +243,9 @@ export function getValidatedExternalCommands(config: DashboardUserConfig): {
 
       // Validate timeout
       if (validatedCommand.timeout <= 0 || validatedCommand.timeout > 600000) {
-        errors.push(`Command "${commandId}": timeout must be between 1ms and 600000ms (10 minutes)`);
+        errors.push(
+          `Command "${commandId}": timeout must be between 1ms and 600000ms (10 minutes)`,
+        );
         continue;
       }
 
@@ -254,8 +258,10 @@ export function getValidatedExternalCommands(config: DashboardUserConfig): {
             errors.push(`Command "${commandId}": cwd "${validatedCommand.cwd}" is not a directory`);
             continue;
           }
-        } catch (err) {
-          errors.push(`Command "${commandId}": cwd "${validatedCommand.cwd}" does not exist or is not accessible`);
+        } catch (_err) {
+          errors.push(
+            `Command "${commandId}": cwd "${validatedCommand.cwd}" does not exist or is not accessible`,
+          );
           continue;
         }
       }
@@ -280,7 +286,10 @@ export function isValidCommandId(config: DashboardUserConfig, commandId: string)
 /**
  * Get a specific validated external command
  */
-export function getExternalCommand(config: DashboardUserConfig, commandId: string): ExternalCommand | null {
+export function getExternalCommand(
+  config: DashboardUserConfig,
+  commandId: string,
+): ExternalCommand | null {
   const { commands } = getValidatedExternalCommands(config);
   return commands[commandId] ?? null;
 }

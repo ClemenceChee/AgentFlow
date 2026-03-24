@@ -4,14 +4,15 @@
  * Tests the full integration between external trace discovery,
  * file watching, and SOMA trace loading.
  */
-import { test, expect, describe, beforeEach, afterEach } from 'vitest';
+
 import * as fs from 'node:fs';
-import * as path from 'node:path';
 import * as os from 'node:os';
-import { TraceWatcher } from '../../src/watcher.js';
-import { getDiscoveryPaths, validateDashboardUserConfig } from '../../src/config.js';
+import * as path from 'node:path';
+import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import type { DashboardUserConfig } from '../../src/config.js';
+import { getDiscoveryPaths, validateDashboardUserConfig } from '../../src/config.js';
 import type { TraceGraph } from '../../src/trace-graph.js';
+import { TraceWatcher } from '../../src/watcher.js';
 
 describe('External Trace Discovery Integration', () => {
   let tempDir: string;
@@ -68,7 +69,7 @@ describe('External Trace Discovery Integration', () => {
           parentId: null,
           children: ['node-2'],
           metadata: { framework: 'external' },
-          state: {}
+          state: {},
         },
         'node-2': {
           id: 'node-2',
@@ -80,9 +81,9 @@ describe('External Trace Discovery Integration', () => {
           parentId: 'node-1',
           children: [],
           metadata: { external: true },
-          state: {}
-        }
-      }
+          state: {},
+        },
+      },
     };
 
     // Write trace file
@@ -94,10 +95,10 @@ describe('External Trace Discovery Integration', () => {
     port: 3000,
     tracesDir,
     discoveryPaths,
-    externalCommands: {}
+    externalCommands: {},
   });
 
-  const waitForFileWatch = (ms = 100) => new Promise(resolve => setTimeout(resolve, ms));
+  const waitForFileWatch = (ms = 100) => new Promise((resolve) => setTimeout(resolve, ms));
 
   describe('Basic External Trace Discovery', () => {
     test('discovers traces from configured external directories', async () => {
@@ -105,13 +106,17 @@ describe('External Trace Discovery Integration', () => {
       fs.writeFileSync(configFile, JSON.stringify(config, null, 2));
 
       // Create traces in different directories
-      const internalTrace = createSampleTrace('internal-agent', 'internal.json', tracesDir);
-      const externalTrace = createSampleTrace('external-agent', 'external.json', externalTracesDir);
-      const somaTrace = createSampleTrace('soma-harvester', 'harvester.json', somaTracesDir);
+      const _internalTrace = createSampleTrace('internal-agent', 'internal.json', tracesDir);
+      const _externalTrace = createSampleTrace(
+        'external-agent',
+        'external.json',
+        externalTracesDir,
+      );
+      const _somaTrace = createSampleTrace('soma-harvester', 'harvester.json', somaTracesDir);
 
       watcher = new TraceWatcher(tracesDir, {
         userConfig: config,
-        enableExternalDiscovery: true
+        enableExternalDiscovery: true,
       });
 
       // Wait for discovery to complete
@@ -121,11 +126,13 @@ describe('External Trace Discovery Integration', () => {
 
       expect(traces).toHaveLength(3);
 
-      const agentIds = traces.map(t => t.agentId).sort();
+      const agentIds = traces.map((t) => t.agentId).sort();
       expect(agentIds).toEqual(['external-agent', 'internal-agent', 'soma-harvester']);
 
       // Verify external traces are marked correctly
-      const externalTraces = traces.filter(t => t.filename.includes('external') || t.filename.includes('soma'));
+      const externalTraces = traces.filter(
+        (t) => t.filename.includes('external') || t.filename.includes('soma'),
+      );
       expect(externalTraces).toHaveLength(2);
 
       for (const trace of externalTraces) {
@@ -142,15 +149,18 @@ describe('External Trace Discovery Integration', () => {
 
       // Create invalid trace files
       fs.writeFileSync(path.join(externalTracesDir, 'invalid.json'), 'invalid json content');
-      fs.writeFileSync(path.join(externalTracesDir, 'incomplete.json'), JSON.stringify({
-        id: 'incomplete'
-        // Missing required fields
-      }));
+      fs.writeFileSync(
+        path.join(externalTracesDir, 'incomplete.json'),
+        JSON.stringify({
+          id: 'incomplete',
+          // Missing required fields
+        }),
+      );
       fs.writeFileSync(path.join(externalTracesDir, 'readme.txt'), 'This is not a trace file');
 
       watcher = new TraceWatcher(tracesDir, {
         userConfig: config,
-        enableExternalDiscovery: true
+        enableExternalDiscovery: true,
       });
 
       await waitForFileWatch(200);
@@ -172,16 +182,16 @@ describe('External Trace Discovery Integration', () => {
         external: true,
         framework: 'custom-framework',
         version: '1.2.3',
-        tags: ['production', 'critical']
+        tags: ['production', 'critical'],
       };
       fs.writeFileSync(
         path.join(externalTracesDir, 'metadata.json'),
-        JSON.stringify(trace, null, 2)
+        JSON.stringify(trace, null, 2),
       );
 
       watcher = new TraceWatcher(tracesDir, {
         userConfig: config,
-        enableExternalDiscovery: true
+        enableExternalDiscovery: true,
       });
 
       await waitForFileWatch(200);
@@ -212,7 +222,7 @@ describe('External Trace Discovery Integration', () => {
 
       watcher = new TraceWatcher(tracesDir, {
         userConfig: config,
-        enableExternalDiscovery: true
+        enableExternalDiscovery: true,
       });
 
       await waitForFileWatch(200);
@@ -220,12 +230,12 @@ describe('External Trace Discovery Integration', () => {
       const traces = watcher.getAllTraces();
       expect(traces).toHaveLength(4);
 
-      const somaAgents = traces.map(t => t.agentId).sort();
+      const somaAgents = traces.map((t) => t.agentId).sort();
       expect(somaAgents).toEqual([
         'soma-cartographer',
         'soma-harvester',
         'soma-reconciler',
-        'soma-synthesizer'
+        'soma-synthesizer',
       ]);
 
       // All traces should be from the SOMA directory
@@ -242,7 +252,7 @@ describe('External Trace Discovery Integration', () => {
         'harvester-20240301-120000.json',
         'synthesizer_batch_1.json',
         'reconciler.worker.json',
-        'cartographer-final.json'
+        'cartographer-final.json',
       ];
 
       for (const filename of traces) {
@@ -251,7 +261,7 @@ describe('External Trace Discovery Integration', () => {
 
       watcher = new TraceWatcher(tracesDir, {
         userConfig: config,
-        enableExternalDiscovery: true
+        enableExternalDiscovery: true,
       });
 
       await waitForFileWatch(200);
@@ -260,7 +270,7 @@ describe('External Trace Discovery Integration', () => {
       expect(loadedTraces).toHaveLength(traces.length);
 
       // All should be discovered regardless of naming pattern
-      const filenames = loadedTraces.map(t => path.basename(t.filename)).sort();
+      const filenames = loadedTraces.map((t) => path.basename(t.filename)).sort();
       expect(filenames).toEqual(traces.sort());
     });
   });
@@ -286,7 +296,7 @@ describe('External Trace Discovery Integration', () => {
 
       watcher = new TraceWatcher(tracesDir, {
         userConfig: config,
-        enableExternalDiscovery: true
+        enableExternalDiscovery: true,
       });
 
       expect(watcher).toBeDefined();
@@ -312,7 +322,7 @@ describe('External Trace Discovery Integration', () => {
 
       watcher = new TraceWatcher(tracesDir, {
         userConfig: config,
-        enableExternalDiscovery: true
+        enableExternalDiscovery: true,
       });
 
       // Initially no traces
@@ -335,12 +345,12 @@ describe('External Trace Discovery Integration', () => {
 
       // Create initial trace
       const traceFile = path.join(externalTracesDir, 'update-test.json');
-      let trace = createSampleTrace('update-agent', 'update-test.json', '');
+      const trace = createSampleTrace('update-agent', 'update-test.json', '');
       fs.writeFileSync(traceFile, JSON.stringify(trace, null, 2));
 
       watcher = new TraceWatcher(tracesDir, {
         userConfig: config,
-        enableExternalDiscovery: true
+        enableExternalDiscovery: true,
       });
 
       await waitForFileWatch(200);
@@ -370,7 +380,7 @@ describe('External Trace Discovery Integration', () => {
 
       watcher = new TraceWatcher(tracesDir, {
         userConfig: config,
-        enableExternalDiscovery: true
+        enableExternalDiscovery: true,
       });
 
       await waitForFileWatch(200);
@@ -396,7 +406,7 @@ describe('External Trace Discovery Integration', () => {
 
       watcher = new TraceWatcher(tracesDir, {
         userConfig: config,
-        enableExternalDiscovery: true
+        enableExternalDiscovery: true,
       });
 
       await waitForFileWatch(200);
@@ -417,7 +427,7 @@ describe('External Trace Discovery Integration', () => {
 
         const traces = watcher.getAllTraces();
         expect(traces.length).toBeGreaterThanOrEqual(0); // May or may not contain traces depending on recovery
-      } catch (error) {
+      } catch (_error) {
         // Skip this test on systems where chmod doesn't work as expected
         console.warn('Skipping permission test due to system limitations');
       }
@@ -434,7 +444,7 @@ describe('External Trace Discovery Integration', () => {
       // Should work despite invalid path
       watcher = new TraceWatcher(tracesDir, {
         userConfig: config,
-        enableExternalDiscovery: true
+        enableExternalDiscovery: true,
       });
 
       await waitForFileWatch(200);
@@ -442,7 +452,7 @@ describe('External Trace Discovery Integration', () => {
       const traces = watcher.getAllTraces();
       expect(traces).toHaveLength(2);
 
-      const agentIds = traces.map(t => t.agentId).sort();
+      const agentIds = traces.map((t) => t.agentId).sort();
       expect(agentIds).toEqual(['external-agent', 'soma-agent']);
     });
   });
@@ -461,7 +471,7 @@ describe('External Trace Discovery Integration', () => {
 
       watcher = new TraceWatcher(tracesDir, {
         userConfig: config,
-        enableExternalDiscovery: true
+        enableExternalDiscovery: true,
       });
 
       await waitForFileWatch(500); // Give more time for large number of files
@@ -473,7 +483,7 @@ describe('External Trace Discovery Integration', () => {
       expect(loadTime).toBeLessThan(5000); // Should load within 5 seconds
 
       // Verify all traces loaded correctly
-      const agentIds = traces.map(t => t.agentId).sort();
+      const agentIds = traces.map((t) => t.agentId).sort();
       const expectedIds = Array.from({ length: numTraces }, (_, i) => `agent-${i}`).sort();
       expect(agentIds).toEqual(expectedIds);
     });
@@ -492,7 +502,7 @@ describe('External Trace Discovery Integration', () => {
 
       watcher = new TraceWatcher(tracesDir, {
         userConfig: config,
-        enableExternalDiscovery: true
+        enableExternalDiscovery: true,
       });
 
       await waitForFileWatch(200);
@@ -500,7 +510,7 @@ describe('External Trace Discovery Integration', () => {
       const traces = watcher.getAllTraces();
       expect(traces).toHaveLength(3);
 
-      const agentIds = traces.map(t => t.agentId).sort();
+      const agentIds = traces.map((t) => t.agentId).sort();
       expect(agentIds).toEqual(['deep-agent', 'level1-agent', 'root-agent']);
     });
   });

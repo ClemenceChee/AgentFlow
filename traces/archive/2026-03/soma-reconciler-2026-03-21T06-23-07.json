@@ -1,0 +1,100 @@
+{
+  "id": "node_001",
+  "rootNodeId": "node_001",
+  "nodes": {
+    "node_001": {
+      "id": "node_001",
+      "type": "agent",
+      "name": "soma-reconciler",
+      "startTime": 1774074187792,
+      "endTime": 1774074188943,
+      "status": "error",
+      "parentId": null,
+      "children": [
+        "node_002"
+      ],
+      "metadata": {},
+      "state": {
+        "exitCode": null,
+        "duration": 1.15,
+        "worker": "reconciler"
+      }
+    },
+    "node_002": {
+      "id": "node_002",
+      "type": "tool",
+      "name": "llm-call:sweep-complete",
+      "startTime": 1774074187792,
+      "endTime": 1774074188943,
+      "status": "error",
+      "parentId": "node_001",
+      "children": [],
+      "metadata": {},
+      "state": {
+        "stage": "sweep-complete",
+        "sessionId": "a1383698",
+        "error": "1 files deferred, 23 near deferral"
+      }
+    }
+  },
+  "edges": [
+    {
+      "from": "node_001",
+      "to": "node_002",
+      "type": "spawned"
+    }
+  ],
+  "startTime": 1774074187792,
+  "endTime": 1774074188943,
+  "status": "error",
+  "trigger": "worker",
+  "agentId": "soma-reconciler",
+  "events": [
+    {
+      "timestamp": 1774074187792,
+      "eventType": "agent_start",
+      "nodeId": "node_001",
+      "data": {
+        "type": "agent",
+        "name": "soma-reconciler"
+      }
+    },
+    {
+      "timestamp": 1774074187792,
+      "eventType": "agent_start",
+      "nodeId": "node_002",
+      "data": {
+        "type": "tool",
+        "name": "llm-call:sweep-complete"
+      }
+    },
+    {
+      "timestamp": 1774074188943,
+      "eventType": "custom",
+      "nodeId": "node_002",
+      "data": {
+        "action": "error",
+        "message": "1 files deferred, 23 near deferral"
+      }
+    },
+    {
+      "timestamp": 1774074188943,
+      "eventType": "agent_end",
+      "nodeId": "node_002",
+      "data": {
+        "status": "error"
+      }
+    },
+    {
+      "timestamp": 1774074188943,
+      "eventType": "agent_end",
+      "nodeId": "node_001",
+      "data": {
+        "status": "error"
+      }
+    }
+  ],
+  "traceId": "c98eb1e854e9",
+  "spanId": "875dd308ea8e",
+  "parentSpanId": null
+}

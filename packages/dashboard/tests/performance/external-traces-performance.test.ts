@@ -4,13 +4,14 @@
  * Tests system behavior with large numbers of external traces,
  * memory usage, and scalability characteristics.
  */
-import { test, expect, describe, beforeEach, afterEach } from 'vitest';
+
 import * as fs from 'node:fs';
-import * as path from 'node:path';
 import * as os from 'node:os';
-import { TraceWatcher } from '../../src/watcher.js';
+import * as path from 'node:path';
+import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import type { DashboardUserConfig } from '../../src/config.js';
 import type { WatchedTrace } from '../../src/watcher.js';
+import { TraceWatcher } from '../../src/watcher.js';
 
 interface PerformanceMetrics {
   loadTimeMs: number;
@@ -28,15 +29,15 @@ interface MemoryStats {
 const getMemoryStats = (): MemoryStats => {
   const usage = process.memoryUsage();
   return {
-    heapUsedMB: Math.round(usage.heapUsed / 1024 / 1024 * 100) / 100,
-    heapTotalMB: Math.round(usage.heapTotal / 1024 / 1024 * 100) / 100,
-    externalMB: Math.round(usage.external / 1024 / 1024 * 100) / 100
+    heapUsedMB: Math.round((usage.heapUsed / 1024 / 1024) * 100) / 100,
+    heapTotalMB: Math.round((usage.heapTotal / 1024 / 1024) * 100) / 100,
+    externalMB: Math.round((usage.external / 1024 / 1024) * 100) / 100,
   };
 };
 
 describe('External Traces Performance', () => {
   // Set longer timeout for performance tests
-  const timeout = 30000; // 30 seconds
+  const _timeout = 30000; // 30 seconds
 
   let tempDir: string;
   let tracesDir: string;
@@ -77,7 +78,7 @@ describe('External Traces Performance', () => {
     baseName: string,
     count: number,
     traceDir: string,
-    workerType: string = 'generic'
+    workerType: string = 'generic',
   ): WatchedTrace[] => {
     const traces: WatchedTrace[] = [];
 
@@ -105,9 +106,9 @@ describe('External Traces Performance', () => {
             metadata: {
               framework: 'external',
               worker: workerType,
-              batch: Math.floor(i / 100)
+              batch: Math.floor(i / 100),
             },
-            state: {}
+            state: {},
           },
           [`node-${i}-child`]: {
             id: `node-${i}-child`,
@@ -121,17 +122,17 @@ describe('External Traces Performance', () => {
             metadata: {
               external: true,
               dataSize: Math.floor(Math.random() * 1000000),
-              processingTime: Math.floor(Math.random() * 5000)
+              processingTime: Math.floor(Math.random() * 5000),
             },
-            state: {}
-          }
-        }
+            state: {},
+          },
+        },
       };
 
       traces.push(trace);
       fs.writeFileSync(
         path.join(traceDir, `${baseName}-${i}.json`),
-        JSON.stringify(trace, null, 2)
+        JSON.stringify(trace, null, 2),
       );
     }
 
@@ -142,15 +143,15 @@ describe('External Traces Performance', () => {
     port: 3000,
     tracesDir,
     discoveryPaths,
-    externalCommands: {}
+    externalCommands: {},
   });
 
-  const waitForDiscovery = (ms = 1000) => new Promise(resolve => setTimeout(resolve, ms));
+  const waitForDiscovery = (ms = 1000) => new Promise((resolve) => setTimeout(resolve, ms));
 
   const measurePerformance = async (
     config: DashboardUserConfig,
-    expectedTraceCount: number,
-    waitTime = 2000
+    _expectedTraceCount: number,
+    waitTime = 2000,
   ): Promise<PerformanceMetrics> => {
     const memoryBefore = getMemoryStats();
     const startTime = Date.now();
@@ -158,7 +159,7 @@ describe('External Traces Performance', () => {
     watcher = new TraceWatcher({
       tracesDir,
       dataDirs: config.discoveryPaths,
-      userConfig: config
+      userConfig: config,
     });
 
     const discoveryStart = Date.now();
@@ -173,7 +174,7 @@ describe('External Traces Performance', () => {
       loadTimeMs: loadTime,
       memoryUsageMB: memoryAfter.heapUsedMB - memoryBefore.heapUsedMB,
       tracesLoaded: traces.length,
-      discoveryTimeMs: discoveryTime
+      discoveryTimeMs: discoveryTime,
     };
   };
 
@@ -225,7 +226,7 @@ describe('External Traces Performance', () => {
 
       watcher = new TraceWatcher(tracesDir, {
         userConfig: config,
-        enableExternalDiscovery: true
+        enableExternalDiscovery: true,
       });
 
       const iterations = 3;
@@ -233,7 +234,7 @@ describe('External Traces Performance', () => {
       const memoryReadings: number[] = [];
 
       for (let i = 0; i < iterations; i++) {
-        const memoryBefore = getMemoryStats();
+        const _memoryBefore = getMemoryStats();
 
         // Create traces
         const traces = createBatchTraces(`iteration-${i}`, tracesPerIteration, externalTracesDir);
@@ -295,7 +296,7 @@ describe('External Traces Performance', () => {
 
       watcher = new TraceWatcher(tracesDir, {
         userConfig: config,
-        enableExternalDiscovery: true
+        enableExternalDiscovery: true,
       });
 
       await waitForDiscovery(500);
@@ -307,13 +308,11 @@ describe('External Traces Performance', () => {
 
       const addBatch = async (batchId: number) => {
         createBatchTraces(`concurrent-${batchId}`, batchSize, externalTracesDir);
-        await new Promise(resolve => setTimeout(resolve, 100)); // Small delay between batches
+        await new Promise((resolve) => setTimeout(resolve, 100)); // Small delay between batches
       };
 
       // Add all batches concurrently
-      await Promise.all(
-        Array.from({ length: numBatches }, (_, i) => addBatch(i))
-      );
+      await Promise.all(Array.from({ length: numBatches }, (_, i) => addBatch(i)));
 
       // Wait for all traces to be discovered
       await waitForDiscovery(3000);
@@ -365,16 +364,16 @@ describe('External Traces Performance', () => {
             type: 'document',
             size: Math.floor(Math.random() * 10000),
             tags: Array.from({ length: 10 }, (_, k) => `tag-${k}`),
-            relationships: Array.from({ length: 5 }, (_, k) => `rel-${i}-${j}-${k}`)
+            relationships: Array.from({ length: 5 }, (_, k) => `rel-${i}-${j}-${k}`),
           })),
           processing: {
             steps: Array.from({ length: 20 }, (_, j) => ({
               name: `step-${j}`,
               duration: Math.random() * 1000,
               memory: Math.random() * 100000000,
-              logs: Array.from({ length: 50 }, (_, k) => `log-entry-${j}-${k}`)
-            }))
-          }
+              logs: Array.from({ length: 50 }, (_, k) => `log-entry-${j}-${k}`),
+            })),
+          },
         };
 
         const trace: TraceGraph = {
@@ -399,9 +398,9 @@ describe('External Traces Performance', () => {
               parentId: null,
               children: [],
               metadata: largeMetadata,
-              state: {}
-            }
-          }
+              state: {},
+            },
+          },
         };
 
         fs.writeFileSync(trace.filename, JSON.stringify(trace, null, 2));
@@ -421,8 +420,8 @@ describe('External Traces Performance', () => {
 
       // Create traces with varying sizes
       const smallTraces = 100; // ~1KB each
-      const mediumTraces = 50;  // ~10KB each
-      const largeTraces = 20;   // ~100KB each
+      const mediumTraces = 50; // ~10KB each
+      const largeTraces = 20; // ~100KB each
 
       // Small traces
       createBatchTraces('small', smallTraces, externalTracesDir, 'harvester');
@@ -439,7 +438,7 @@ describe('External Traces Performance', () => {
           startTime: Date.now() - 100000,
           endTime: Date.now(),
           status: 'completed',
-          nodes: {}
+          nodes: {},
         };
 
         // Add 50 nodes to make it medium-sized
@@ -451,10 +450,10 @@ describe('External Traces Performance', () => {
             startTime: Date.now() - (100000 - j * 1000),
             endTime: Date.now() - (90000 - j * 1000),
             status: 'completed',
-            parentId: j === 0 ? null : `node-${i}-${j-1}`,
-            children: j < 49 ? [`node-${i}-${j+1}`] : [],
+            parentId: j === 0 ? null : `node-${i}-${j - 1}`,
+            children: j < 49 ? [`node-${i}-${j + 1}`] : [],
             metadata: { step: j, data: `data-${i}-${j}`.repeat(10) },
-            state: { values: Array.from({ length: 10 }, (_, k) => `value-${k}`) }
+            state: { values: Array.from({ length: 10 }, (_, k) => `value-${k}`) },
           };
         }
 
@@ -479,9 +478,9 @@ describe('External Traces Performance', () => {
           status: 'completed',
           metadata: {
             largeData: 'x'.repeat(10000), // 10KB string
-            arrayData: Array.from({ length: 1000 }, (_, j) => ({ id: j, value: `item-${j}` }))
+            arrayData: Array.from({ length: 1000 }, (_, j) => ({ id: j, value: `item-${j}` })),
           },
-          nodes: {}
+          nodes: {},
         };
 
         // Add 100 nodes with extensive metadata
@@ -493,20 +492,20 @@ describe('External Traces Performance', () => {
             startTime: Date.now() - (200000 - j * 2000),
             endTime: Date.now() - (180000 - j * 2000),
             status: 'completed',
-            parentId: j === 0 ? null : `node-${i}-${j-1}`,
-            children: j < 99 ? [`node-${i}-${j+1}`] : [],
+            parentId: j === 0 ? null : `node-${i}-${j - 1}`,
+            children: j < 99 ? [`node-${i}-${j + 1}`] : [],
             metadata: {
               step: j,
               logs: Array.from({ length: 20 }, (_, k) => `log-${i}-${j}-${k}`.repeat(5)),
-              processing: 'x'.repeat(1000)
+              processing: 'x'.repeat(1000),
             },
             state: {
               results: Array.from({ length: 50 }, (_, k) => ({
                 id: k,
                 data: `result-${i}-${j}-${k}`,
-                details: 'detail'.repeat(10)
-              }))
-            }
+                details: 'detail'.repeat(10),
+              })),
+            },
           };
         }
 
@@ -558,7 +557,9 @@ describe('External Traces Performance', () => {
       const finalTraces = watcher.getAllTraces();
       expect(finalTraces.length).toBeGreaterThanOrEqual(200);
 
-      console.log(`File handle management test: ${finalTraces.length} traces across ${externalDirs.length} directories`);
+      console.log(
+        `File handle management test: ${finalTraces.length} traces across ${externalDirs.length} directories`,
+      );
     });
 
     test('handles rapid file system changes without memory leaks', async () => {
@@ -566,7 +567,7 @@ describe('External Traces Performance', () => {
 
       watcher = new TraceWatcher(tracesDir, {
         userConfig: config,
-        enableExternalDiscovery: true
+        enableExternalDiscovery: true,
       });
 
       const memoryBefore = getMemoryStats();
@@ -575,7 +576,7 @@ describe('External Traces Performance', () => {
       for (let cycle = 0; cycle < 10; cycle++) {
         // Create batch of traces
         const traces = createBatchTraces(`cycle-${cycle}`, 20, externalTracesDir);
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
 
         // Update some traces
         for (let i = 0; i < 5; i++) {
@@ -584,13 +585,13 @@ describe('External Traces Performance', () => {
           trace.endTime = Date.now();
           fs.writeFileSync(trace.filename, JSON.stringify(trace, null, 2));
         }
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
 
         // Delete some traces
         for (let i = 10; i < 15; i++) {
           fs.unlinkSync(traces[i].filename);
         }
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
       }
 
       // Wait for all operations to settle

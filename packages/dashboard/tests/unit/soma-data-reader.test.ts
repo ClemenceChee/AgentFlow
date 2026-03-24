@@ -1,20 +1,20 @@
 /**
  * Unit tests for SOMA Operational Data Reader
  */
-import { test, expect, describe, beforeEach, afterEach } from 'vitest';
+
 import * as fs from 'node:fs';
-import * as path from 'node:path';
 import * as os from 'node:os';
+import * as path from 'node:path';
+import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import {
   DefaultSOMADataReader,
-  type SOMAWorkerState,
-  type SOMAHarvesterState,
-  type SOMASynthesizerState,
-  type SOMAReconcilerState,
   type SOMACartographerState,
+  type SOMADataReaderConfig,
+  type SOMAHarvesterState,
+  type SOMAReconcilerState,
+  type SOMASynthesizerState,
   type SOMAVaultChange,
-  type SOMAOperationalData,
-  type SOMADataReaderConfig
+  type SOMAWorkerState,
 } from '../../src/soma-data-reader.js';
 
 describe('SOMA Data Reader', () => {
@@ -39,7 +39,7 @@ describe('SOMA Data Reader', () => {
       statePath,
       maxStateAge: 1000 * 60 * 60, // 1 hour
       enableErrorLogging: true,
-      maxRetries: 2
+      maxRetries: 2,
     };
 
     reader = new DefaultSOMADataReader(config);
@@ -64,7 +64,7 @@ describe('SOMA Data Reader', () => {
         statePath: '/custom/state',
         maxStateAge: 2000,
         enableErrorLogging: false,
-        maxRetries: 5
+        maxRetries: 5,
       };
 
       const customReader = new DefaultSOMADataReader(customConfig);
@@ -85,15 +85,15 @@ describe('SOMA Data Reader', () => {
           totalFiles: 10,
           processedFiles: 5,
           skippedFiles: 2,
-          errorFiles: 3
+          errorFiles: 3,
         },
         lastProcessedFiles: ['file1.json', 'file2.json'],
         processingDuration: 5000,
         errors: {
           count: 1,
           lastError: 'Failed to parse file3.json',
-          timestamp: Date.now() - 15000
-        }
+          timestamp: Date.now() - 15000,
+        },
       };
 
       // Write test state file
@@ -123,8 +123,8 @@ describe('SOMA Data Reader', () => {
     test('handles stale harvester state file', async () => {
       const staleState: SOMAHarvesterState = {
         type: 'harvester',
-        lastRun: Date.now() - (2 * 60 * 60 * 1000), // 2 hours ago
-        entityCount: 100
+        lastRun: Date.now() - 2 * 60 * 60 * 1000, // 2 hours ago
+        entityCount: 100,
       };
 
       const stateFile = path.join(statePath, 'harvester-state.json');
@@ -149,14 +149,14 @@ describe('SOMA Data Reader', () => {
         deduplicationStats: {
           duplicatesFound: 8,
           uniqueInsights: 4,
-          similarityThreshold: 0.85
+          similarityThreshold: 0.85,
         },
         confidenceScores: [0.9, 0.85, 0.92, 0.88],
         errors: {
           count: 2,
           lastError: 'LLM timeout',
-          timestamp: Date.now() - 30000
-        }
+          timestamp: Date.now() - 30000,
+        },
       };
 
       const stateFile = path.join(statePath, 'synthesizer-state.json');
@@ -188,13 +188,13 @@ describe('SOMA Data Reader', () => {
         structuralIssues: {
           missingReferences: 5,
           duplicateEntities: 8,
-          brokenLinks: 2
+          brokenLinks: 2,
         },
         processingStats: {
           scanDuration: 8000,
           fixDuration: 12000,
-          totalDuration: 20000
-        }
+          totalDuration: 20000,
+        },
       };
 
       const stateFile = path.join(statePath, 'reconciler-state.json');
@@ -221,13 +221,13 @@ describe('SOMA Data Reader', () => {
         embeddingStats: {
           averageDimensions: 512,
           processingTime: 25000,
-          vectorStoreSize: 125000
+          vectorStoreSize: 125000,
         },
         clusteringResults: {
           clustersFound: 12,
           averageClusterSize: 20,
-          silhouetteScore: 0.75
-        }
+          silhouetteScore: 0.75,
+        },
       };
 
       const stateFile = path.join(statePath, 'cartographer-state.json');
@@ -248,7 +248,7 @@ describe('SOMA Data Reader', () => {
         lastRun: Date.now() - 45000,
         entityCount: 125,
         processedEventIds: ['gen1', 'gen2'],
-        customField: 'test-value'
+        customField: 'test-value',
       };
 
       const stateFile = path.join(statePath, 'harvester-state.json');
@@ -275,7 +275,7 @@ describe('SOMA Data Reader', () => {
           entityType: 'insight',
           operation: 'create',
           layer: 'emerging',
-          metadata: { confidence: 0.85 }
+          metadata: { confidence: 0.85 },
         },
         {
           timestamp: Date.now() - 30000,
@@ -283,15 +283,13 @@ describe('SOMA Data Reader', () => {
           entityType: 'policy',
           operation: 'update',
           layer: 'canon',
-          metadata: { enforcement: 'strict' }
-        }
+          metadata: { enforcement: 'strict' },
+        },
       ];
 
       // Write change log file
       const changeLogFile = path.join(vaultPath, '_mutations.jsonl');
-      const changeLogContent = vaultChanges
-        .map(change => JSON.stringify(change))
-        .join('\n');
+      const changeLogContent = vaultChanges.map((change) => JSON.stringify(change)).join('\n');
       fs.writeFileSync(changeLogFile, changeLogContent);
 
       const result = await reader.readVaultChanges();
@@ -324,14 +322,14 @@ describe('SOMA Data Reader', () => {
         type: 'harvester',
         lastRun: Date.now() - 30000,
         entityCount: 100,
-        filesProcessed: 5
+        filesProcessed: 5,
       };
 
       const synthesizerState: SOMASynthesizerState = {
         type: 'synthesizer',
         lastRun: Date.now() - 60000,
         entityCount: 50,
-        candidatesAnalyzed: 25
+        candidatesAnalyzed: 25,
       };
 
       const vaultChanges: SOMAVaultChange[] = [
@@ -340,23 +338,20 @@ describe('SOMA Data Reader', () => {
           entityId: 'test-entity',
           entityType: 'insight',
           operation: 'create',
-          layer: 'emerging'
-        }
+          layer: 'emerging',
+        },
       ];
 
       // Write files
       fs.writeFileSync(
         path.join(statePath, 'harvester-state.json'),
-        JSON.stringify(harvesterState, null, 2)
+        JSON.stringify(harvesterState, null, 2),
       );
       fs.writeFileSync(
         path.join(statePath, 'synthesizer-state.json'),
-        JSON.stringify(synthesizerState, null, 2)
+        JSON.stringify(synthesizerState, null, 2),
       );
-      fs.writeFileSync(
-        path.join(vaultPath, '_mutations.jsonl'),
-        JSON.stringify(vaultChanges[0])
-      );
+      fs.writeFileSync(path.join(vaultPath, '_mutations.jsonl'), JSON.stringify(vaultChanges[0]));
 
       const result = await reader.readOperationalData();
 
@@ -397,7 +392,7 @@ describe('SOMA Data Reader', () => {
       // Try to read from non-existent state directory
       const config: SOMADataReaderConfig = {
         statePath: '/non/existent/path',
-        vaultPath: '/non/existent/vault'
+        vaultPath: '/non/existent/vault',
       };
 
       const faultyReader = new DefaultSOMADataReader(config);
@@ -412,7 +407,7 @@ describe('SOMA Data Reader', () => {
       // to simulate retry scenarios
       const config: SOMADataReaderConfig = {
         statePath: tempDir,
-        maxRetries: 1
+        maxRetries: 1,
       };
 
       const retryReader = new DefaultSOMADataReader(config);
@@ -425,7 +420,7 @@ describe('SOMA Data Reader', () => {
       const invalidState = {
         // Missing required 'type' field
         lastRun: Date.now(),
-        entityCount: 50
+        entityCount: 50,
       };
 
       const stateFile = path.join(statePath, 'harvester-state.json');
@@ -439,7 +434,7 @@ describe('SOMA Data Reader', () => {
     test('handles partial state data', async () => {
       const partialState: Partial<SOMAHarvesterState> = {
         type: 'harvester',
-        lastRun: Date.now() - 30000
+        lastRun: Date.now() - 30000,
         // Missing other optional fields
       };
 
