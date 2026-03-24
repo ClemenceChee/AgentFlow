@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useSomaGovernance } from '../hooks/useSomaGovernance';
 import { useSomaReport } from '../hooks/useSomaReport';
 import type { SomaTier } from '../hooks/useSomaTier';
+import { AicpPage } from './AicpPage';
 import { CrossAgentView } from './CrossAgentView';
 import { DriftChart } from './DriftChart';
 import { SomaActivityFeed } from './SomaActivityFeed';
@@ -10,12 +11,19 @@ import { SomaIntelligence } from './SomaIntelligence';
 import { SomaKnowledgeExplorer } from './SomaKnowledgeExplorer';
 import { SomaPolicyEditor } from './SomaPolicyEditor';
 
-export type SomaView = 'intelligence' | 'review' | 'policies' | 'knowledge' | 'activity';
+export type SomaView =
+  | 'intelligence'
+  | 'control-plane'
+  | 'review'
+  | 'policies'
+  | 'knowledge'
+  | 'activity';
 
 const PAID_VIEWS: SomaView[] = ['review', 'policies', 'knowledge', 'activity'];
 
 const VIEW_LABELS: Record<SomaView, { icon: string; label: string }> = {
   intelligence: { icon: '\u{1F9E0}', label: 'Intelligence' },
+  'control-plane': { icon: '\u{1F6E1}\uFE0F', label: 'Control Plane' },
   review: { icon: '\u{1F3DB}', label: 'Review' },
   policies: { icon: '\u{1F6E1}', label: 'Policies' },
   knowledge: { icon: '\u{1F4DA}', label: 'Knowledge' },
@@ -101,6 +109,7 @@ export function SomaPage({ tier }: Props) {
         {activeView === 'intelligence' && !report.report && (
           <div className="soma-page__loading">Loading intelligence data...</div>
         )}
+        {activeView === 'control-plane' && <AicpPage />}
         {activeView === 'review' && isPro && (
           <SomaGovernance
             data={somaGov.data}
