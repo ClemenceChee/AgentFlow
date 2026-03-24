@@ -53,3 +53,5 @@ docs/docs/api/core/
 **/verify-openclaw-integration.test.ts
 **/debug.html
 tests/soma/
+.agentflow/
+traces/
