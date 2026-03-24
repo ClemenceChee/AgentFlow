@@ -11,6 +11,7 @@ import {
   extractTimestamp,
   getUniversalNodeStatus,
   openClawSessionIdToAgent,
+  parseOpenClawSessionKey,
   parseTimestamp,
   parseValue,
   stripAnsi,
@@ -259,6 +260,60 @@ describe('Log Utils', () => {
 
     it('extracts first segment for unknown prefixes', () => {
       expect(openClawSessionIdToAgent('custom-session')).toBe('custom');
+    });
+
+    it('uses lookup map when provided', () => {
+      const map = new Map([['abc-123', 'openclaw:newsletter-digest-daily']]);
+      expect(openClawSessionIdToAgent('abc-123', map)).toBe('openclaw:newsletter-digest-daily');
+    });
+
+    it('falls back to dash-split when UUID not in lookup map', () => {
+      const map = new Map<string, string>();
+      expect(openClawSessionIdToAgent('janitor-abc', map)).toBe('janitor');
+    });
+  });
+
+  describe('parseOpenClawSessionKey', () => {
+    it('parses cron job key', () => {
+      expect(parseOpenClawSessionKey('agent:main:cron:newsletter-digest-daily')).toBe(
+        'openclaw:newsletter-digest-daily',
+      );
+    });
+
+    it('parses cron job run key', () => {
+      expect(
+        parseOpenClawSessionKey(
+          'agent:main:cron:newsletter-digest-daily:run:5bbfec39-97b3-48ca-b4d3-6a1ed3937f97',
+        ),
+      ).toBe('openclaw:newsletter-digest-daily');
+    });
+
+    it('parses cron job with simple ID', () => {
+      expect(parseOpenClawSessionKey('agent:main:cron:daily-activity-digest')).toBe(
+        'openclaw:daily-activity-digest',
+      );
+    });
+
+    it('parses telegram session', () => {
+      expect(parseOpenClawSessionKey('agent:main:telegram:slash:6549702894')).toBe(
+        'openclaw:telegram:6549702894',
+      );
+    });
+
+    it('parses whatsapp group session', () => {
+      expect(
+        parseOpenClawSessionKey('agent:main:whatsapp:group:120363424797383700'),
+      ).toBe('openclaw:whatsapp:120363424797383700');
+    });
+
+    it('parses main agent key', () => {
+      expect(parseOpenClawSessionKey('agent:main:main')).toBe('openclaw:main');
+    });
+
+    it('returns null for unrecognized format', () => {
+      expect(parseOpenClawSessionKey('not-a-valid-key')).toBeNull();
+      expect(parseOpenClawSessionKey('agent:main')).toBeNull();
+      expect(parseOpenClawSessionKey('')).toBeNull();
     });
   });
 });

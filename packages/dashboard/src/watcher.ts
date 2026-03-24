@@ -13,6 +13,7 @@ import {
   extractSessionIdentifier,
   getUniversalNodeStatus,
   openClawSessionIdToAgent,
+  parseOpenClawSessionKey,
 } from './parsers/index.js';
 
 /** Parsed event from a JSONL session for rich timeline rendering. */
@@ -75,6 +76,8 @@ export class TraceWatcher extends EventEmitter {
   private allWatchDirs: string[];
   private maxAgeMs: number;
   private userConfig: DashboardUserConfig;
+  /** Maps OpenClaw session UUIDs to resolved agentIds (populated from sessions.json) */
+  private sessionAgentMap = new Map<string, string>();
 
   constructor(tracesDirOrOptions: string | TraceWatcherOptions) {
     super();
@@ -680,7 +683,7 @@ export class TraceWatcher extends EventEmitter {
             if (inner?.payloads && inner?.meta?.agentMeta) {
               const agentMeta = inner.meta.agentMeta;
               const sessionId = agentMeta.sessionId || 'unknown';
-              const agentName = openClawSessionIdToAgent(sessionId);
+              const agentName = openClawSessionIdToAgent(sessionId, this.sessionAgentMap);
               const timestamp = parsed.time
                 ? new Date(parsed.time).getTime()
                 : parsed._meta?.date
@@ -714,7 +717,7 @@ export class TraceWatcher extends EventEmitter {
         if (parsed.payloads && parsed.meta?.agentMeta) {
           const agentMeta = parsed.meta.agentMeta;
           const sessionId = agentMeta.sessionId || 'unknown';
-          const agentName = openClawSessionIdToAgent(sessionId);
+          const agentName = openClawSessionIdToAgent(sessionId, this.sessionAgentMap);
           const timestamp = parsed.time
             ? new Date(parsed.time).getTime()
             : parsed._meta?.date
@@ -932,12 +935,28 @@ export class TraceWatcher extends EventEmitter {
         const sessionId = session.sessionId;
         if (!sessionId) continue;
 
+        // Resolve agentId from session key (e.g. agent:main:cron:newsletter-digest-daily)
+        const resolvedAgentId = parseOpenClawSessionKey(sessionKey) ?? agentId;
+
+        // Populate session-to-agent lookup for JSONL resolution
+        this.sessionAgentMap.set(String(sessionId), resolvedAgentId);
+
         // Check if we already have a JSONL file for this session
         const existingKey = Array.from(this.traces.keys()).find((k) => {
           const t = this.traces.get(k);
           return t?.id === sessionId || t?.traceId === sessionId;
         });
-        if (existingKey) continue;
+        if (existingKey) {
+          // Re-tag existing trace with resolved agentId if it has a generic fallback
+          const existing = this.traces.get(existingKey);
+          if (
+            existing &&
+            (existing.agentId === agentId || existing.agentId?.startsWith('openclaw-main'))
+          ) {
+            (existing as Record<string, unknown>).agentId = resolvedAgentId;
+          }
+          continue;
+        }
 
         // Create a lightweight trace entry from the index metadata
         const updatedAt = session.updatedAt || stats.mtime.getTime();
@@ -970,7 +989,7 @@ export class TraceWatcher extends EventEmitter {
           edges: [],
           events: [],
           startTime: updatedAt,
-          agentId,
+          agentId: resolvedAgentId,
           trigger,
           name: label,
           traceId: sessionId,
@@ -1491,7 +1510,7 @@ export class TraceWatcher extends EventEmitter {
         edges: [],
         events: [],
         startTime: firstTs,
-        agentId: 'openclaw-cron',
+        agentId: `openclaw:${String(jobId)}`,
         trigger: 'cron',
         name: jobId,
         traceId: jobId,
@@ -1514,6 +1533,12 @@ export class TraceWatcher extends EventEmitter {
 
   /** Unique key for a file across directories. Includes agentId to prevent collisions between agents. */
   private traceKey(filePath: string, agentId?: string): string {
+    // For OpenClaw session traces, key on file path only — agentId is resolved
+    // from the manifest and may change, so including it would create ghost entries
+    const isOpenClawSession =
+      filePath.includes('.openclaw/') &&
+      (filePath.includes('/sessions/') || filePath.includes('/cron/runs/'));
+
     let fileKey: string;
     // Use relative path from any watched dir, or absolute path as fallback
     for (const dir of this.allWatchDirs) {
@@ -1523,11 +1548,11 @@ export class TraceWatcher extends EventEmitter {
         const dirParts = dir.split(path.sep).filter(Boolean);
         const dirSuffix = dirParts.slice(-2).join('/');
         fileKey = `${path.relative(dir, filePath).replace(/\\/g, '/')}@${dirSuffix}`;
-        return agentId ? `${fileKey}#${agentId}` : fileKey;
+        return !isOpenClawSession && agentId ? `${fileKey}#${agentId}` : fileKey;
       }
     }
     fileKey = filePath;
-    return agentId ? `${fileKey}#${agentId}` : fileKey;
+    return !isOpenClawSession && agentId ? `${fileKey}#${agentId}` : fileKey;
   }
 
   private startWatching() {
