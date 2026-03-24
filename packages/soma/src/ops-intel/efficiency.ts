@@ -1,0 +1,142 @@
+/**
+ * Efficiency scoring — per-run token cost analysis with wasteful loop detection.
+ *
+ * @module
+ */
+
+import type {
+  EfficiencyFlag,
+  EfficiencyReport,
+  ExecutionGraph,
+  ExecutionNode,
+  NodeCost,
+  RunEfficiency,
+  SemanticContext,
+} from './types.js';
+
+function extractTokenCost(node: ExecutionNode): number | null {
+  const semantic = (node.metadata as Record<string, unknown>)?.semantic as
+    | SemanticContext
+    | undefined;
+  if (semantic?.tokenCost != null && typeof semantic.tokenCost === 'number') {
+    return semantic.tokenCost;
+  }
+  if ((node.state as Record<string, unknown>)?.tokenCost != null) {
+    return (node.state as Record<string, unknown>).tokenCost as number;
+  }
+  return null;
+}
+
+function median(sorted: readonly number[]): number {
+  if (sorted.length === 0) return 0;
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0 ? (sorted[mid - 1]! + sorted[mid]!) / 2 : sorted[mid]!;
+}
+
+function percentile(sorted: readonly number[], p: number): number {
+  if (sorted.length === 0) return 0;
+  const idx = Math.ceil((p / 100) * sorted.length) - 1;
+  return sorted[Math.max(0, idx)]!;
+}
+
+/**
+ * Compute efficiency report across execution graphs.
+ *
+ * Extracts token costs from node metadata/state, computes per-run and
+ * aggregate statistics, detects wasteful retry patterns, and reports
+ * data coverage.
+ */
+export function getEfficiency(graphs: ExecutionGraph[]): EfficiencyReport {
+  const allNodeCosts: NodeCost[] = [];
+  const runs: RunEfficiency[] = [];
+  let totalNodesWithCost = 0;
+  let totalNodes = 0;
+
+  for (const graph of graphs) {
+    let graphTokenCost = 0;
+    let completedNodes = 0;
+
+    for (const node of graph.nodes.values()) {
+      totalNodes++;
+      const cost = extractTokenCost(node);
+      if (cost !== null) totalNodesWithCost++;
+
+      const duration =
+        node.startTime && node.endTime != null ? node.endTime - node.startTime : null;
+
+      allNodeCosts.push({
+        nodeId: node.id,
+        name: node.name,
+        type: node.type,
+        tokenCost: cost,
+        durationMs: duration,
+      });
+
+      if (node.status === 'completed') completedNodes++;
+      if (cost !== null) graphTokenCost += cost;
+    }
+
+    const costPerNode = completedNodes > 0 ? graphTokenCost / completedNodes : 0;
+
+    runs.push({
+      graphId: graph.id,
+      agentId: graph.agentId,
+      totalTokenCost: graphTokenCost,
+      completedNodes,
+      costPerNode,
+    });
+  }
+
+  const costPerNodeValues = runs
+    .map((r) => r.costPerNode)
+    .filter((v) => v > 0)
+    .sort((a, b) => a - b);
+  const mean =
+    costPerNodeValues.length > 0
+      ? costPerNodeValues.reduce((a, b) => a + b, 0) / costPerNodeValues.length
+      : 0;
+
+  const aggregate = {
+    mean,
+    median: median(costPerNodeValues),
+    p95: percentile(costPerNodeValues, 95),
+  };
+
+  // Detect wasteful retry patterns
+  const flags: EfficiencyFlag[] = [];
+  const medianCostPerNode = aggregate.median;
+
+  for (let gi = 0; gi < graphs.length; gi++) {
+    const graph = graphs[gi]!;
+    const run = runs[gi]!;
+
+    const nameCounts = new Map<string, number>();
+    const nameCost = new Map<string, number>();
+
+    for (const node of graph.nodes.values()) {
+      nameCounts.set(node.name, (nameCounts.get(node.name) ?? 0) + 1);
+      const cost = extractTokenCost(node);
+      if (cost !== null) {
+        nameCost.set(node.name, (nameCost.get(node.name) ?? 0) + cost);
+      }
+    }
+
+    if (medianCostPerNode > 0 && run.costPerNode > 3 * medianCostPerNode) {
+      for (const [name, count] of nameCounts) {
+        if (count > 1) {
+          flags.push({
+            pattern: 'wasteful_retry',
+            nodeName: name,
+            retryCount: count,
+            tokenCost: nameCost.get(name) ?? 0,
+            message: `Node "${name}" appears ${count} times with cost-per-node ${run.costPerNode.toFixed(1)} (>3x median ${medianCostPerNode.toFixed(1)})`,
+          });
+        }
+      }
+    }
+  }
+
+  const dataCoverage = totalNodes > 0 ? totalNodesWithCost / totalNodes : 0;
+
+  return { runs, aggregate, flags, nodeCosts: allNodeCosts, dataCoverage };
+}

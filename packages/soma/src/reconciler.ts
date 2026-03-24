@@ -11,10 +11,22 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import type { AnalysisFn } from 'agentflow-core';
+import { queryByLayer, writeToLayer } from './layers.js';
 import type { Entity, ReconcilerConfig, ScanIssue, Vault } from './types.js';
 import { ENTITY_STATUSES } from './types.js';
+import { vaultEntityCount } from './vault.js';
 
 const DEFAULT_STUB_THRESHOLD = 100;
+
+/** Compute overlap coefficient for content similarity. */
+function overlapCoefficient(a: string, b: string): number {
+  const setA = new Set(a.toLowerCase().split(/\s+/));
+  const setB = new Set(b.toLowerCase().split(/\s+/));
+  let intersection = 0;
+  for (const word of setA) if (setB.has(word)) intersection++;
+  const minSize = Math.min(setA.size, setB.size);
+  return minSize > 0 ? intersection / minSize : 0;
+}
 
 /** Type alias corrections (fuzzy matching for common mistakes). */
 const TYPE_CORRECTIONS: Record<string, string> = {
@@ -55,10 +67,26 @@ export function createReconciler(vault: Vault, analysisFn?: AnalysisFn, config?:
   const stateFile = config?.stateFile ?? '.soma/reconciler-state.json';
 
   let hashes = new Map<string, string>();
+  let savedEntityCount = 0;
   try {
     if (existsSync(stateFile)) {
       const raw = JSON.parse(readFileSync(stateFile, 'utf-8'));
-      hashes = new Map(Object.entries(raw.hashes ?? {}));
+      const currentCount = vaultEntityCount(vault.baseDir);
+      // Migrate from old vaultFingerprint format or detect vault restructuring
+      if (raw.entityCount == null && raw.vaultFingerprint) {
+        // Old format — migrate: do a one-time full rescan
+        console.log('[Reconciler] Migrating state from vaultFingerprint to entityCount');
+        hashes = new Map();
+      } else if (raw.entityCount != null && currentCount < raw.entityCount) {
+        // Entity count decreased — vault restructured, reset state
+        console.log(
+          `[Reconciler] Vault entity count decreased (${raw.entityCount} → ${currentCount}) — resetting state`,
+        );
+        hashes = new Map();
+      } else {
+        hashes = new Map(Object.entries(raw.hashes ?? {}));
+      }
+      savedEntityCount = currentCount;
     }
   } catch {
     /* fresh */
@@ -67,7 +95,14 @@ export function createReconciler(vault: Vault, analysisFn?: AnalysisFn, config?:
   function saveState(): void {
     const dir = dirname(stateFile);
     if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-    writeFileSync(stateFile, JSON.stringify({ hashes: Object.fromEntries(hashes) }), 'utf-8');
+    writeFileSync(
+      stateFile,
+      JSON.stringify({
+        hashes: Object.fromEntries(hashes),
+        entityCount: savedEntityCount ?? vaultEntityCount(vault.baseDir),
+      }),
+      'utf-8',
+    );
   }
 
   function md5(content: string): string {
@@ -282,6 +317,114 @@ export function createReconciler(vault: Vault, analysisFn?: AnalysisFn, config?:
       }
 
       return fixed;
+    },
+
+    /**
+     * Reconcile L1 entries: detect near-duplicates, merge overlapping entries,
+     * and resolve conflicts. Only operates on L1 (archive) knowledge entries.
+     *
+     * Execution and agent entities are excluded — they are event logs, not
+     * duplicatable knowledge. Superseded entries are also excluded.
+     *
+     * Returns { reconciled, mergeErrors }.
+     */
+    reconcileL1(): { reconciled: number; mergeErrors: number } {
+      const KNOWLEDGE_TYPES = new Set([
+        'insight',
+        'decision',
+        'policy',
+        'constraint',
+        'contradiction',
+        'synthesis',
+        'archetype',
+        'assumption',
+      ]);
+
+      const allL1 = queryByLayer(vault, 'archive');
+
+      // Filter: only non-superseded, non-merged knowledge entities
+      const l1Entries = allL1.filter((e) => {
+        if (!KNOWLEDGE_TYPES.has(e.type)) return false;
+        if ((e as Record<string, unknown>).superseded_by) return false;
+        if (Array.isArray((e as Record<string, unknown>).reconciled_from)) return false;
+        return true;
+      });
+
+      let reconciled = 0;
+      let mergeErrors = 0;
+      const processed = new Set<string>();
+
+      // Collect existing merges once (not inside the loop)
+      const existingMerges = allL1
+        .map((e) => (e as Record<string, unknown>).reconciled_from)
+        .filter((rf): rf is string[] => Array.isArray(rf));
+
+      for (let i = 0; i < l1Entries.length; i++) {
+        const entry = l1Entries[i]!;
+        if (processed.has(entry.id)) continue;
+
+        const duplicates: Entity[] = [];
+        for (let j = i + 1; j < l1Entries.length; j++) {
+          const other = l1Entries[j]!;
+          if (processed.has(other.id)) continue;
+
+          const similarity = overlapCoefficient(entry.body, other.body);
+          if (similarity >= 0.7) {
+            duplicates.push(other);
+          }
+        }
+
+        if (duplicates.length === 0) continue;
+
+        const allEntries = [entry, ...duplicates];
+        const sourceIds = allEntries.map((e) => e.id);
+
+        // Subset-aware dedup guard: skip if all source IDs are already
+        // covered by any single existing merge's reconciled_from
+        const alreadyCovered = existingMerges.some((rf) =>
+          sourceIds.every((id) => rf.includes(id)),
+        );
+        if (alreadyCovered) {
+          for (const dup of duplicates) processed.add(dup.id);
+          processed.add(entry.id);
+          continue;
+        }
+
+        const newestEntry = allEntries.reduce((a, b) =>
+          new Date(b.updated).getTime() > new Date(a.updated).getTime() ? b : a,
+        );
+        const allAgentIds = [...new Set(allEntries.map((e) => e.agent_id).filter(Boolean))];
+
+        try {
+          const mergedId = writeToLayer(vault, 'reconciler', 'archive', {
+            type: newestEntry.type,
+            name: newestEntry.name,
+            status: newestEntry.status,
+            agent_id: allAgentIds.join(','),
+            trace_id: newestEntry.trace_id,
+            source_system: newestEntry.source_system,
+            reconciled_from: sourceIds,
+            tags: [...new Set(allEntries.flatMap((e) => e.tags))],
+            related: [...new Set(allEntries.flatMap((e) => e.related))],
+            body: newestEntry.body,
+          } as Partial<Entity> & { type: string; name: string });
+
+          // Mark ALL source entries (including primary) as superseded
+          for (const source of allEntries) {
+            vault.update(source.id, { superseded_by: mergedId } as Partial<Entity>);
+            processed.add(source.id);
+          }
+          reconciled++;
+        } catch (err) {
+          console.error(
+            '[Reconciler] Merge failed:',
+            err instanceof Error ? err.message : String(err),
+          );
+          mergeErrors++;
+        }
+      }
+
+      return { reconciled, mergeErrors };
     },
 
     /**

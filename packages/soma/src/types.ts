@@ -7,7 +7,32 @@
  * @module
  */
 
-import type { AgentProfile, AnalysisFn } from 'agentflow-core';
+import type { AnalysisFn as _AnalysisFn, AgentProfile } from 'agentflow-core';
+
+export type AnalysisFn = _AnalysisFn;
+
+// ---------------------------------------------------------------------------
+// Knowledge layers
+// ---------------------------------------------------------------------------
+
+/** The four knowledge layers in the SOMA four-layer architecture. */
+export type KnowledgeLayer = 'archive' | 'working' | 'emerging' | 'canon';
+
+/** All valid knowledge layer values. */
+export const KNOWLEDGE_LAYERS: readonly KnowledgeLayer[] = [
+  'archive',
+  'working',
+  'emerging',
+  'canon',
+] as const;
+
+/** Semantic weight labels per layer. */
+export const LAYER_SEMANTIC_WEIGHTS: Record<KnowledgeLayer, string> = {
+  archive: 'historical',
+  working: 'contextual',
+  emerging: 'advisory',
+  canon: 'mandatory',
+};
 
 // ---------------------------------------------------------------------------
 // Entity base
@@ -34,7 +59,7 @@ export const ENTITY_STATUSES: Record<string, readonly string[]> = {
   archetype: ['active', 'proposed', 'deprecated'],
   insight: ['active', 'superseded', 'rejected'],
   policy: ['active', 'draft', 'deprecated', 'enforcing'],
-  decision: ['active', 'superseded', 'reversed'],
+  decision: ['active', 'superseded', 'reversed', 'flagged'],
   assumption: ['active', 'validated', 'invalidated'],
   constraint: ['active', 'resolved', 'deprecated'],
   contradiction: ['active', 'resolved'],
@@ -43,6 +68,14 @@ export const ENTITY_STATUSES: Record<string, readonly string[]> = {
 
 /** Required fields for all entity types. */
 export const REQUIRED_FIELDS = ['type', 'id', 'name', 'created'] as const;
+
+/**
+ * Resolve the agent ID from an entity that may use `agentId` or `agent_id`.
+ * Returns undefined if neither field exists.
+ */
+export function resolveAgentId(entity: Record<string, unknown>): string | undefined {
+  return (entity.agentId ?? entity.agent_id) as string | undefined;
+}
 
 /** Base entity — all entities extend this. */
 export interface Entity {
@@ -64,6 +97,48 @@ export interface Entity {
   related: string[];
   /** Body content (Markdown) */
   body: string;
+
+  // --- Four-layer architecture fields ---
+
+  /** Knowledge layer: archive (L1), working (L2), emerging (L3), canon (L4) */
+  layer?: KnowledgeLayer;
+  /** Worker that created this entry */
+  source_worker?: string;
+
+  // L1-specific
+  /** Agent identifier (also used by agent/execution entities) */
+  agent_id?: string;
+  /** Trace identifier for L1 entries */
+  trace_id?: string;
+  /** Source system for L1 entries */
+  source_system?: string;
+  /** Layer this entry was decayed from (set when moved to L1 via decay) */
+  decayed_from?: KnowledgeLayer | null;
+  /** IDs of entries reconciled into this one */
+  reconciled_from?: string[] | null;
+  /** ID of the entry that supersedes this one */
+  superseded_by?: string | null;
+
+  // L2-specific
+  /** Team identifier (required for L2 entries) */
+  team_id?: string;
+  /** ISO timestamp when this entry should decay */
+  decay_at?: string;
+
+  // L3-specific
+  /** Confidence score (0.0–1.0) for L3 proposals */
+  confidence_score?: number;
+  /** Array of L1 entry IDs that support this proposal */
+  evidence_links?: string[];
+
+  // L4-specific
+  /** Who ratified this entry (L4 only) */
+  ratified_by?: string;
+  /** ISO timestamp of ratification (L4 only) */
+  ratified_at?: string;
+  /** Originating L3 entry ID (L4 only) */
+  origin_l3_id?: string;
+
   /** Arbitrary extra frontmatter fields */
   [key: string]: unknown;
 }
@@ -102,6 +177,20 @@ export interface ExecutionEntity extends Entity {
   conformanceScore?: number;
   /** Trigger type */
   trigger?: string;
+  /** Extracted decisions from session trace (agent-agnostic) */
+  decisions?: Array<{
+    action: string;
+    reasoning?: string;
+    tool?: string;
+    args?: Record<string, unknown>;
+    outcome: 'ok' | 'failed' | 'timeout' | 'skipped';
+    output?: string;
+    error?: string;
+    durationMs?: number;
+    index: number;
+  }>;
+  /** Decision pattern signature for cross-agent comparison */
+  decisionPattern?: string;
 }
 
 export interface ArchetypeEntity extends Entity {
@@ -159,6 +248,20 @@ export interface DecisionEntity extends Entity {
   /** Confidence level */
   confidence: 'low' | 'medium' | 'high';
   sourceIds: string[];
+
+  // Graph-inferred decision fields (populated by Harvester from ExecutionGraph)
+  /** Decision type: tool_choice, branch, retry, delegation, failure */
+  decision_type?: 'tool_choice' | 'branch' | 'retry' | 'delegation' | 'failure';
+  /** What was selected (tool name, branch name, subagent name) */
+  choice?: string;
+  /** Other options that were available (sibling branches, alternative tools) */
+  alternatives?: string[];
+  /** Outcome of the decision (completed, failed) */
+  outcome?: string;
+  /** Arbitrary context from node metadata/state */
+  decision_context?: Record<string, unknown>;
+  /** Source execution graph ID */
+  graph_id?: string;
 }
 
 export interface AssumptionEntity extends Entity {
@@ -203,13 +306,52 @@ export interface SynthesisEntity extends Entity {
 export interface VaultConfig {
   /** Base directory for the vault. Default: `.soma/vault` */
   baseDir?: string;
+  /** Callback invoked after a single-entity read(). Not called by batch methods. */
+  onRead?: (entity: Entity) => void;
 }
 
 export interface QueryFilter {
   [key: string]: unknown;
   limit?: number;
   offset?: number;
+  /** Filter by knowledge layer */
+  layer?: KnowledgeLayer;
+  /** Filter by team ID (for L2 queries) */
+  team_id?: string;
 }
+
+// ---------------------------------------------------------------------------
+// Layer write permissions
+// ---------------------------------------------------------------------------
+
+/** SOMA worker identifiers. */
+export type SomaWorker =
+  | 'harvester'
+  | 'reconciler'
+  | 'synthesizer'
+  | 'cartographer'
+  | 'policy-bridge'
+  | 'governance'
+  | 'team-context';
+
+/** Worker-to-layer write permission map. */
+export const WORKER_WRITE_PERMISSIONS: Record<string, readonly KnowledgeLayer[]> = {
+  harvester: ['archive'],
+  reconciler: ['archive'],
+  synthesizer: ['emerging'],
+  cartographer: ['emerging'],
+  governance: ['canon'],
+  'team-context': ['working'],
+  'policy-bridge': [], // read-only
+};
+
+/** Layer-specific required fields. */
+export const LAYER_REQUIRED_FIELDS: Record<KnowledgeLayer, readonly string[]> = {
+  archive: ['layer', 'source_worker'],
+  working: ['layer', 'source_worker', 'team_id', 'decay_at'],
+  emerging: ['layer', 'source_worker', 'confidence_score', 'evidence_links', 'decay_at'],
+  canon: ['layer', 'source_worker', 'ratified_by', 'ratified_at', 'origin_l3_id'],
+};
 
 export interface Vault {
   /** Base directory path */
@@ -231,8 +373,14 @@ export interface Vault {
   /** Find entities linked to a given entity (follow wikilinks). */
   findLinked(id: string): Entity[];
 
+  /** List entities filtered by knowledge layer (index-level filtering). */
+  listByLayer(layer: KnowledgeLayer, filter?: QueryFilter): Entity[];
+
   /** Rebuild the fast-lookup index from disk. */
   rebuildIndex(): void;
+
+  /** Set the onRead callback (used to wire decay-on-read after construction). */
+  setOnRead(callback: (entity: Entity) => void): void;
 }
 
 // ---------------------------------------------------------------------------
@@ -267,7 +415,7 @@ export interface VectorStore {
 // ---------------------------------------------------------------------------
 
 /** User-provided embedding function. */
-export type EmbedFn = (text: string) => Promise<number[]>;
+export type EmbedFn = (text: string) => Promise<number[] | null>;
 
 export interface HarvesterConfig {
   /** Concurrency limit for inbox processing. Default: 4 */
@@ -312,6 +460,34 @@ export interface ReconcilerConfig {
   stateFile?: string;
 }
 
+export interface DecayConfig {
+  /** Default L2 decay window in days. Default: 14 */
+  l2DefaultDays?: number;
+  /** Default L3 decay window in days. Default: 90 */
+  l3DefaultDays?: number;
+  /** Per-team L2 decay windows in days. */
+  teamDecayDays?: Record<string, number>;
+}
+
+export interface LayersConfig {
+  /** Enable L2 (Team Working Memory). Default: false */
+  working?: { enabled?: boolean };
+}
+
+export interface AutoPromoteConfig {
+  /** Enable auto-promotion of high-confidence proposals. Default: false */
+  enabled?: boolean;
+  /** Minimum confidence score for auto-promotion. Default: 0.9 */
+  minConfidence?: number;
+  /** Minimum distinct agent count in evidence. Default: 5 */
+  minAgentCount?: number;
+}
+
+export interface GovernanceConfig {
+  /** Auto-promote configuration for high-confidence L3 proposals. */
+  autoPromote?: AutoPromoteConfig;
+}
+
 export interface SomaConfig {
   /** Vault directory. Default: `.soma/vault` */
   vaultDir?: string;
@@ -328,6 +504,14 @@ export interface SomaConfig {
   synthesizer?: SynthesizerConfig;
   cartographer?: CartographerConfig;
   reconciler?: ReconcilerConfig;
+  /** Decay mechanics config */
+  decay?: DecayConfig;
+  /** Governance config (auto-promote, etc.) */
+  governance?: GovernanceConfig;
+  /** Layer topology config (enable/disable L2). */
+  layers?: LayersConfig;
+  /** Outcome assertions evaluated after pipeline completes. */
+  assertions?: Array<{ name: string; verify: () => Promise<boolean> | boolean; timeout?: number }>;
 }
 
 // ---------------------------------------------------------------------------

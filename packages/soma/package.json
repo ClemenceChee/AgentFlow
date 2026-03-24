@@ -1,6 +1,6 @@
 {
   "name": "soma",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Organizational intelligence layer for AI agent systems. Knowledge vault, semantic search, and adaptive policy generation.",
   "type": "module",
   "main": "./dist/index.js",
@@ -11,13 +11,18 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./ops-intel": {
+      "types": "./dist/ops-intel/index.d.ts",
+      "import": "./dist/ops-intel/index.js",
+      "require": "./dist/ops-intel/index.cjs"
     }
   },
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --dts --clean --tsconfig tsconfig.build.json",
+    "build": "tsup src/index.ts src/ops-intel/index.ts --format esm,cjs --dts --clean --tsconfig tsconfig.build.json",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {

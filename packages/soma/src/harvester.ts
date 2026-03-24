@@ -7,10 +7,30 @@
  * @module
  */
 
-import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  renameSync,
+  writeFileSync,
+} from 'node:fs';
 import { basename, extname, join } from 'node:path';
 import type { ExecutionEvent, PatternEvent } from 'agentflow-core';
+import type { GraphLike } from './decision-extractor.js';
+import {
+  decisionsToEntities,
+  extractDecisionsFromGraph,
+  isExecutionGraph,
+} from './decision-extractor.js';
+import { writeToLayer } from './layers.js';
+import {
+  computePatternSignature,
+  extractDecisionsFromNodes,
+} from './ops-intel/decision-extraction.js';
+import type { NormalizedDecision } from './ops-intel/types.js';
 import type { Entity, HarvesterConfig, Vault } from './types.js';
+import { vaultEntityCount } from './vault.js';
 
 const DEFAULT_STATE_FILE = '.soma/harvester-state.json';
 
@@ -70,6 +90,7 @@ const DEFAULT_PARSERS: Record<string, InboxParser> = {
 interface HarvesterState {
   processedEventIds: Set<string>;
   lastProcessedTimestamp: number;
+  entityCount?: number;
 }
 
 /**
@@ -83,15 +104,36 @@ export function createHarvester(vault: Vault, config?: HarvesterConfig) {
   const stateFile = config?.stateFile ?? DEFAULT_STATE_FILE;
   const parsers: Record<string, InboxParser> = { ...DEFAULT_PARSERS, ...config?.parsers };
 
-  // Load state
+  // Load state with entity count check
   let state: HarvesterState = { processedEventIds: new Set(), lastProcessedTimestamp: 0 };
   try {
     if (existsSync(stateFile)) {
       const raw = JSON.parse(readFileSync(stateFile, 'utf-8'));
-      state = {
-        processedEventIds: new Set(raw.processedEventIds ?? []),
-        lastProcessedTimestamp: raw.lastProcessedTimestamp ?? 0,
-      };
+      const currentCount = vaultEntityCount(vault.baseDir);
+      if (raw.entityCount == null && raw.vaultFingerprint) {
+        // Migrate from old vaultFingerprint format
+        console.log('[Harvester] Migrating state from vaultFingerprint to entityCount');
+        state = {
+          processedEventIds: new Set(),
+          lastProcessedTimestamp: 0,
+          entityCount: currentCount,
+        };
+      } else if (raw.entityCount != null && currentCount < raw.entityCount) {
+        console.log(
+          `[Harvester] Vault entity count decreased (${raw.entityCount} → ${currentCount}) — resetting state`,
+        );
+        state = {
+          processedEventIds: new Set(),
+          lastProcessedTimestamp: 0,
+          entityCount: currentCount,
+        };
+      } else {
+        state = {
+          processedEventIds: new Set(raw.processedEventIds ?? []),
+          lastProcessedTimestamp: raw.lastProcessedTimestamp ?? 0,
+          entityCount: currentCount,
+        };
+      }
     }
   } catch {
     /* fresh state */
@@ -103,9 +145,9 @@ export function createHarvester(vault: Vault, config?: HarvesterConfig) {
     const raw = {
       processedEventIds: [...state.processedEventIds].slice(-10000), // Keep last 10K
       lastProcessedTimestamp: state.lastProcessedTimestamp,
+      entityCount: state.entityCount ?? vaultEntityCount(vault.baseDir),
     };
-    const { writeFileSync: ws } = require('node:fs');
-    ws(stateFile, JSON.stringify(raw, null, 2), 'utf-8');
+    writeFileSync(stateFile, JSON.stringify(raw, null, 2), 'utf-8');
   }
 
   function eventId(event: ExecutionEvent | PatternEvent): string {
@@ -123,25 +165,49 @@ export function createHarvester(vault: Vault, config?: HarvesterConfig) {
     const id = normalizeId(agentId);
     const existing = vault.read('agent', id);
     if (!existing) {
-      vault.create({
+      writeToLayer(vault, 'harvester', 'archive', {
         type: 'agent',
         id,
         name: agentId,
         agentId,
         status: 'active',
         tags: ['agent-layer'],
-      });
+      } as Partial<Entity> & { type: string; name: string });
     }
   }
 
-  function createExecutionEntity(event: ExecutionEvent): void {
+  /** Check for duplicate trace by trace_id in vault. */
+  function isDuplicateTrace(traceId: string): boolean {
+    if (state.processedEventIds.has(traceId)) return true;
+    // Also check vault for trace_id field
+    const existing = vault.list('execution', { limit: 5000 });
+    return existing.some((e) => (e as Record<string, unknown>).trace_id === traceId);
+  }
+
+  function createExecutionEntity(event: ExecutionEvent, decisions?: NormalizedDecision[]): void {
     const agentNormId = normalizeId(event.agentId);
     const execId = `exec-${event.agentId}-${event.timestamp}`;
-    vault.create({
+    const traceId = `${event.agentId}-${event.timestamp}`;
+
+    // Duplicate trace detection by trace_id
+    if (isDuplicateTrace(traceId)) {
+      console.log(`[Harvester] Duplicate trace skipped: ${traceId}`);
+      return;
+    }
+
+    // Compute decision pattern if decisions available
+    const decisionPattern =
+      decisions && decisions.length > 0 ? computePatternSignature(decisions) : undefined;
+
+    // Write to L1 via layer-enforced path
+    writeToLayer(vault, 'harvester', 'archive', {
       type: 'execution',
       id: normalizeId(execId),
       name: `${event.agentId} execution at ${new Date(event.timestamp).toISOString()}`,
       agentId: event.agentId,
+      agent_id: event.agentId,
+      trace_id: traceId,
+      source_system: 'agentflow',
       status:
         event.status === 'completed'
           ? 'completed'
@@ -153,6 +219,8 @@ export function createHarvester(vault: Vault, config?: HarvesterConfig) {
       variant: event.pathSignature,
       conformanceScore: event.processContext?.conformanceScore,
       trigger: 'event',
+      decisions: decisions && decisions.length > 0 ? decisions : undefined,
+      decisionPattern,
       tags: ['agent-layer', event.agentId],
       related: [`agent/${agentNormId}`],
       body: `Execution of ${event.agentId}. Duration: ${event.duration}ms. Nodes: ${event.nodeCount}. Status: ${event.status}.`,
@@ -244,11 +312,23 @@ export function createHarvester(vault: Vault, config?: HarvesterConfig) {
           const result = parser(content, file);
 
           if (result.events?.length) {
-            await this.ingest(result.events);
+            // Detect full ExecutionGraph objects among events
+            for (const event of result.events) {
+              if (isExecutionGraph(event)) {
+                await this.ingestGraph(event as unknown as GraphLike);
+              }
+            }
+            // Ingest normal events
+            await this.ingest(result.events.filter((e) => !isExecutionGraph(e)));
           }
           if (result.entities?.length) {
             for (const entity of result.entities) {
-              vault.create(entity);
+              writeToLayer(
+                vault,
+                'harvester',
+                'archive',
+                entity as Partial<Entity> & { type: string; name: string },
+              );
             }
           }
 
@@ -259,14 +339,98 @@ export function createHarvester(vault: Vault, config?: HarvesterConfig) {
           // Move to errors
           try {
             renameSync(filePath, join(errorsDir, file));
-          } catch {
-            /* skip */
+          } catch (moveErr) {
+            console.warn(
+              `[Harvester] Failed to move ${file} to errors dir:`,
+              (moveErr as Error).message,
+            );
           }
           console.error(`Harvester error processing ${file}:`, err);
         }
       }
 
       return processed;
+    },
+
+    /**
+     * Ingest a full ExecutionGraph, extracting decisions and writing them
+     * to L1 with stable trace_id (decision-graphId-nodeId).
+     * Returns the number of decision entities created.
+     */
+    async ingestGraph(graph: GraphLike): Promise<number> {
+      // Extract NormalizedDecisions from graph nodes (for execution entity enrichment)
+      const graphNodes = graph.nodes as Record<
+        string,
+        {
+          id: string;
+          type: string;
+          name: string;
+          status: string;
+          startTime: number;
+          endTime: number | null;
+          metadata?: Record<string, unknown>;
+          state?: Record<string, unknown>;
+        }
+      >;
+      const normalizedDecisions = extractDecisionsFromNodes(graphNodes);
+      const pattern =
+        normalizedDecisions.length > 0 ? computePatternSignature(normalizedDecisions) : undefined;
+
+      // Also create execution entity with decisions if graph has agentId
+      if (graph.agentId && normalizedDecisions.length > 0) {
+        const execTraceId = `exec-${graph.agentId}-${Date.now()}`;
+        if (!isDuplicateTrace(execTraceId)) {
+          try {
+            writeToLayer(vault, 'harvester', 'archive', {
+              type: 'execution',
+              id: normalizeId(execTraceId),
+              name: `${graph.agentId} execution`,
+              agentId: graph.agentId,
+              agent_id: graph.agentId,
+              trace_id: execTraceId,
+              source_system: 'agentflow-graph',
+              status: (graph.status as string) ?? 'completed',
+              decisions: normalizedDecisions,
+              decisionPattern: pattern,
+              tags: ['agent-layer', graph.agentId],
+              related: [],
+              body: '',
+            } as Partial<Entity> & { type: string; name: string });
+            state.processedEventIds.add(execTraceId);
+          } catch {
+            /* skip if exists */
+          }
+        }
+      }
+
+      // Extract decision entities from graph (existing behavior)
+      const decisions = extractDecisionsFromGraph(graph);
+      if (decisions.length === 0) return normalizedDecisions.length > 0 ? 1 : 0;
+
+      const entities = decisionsToEntities(decisions);
+      let created = 0;
+
+      for (const entity of entities) {
+        const traceId = `decision-${(entity as Record<string, unknown>).graph_id}-${entity.name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}`;
+
+        // Dedup by stable trace_id
+        if (isDuplicateTrace(traceId)) continue;
+
+        try {
+          writeToLayer(vault, 'harvester', 'archive', {
+            ...entity,
+            trace_id: traceId,
+            source_system: 'agentflow-graph',
+          } as Partial<Entity> & { type: string; name: string });
+          state.processedEventIds.add(traceId);
+          created++;
+        } catch {
+          // Skip failed writes
+        }
+      }
+
+      if (created > 0) saveState();
+      return created;
     },
 
     /** Get current state for debugging. */

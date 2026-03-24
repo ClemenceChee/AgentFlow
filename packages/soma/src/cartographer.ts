@@ -10,6 +10,7 @@
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { queryByLayer, writeToLayer } from './layers.js';
 // cosineSimilarity and extractWikilinks available for future use
 // import { cosineSimilarity } from './vector-store.js';
 // import { extractWikilinks } from './entity.js';
@@ -21,6 +22,7 @@ import type {
   VectorSearchResult,
   VectorStore,
 } from './types.js';
+import { vaultEntityCount } from './vault.js';
 
 const DEFAULT_MIN_CLUSTER_SIZE = 3;
 const DEFAULT_SIMILARITY_THRESHOLD = 0.5;
@@ -30,6 +32,7 @@ interface CartographerState {
   /** MD5 hashes of entity text at time of embedding — used for incremental re-embedding. */
   entityHashes: Map<string, string>;
   clusterAssignments: Record<string, number>;
+  entityCount?: number;
 }
 
 /**
@@ -53,14 +56,36 @@ export function createCartographer(
   try {
     if (existsSync(stateFile)) {
       const raw = JSON.parse(readFileSync(stateFile, 'utf-8'));
-      state = {
-        embeddedIds: new Set(raw.embeddedIds ?? []),
-        entityHashes: new Map(Object.entries(raw.entityHashes ?? {})),
-        clusterAssignments: raw.clusterAssignments ?? {},
-      };
+      const currentCount = vaultEntityCount(vault.baseDir);
+      if (raw.entityCount == null && raw.vaultFingerprint) {
+        console.log('[Cartographer] Migrating state from vaultFingerprint to entityCount');
+        state = {
+          embeddedIds: new Set(),
+          entityHashes: new Map(),
+          clusterAssignments: {},
+          entityCount: currentCount,
+        };
+      } else if (raw.entityCount != null && currentCount < raw.entityCount) {
+        console.log(
+          `[Cartographer] Vault entity count decreased (${raw.entityCount} → ${currentCount}) — resetting state`,
+        );
+        state = {
+          embeddedIds: new Set(),
+          entityHashes: new Map(),
+          clusterAssignments: {},
+          entityCount: currentCount,
+        };
+      } else {
+        state = {
+          embeddedIds: new Set(raw.embeddedIds ?? []),
+          entityHashes: new Map(Object.entries(raw.entityHashes ?? {})),
+          clusterAssignments: raw.clusterAssignments ?? {},
+          entityCount: currentCount,
+        };
+      }
     }
-  } catch {
-    /* fresh */
+  } catch (err) {
+    console.warn('[Cartographer] Failed to load state, starting fresh:', (err as Error).message);
   }
 
   function saveState(): void {
@@ -72,6 +97,7 @@ export function createCartographer(
         embeddedIds: [...state.embeddedIds],
         entityHashes: Object.fromEntries(state.entityHashes),
         clusterAssignments: state.clusterAssignments,
+        entityCount: state.entityCount ?? vaultEntityCount(vault.baseDir),
       }),
       'utf-8',
     );
@@ -98,8 +124,8 @@ export function createCartographer(
       for (const link of e.related) {
         const linkedId = link.split('/').pop() ?? '';
         if (!adj.has(linkedId)) adj.set(linkedId, new Set());
-        adj.get(e.id)?.add(linkedId);
-        adj.get(linkedId)?.add(e.id); // Undirected
+        adj.get(e.id)!.add(linkedId);
+        adj.get(linkedId)!.add(e.id); // Undirected
       }
     }
 
@@ -166,6 +192,7 @@ export function createCartographer(
 
           try {
             const vector = await embedFn(text);
+            if (!vector) continue; // Embedding unavailable for this entity
             await vectorStore.upsert(entity.id, vector, {
               type: entity.type,
               name: entity.name,
@@ -219,12 +246,15 @@ export function createCartographer(
         // Cross-agent or cross-type cluster → archetype candidate
         if (agents.size >= 2 || types.size >= 3) {
           const name = `archetype-cluster-${Date.now()}-${archetypesCreated}`;
-          vault.create({
+          writeToLayer(vault, 'cartographer', 'emerging', {
             type: 'archetype',
             name,
             status: 'proposed',
             pattern: `Cluster of ${members.length} entities across ${agents.size} agents and ${types.size} types`,
             confidence: Math.min(members.length / 10, 1),
+            confidence_score: Math.min(members.length / 10, 1),
+            evidence_links: members,
+            decay_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
             memberAgents: [...agents],
             memberExecutions: members.filter(
               (id) => memberEntities.find((e) => e.id === id)?.type === 'execution',
@@ -255,7 +285,117 @@ export function createCartographer(
     ): Promise<VectorSearchResult[]> {
       if (!embedFn) return [];
       const queryVector = await embedFn(query);
+      if (!queryVector) return [];
       return vectorStore.search(queryVector, options);
+    },
+
+    /**
+     * Extract entities and relationships from L1, L3, and L4 entries.
+     * Creates relationship mapping proposals in L3 with evidence_links and confidence_score.
+     * Returns the number of relationship proposals created.
+     */
+    async mapRelationships(): Promise<number> {
+      const l1Entries = queryByLayer(vault, 'archive');
+      const l3Entries = queryByLayer(vault, 'emerging');
+      const l4Entries = queryByLayer(vault, 'canon');
+      const allLayered = [...l1Entries, ...l3Entries, ...l4Entries];
+
+      if (allLayered.length < 2) return 0;
+
+      let created = 0;
+      const decayAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
+
+      // Circuit breaker: cap total relationship proposals at 100
+      const CIRCUIT_BREAKER_LIMIT = 100;
+
+      // Find entities that share tags or related links but aren't directly linked
+      for (let i = 0; i < allLayered.length && i < 200; i++) {
+        const entry = allLayered[i]!;
+        for (let j = i + 1; j < allLayered.length && j < 200; j++) {
+          const other = allLayered[j]!;
+
+          // Self-reference guard: skip if same entity
+          if (entry.id === other.id) continue;
+
+          // Check for shared tags
+          const sharedTags = entry.tags.filter((t) => other.tags.includes(t));
+          if (sharedTags.length === 0) continue;
+
+          // Skip if already linked
+          if (entry.related.some((r) => r.includes(other.id))) continue;
+
+          const confidence = Math.min(sharedTags.length / 5, 0.9);
+          if (confidence < similarityThreshold) continue;
+
+          try {
+            writeToLayer(vault, 'cartographer', 'emerging', {
+              type: 'synthesis',
+              name: `Relationship: ${entry.name} ↔ ${other.name}`,
+              status: 'pending',
+              confidence_score: confidence,
+              evidence_links: [entry.id, other.id],
+              decay_at: decayAt,
+              tags: ['relationship-proposal', 'cartographer'],
+              related: [`${entry.type}/${entry.id}`, `${other.type}/${other.id}`],
+              body: `Proposed relationship between ${entry.name} and ${other.name}.\nShared tags: ${sharedTags.join(', ')}`,
+            } as Partial<Entity> & { type: string; name: string });
+            created++;
+          } catch {
+            // Skip
+          }
+
+          if (created >= CIRCUIT_BREAKER_LIMIT) return created; // Circuit breaker
+        }
+      }
+
+      return created;
+    },
+
+    /**
+     * Detect contradictions between L3 entries and L4 canon.
+     * Flags L3 entries that contradict established L4 truth.
+     * Returns the number of contradictions found.
+     */
+    detectContradictions(): number {
+      const l3Entries = queryByLayer(vault, 'emerging');
+      const l4Entries = queryByLayer(vault, 'canon');
+      let flagged = 0;
+
+      for (const l3 of l3Entries) {
+        for (const l4 of l4Entries) {
+          // Check if they cover the same topic (shared tags or similar content)
+          const sharedTags = l3.tags.filter((t) => l4.tags.includes(t) && t !== 'synthesized');
+          if (sharedTags.length === 0) continue;
+
+          // Simple contradiction check: look for opposing keywords
+          const l3Text = l3.body.toLowerCase();
+          const l4Text = l4.body.toLowerCase();
+          const contradictionPairs = [
+            ['should', 'should not'],
+            ['enable', 'disable'],
+            ['allow', 'deny'],
+            ['increase', 'decrease'],
+            ['must', 'must not'],
+          ];
+
+          for (const [a, b] of contradictionPairs) {
+            if (
+              (l3Text.includes(a!) && l4Text.includes(b!)) ||
+              (l3Text.includes(b!) && l4Text.includes(a!))
+            ) {
+              // Flag the L3 entry
+              vault.update(l3.id, {
+                tags: [...new Set([...l3.tags, 'contradicts-canon'])],
+                related: [...new Set([...l3.related, `${l4.type}/${l4.id}`])],
+              } as Partial<Entity>);
+              flagged++;
+              break;
+            }
+          }
+        }
+      }
+
+      return flagged;
     },
 
     /** Suggest missing relationships within clusters. */
@@ -275,6 +415,7 @@ export function createCartographer(
         try {
           const text = entityToText(entity);
           const vector = await embedFn(text);
+          if (!vector) continue;
           const similar = await vectorStore.search(vector, { limit: 5 });
 
           for (const result of similar) {

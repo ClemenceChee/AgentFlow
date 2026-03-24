@@ -39,8 +39,13 @@ export function parseEntity(content: string, defaults?: Partial<Entity>): Entity
 
   const now = new Date().toISOString();
 
+  const resolvedType = (frontmatter.type as string) ?? defaults?.type;
+  if (!resolvedType)
+    console.warn(`[Entity] Missing type in frontmatter and defaults, using 'untyped'`);
+
   return {
-    type: (frontmatter.type as string) ?? defaults?.type ?? 'unknown',
+    ...frontmatter,
+    type: resolvedType ?? 'untyped',
     id: (frontmatter.id as string) ?? defaults?.id ?? '',
     name: (frontmatter.name as string) ?? defaults?.name ?? '',
     status: (frontmatter.status as string) ?? defaults?.status ?? 'active',
@@ -49,7 +54,6 @@ export function parseEntity(content: string, defaults?: Partial<Entity>): Entity
     tags: Array.isArray(frontmatter.tags) ? (frontmatter.tags as string[]) : [],
     related: allRelated,
     body,
-    ...frontmatter,
   };
 }
 
@@ -101,19 +105,36 @@ function parseSimpleYaml(yaml: string): Record<string, unknown> {
     const key = line.slice(0, colonIdx).trim();
     const value = line.slice(colonIdx + 1).trim();
 
+    // JSON object (starts with { and ends with })
+    if (value.startsWith('{') && value.endsWith('}')) {
+      try {
+        result[key] = JSON.parse(value);
+      } catch {
+        // Fall back to string if not valid JSON
+        result[key] = value.replace(/^["']|["']$/g, '');
+      }
+      continue;
+    }
+
     // Array (inline `[a, b, c]` or multi-line `- item`)
     if (value.startsWith('[') && value.endsWith(']')) {
-      result[key] = value
-        .slice(1, -1)
-        .split(',')
-        .map((s) => s.trim().replace(/^["']|["']$/g, ''))
-        .filter(Boolean);
+      // Try JSON.parse first for arrays containing objects or complex values
+      try {
+        result[key] = JSON.parse(value);
+      } catch {
+        // Fall back to simple comma-split for plain string arrays
+        result[key] = value
+          .slice(1, -1)
+          .split(',')
+          .map((s) => s.trim().replace(/^["']|["']$/g, ''))
+          .filter(Boolean);
+      }
     } else if (value === '') {
       // Check for multi-line array
       const items: string[] = [];
-      while (i + 1 < lines.length && lines[i + 1]?.trimStart().startsWith('- ')) {
+      while (i + 1 < lines.length && lines[i + 1]!.trimStart().startsWith('- ')) {
         i++;
-        items.push(lines[i]?.trimStart().slice(2).trim());
+        items.push(lines[i]!.trimStart().slice(2).trim());
       }
       if (items.length > 0) result[key] = items;
       else result[key] = '';
@@ -133,6 +154,10 @@ function parseSimpleYaml(yaml: string): Record<string, unknown> {
 function serializeYamlField(key: string, value: unknown): string {
   if (Array.isArray(value)) {
     if (value.length === 0) return `${key}: []`;
+    // Arrays containing objects should use JSON.stringify for the entire array
+    if (value.some((v) => typeof v === 'object' && v !== null)) {
+      return `${key}: ${JSON.stringify(value)}`;
+    }
     if (value.length <= 5 && value.every((v) => typeof v === 'string' && v.length < 30)) {
       return `${key}: [${value.map((v) => JSON.stringify(v)).join(', ')}]`;
     }
