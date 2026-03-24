@@ -93,9 +93,12 @@ export function isExecutionGraph(obj: unknown): obj is GraphLike {
   if (!obj || typeof obj !== 'object') return false;
   const o = obj as Record<string, unknown>;
   return (
-    ('nodes' in o && (o.nodes instanceof Map || (typeof o.nodes === 'object' && o.nodes !== null))) &&
-    ('edges' in o && Array.isArray(o.edges)) &&
-    ('agentId' in o && typeof o.agentId === 'string')
+    'nodes' in o &&
+    (o.nodes instanceof Map || (typeof o.nodes === 'object' && o.nodes !== null)) &&
+    'edges' in o &&
+    Array.isArray(o.edges) &&
+    'agentId' in o &&
+    typeof o.agentId === 'string'
   );
 }
 
@@ -109,8 +112,10 @@ export function extractDecisionsFromGraph(graph: GraphLike): ExtractedDecision[]
   const nodes = getNodes(graph);
 
   // Skip graphs with only a root agent node and no events
-  const nonRootNodes = nodes.filter(n => n.parentId !== null);
-  const hasExplicitDecisionEvents = graph.events?.some(e => e.eventType === 'decision' || e.eventType === 'subagent_spawn');
+  const nonRootNodes = nodes.filter((n) => n.parentId !== null);
+  const hasExplicitDecisionEvents = graph.events?.some(
+    (e) => e.eventType === 'decision' || e.eventType === 'subagent_spawn',
+  );
   if (nonRootNodes.length === 0 && !hasExplicitDecisionEvents) return decisions;
 
   // 1. Tool choice decisions
@@ -123,7 +128,8 @@ export function extractDecisionsFromGraph(graph: GraphLike): ExtractedDecision[]
         decision_context: {
           ...node.metadata,
           ...(node.state ?? {}),
-          duration: node.endTime != null && node.startTime ? node.endTime - node.startTime : undefined,
+          duration:
+            node.endTime != null && node.startTime ? node.endTime - node.startTime : undefined,
         },
         agent_id: graph.agentId,
         graph_id: graph.id,
@@ -140,14 +146,12 @@ export function extractDecisionsFromGraph(graph: GraphLike): ExtractedDecision[]
       if (!targetNode || !sourceNode) continue;
 
       // Find sibling branches (other children of the same parent)
-      const siblings = nodes.filter(n =>
-        n.parentId === sourceNode.id && n.id !== targetNode.id,
-      );
+      const siblings = nodes.filter((n) => n.parentId === sourceNode.id && n.id !== targetNode.id);
 
       decisions.push({
         decision_type: 'branch',
         choice: targetNode.name,
-        alternatives: siblings.map(s => s.name),
+        alternatives: siblings.map((s) => s.name),
         outcome: targetNode.status,
         decision_context: {
           source_node: sourceNode.name,
@@ -161,7 +165,7 @@ export function extractDecisionsFromGraph(graph: GraphLike): ExtractedDecision[]
   }
 
   // 3. Retry decisions
-  const retryEdges = graph.edges.filter(e => e.type === 'retried');
+  const retryEdges = graph.edges.filter((e) => e.type === 'retried');
   if (retryEdges.length > 0) {
     // Group retries by target
     const retryGroups = new Map<string, GraphEdge[]>();
@@ -213,13 +217,15 @@ export function extractDecisionsFromGraph(graph: GraphLike): ExtractedDecision[]
     for (const event of graph.events) {
       if (event.eventType === 'subagent_spawn') {
         // Only add if not already captured as a subagent node
-        const alreadyCaptured = decisions.some(d =>
-          d.decision_type === 'delegation' && d.node_id === event.nodeId,
+        const alreadyCaptured = decisions.some(
+          (d) => d.decision_type === 'delegation' && d.node_id === event.nodeId,
         );
         if (!alreadyCaptured) {
           decisions.push({
             decision_type: 'delegation',
-            choice: String(event.data.name ?? event.data.agentId ?? `unattributed:node-${event.nodeId}`),
+            choice: String(
+              event.data.name ?? event.data.agentId ?? `unattributed:node-${event.nodeId}`,
+            ),
             outcome: 'spawned',
             decision_context: { ...event.data },
             agent_id: graph.agentId,
@@ -232,7 +238,7 @@ export function extractDecisionsFromGraph(graph: GraphLike): ExtractedDecision[]
   }
 
   // 5. Failure path decisions
-  const failedNodes = nodes.filter(n => n.status === 'failed');
+  const failedNodes = nodes.filter((n) => n.status === 'failed');
   for (const failedNode of failedNodes) {
     // Walk path from root to failure
     const path: string[] = [];
@@ -263,7 +269,7 @@ export function extractDecisionsFromGraph(graph: GraphLike): ExtractedDecision[]
     for (const event of graph.events) {
       if (event.eventType === 'custom' && event.data.action === 'state_update') {
         // Find matching decision and enrich its context
-        const matchingDecision = decisions.find(d => d.node_id === event.nodeId);
+        const matchingDecision = decisions.find((d) => d.node_id === event.nodeId);
         if (matchingDecision) {
           const { action, ...stateData } = event.data;
           Object.assign(matchingDecision.decision_context, stateData);
@@ -279,7 +285,9 @@ export function extractDecisionsFromGraph(graph: GraphLike): ExtractedDecision[]
         decisions.push({
           decision_type: (event.data.decision_type as any) ?? 'tool_choice',
           choice: String(event.data.choice ?? 'unattributed'),
-          alternatives: Array.isArray(event.data.alternatives) ? event.data.alternatives.map(String) : undefined,
+          alternatives: Array.isArray(event.data.alternatives)
+            ? event.data.alternatives.map(String)
+            : undefined,
           rationale: event.data.rationale ? String(event.data.rationale) : undefined,
           outcome: String(event.data.outcome ?? 'unattributed'),
           decision_context: { ...event.data },

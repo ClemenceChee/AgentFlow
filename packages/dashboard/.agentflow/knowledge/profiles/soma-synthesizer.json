@@ -1,0 +1,12 @@
+{
+  "agentId": "soma-synthesizer",
+  "totalRuns": 10,
+  "successCount": 10,
+  "failureCount": 0,
+  "failureRate": 0,
+  "recentDurations": [174674, 224654, 47012, 217395, 179286, 107212, 126278, 158096, 77611, 473826],
+  "lastConformanceScore": null,
+  "knownBottlenecks": [],
+  "lastPatternTimestamp": null,
+  "updatedAt": "2026-03-24T18:18:50.031Z"
+}

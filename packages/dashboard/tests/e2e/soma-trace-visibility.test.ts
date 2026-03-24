@@ -4,16 +4,21 @@
  * Tests the complete workflow from SOMA trace discovery through enhancement
  * to UI display, including all the integrated components working together.
  */
-import { test, expect, describe, beforeEach, afterEach } from 'vitest';
+
 import * as fs from 'node:fs';
-import * as path from 'node:path';
 import * as os from 'node:os';
-import { DashboardServer } from '../../src/server.js';
-import { TraceEnhancementService } from '../../src/trace-enhancer.js';
-import { DefaultSOMADataReader } from '../../src/soma-data-reader.js';
+import * as path from 'node:path';
+import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import type { DashboardUserConfig } from '../../src/config.js';
+import { DashboardServer } from '../../src/server.js';
+import type {
+  SOMAHarvesterState,
+  SOMASynthesizerState,
+  SOMAVaultChange,
+} from '../../src/soma-data-reader.js';
+import { DefaultSOMADataReader } from '../../src/soma-data-reader.js';
+import { TraceEnhancementService } from '../../src/trace-enhancer.js';
 import type { TraceGraph } from '../../src/trace-graph.js';
-import type { SOMAHarvesterState, SOMASynthesizerState, SOMAVaultChange } from '../../src/soma-data-reader.js';
 
 describe('SOMA Trace Visibility End-to-End Workflow', () => {
   let server: DashboardServer;
@@ -51,7 +56,7 @@ describe('SOMA Trace Visibility End-to-End Workflow', () => {
           description: 'Test SOMA harvester command',
           category: 'SOMA Workers',
           timeout: 10000,
-          allowConcurrent: false
+          allowConcurrent: false,
         },
         'soma-synthesize': {
           name: 'SOMA Synthesizer',
@@ -60,9 +65,9 @@ describe('SOMA Trace Visibility End-to-End Workflow', () => {
           description: 'Test SOMA synthesizer command',
           category: 'SOMA Workers',
           timeout: 15000,
-          allowConcurrent: false
-        }
-      }
+          allowConcurrent: false,
+        },
+      },
     };
 
     // Start server
@@ -85,7 +90,7 @@ describe('SOMA Trace Visibility End-to-End Workflow', () => {
     agentId: string,
     filename: string,
     traceDir: string,
-    workerType: 'harvester' | 'synthesizer' | 'reconciler' | 'cartographer'
+    workerType: 'harvester' | 'synthesizer' | 'reconciler' | 'cartographer',
   ): TraceGraph => {
     const trace: TraceGraph = {
       id: `soma-trace-${Date.now()}`,
@@ -110,9 +115,9 @@ describe('SOMA Trace Visibility End-to-End Workflow', () => {
           metadata: {
             workerType,
             framework: 'soma',
-            component: workerType
+            component: workerType,
           },
-          state: {}
+          state: {},
         },
         'node-2': {
           id: 'node-2',
@@ -125,9 +130,9 @@ describe('SOMA Trace Visibility End-to-End Workflow', () => {
           children: [],
           metadata: {
             operation: `${workerType}_process`,
-            duration: 7000
+            duration: 7000,
           },
-          state: {}
+          state: {},
         },
         'node-3': {
           id: 'node-3',
@@ -140,11 +145,11 @@ describe('SOMA Trace Visibility End-to-End Workflow', () => {
           children: [],
           metadata: {
             operation: `${workerType}_finalize`,
-            duration: 3000
+            duration: 3000,
           },
-          state: {}
-        }
-      }
+          state: {},
+        },
+      },
     };
 
     fs.writeFileSync(path.join(traceDir, filename), JSON.stringify(trace, null, 2));
@@ -164,15 +169,15 @@ describe('SOMA Trace Visibility End-to-End Workflow', () => {
         totalFiles: 12,
         processedFiles: 8,
         skippedFiles: 2,
-        errorFiles: 2
+        errorFiles: 2,
       },
       lastProcessedFiles: ['file1.json', 'file2.json', 'file3.json'],
       processingDuration: 7500,
       errors: {
         count: 1,
         lastError: 'Timeout on file4.json',
-        timestamp: Date.now() - 3000
-      }
+        timestamp: Date.now() - 3000,
+      },
     };
 
     const synthesizerState: SOMASynthesizerState = {
@@ -186,25 +191,25 @@ describe('SOMA Trace Visibility End-to-End Workflow', () => {
       deduplicationStats: {
         duplicatesFound: 12,
         uniqueInsights: 6,
-        similarityThreshold: 0.88
+        similarityThreshold: 0.88,
       },
       confidenceScores: [0.92, 0.87, 0.91, 0.85, 0.89],
       errors: {
         count: 0,
         lastError: null,
-        timestamp: null
-      }
+        timestamp: null,
+      },
     };
 
     // Write state files
     fs.writeFileSync(
       path.join(somaStateDir, 'harvester-state.json'),
-      JSON.stringify(harvesterState, null, 2)
+      JSON.stringify(harvesterState, null, 2),
     );
 
     fs.writeFileSync(
       path.join(somaStateDir, 'synthesizer-state.json'),
-      JSON.stringify(synthesizerState, null, 2)
+      JSON.stringify(synthesizerState, null, 2),
     );
 
     // Create vault change log
@@ -215,7 +220,7 @@ describe('SOMA Trace Visibility End-to-End Workflow', () => {
         entityType: 'insight',
         operation: 'create',
         layer: 'emerging',
-        metadata: { confidence: 0.89, source: 'harvester' }
+        metadata: { confidence: 0.89, source: 'harvester' },
       },
       {
         timestamp: Date.now() - 3600000, // 1 hour ago
@@ -223,7 +228,7 @@ describe('SOMA Trace Visibility End-to-End Workflow', () => {
         entityType: 'policy',
         operation: 'update',
         layer: 'canon',
-        metadata: { enforcement: 'strict', ratified: true }
+        metadata: { enforcement: 'strict', ratified: true },
       },
       {
         timestamp: Date.now() - 1800000, // 30 min ago
@@ -231,38 +236,36 @@ describe('SOMA Trace Visibility End-to-End Workflow', () => {
         entityType: 'insight',
         operation: 'promote',
         layer: 'emerging',
-        metadata: { promotedFrom: 'working', confidence: 0.94 }
-      }
+        metadata: { promotedFrom: 'working', confidence: 0.94 },
+      },
     ];
 
-    const changeLogContent = vaultChanges
-      .map(change => JSON.stringify(change))
-      .join('\n');
+    const changeLogContent = vaultChanges.map((change) => JSON.stringify(change)).join('\n');
     fs.writeFileSync(path.join(somaVaultDir, '_mutations.jsonl'), changeLogContent);
 
     return { harvesterState, synthesizerState, vaultChanges };
   };
 
-  const waitForAsync = (ms = 200) => new Promise(resolve => setTimeout(resolve, ms));
+  const waitForAsync = (ms = 200) => new Promise((resolve) => setTimeout(resolve, ms));
 
   describe('Complete SOMA Trace Workflow', () => {
     test('end-to-end workflow: discovery → enhancement → API access', async () => {
       // Step 1: Create SOMA operational data
-      const operationalData = createSOMAOperationalData();
+      const _operationalData = createSOMAOperationalData();
 
       // Step 2: Create SOMA traces
       const harvesterTrace = createSOMATrace(
         'soma-harvester',
         'harvester-001.json',
         somaTracesDir,
-        'harvester'
+        'harvester',
       );
 
-      const synthesizerTrace = createSOMATrace(
+      const _synthesizerTrace = createSOMATrace(
         'soma-synthesizer',
         'synthesizer-001.json',
         somaTracesDir,
-        'synthesizer'
+        'synthesizer',
       );
 
       // Wait for trace discovery
@@ -292,11 +295,11 @@ describe('SOMA Trace Visibility End-to-End Workflow', () => {
       // Step 5: Test trace enhancement
       const dataReader = new DefaultSOMADataReader({
         statePath: somaStateDir,
-        vaultPath: somaVaultDir
+        vaultPath: somaVaultDir,
       });
 
       const enhancer = new TraceEnhancementService({
-        somaDataReader: dataReader
+        somaDataReader: dataReader,
       });
 
       const enhancementResult = await enhancer.enhanceTrace(harvesterTrace);
@@ -316,7 +319,7 @@ describe('SOMA Trace Visibility End-to-End Workflow', () => {
       // Test SOMA data reader directly
       const dataReader = new DefaultSOMADataReader({
         statePath: somaStateDir,
-        vaultPath: somaVaultDir
+        vaultPath: somaVaultDir,
       });
 
       const operationalData = await dataReader.readOperationalData();
@@ -346,11 +349,14 @@ describe('SOMA Trace Visibility End-to-End Workflow', () => {
 
     test('external command integration with SOMA workers', async () => {
       // Test SOMA harvester command
-      const harvesterResponse = await fetch(`${baseUrl}/api/external/commands/soma-harvest/execute`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({})
-      });
+      const harvesterResponse = await fetch(
+        `${baseUrl}/api/external/commands/soma-harvest/execute`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        },
+      );
 
       expect(harvesterResponse.status).toBe(200);
 
@@ -360,11 +366,14 @@ describe('SOMA Trace Visibility End-to-End Workflow', () => {
       expect(harvesterData.exitCode).toBe(0);
 
       // Test SOMA synthesizer command
-      const synthesizerResponse = await fetch(`${baseUrl}/api/external/commands/soma-synthesize/execute`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({})
-      });
+      const synthesizerResponse = await fetch(
+        `${baseUrl}/api/external/commands/soma-synthesize/execute`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        },
+      );
 
       expect(synthesizerResponse.status).toBe(200);
 
@@ -400,7 +409,7 @@ describe('SOMA Trace Visibility End-to-End Workflow', () => {
           `soma-${worker}`,
           `${worker}-001.json`,
           somaTracesDir,
-          worker
+          worker,
         );
         createdTraces.push(trace);
       }
@@ -418,17 +427,17 @@ describe('SOMA Trace Visibility End-to-End Workflow', () => {
         'soma-cartographer',
         'soma-harvester',
         'soma-reconciler',
-        'soma-synthesizer'
+        'soma-synthesizer',
       ]);
 
       // Test enhancement for each worker type
       const dataReader = new DefaultSOMADataReader({
         statePath: somaStateDir,
-        vaultPath: somaVaultDir
+        vaultPath: somaVaultDir,
       });
 
       const enhancer = new TraceEnhancementService({
-        somaDataReader: dataReader
+        somaDataReader: dataReader,
       });
 
       for (const trace of createdTraces) {
@@ -451,11 +460,11 @@ describe('SOMA Trace Visibility End-to-End Workflow', () => {
       createSOMAOperationalData();
 
       // Create initial trace
-      let harvesterTrace = createSOMATrace(
+      const harvesterTrace = createSOMATrace(
         'soma-harvester',
         'dynamic-harvester.json',
         somaTracesDir,
-        'harvester'
+        'harvester',
       );
 
       await waitForAsync(200);
@@ -471,12 +480,12 @@ describe('SOMA Trace Visibility End-to-End Workflow', () => {
       harvesterTrace.nodes['node-2'].status = 'failed';
       harvesterTrace.nodes['node-2'].metadata = {
         ...harvesterTrace.nodes['node-2'].metadata,
-        error: 'Processing timeout'
+        error: 'Processing timeout',
       };
 
       fs.writeFileSync(
         path.join(somaTracesDir, 'dynamic-harvester.json'),
-        JSON.stringify(harvesterTrace, null, 2)
+        JSON.stringify(harvesterTrace, null, 2),
       );
 
       await waitForAsync(300);
@@ -490,11 +499,11 @@ describe('SOMA Trace Visibility End-to-End Workflow', () => {
       // Test enhancement on failed trace
       const dataReader = new DefaultSOMADataReader({
         statePath: somaStateDir,
-        vaultPath: somaVaultDir
+        vaultPath: somaVaultDir,
       });
 
       const enhancer = new TraceEnhancementService({
-        somaDataReader: dataReader
+        somaDataReader: dataReader,
       });
 
       const enhancementResult = await enhancer.enhanceTrace(harvesterTrace);
@@ -521,11 +530,11 @@ describe('SOMA Trace Visibility End-to-End Workflow', () => {
       // Enhancement should fall back gracefully
       const dataReader = new DefaultSOMADataReader({
         statePath: somaStateDir,
-        vaultPath: somaVaultDir
+        vaultPath: somaVaultDir,
       });
 
       const enhancer = new TraceEnhancementService({
-        somaDataReader: dataReader
+        somaDataReader: dataReader,
       });
 
       const trace = tracesData.traces[0];
@@ -547,7 +556,7 @@ describe('SOMA Trace Visibility End-to-End Workflow', () => {
 
       const dataReader = new DefaultSOMADataReader({
         statePath: somaStateDir,
-        vaultPath: somaVaultDir
+        vaultPath: somaVaultDir,
       });
 
       const operationalData = await dataReader.readOperationalData();
@@ -568,7 +577,7 @@ describe('SOMA Trace Visibility End-to-End Workflow', () => {
       // Verify initial state works
       const dataReader = new DefaultSOMADataReader({
         statePath: somaStateDir,
-        vaultPath: somaVaultDir
+        vaultPath: somaVaultDir,
       });
 
       const initialData = await dataReader.readOperationalData();
@@ -605,7 +614,7 @@ describe('SOMA Trace Visibility End-to-End Workflow', () => {
           `soma-${workerType}-${i}`,
           `${workerType}-${i}.json`,
           somaTracesDir,
-          workerType
+          workerType,
         );
         tracePromises.push(trace);
       }
@@ -620,17 +629,17 @@ describe('SOMA Trace Visibility End-to-End Workflow', () => {
       // Test concurrent enhancement
       const dataReader = new DefaultSOMADataReader({
         statePath: somaStateDir,
-        vaultPath: somaVaultDir
+        vaultPath: somaVaultDir,
       });
 
       const enhancer = new TraceEnhancementService({
-        somaDataReader: dataReader
+        somaDataReader: dataReader,
       });
 
       const startTime = Date.now();
-      const enhancementPromises = tracePromises.slice(0, 5).map(trace =>
-        enhancer.enhanceTrace(trace)
-      );
+      const enhancementPromises = tracePromises
+        .slice(0, 5)
+        .map((trace) => enhancer.enhanceTrace(trace));
 
       const results = await Promise.all(enhancementPromises);
       const processingTime = Date.now() - startTime;

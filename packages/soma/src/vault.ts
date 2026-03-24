@@ -18,6 +18,7 @@
  * @module
  */
 
+import { createHash, randomUUID } from 'node:crypto';
 import {
   closeSync,
   constants,
@@ -33,8 +34,7 @@ import {
   unlinkSync,
   writeFileSync,
 } from 'node:fs';
-import { createHash, randomUUID } from 'node:crypto';
-import { join, basename, dirname } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { parseEntity, serializeEntity } from './entity.js';
 import type { Entity, KnowledgeLayer, QueryFilter, Vault, VaultConfig } from './types.js';
 
@@ -146,11 +146,19 @@ function acquireLock(lockPath: string): void {
       const pid = parseInt(content.trim(), 10);
       if (!isNaN(pid) && !isProcessAlive(pid)) {
         // Stale lock — owning process is dead
-        try { unlinkSync(lockPath); } catch { /* race with another cleaner */ }
+        try {
+          unlinkSync(lockPath);
+        } catch {
+          /* race with another cleaner */
+        }
       }
     } catch {
       // Can't read lock file, try to remove it
-      try { unlinkSync(lockPath); } catch { /* ignore */ }
+      try {
+        unlinkSync(lockPath);
+      } catch {
+        /* ignore */
+      }
     }
   }
 
@@ -170,7 +178,11 @@ function acquireLock(lockPath: string): void {
         const content = readFileSync(lockPath, 'utf-8');
         const pid = parseInt(content.trim(), 10);
         if (!isNaN(pid) && !isProcessAlive(pid)) {
-          try { unlinkSync(lockPath); } catch { /* race */ }
+          try {
+            unlinkSync(lockPath);
+          } catch {
+            /* race */
+          }
           continue; // Retry immediately after removing stale lock
         }
       } catch {
@@ -179,18 +191,26 @@ function acquireLock(lockPath: string): void {
       }
 
       if (Date.now() - startTime >= LOCK_TIMEOUT_MS) {
-        throw new Error(`Vault lock timeout: could not acquire ${lockPath} within ${LOCK_TIMEOUT_MS}ms`);
+        throw new Error(
+          `Vault lock timeout: could not acquire ${lockPath} within ${LOCK_TIMEOUT_MS}ms`,
+        );
       }
 
       // Busy-wait (synchronous context — no async available)
       const waitUntil = Date.now() + LOCK_POLL_MS;
-      while (Date.now() < waitUntil) { /* spin */ }
+      while (Date.now() < waitUntil) {
+        /* spin */
+      }
     }
   }
 }
 
 function releaseLock(lockPath: string): void {
-  try { unlinkSync(lockPath); } catch { /* already released */ }
+  try {
+    unlinkSync(lockPath);
+  } catch {
+    /* already released */
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -204,7 +224,7 @@ function checkDiskSpace(dirPath: string): void {
     if (available < MIN_DISK_SPACE_BYTES) {
       throw new Error(
         `Insufficient disk space: ${Math.round(available / 1024 / 1024)}MB available, ` +
-        `minimum ${Math.round(MIN_DISK_SPACE_BYTES / 1024 / 1024)}MB required`,
+          `minimum ${Math.round(MIN_DISK_SPACE_BYTES / 1024 / 1024)}MB required`,
       );
     }
   } catch (err: unknown) {
@@ -234,12 +254,18 @@ function cleanupTempFiles(baseDir: string): number {
             try {
               unlinkSync(join(typePath, file));
               cleaned++;
-            } catch { /* already gone */ }
+            } catch {
+              /* already gone */
+            }
           }
         }
-      } catch { /* skip non-directories or unreadable entries */ }
+      } catch {
+        /* skip non-directories or unreadable entries */
+      }
     }
-  } catch { /* base dir not readable */ }
+  } catch {
+    /* base dir not readable */
+  }
 
   // Also clean tmp files in the base dir itself (e.g., _index.json.tmp.*)
   try {
@@ -248,10 +274,14 @@ function cleanupTempFiles(baseDir: string): number {
         try {
           unlinkSync(join(baseDir, file));
           cleaned++;
-        } catch { /* already gone */ }
+        } catch {
+          /* already gone */
+        }
       }
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 
   return cleaned;
 }
@@ -287,7 +317,14 @@ export function createVault(config?: VaultConfig): Vault {
       renameSync(tmpPath, filePath);
     } catch (err) {
       // Cleanup temp file on failure
-      try { unlinkSync(tmpPath); } catch (cleanupErr) { console.warn(`[Vault] Failed to clean up temp file ${tmpPath}:`, (cleanupErr as Error).message); }
+      try {
+        unlinkSync(tmpPath);
+      } catch (cleanupErr) {
+        console.warn(
+          `[Vault] Failed to clean up temp file ${tmpPath}:`,
+          (cleanupErr as Error).message,
+        );
+      }
       throw err;
     }
   }
@@ -312,7 +349,10 @@ export function createVault(config?: VaultConfig): Vault {
 
   function generateId(type: string, name: string): string {
     // Normalize name to create a filesystem-safe ID
-    const normalized = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const normalized = name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '');
     return normalized || `${type}-${Date.now()}-${idCounter++}`;
   }
 
@@ -439,10 +479,18 @@ export function createVault(config?: VaultConfig): Vault {
       const content = readFileSync(lockPath, 'utf-8');
       const pid = parseInt(content.trim(), 10);
       if (!isNaN(pid) && !isProcessAlive(pid)) {
-        try { unlinkSync(lockPath); } catch { /* race */ }
+        try {
+          unlinkSync(lockPath);
+        } catch {
+          /* race */
+        }
       }
     } catch {
-      try { unlinkSync(lockPath); } catch { /* ignore */ }
+      try {
+        unlinkSync(lockPath);
+      } catch {
+        /* ignore */
+      }
     }
   }
 
@@ -458,10 +506,17 @@ export function createVault(config?: VaultConfig): Vault {
   // Ensure vault identity file exists (backfills existing vaults)
   const vaultIdPath = join(baseDir, VAULT_ID_FILE);
   if (existsSync(baseDir) && !existsSync(vaultIdPath)) {
-    writeAtomic(vaultIdPath, JSON.stringify({
-      id: randomUUID(),
-      createdAt: new Date().toISOString(),
-    }, null, 2) + '\n');
+    writeAtomic(
+      vaultIdPath,
+      JSON.stringify(
+        {
+          id: randomUUID(),
+          createdAt: new Date().toISOString(),
+        },
+        null,
+        2,
+      ) + '\n',
+    );
   }
 
   // ---------------------------------------------------------------------------
@@ -536,7 +591,11 @@ export function createVault(config?: VaultConfig): Vault {
     read(type, id) {
       const entity = _readRaw(type, id);
       if (entity && onReadCallback) {
-        try { onReadCallback(entity); } catch { /* don't break reads */ }
+        try {
+          onReadCallback(entity);
+        } catch {
+          /* don't break reads */
+        }
       }
       return entity;
     },
@@ -548,7 +607,7 @@ export function createVault(config?: VaultConfig): Vault {
         if (entry && entry.layer !== undefined && patch.layer !== entry.layer) {
           throw new Error(
             `Cannot change layer via vault.update() — layer changes require writeToLayer or the governance API. ` +
-            `Current layer: '${entry.layer}', attempted: '${patch.layer}'`,
+              `Current layer: '${entry.layer}', attempted: '${patch.layer}'`,
           );
         }
       }
@@ -589,7 +648,11 @@ export function createVault(config?: VaultConfig): Vault {
         const entry = index.get(id);
         if (!entry) return;
 
-        try { rmSync(entry.path); } catch { /* already gone */ }
+        try {
+          rmSync(entry.path);
+        } catch {
+          /* already gone */
+        }
         removeFromIndex(id);
         logMutation({ ts: Date.now(), op: 'delete', id, type: entry.type });
       } finally {

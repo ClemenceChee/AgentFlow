@@ -7,7 +7,7 @@
  * @module
  */
 
-import type { AgentProfile, AnalysisFn as _AnalysisFn } from 'agentflow-core';
+import type { AnalysisFn as _AnalysisFn, AgentProfile } from 'agentflow-core';
 
 export type AnalysisFn = _AnalysisFn;
 
@@ -19,7 +19,12 @@ export type AnalysisFn = _AnalysisFn;
 export type KnowledgeLayer = 'archive' | 'working' | 'emerging' | 'canon';
 
 /** All valid knowledge layer values. */
-export const KNOWLEDGE_LAYERS: readonly KnowledgeLayer[] = ['archive', 'working', 'emerging', 'canon'] as const;
+export const KNOWLEDGE_LAYERS: readonly KnowledgeLayer[] = [
+  'archive',
+  'working',
+  'emerging',
+  'canon',
+] as const;
 
 /** Semantic weight labels per layer. */
 export const LAYER_SEMANTIC_WEIGHTS: Record<KnowledgeLayer, string> = {
@@ -35,10 +40,17 @@ export const LAYER_SEMANTIC_WEIGHTS: Record<KnowledgeLayer, string> = {
 
 /** All valid entity types. Extensible via the type registry. */
 export type EntityType =
-  | 'agent' | 'execution' | 'archetype'          // Agent Layer
-  | 'insight' | 'policy' | 'decision'             // Knowledge Layer
-  | 'assumption' | 'constraint' | 'contradiction' | 'synthesis'
-  | string;                                        // Extensible
+  | 'agent'
+  | 'execution'
+  | 'archetype' // Agent Layer
+  | 'insight'
+  | 'policy'
+  | 'decision' // Knowledge Layer
+  | 'assumption'
+  | 'constraint'
+  | 'contradiction'
+  | 'synthesis'
+  | string; // Extensible
 
 /** Valid statuses per entity type. */
 export const ENTITY_STATUSES: Record<string, readonly string[]> = {
@@ -313,7 +325,14 @@ export interface QueryFilter {
 // ---------------------------------------------------------------------------
 
 /** SOMA worker identifiers. */
-export type SomaWorker = 'harvester' | 'reconciler' | 'synthesizer' | 'cartographer' | 'policy-bridge' | 'governance' | 'team-context';
+export type SomaWorker =
+  | 'harvester'
+  | 'reconciler'
+  | 'synthesizer'
+  | 'cartographer'
+  | 'policy-bridge'
+  | 'governance'
+  | 'team-context';
 
 /** Worker-to-layer write permission map. */
 export const WORKER_WRITE_PERMISSIONS: Record<string, readonly KnowledgeLayer[]> = {
@@ -323,7 +342,7 @@ export const WORKER_WRITE_PERMISSIONS: Record<string, readonly KnowledgeLayer[]>
   cartographer: ['emerging'],
   governance: ['canon'],
   'team-context': ['working'],
-  'policy-bridge': [],  // read-only
+  'policy-bridge': [], // read-only
 };
 
 /** Layer-specific required fields. */
@@ -380,10 +399,13 @@ export interface VectorStore {
   /** Delete a vector. */
   delete(id: string): Promise<void>;
   /** Semantic search — find nearest neighbors. */
-  search(queryVector: number[], options?: {
-    limit?: number;
-    filter?: Record<string, unknown>;
-  }): Promise<VectorSearchResult[]>;
+  search(
+    queryVector: number[],
+    options?: {
+      limit?: number;
+      filter?: Record<string, unknown>;
+    },
+  ): Promise<VectorSearchResult[]>;
   /** Get count of stored vectors. */
   count(): Promise<number>;
 }
@@ -405,7 +427,13 @@ export interface HarvesterConfig {
 }
 
 /** Inbox parser function signature for HarvesterConfig. */
-export type InboxParserFn = (content: string, fileName: string) => { events?: (import('agentflow-core').ExecutionEvent | import('agentflow-core').PatternEvent)[]; entities?: (Partial<Entity> & { type: string; name: string })[] };
+export type InboxParserFn = (
+  content: string,
+  fileName: string,
+) => {
+  events?: (import('agentflow-core').ExecutionEvent | import('agentflow-core').PatternEvent)[];
+  entities?: (Partial<Entity> & { type: string; name: string })[];
+};
 
 export interface SynthesizerConfig {
   /** Minimum score threshold for candidates. Default: 0.4 */

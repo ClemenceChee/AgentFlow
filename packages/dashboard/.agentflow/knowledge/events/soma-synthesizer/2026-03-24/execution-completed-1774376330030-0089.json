@@ -1,0 +1,12 @@
+{
+  "eventType": "execution.completed",
+  "graphId": "node_001",
+  "agentId": "soma-synthesizer",
+  "timestamp": 1774376330030,
+  "schemaVersion": 1,
+  "status": "error",
+  "duration": 77611,
+  "nodeCount": 2,
+  "pathSignature": "agent:soma-synthesizer→tool:llm-call:zo-extract",
+  "violations": []
+}

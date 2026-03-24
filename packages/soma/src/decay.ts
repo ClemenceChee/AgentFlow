@@ -10,8 +10,8 @@
  * @module
  */
 
-import type { DecayConfig, Entity, KnowledgeLayer, Vault } from './types.js';
 import { queryByLayer, writeToLayer } from './layers.js';
+import type { DecayConfig, Entity, KnowledgeLayer, Vault } from './types.js';
 
 const DEFAULT_L2_DECAY_DAYS = 14;
 const DEFAULT_L3_DECAY_DAYS = 90;
@@ -27,7 +27,7 @@ function updateEvidenceReferences(vault: Vault, oldId: string, newId: string): v
       const links = entry.evidence_links;
       if (!Array.isArray(links) || !links.includes(oldId)) continue;
 
-      const updatedLinks = links.map((id: string) => id === oldId ? newId : id);
+      const updatedLinks = links.map((id: string) => (id === oldId ? newId : id));
       vault.update(entry.id, { evidence_links: updatedLinks } as Partial<Entity>);
     }
   }
@@ -37,7 +37,9 @@ function updateEvidenceReferences(vault: Vault, oldId: string, newId: string): v
  * Check for dangling evidence_links across all layered entries.
  * Returns array of { entryId, missingTargetId } for broken links.
  */
-export function checkDanglingReferences(vault: Vault): { entryId: string; missingTargetId: string }[] {
+export function checkDanglingReferences(
+  vault: Vault,
+): { entryId: string; missingTargetId: string }[] {
   const dangling: { entryId: string; missingTargetId: string }[] = [];
 
   for (const layer of ['emerging', 'canon'] as KnowledgeLayer[]) {
@@ -49,8 +51,22 @@ export function checkDanglingReferences(vault: Vault): { entryId: string; missin
       for (const linkId of links) {
         // Check if linked entity exists in any type
         let found = false;
-        for (const type of ['execution', 'insight', 'decision', 'policy', 'agent', 'archetype', 'assumption', 'constraint', 'contradiction', 'synthesis']) {
-          if (vault.read(type, linkId)) { found = true; break; }
+        for (const type of [
+          'execution',
+          'insight',
+          'decision',
+          'policy',
+          'agent',
+          'archetype',
+          'assumption',
+          'constraint',
+          'contradiction',
+          'synthesis',
+        ]) {
+          if (vault.read(type, linkId)) {
+            found = true;
+            break;
+          }
         }
         if (!found) {
           dangling.push({ entryId: entry.id, missingTargetId: linkId });

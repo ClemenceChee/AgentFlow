@@ -30,7 +30,7 @@ import {
 import './adapters/index.js'; // Register all adapters
 import { parseOtlpPayload } from './adapters/otel.js';
 import { deduplicateAgents, groupAgents } from './agent-clustering.js';
-import { createCommandExecutor, type CommandExecutor } from './command-executor.js';
+import { type CommandExecutor, createCommandExecutor } from './command-executor.js';
 import { AgentStats } from './stats.js';
 import { TraceWatcher, type WatchedTrace } from './watcher.js';
 
@@ -1624,11 +1624,11 @@ export class DashboardServer {
 
         // Filter by status if requested
         if (status && ['running', 'completed', 'failed', 'timeout', 'killed'].includes(status)) {
-          executions = executions.filter(exec => exec.status === status);
+          executions = executions.filter((exec) => exec.status === status);
         }
 
         // Return summary data only
-        const executionSummaries = executions.map(exec => ({
+        const executionSummaries = executions.map((exec) => ({
           executionId: exec.executionId,
           commandName: exec.command.name,
           status: exec.status,

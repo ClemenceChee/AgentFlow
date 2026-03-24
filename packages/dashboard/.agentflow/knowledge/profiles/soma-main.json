@@ -1,0 +1,12 @@
+{
+  "agentId": "soma-main",
+  "totalRuns": 1,
+  "successCount": 1,
+  "failureCount": 0,
+  "failureRate": 0,
+  "recentDurations": [0],
+  "lastConformanceScore": null,
+  "knownBottlenecks": [],
+  "lastPatternTimestamp": null,
+  "updatedAt": "2026-03-24T18:18:49.996Z"
+}

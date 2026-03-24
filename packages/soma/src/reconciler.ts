@@ -7,13 +7,13 @@
  * @module
  */
 
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { createHash } from 'node:crypto';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import type { AnalysisFn } from 'agentflow-core';
+import { queryByLayer, writeToLayer } from './layers.js';
 import type { Entity, ReconcilerConfig, ScanIssue, Vault } from './types.js';
 import { ENTITY_STATUSES } from './types.js';
-import { queryByLayer, writeToLayer } from './layers.js';
 import { vaultEntityCount } from './vault.js';
 
 const DEFAULT_STUB_THRESHOLD = 100;
@@ -30,17 +30,33 @@ function overlapCoefficient(a: string, b: string): number {
 
 /** Type alias corrections (fuzzy matching for common mistakes). */
 const TYPE_CORRECTIONS: Record<string, string> = {
-  agents: 'agent', persons: 'person', projects: 'project', tasks: 'task',
-  decisions: 'decision', assumptions: 'assumption', constraints: 'constraint',
-  contradictions: 'contradiction', insights: 'insight', policies: 'policy',
-  executions: 'execution', archetypes: 'archetype', syntheses: 'synthesis',
+  agents: 'agent',
+  persons: 'person',
+  projects: 'project',
+  tasks: 'task',
+  decisions: 'decision',
+  assumptions: 'assumption',
+  constraints: 'constraint',
+  contradictions: 'contradiction',
+  insights: 'insight',
+  policies: 'policy',
+  executions: 'execution',
+  archetypes: 'archetype',
+  syntheses: 'synthesis',
 };
 
 /** Status alias corrections. */
 const STATUS_CORRECTIONS: Record<string, string> = {
-  open: 'active', closed: 'completed', done: 'completed', wip: 'active',
-  'in-progress': 'active', 'in progress': 'active', finished: 'completed',
-  todo: 'pending', cancelled: 'deprecated', archived: 'deprecated',
+  open: 'active',
+  closed: 'completed',
+  done: 'completed',
+  wip: 'active',
+  'in-progress': 'active',
+  'in progress': 'active',
+  finished: 'completed',
+  todo: 'pending',
+  cancelled: 'deprecated',
+  archived: 'deprecated',
 };
 
 /**
@@ -63,22 +79,30 @@ export function createReconciler(vault: Vault, analysisFn?: AnalysisFn, config?:
         hashes = new Map();
       } else if (raw.entityCount != null && currentCount < raw.entityCount) {
         // Entity count decreased — vault restructured, reset state
-        console.log(`[Reconciler] Vault entity count decreased (${raw.entityCount} → ${currentCount}) — resetting state`);
+        console.log(
+          `[Reconciler] Vault entity count decreased (${raw.entityCount} → ${currentCount}) — resetting state`,
+        );
         hashes = new Map();
       } else {
         hashes = new Map(Object.entries(raw.hashes ?? {}));
       }
       savedEntityCount = currentCount;
     }
-  } catch { /* fresh */ }
+  } catch {
+    /* fresh */
+  }
 
   function saveState(): void {
     const dir = dirname(stateFile);
     if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-    writeFileSync(stateFile, JSON.stringify({
-      hashes: Object.fromEntries(hashes),
-      entityCount: savedEntityCount ?? vaultEntityCount(vault.baseDir),
-    }), 'utf-8');
+    writeFileSync(
+      stateFile,
+      JSON.stringify({
+        hashes: Object.fromEntries(hashes),
+        entityCount: savedEntityCount ?? vaultEntityCount(vault.baseDir),
+      }),
+      'utf-8',
+    );
   }
 
   function md5(content: string): string {
@@ -93,7 +117,18 @@ export function createReconciler(vault: Vault, analysisFn?: AnalysisFn, config?:
     scan(options?: { fullScan?: boolean }): ScanIssue[] {
       const issues: ScanIssue[] = [];
 
-      const allTypes = ['agent', 'execution', 'archetype', 'insight', 'policy', 'decision', 'assumption', 'constraint', 'contradiction', 'synthesis'];
+      const allTypes = [
+        'agent',
+        'execution',
+        'archetype',
+        'insight',
+        'policy',
+        'decision',
+        'assumption',
+        'constraint',
+        'contradiction',
+        'synthesis',
+      ];
 
       for (const type of allTypes) {
         const entities = vault.list(type);
@@ -106,28 +141,73 @@ export function createReconciler(vault: Vault, analysisFn?: AnalysisFn, config?:
           hashes.set(entity.id, hash);
 
           // FM001: Missing required fields
-          if (!entity.type) issues.push({ code: 'FM001', severity: 'error', entityPath: `${type}/${entity.id}`, message: 'Missing type field', autoFixable: true });
-          if (!entity.created) issues.push({ code: 'FM001', severity: 'warning', entityPath: `${type}/${entity.id}`, message: 'Missing created field', autoFixable: true });
-          if (!entity.name) issues.push({ code: 'FM001', severity: 'warning', entityPath: `${type}/${entity.id}`, message: 'Missing name field', autoFixable: true });
+          if (!entity.type)
+            issues.push({
+              code: 'FM001',
+              severity: 'error',
+              entityPath: `${type}/${entity.id}`,
+              message: 'Missing type field',
+              autoFixable: true,
+            });
+          if (!entity.created)
+            issues.push({
+              code: 'FM001',
+              severity: 'warning',
+              entityPath: `${type}/${entity.id}`,
+              message: 'Missing created field',
+              autoFixable: true,
+            });
+          if (!entity.name)
+            issues.push({
+              code: 'FM001',
+              severity: 'warning',
+              entityPath: `${type}/${entity.id}`,
+              message: 'Missing name field',
+              autoFixable: true,
+            });
 
           // FM002: Invalid type
           if (TYPE_CORRECTIONS[entity.type]) {
-            issues.push({ code: 'FM002', severity: 'warning', entityPath: `${type}/${entity.id}`, message: `Invalid type "${entity.type}" (should be "${TYPE_CORRECTIONS[entity.type]}")`, autoFixable: true });
+            issues.push({
+              code: 'FM002',
+              severity: 'warning',
+              entityPath: `${type}/${entity.id}`,
+              message: `Invalid type "${entity.type}" (should be "${TYPE_CORRECTIONS[entity.type]}")`,
+              autoFixable: true,
+            });
           }
 
           // FM003: Invalid status
           const validStatuses = ENTITY_STATUSES[entity.type];
           if (validStatuses && !validStatuses.includes(entity.status)) {
             const corrected = STATUS_CORRECTIONS[entity.status];
-            issues.push({ code: 'FM003', severity: 'warning', entityPath: `${type}/${entity.id}`, message: `Invalid status "${entity.status}"${corrected ? ` (should be "${corrected}")` : ''}`, autoFixable: !!corrected });
+            issues.push({
+              code: 'FM003',
+              severity: 'warning',
+              entityPath: `${type}/${entity.id}`,
+              message: `Invalid status "${entity.status}"${corrected ? ` (should be "${corrected}")` : ''}`,
+              autoFixable: !!corrected,
+            });
           }
 
           // FM004: Wrong field type (scalar where list expected)
           if (entity.tags && !Array.isArray(entity.tags)) {
-            issues.push({ code: 'FM004', severity: 'warning', entityPath: `${type}/${entity.id}`, message: 'tags should be an array', autoFixable: true });
+            issues.push({
+              code: 'FM004',
+              severity: 'warning',
+              entityPath: `${type}/${entity.id}`,
+              message: 'tags should be an array',
+              autoFixable: true,
+            });
           }
           if (entity.related && !Array.isArray(entity.related)) {
-            issues.push({ code: 'FM004', severity: 'warning', entityPath: `${type}/${entity.id}`, message: 'related should be an array', autoFixable: true });
+            issues.push({
+              code: 'FM004',
+              severity: 'warning',
+              entityPath: `${type}/${entity.id}`,
+              message: 'related should be an array',
+              autoFixable: true,
+            });
           }
 
           // LINK001: Broken wikilinks
@@ -136,7 +216,13 @@ export function createReconciler(vault: Vault, analysisFn?: AnalysisFn, config?:
             if (parts.length >= 2) {
               const linkedEntity = vault.read(parts[0]!, parts.slice(1).join('/'));
               if (!linkedEntity) {
-                issues.push({ code: 'LINK001', severity: 'warning', entityPath: `${type}/${entity.id}`, message: `Broken wikilink: [[${link}]]`, autoFixable: false });
+                issues.push({
+                  code: 'LINK001',
+                  severity: 'warning',
+                  entityPath: `${type}/${entity.id}`,
+                  message: `Broken wikilink: [[${link}]]`,
+                  autoFixable: false,
+                });
               }
             }
           }
@@ -153,13 +239,25 @@ export function createReconciler(vault: Vault, analysisFn?: AnalysisFn, config?:
               }
             }
             if (!hasInbound && entity.type !== 'agent') {
-              issues.push({ code: 'ORPHAN001', severity: 'info', entityPath: `${type}/${entity.id}`, message: 'Orphan entity — no inbound links', autoFixable: false });
+              issues.push({
+                code: 'ORPHAN001',
+                severity: 'info',
+                entityPath: `${type}/${entity.id}`,
+                message: 'Orphan entity — no inbound links',
+                autoFixable: false,
+              });
             }
           }
 
           // STUB001: Body below threshold
           if (entity.body.length < stubThreshold) {
-            issues.push({ code: 'STUB001', severity: 'info', entityPath: `${type}/${entity.id}`, message: `Stub entity (body: ${entity.body.length} chars, threshold: ${stubThreshold})`, autoFixable: false });
+            issues.push({
+              code: 'STUB001',
+              severity: 'info',
+              entityPath: `${type}/${entity.id}`,
+              message: `Stub entity (body: ${entity.body.length} chars, threshold: ${stubThreshold})`,
+              autoFixable: false,
+            });
           }
         }
       }
@@ -206,7 +304,8 @@ export function createReconciler(vault: Vault, analysisFn?: AnalysisFn, config?:
           }
           case 'FM004': {
             if (entity.tags && !Array.isArray(entity.tags)) patch.tags = [String(entity.tags)];
-            if (entity.related && !Array.isArray(entity.related)) patch.related = [String(entity.related)];
+            if (entity.related && !Array.isArray(entity.related))
+              patch.related = [String(entity.related)];
             break;
           }
         }
@@ -230,7 +329,16 @@ export function createReconciler(vault: Vault, analysisFn?: AnalysisFn, config?:
      * Returns { reconciled, mergeErrors }.
      */
     reconcileL1(): { reconciled: number; mergeErrors: number } {
-      const KNOWLEDGE_TYPES = new Set(['insight', 'decision', 'policy', 'constraint', 'contradiction', 'synthesis', 'archetype', 'assumption']);
+      const KNOWLEDGE_TYPES = new Set([
+        'insight',
+        'decision',
+        'policy',
+        'constraint',
+        'contradiction',
+        'synthesis',
+        'archetype',
+        'assumption',
+      ]);
 
       const allL1 = queryByLayer(vault, 'archive');
 
@@ -308,7 +416,10 @@ export function createReconciler(vault: Vault, analysisFn?: AnalysisFn, config?:
           }
           reconciled++;
         } catch (err) {
-          console.error('[Reconciler] Merge failed:', err instanceof Error ? err.message : String(err));
+          console.error(
+            '[Reconciler] Merge failed:',
+            err instanceof Error ? err.message : String(err),
+          );
           mergeErrors++;
         }
       }
@@ -320,7 +431,9 @@ export function createReconciler(vault: Vault, analysisFn?: AnalysisFn, config?:
      * Run the full reconciliation pipeline.
      * Returns { scanned, issues, fixed }.
      */
-    async run(options?: { fullScan?: boolean }): Promise<{ scanned: number; issues: number; fixed: number }> {
+    async run(options?: {
+      fullScan?: boolean;
+    }): Promise<{ scanned: number; issues: number; fixed: number }> {
       const issues = this.scan(options);
       const autoFixable = issues.filter((i) => i.autoFixable);
       const fixed = this.autofix(autoFixable);

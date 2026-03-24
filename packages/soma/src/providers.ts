@@ -8,8 +8,8 @@
  */
 
 import { existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { homedir } from 'node:os';
+import { join } from 'node:path';
 import type { AnalysisFn, EmbedFn } from './types.js';
 
 // ---------------------------------------------------------------------------
@@ -75,7 +75,7 @@ function resolveApiKey(config: ProviderConfig): string {
 
   throw new Error(
     `No API key found for provider "${config.provider}". ` +
-    `Set ${envVar ?? 'SOMA_API_KEY'} env var or pass --api-key.`,
+      `Set ${envVar ?? 'SOMA_API_KEY'} env var or pass --api-key.`,
   );
 }
 
@@ -122,7 +122,7 @@ function createOpenAICompatibleAnalysisFn(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
         model,
@@ -137,7 +137,7 @@ function createOpenAICompatibleAnalysisFn(
       throw new Error(`LLM API error ${response.status}: ${body.slice(0, 200)}`);
     }
 
-    const data = await response.json() as {
+    const data = (await response.json()) as {
       choices?: Array<{ message?: { content?: string } }>;
     };
 
@@ -149,11 +149,7 @@ function createOpenAICompatibleAnalysisFn(
 // Anthropic messages API
 // ---------------------------------------------------------------------------
 
-function createAnthropicAnalysisFn(
-  apiKey: string,
-  model: string,
-  maxTokens: number,
-): AnalysisFn {
+function createAnthropicAnalysisFn(apiKey: string, model: string, maxTokens: number): AnalysisFn {
   return async (prompt: string): Promise<string> => {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -175,7 +171,7 @@ function createAnthropicAnalysisFn(
       throw new Error(`Anthropic API error ${response.status}: ${body.slice(0, 200)}`);
     }
 
-    const data = await response.json() as {
+    const data = (await response.json()) as {
       content?: Array<{ type: string; text?: string }>;
     };
 
@@ -187,17 +183,13 @@ function createAnthropicAnalysisFn(
 // OpenAI-compatible embeddings
 // ---------------------------------------------------------------------------
 
-function createOpenAICompatibleEmbedFn(
-  baseUrl: string,
-  model: string,
-  apiKey: string,
-): EmbedFn {
+function createOpenAICompatibleEmbedFn(baseUrl: string, model: string, apiKey: string): EmbedFn {
   return async (text: string): Promise<number[] | null> => {
     const response = await fetch(`${baseUrl}/embeddings`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
         model,
@@ -210,7 +202,7 @@ function createOpenAICompatibleEmbedFn(
       throw new Error(`Embedding API error ${response.status}: ${body.slice(0, 200)}`);
     }
 
-    const data = await response.json() as {
+    const data = (await response.json()) as {
       data?: Array<{ embedding?: number[] }>;
     };
 
@@ -254,7 +246,8 @@ export function createProvider(config: ProviderConfig): ProviderResult {
     analysisFn = createAnthropicAnalysisFn(apiKey, config.model, maxTokens);
   } else {
     const baseUrl = config.baseUrl ?? BASE_URLS[config.provider] ?? config.baseUrl;
-    if (!baseUrl) throw new Error(`No base URL for provider "${config.provider}". Set baseUrl in config.`);
+    if (!baseUrl)
+      throw new Error(`No base URL for provider "${config.provider}". Set baseUrl in config.`);
     analysisFn = createOpenAICompatibleAnalysisFn(baseUrl, config.model, apiKey, maxTokens);
   }
 
@@ -263,9 +256,10 @@ export function createProvider(config: ProviderConfig): ProviderResult {
 
   if (config.embeddingModel) {
     // Anthropic doesn't have an embedding API — use OpenAI-compatible endpoint
-    const embedBaseUrl = config.provider === 'anthropic'
-      ? 'https://api.openai.com/v1' // Requires separate OpenAI key
-      : (config.baseUrl ?? BASE_URLS[config.provider]);
+    const embedBaseUrl =
+      config.provider === 'anthropic'
+        ? 'https://api.openai.com/v1' // Requires separate OpenAI key
+        : (config.baseUrl ?? BASE_URLS[config.provider]);
 
     if (embedBaseUrl) {
       embedFn = createOpenAICompatibleEmbedFn(embedBaseUrl, config.embeddingModel, apiKey);

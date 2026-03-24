@@ -4,13 +4,8 @@
  * @module
  */
 
-import type {
-  ExecutionGraph,
-  SemanticContext,
-  Variant,
-  VariantOptions,
-} from './types.js';
 import { getPathSignature } from 'agentflow-core';
+import type { ExecutionGraph, SemanticContext, Variant, VariantOptions } from './types.js';
 
 /**
  * Get a variant signature that includes model IDs from node metadata.
@@ -25,9 +20,12 @@ function getModelAwareSignature(graph: ExecutionGraph, dimensions: readonly stri
   if (dimensions.includes('modelId')) {
     const models = new Set<string>();
     for (const node of graph.nodes.values()) {
-      const semantic = (node.metadata as Record<string, unknown>)?.semantic as SemanticContext | undefined;
-      const modelId = semantic?.modelId
-        ?? ((node.state as Record<string, unknown>)?.modelId as string | undefined);
+      const semantic = (node.metadata as Record<string, unknown>)?.semantic as
+        | SemanticContext
+        | undefined;
+      const modelId =
+        semantic?.modelId ??
+        ((node.state as Record<string, unknown>)?.modelId as string | undefined);
       models.add(modelId ?? 'unattributed');
     }
     parts.push(`model:${[...models].sort().join('+')}`);

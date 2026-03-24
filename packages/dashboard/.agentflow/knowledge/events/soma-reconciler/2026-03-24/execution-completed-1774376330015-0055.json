@@ -1,0 +1,12 @@
+{
+  "eventType": "execution.completed",
+  "graphId": "node_001",
+  "agentId": "soma-reconciler",
+  "timestamp": 1774376330015,
+  "schemaVersion": 1,
+  "status": "success",
+  "duration": 165673,
+  "nodeCount": 2,
+  "pathSignature": "agent:soma-reconciler→tool:llm-call:agent-fix",
+  "violations": []
+}

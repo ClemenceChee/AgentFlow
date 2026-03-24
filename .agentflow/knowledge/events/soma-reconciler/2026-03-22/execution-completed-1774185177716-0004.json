@@ -1,0 +1,12 @@
+{
+  "eventType": "execution.completed",
+  "graphId": "node_001",
+  "agentId": "soma-reconciler",
+  "timestamp": 1774185177716,
+  "schemaVersion": 1,
+  "status": "error",
+  "duration": 1258,
+  "nodeCount": 2,
+  "pathSignature": "agent:soma-reconciler→tool:llm-call:sweep-complete",
+  "violations": []
+}

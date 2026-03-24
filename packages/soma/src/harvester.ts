@@ -7,16 +7,30 @@
  * @module
  */
 
-import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
-import { join, basename, extname } from 'node:path';
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  renameSync,
+  writeFileSync,
+} from 'node:fs';
+import { basename, extname, join } from 'node:path';
 import type { ExecutionEvent, PatternEvent } from 'agentflow-core';
-import type { Entity, HarvesterConfig, Vault } from './types.js';
-import { writeToLayer } from './layers.js';
-import { vaultEntityCount } from './vault.js';
-import { isExecutionGraph, extractDecisionsFromGraph, decisionsToEntities } from './decision-extractor.js';
 import type { GraphLike } from './decision-extractor.js';
-import { extractDecisionsFromNodes, computePatternSignature } from './ops-intel/decision-extraction.js';
+import {
+  decisionsToEntities,
+  extractDecisionsFromGraph,
+  isExecutionGraph,
+} from './decision-extractor.js';
+import { writeToLayer } from './layers.js';
+import {
+  computePatternSignature,
+  extractDecisionsFromNodes,
+} from './ops-intel/decision-extraction.js';
 import type { NormalizedDecision } from './ops-intel/types.js';
+import type { Entity, HarvesterConfig, Vault } from './types.js';
+import { vaultEntityCount } from './vault.js';
 
 const DEFAULT_STATE_FILE = '.soma/harvester-state.json';
 
@@ -44,7 +58,9 @@ const jsonParser: InboxParser = (content) => {
 
 /** JSONL parser — handles `.jsonl` files (one event per line). */
 const jsonlParser: InboxParser = (content) => {
-  const events = content.trim().split('\n')
+  const events = content
+    .trim()
+    .split('\n')
     .filter((line) => line.trim())
     .map((line) => JSON.parse(line));
   return { events };
@@ -53,12 +69,14 @@ const jsonlParser: InboxParser = (content) => {
 /** Markdown parser — handles `.md` files (creates note entities). */
 const markdownParser: InboxParser = (content, fileName) => {
   return {
-    entities: [{
-      type: 'note' as any,
-      name: basename(fileName, '.md'),
-      body: content,
-      tags: ['inbox'],
-    }],
+    entities: [
+      {
+        type: 'note' as any,
+        name: basename(fileName, '.md'),
+        body: content,
+        tags: ['inbox'],
+      },
+    ],
   };
 };
 
@@ -95,10 +113,20 @@ export function createHarvester(vault: Vault, config?: HarvesterConfig) {
       if (raw.entityCount == null && raw.vaultFingerprint) {
         // Migrate from old vaultFingerprint format
         console.log('[Harvester] Migrating state from vaultFingerprint to entityCount');
-        state = { processedEventIds: new Set(), lastProcessedTimestamp: 0, entityCount: currentCount };
+        state = {
+          processedEventIds: new Set(),
+          lastProcessedTimestamp: 0,
+          entityCount: currentCount,
+        };
       } else if (raw.entityCount != null && currentCount < raw.entityCount) {
-        console.log(`[Harvester] Vault entity count decreased (${raw.entityCount} → ${currentCount}) — resetting state`);
-        state = { processedEventIds: new Set(), lastProcessedTimestamp: 0, entityCount: currentCount };
+        console.log(
+          `[Harvester] Vault entity count decreased (${raw.entityCount} → ${currentCount}) — resetting state`,
+        );
+        state = {
+          processedEventIds: new Set(),
+          lastProcessedTimestamp: 0,
+          entityCount: currentCount,
+        };
       } else {
         state = {
           processedEventIds: new Set(raw.processedEventIds ?? []),
@@ -107,7 +135,9 @@ export function createHarvester(vault: Vault, config?: HarvesterConfig) {
         };
       }
     }
-  } catch { /* fresh state */ }
+  } catch {
+    /* fresh state */
+  }
 
   function saveState(): void {
     const dir = join(stateFile, '..');
@@ -125,7 +155,10 @@ export function createHarvester(vault: Vault, config?: HarvesterConfig) {
   }
 
   function normalizeId(name: string): string {
-    return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    return name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '');
   }
 
   function ensureAgentEntity(agentId: string): void {
@@ -165,8 +198,16 @@ export function createHarvester(vault: Vault, config?: HarvesterConfig) {
     // Detect AICP trace annotation and create guard_check decision
     const eventData = event as unknown as Record<string, unknown>;
     const metadata = eventData.metadata as Record<string, unknown> | undefined;
-    const aicp = metadata?.aicp as { consulted?: boolean; proceed?: boolean; warnings?: number; recommendations?: number; timestamp?: number } | undefined;
-    let allDecisions = decisions ? [...decisions] : [];
+    const aicp = metadata?.aicp as
+      | {
+          consulted?: boolean;
+          proceed?: boolean;
+          warnings?: number;
+          recommendations?: number;
+          timestamp?: number;
+        }
+      | undefined;
+    const allDecisions = decisions ? [...decisions] : [];
     if (aicp?.consulted) {
       allDecisions.push({
         action: 'aicp-preflight',
@@ -177,9 +218,8 @@ export function createHarvester(vault: Vault, config?: HarvesterConfig) {
     }
 
     // Compute decision pattern if decisions available
-    const decisionPattern = allDecisions.length > 0
-      ? computePatternSignature(allDecisions)
-      : undefined;
+    const decisionPattern =
+      allDecisions.length > 0 ? computePatternSignature(allDecisions) : undefined;
 
     // Write to L1 via layer-enforced path
     writeToLayer(vault, 'harvester', 'archive', {
@@ -190,7 +230,12 @@ export function createHarvester(vault: Vault, config?: HarvesterConfig) {
       agent_id: event.agentId,
       trace_id: traceId,
       source_system: 'agentflow',
-      status: event.status === 'completed' ? 'completed' : event.status === 'failed' ? 'failed' : 'running',
+      status:
+        event.status === 'completed'
+          ? 'completed'
+          : event.status === 'failed'
+            ? 'failed'
+            : 'running',
       duration: event.duration,
       nodeCount: event.nodeCount,
       variant: event.pathSignature,
@@ -219,8 +264,8 @@ export function createHarvester(vault: Vault, config?: HarvesterConfig) {
     const agent = vault.read('agent', id);
     if (!agent) return;
 
-    const totalExec = ((agent as Record<string, unknown>).totalExecutions as number ?? 0) + 1;
-    const failCount = (agent as Record<string, unknown>).failureCount as number ?? 0;
+    const totalExec = (((agent as Record<string, unknown>).totalExecutions as number) ?? 0) + 1;
+    const failCount = ((agent as Record<string, unknown>).failureCount as number) ?? 0;
     const newFails = event.eventType === 'execution.failed' ? failCount + 1 : failCount;
 
     vault.update(id, {
@@ -300,7 +345,12 @@ export function createHarvester(vault: Vault, config?: HarvesterConfig) {
           }
           if (result.entities?.length) {
             for (const entity of result.entities) {
-              writeToLayer(vault, 'harvester', 'archive', entity as Partial<Entity> & { type: string; name: string });
+              writeToLayer(
+                vault,
+                'harvester',
+                'archive',
+                entity as Partial<Entity> & { type: string; name: string },
+              );
             }
           }
 
@@ -309,7 +359,14 @@ export function createHarvester(vault: Vault, config?: HarvesterConfig) {
           processed++;
         } catch (err) {
           // Move to errors
-          try { renameSync(filePath, join(errorsDir, file)); } catch (moveErr) { console.warn(`[Harvester] Failed to move ${file} to errors dir:`, (moveErr as Error).message); }
+          try {
+            renameSync(filePath, join(errorsDir, file));
+          } catch (moveErr) {
+            console.warn(
+              `[Harvester] Failed to move ${file} to errors dir:`,
+              (moveErr as Error).message,
+            );
+          }
           console.error(`Harvester error processing ${file}:`, err);
         }
       }
@@ -324,9 +381,22 @@ export function createHarvester(vault: Vault, config?: HarvesterConfig) {
      */
     async ingestGraph(graph: GraphLike): Promise<number> {
       // Extract NormalizedDecisions from graph nodes (for execution entity enrichment)
-      const graphNodes = graph.nodes as Record<string, { id: string; type: string; name: string; status: string; startTime: number; endTime: number | null; metadata?: Record<string, unknown>; state?: Record<string, unknown> }>;
+      const graphNodes = graph.nodes as Record<
+        string,
+        {
+          id: string;
+          type: string;
+          name: string;
+          status: string;
+          startTime: number;
+          endTime: number | null;
+          metadata?: Record<string, unknown>;
+          state?: Record<string, unknown>;
+        }
+      >;
       const normalizedDecisions = extractDecisionsFromNodes(graphNodes);
-      const pattern = normalizedDecisions.length > 0 ? computePatternSignature(normalizedDecisions) : undefined;
+      const pattern =
+        normalizedDecisions.length > 0 ? computePatternSignature(normalizedDecisions) : undefined;
 
       // Also create execution entity with decisions if graph has agentId
       if (graph.agentId && normalizedDecisions.length > 0) {
@@ -349,7 +419,9 @@ export function createHarvester(vault: Vault, config?: HarvesterConfig) {
               body: '',
             } as Partial<Entity> & { type: string; name: string });
             state.processedEventIds.add(execTraceId);
-          } catch { /* skip if exists */ }
+          } catch {
+            /* skip if exists */
+          }
         }
       }
 

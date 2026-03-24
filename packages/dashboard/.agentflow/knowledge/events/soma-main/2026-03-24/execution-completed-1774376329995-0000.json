@@ -1,0 +1,12 @@
+{
+  "eventType": "execution.completed",
+  "graphId": "",
+  "agentId": "soma-main",
+  "timestamp": 1774376329995,
+  "schemaVersion": 1,
+  "status": "completed",
+  "duration": 0,
+  "nodeCount": 1,
+  "pathSignature": "log-file:agentflow-dashboard.log",
+  "violations": []
+}

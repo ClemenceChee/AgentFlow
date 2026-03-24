@@ -63,13 +63,20 @@ function mapStatus(status: string): string {
 
 function mapRunType(runType: string): string {
   switch (runType) {
-    case 'chain': return 'agent';
-    case 'tool': return 'tool';
-    case 'llm': return 'tool';
-    case 'retriever': return 'tool';
-    case 'prompt': return 'tool';
-    case 'parser': return 'tool';
-    default: return 'custom';
+    case 'chain':
+      return 'agent';
+    case 'tool':
+      return 'tool';
+    case 'llm':
+      return 'tool';
+    case 'retriever':
+      return 'tool';
+    case 'prompt':
+      return 'tool';
+    case 'parser':
+      return 'tool';
+    default:
+      return 'custom';
   }
 }
 
@@ -78,17 +85,20 @@ function mapRunType(runType: string): string {
 // ---------------------------------------------------------------------------
 
 interface BuildResult {
-  nodes: Record<string, {
-    id: string;
-    type: string;
-    name: string;
-    startTime: number;
-    endTime: number | null;
-    status: string;
-    parentId: string | null;
-    children: string[];
-    metadata: Record<string, unknown>;
-  }>;
+  nodes: Record<
+    string,
+    {
+      id: string;
+      type: string;
+      name: string;
+      startTime: number;
+      endTime: number | null;
+      status: string;
+      parentId: string | null;
+      children: string[];
+      metadata: Record<string, unknown>;
+    }
+  >;
   edges: { from: string; to: string; type: string }[];
 }
 

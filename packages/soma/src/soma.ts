@@ -4,25 +4,25 @@
  * @module
  */
 
-import { createVault } from './vault.js';
-import { createJsonVectorStore } from './vector-store.js';
-import { createHarvester } from './harvester.js';
-import { createSynthesizer } from './synthesizer.js';
-import { createCartographer } from './cartographer.js';
-import { createReconciler } from './reconciler.js';
-import { createPolicyBridge } from './policy-bridge.js';
-import { createDecayProcessor } from './decay.js';
-import { createGovernanceAPI } from './governance.js';
-import { setLayersConfig } from './layers.js';
-import { detectDrift, trackConformanceTrend } from './ops-intel/drift.js';
-import { evaluateAssertions } from './ops-intel/assertions.js';
-import type { ConformanceHistory, OutcomeAssertion } from './ops-intel/types.js';
-import type { SomaConfig, Entity, Vault, VectorStore } from './types.js';
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import type { PolicySource } from 'agentflow-core';
-import type { LayerPolicyBridge } from './policy-bridge.js';
+import { createCartographer } from './cartographer.js';
+import { createDecayProcessor } from './decay.js';
 import type { GovernanceAPI } from './governance.js';
+import { createGovernanceAPI } from './governance.js';
+import { createHarvester } from './harvester.js';
+import { setLayersConfig } from './layers.js';
+import { evaluateAssertions } from './ops-intel/assertions.js';
+import { detectDrift, trackConformanceTrend } from './ops-intel/drift.js';
+import type { ConformanceHistory, OutcomeAssertion } from './ops-intel/types.js';
+import type { LayerPolicyBridge } from './policy-bridge.js';
+import { createPolicyBridge } from './policy-bridge.js';
+import { createReconciler } from './reconciler.js';
+import { createSynthesizer } from './synthesizer.js';
+import type { Entity, SomaConfig, Vault, VectorStore } from './types.js';
+import { createVault } from './vault.js';
+import { createJsonVectorStore } from './vector-store.js';
 
 export interface Soma {
   /** The knowledge vault. */
@@ -49,7 +49,16 @@ export interface Soma {
   /**
    * Run the full pipeline: Harvester → Reconciler → Synthesizer → Cartographer → Decay.
    */
-  run(): Promise<{ harvested: number; reconciled: { issues: number; fixed: number; mergeErrors: number }; synthesized: number; autoPromoted: number; mapped: number; decayed: number; drift: { tracked: number; alerts: number }; assertionFailures: number }>;
+  run(): Promise<{
+    harvested: number;
+    reconciled: { issues: number; fixed: number; mergeErrors: number };
+    synthesized: number;
+    autoPromoted: number;
+    mapped: number;
+    decayed: number;
+    drift: { tracked: number; alerts: number };
+    assertionFailures: number;
+  }>;
 
   /**
    * Watch an inbox directory for new files, triggering the Harvester.
@@ -81,7 +90,12 @@ export function createSoma(config?: SomaConfig): Soma {
   const synthesizer = config?.analysisFn
     ? createSynthesizer(vault, config.analysisFn, config?.synthesizer)
     : undefined;
-  const cartographer = createCartographer(vault, vectorStore, config?.embedFn, config?.cartographer);
+  const cartographer = createCartographer(
+    vault,
+    vectorStore,
+    config?.embedFn,
+    config?.cartographer,
+  );
   const reconciler = createReconciler(vault, config?.analysisFn, config?.reconciler);
 
   return {
@@ -123,7 +137,9 @@ export function createSoma(config?: SomaConfig): Soma {
         if (existsSync(driftStateFile)) {
           conformanceHistory = JSON.parse(readFileSync(driftStateFile, 'utf-8'));
         }
-      } catch { /* fresh history */ }
+      } catch {
+        /* fresh history */
+      }
 
       // Collect agent conformance from agent entities
       // Conformance score = 1 - failureRate (derived from agent stats)
@@ -136,8 +152,9 @@ export function createSoma(config?: SomaConfig): Soma {
         const failureRate = data.failureRate as number | undefined;
         const totalExecutions = data.totalExecutions as number | undefined;
         // Use explicit lastConformanceScore if set, otherwise derive from failureRate
-        const conformanceScore = (data.lastConformanceScore as number | undefined)
-          ?? (failureRate != null ? 1 - failureRate : undefined);
+        const conformanceScore =
+          (data.lastConformanceScore as number | undefined) ??
+          (failureRate != null ? 1 - failureRate : undefined);
         if (conformanceScore != null && (totalExecutions ?? 0) > 0) {
           conformanceHistory = trackConformanceTrend(conformanceHistory, {
             agentId: agent.name,
@@ -165,7 +182,9 @@ export function createSoma(config?: SomaConfig): Soma {
               body: driftReport.alert.message,
             } as Partial<Entity> & { type: string; name: string });
             driftAlerts++;
-          } catch { /* skip if already exists */ }
+          } catch {
+            /* skip if already exists */
+          }
         }
       }
 
@@ -175,7 +194,9 @@ export function createSoma(config?: SomaConfig): Soma {
         const dir = dirname(driftStateFile);
         if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
         writeFileSync(driftStateFile, JSON.stringify(trimmedHistory), 'utf-8');
-      } catch { /* non-fatal */ }
+      } catch {
+        /* non-fatal */
+      }
 
       // 4. Map (embed + discover + relationship mapping + contradiction detection)
       const embedded = await cartographer.embed();
@@ -203,13 +224,19 @@ export function createSoma(config?: SomaConfig): Soma {
               body: v.message,
             } as Partial<Entity> & { type: string; name: string });
             assertionFailures++;
-          } catch { /* skip if already exists */ }
+          } catch {
+            /* skip if already exists */
+          }
         }
       }
 
       return {
         harvested,
-        reconciled: { issues: reconcileResult.issues, fixed: reconcileResult.fixed, mergeErrors: l1Result.mergeErrors },
+        reconciled: {
+          issues: reconcileResult.issues,
+          fixed: reconcileResult.fixed,
+          mergeErrors: l1Result.mergeErrors,
+        },
         synthesized,
         autoPromoted: autoPromoteResult.promoted.length,
         mapped: embedded + archetypes,

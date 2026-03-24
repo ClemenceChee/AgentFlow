@@ -7,14 +7,21 @@
  * @module
  */
 
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { createHash } from 'node:crypto';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { queryByLayer, writeToLayer } from './layers.js';
 // cosineSimilarity and extractWikilinks available for future use
 // import { cosineSimilarity } from './vector-store.js';
 // import { extractWikilinks } from './entity.js';
-import type { CartographerConfig, EmbedFn, Entity, Vault, VectorStore, VectorSearchResult } from './types.js';
-import { queryByLayer, writeToLayer } from './layers.js';
+import type {
+  CartographerConfig,
+  EmbedFn,
+  Entity,
+  Vault,
+  VectorSearchResult,
+  VectorStore,
+} from './types.js';
 import { vaultEntityCount } from './vault.js';
 
 const DEFAULT_MIN_CLUSTER_SIZE = 3;
@@ -31,22 +38,43 @@ interface CartographerState {
 /**
  * Create a Cartographer worker.
  */
-export function createCartographer(vault: Vault, vectorStore: VectorStore, embedFn?: EmbedFn, config?: CartographerConfig) {
+export function createCartographer(
+  vault: Vault,
+  vectorStore: VectorStore,
+  embedFn?: EmbedFn,
+  config?: CartographerConfig,
+) {
   const minClusterSize = config?.minClusterSize ?? DEFAULT_MIN_CLUSTER_SIZE;
   const similarityThreshold = config?.similarityThreshold ?? DEFAULT_SIMILARITY_THRESHOLD;
   const stateFile = config?.stateFile ?? '.soma/cartographer-state.json';
 
-  let state: CartographerState = { embeddedIds: new Set(), entityHashes: new Map(), clusterAssignments: {} };
+  let state: CartographerState = {
+    embeddedIds: new Set(),
+    entityHashes: new Map(),
+    clusterAssignments: {},
+  };
   try {
     if (existsSync(stateFile)) {
       const raw = JSON.parse(readFileSync(stateFile, 'utf-8'));
       const currentCount = vaultEntityCount(vault.baseDir);
       if (raw.entityCount == null && raw.vaultFingerprint) {
         console.log('[Cartographer] Migrating state from vaultFingerprint to entityCount');
-        state = { embeddedIds: new Set(), entityHashes: new Map(), clusterAssignments: {}, entityCount: currentCount };
+        state = {
+          embeddedIds: new Set(),
+          entityHashes: new Map(),
+          clusterAssignments: {},
+          entityCount: currentCount,
+        };
       } else if (raw.entityCount != null && currentCount < raw.entityCount) {
-        console.log(`[Cartographer] Vault entity count decreased (${raw.entityCount} → ${currentCount}) — resetting state`);
-        state = { embeddedIds: new Set(), entityHashes: new Map(), clusterAssignments: {}, entityCount: currentCount };
+        console.log(
+          `[Cartographer] Vault entity count decreased (${raw.entityCount} → ${currentCount}) — resetting state`,
+        );
+        state = {
+          embeddedIds: new Set(),
+          entityHashes: new Map(),
+          clusterAssignments: {},
+          entityCount: currentCount,
+        };
       } else {
         state = {
           embeddedIds: new Set(raw.embeddedIds ?? []),
@@ -56,17 +84,23 @@ export function createCartographer(vault: Vault, vectorStore: VectorStore, embed
         };
       }
     }
-  } catch (err) { console.warn('[Cartographer] Failed to load state, starting fresh:', (err as Error).message); }
+  } catch (err) {
+    console.warn('[Cartographer] Failed to load state, starting fresh:', (err as Error).message);
+  }
 
   function saveState(): void {
     const dir = dirname(stateFile);
     if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-    writeFileSync(stateFile, JSON.stringify({
-      embeddedIds: [...state.embeddedIds],
-      entityHashes: Object.fromEntries(state.entityHashes),
-      clusterAssignments: state.clusterAssignments,
-      entityCount: state.entityCount ?? vaultEntityCount(vault.baseDir),
-    }), 'utf-8');
+    writeFileSync(
+      stateFile,
+      JSON.stringify({
+        embeddedIds: [...state.embeddedIds],
+        entityHashes: Object.fromEntries(state.entityHashes),
+        clusterAssignments: state.clusterAssignments,
+        entityCount: state.entityCount ?? vaultEntityCount(vault.baseDir),
+      }),
+      'utf-8',
+    );
   }
 
   function contentHash(text: string): string {
@@ -75,7 +109,10 @@ export function createCartographer(vault: Vault, vectorStore: VectorStore, embed
 
   /** Extract embeddable text from an entity. */
   function entityToText(entity: Entity): string {
-    return `${entity.type}: ${entity.name}\n${entity.tags.join(', ')}\n${entity.body}`.slice(0, 2000);
+    return `${entity.type}: ${entity.name}\n${entity.tags.join(', ')}\n${entity.body}`.slice(
+      0,
+      2000,
+    );
   }
 
   /** Build wikilink graph and find structural communities. */
@@ -129,7 +166,18 @@ export function createCartographer(vault: Vault, vectorStore: VectorStore, embed
     async embed(): Promise<number> {
       if (!embedFn) return 0;
 
-      const allTypes = ['agent', 'execution', 'archetype', 'insight', 'policy', 'decision', 'assumption', 'constraint', 'contradiction', 'synthesis'];
+      const allTypes = [
+        'agent',
+        'execution',
+        'archetype',
+        'insight',
+        'policy',
+        'decision',
+        'assumption',
+        'constraint',
+        'contradiction',
+        'synthesis',
+      ];
       let embedded = 0;
 
       for (const type of allTypes) {
@@ -139,7 +187,8 @@ export function createCartographer(vault: Vault, vectorStore: VectorStore, embed
           const hash = contentHash(text);
 
           // Skip if already embedded and unchanged
-          if (state.embeddedIds.has(entity.id) && state.entityHashes.get(entity.id) === hash) continue;
+          if (state.embeddedIds.has(entity.id) && state.entityHashes.get(entity.id) === hash)
+            continue;
 
           try {
             const vector = await embedFn(text);
@@ -207,7 +256,9 @@ export function createCartographer(vault: Vault, vectorStore: VectorStore, embed
             evidence_links: members,
             decay_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
             memberAgents: [...agents],
-            memberExecutions: members.filter((id) => memberEntities.find((e) => e.id === id)?.type === 'execution'),
+            memberExecutions: members.filter(
+              (id) => memberEntities.find((e) => e.id === id)?.type === 'execution',
+            ),
             bottlenecks: [],
             suggestedPolicies: [],
             tags: ['archetype', 'auto-discovered'],
@@ -228,7 +279,10 @@ export function createCartographer(vault: Vault, vectorStore: VectorStore, embed
     /**
      * Semantic search across all entity types.
      */
-    async search(query: string, options?: { limit?: number; filter?: Record<string, unknown> }): Promise<VectorSearchResult[]> {
+    async search(
+      query: string,
+      options?: { limit?: number; filter?: Record<string, unknown> },
+    ): Promise<VectorSearchResult[]> {
       if (!embedFn) return [];
       const queryVector = await embedFn(query);
       if (!queryVector) return [];
@@ -317,12 +371,18 @@ export function createCartographer(vault: Vault, vectorStore: VectorStore, embed
           const l3Text = l3.body.toLowerCase();
           const l4Text = l4.body.toLowerCase();
           const contradictionPairs = [
-            ['should', 'should not'], ['enable', 'disable'], ['allow', 'deny'],
-            ['increase', 'decrease'], ['must', 'must not'],
+            ['should', 'should not'],
+            ['enable', 'disable'],
+            ['allow', 'deny'],
+            ['increase', 'decrease'],
+            ['must', 'must not'],
           ];
 
           for (const [a, b] of contradictionPairs) {
-            if ((l3Text.includes(a!) && l4Text.includes(b!)) || (l3Text.includes(b!) && l4Text.includes(a!))) {
+            if (
+              (l3Text.includes(a!) && l4Text.includes(b!)) ||
+              (l3Text.includes(b!) && l4Text.includes(a!))
+            ) {
               // Flag the L3 entry
               vault.update(l3.id, {
                 tags: [...new Set([...l3.tags, 'contradicts-canon'])],
@@ -339,11 +399,15 @@ export function createCartographer(vault: Vault, vectorStore: VectorStore, embed
     },
 
     /** Suggest missing relationships within clusters. */
-    async suggestRelationships(): Promise<{ from: string; to: string; type: string; confidence: number }[]> {
+    async suggestRelationships(): Promise<
+      { from: string; to: string; type: string; confidence: number }[]
+    > {
       const suggestions: { from: string; to: string; type: string; confidence: number }[] = [];
 
       // For each entity, find similar entities not yet linked
-      const allEntities = vault.list('insight').concat(vault.list('decision'), vault.list('archetype'));
+      const allEntities = vault
+        .list('insight')
+        .concat(vault.list('decision'), vault.list('archetype'));
 
       for (const entity of allEntities) {
         if (!embedFn) break;

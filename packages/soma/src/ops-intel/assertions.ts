@@ -4,11 +4,9 @@
  * @module
  */
 
-import type { GuardViolation, GraphBuilder } from './types.js';
-import type { GuardExplanation, OutcomeAssertion } from './types.js';
-import type { NodeStatus } from 'agentflow-core';
+import type { GuardConfig, NodeStatus } from 'agentflow-core';
 import { withGuards } from 'agentflow-core';
-import type { GuardConfig } from 'agentflow-core';
+import type { GraphBuilder, GuardExplanation, GuardViolation, OutcomeAssertion } from './types.js';
 
 /**
  * Evaluate outcome assertions and return violations for failures.
@@ -67,7 +65,11 @@ export async function evaluateAssertions(
 
 /** Extended builder with assertion support (SOMA premium). */
 export interface SomaGuardedBuilder extends GraphBuilder {
-  endNodeWithAssertions(nodeId: string, status: NodeStatus | undefined, assertions: OutcomeAssertion[]): Promise<void>;
+  endNodeWithAssertions(
+    nodeId: string,
+    status: NodeStatus | undefined,
+    assertions: OutcomeAssertion[],
+  ): Promise<void>;
 }
 
 /**

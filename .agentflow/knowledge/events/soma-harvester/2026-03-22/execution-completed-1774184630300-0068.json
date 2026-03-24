@@ -1,0 +1,12 @@
+{
+  "eventType": "execution.completed",
+  "graphId": "node_001",
+  "agentId": "soma-harvester",
+  "timestamp": 1774184630300,
+  "schemaVersion": 1,
+  "status": "success",
+  "duration": 25329,
+  "nodeCount": 2,
+  "pathSignature": "agent:soma-harvester→tool:llm-call:zo-process",
+  "violations": []
+}

@@ -1,16 +1,15 @@
 /**
  * Unit tests for Trace Enhancement Service
  */
-import { test, expect, describe, beforeEach, afterEach, vi } from 'vitest';
-import {
-  TraceEnhancementService,
-  type TraceEnhancementOptions,
-  type EnhancedTraceGraph,
-  type EnhancedTraceNode,
-  type TraceEnhancementResult
-} from '../../src/trace-enhancer.js';
-import type { TraceGraph, TraceNode } from '../../src/trace-graph.js';
-import type { SOMADataReader, SOMAOperationalData, SOMAHarvesterState, SOMASynthesizerState } from '../../src/soma-data-reader.js';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import type {
+  SOMADataReader,
+  SOMAHarvesterState,
+  SOMAOperationalData,
+  SOMASynthesizerState,
+} from '../../src/soma-data-reader.js';
+import { type EnhancedTraceGraph, TraceEnhancementService } from '../../src/trace-enhancer.js';
+import type { TraceGraph } from '../../src/trace-graph.js';
 
 // Mock SOMA data reader
 class MockSOMADataReader implements Partial<SOMADataReader> {
@@ -26,15 +25,17 @@ class MockSOMADataReader implements Partial<SOMADataReader> {
   }
 
   async readOperationalData(): Promise<SOMAOperationalData> {
-    return this.mockOperationalData ?? {
-      harvesterState: null,
-      synthesizerState: null,
-      reconcilerState: null,
-      cartographerState: null,
-      vaultChanges: [],
-      lastUpdated: Date.now(),
-      errors: []
-    };
+    return (
+      this.mockOperationalData ?? {
+        harvesterState: null,
+        synthesizerState: null,
+        reconcilerState: null,
+        cartographerState: null,
+        vaultChanges: [],
+        lastUpdated: Date.now(),
+        errors: [],
+      }
+    );
   }
 
   isSOMADataAvailable(): boolean {
@@ -96,7 +97,7 @@ describe('Trace Enhancement Service', () => {
         parentId: null,
         children: ['node-2'],
         metadata: {},
-        state: {}
+        state: {},
       },
       'node-2': {
         id: 'node-2',
@@ -108,16 +109,16 @@ describe('Trace Enhancement Service', () => {
         parentId: 'node-1',
         children: [],
         metadata: { tool: 'data-processor' },
-        state: {}
-      }
-    }
+        state: {},
+      },
+    },
   });
 
   beforeEach(() => {
     mockDataReader = new MockSOMADataReader();
     service = new TraceEnhancementService({
       somaDataReader: mockDataReader as any,
-      cacheTimeoutMs: 1000 // Short timeout for testing
+      cacheTimeoutMs: 1000, // Short timeout for testing
     });
   });
 
@@ -134,7 +135,7 @@ describe('Trace Enhancement Service', () => {
     test('creates service with custom configuration', () => {
       const customService = new TraceEnhancementService({
         somaDataReader: mockDataReader as any,
-        cacheTimeoutMs: 30000
+        cacheTimeoutMs: 30000,
       });
       expect(customService).toBeDefined();
     });
@@ -147,7 +148,7 @@ describe('Trace Enhancement Service', () => {
         lastRun: Date.now() - 5000,
         entityCount: 100,
         filesProcessed: 5,
-        eventsIngested: 25
+        eventsIngested: 25,
       };
 
       mockDataReader.setMockOperationalData({
@@ -157,7 +158,7 @@ describe('Trace Enhancement Service', () => {
         cartographerState: null,
         vaultChanges: [],
         lastUpdated: Date.now(),
-        errors: []
+        errors: [],
       });
 
       const trace = createSampleTrace('soma-harvester');
@@ -195,7 +196,7 @@ describe('Trace Enhancement Service', () => {
         cartographerState: null,
         vaultChanges: [],
         lastUpdated: Date.now(),
-        errors: []
+        errors: [],
       });
 
       const somaResult = await service.enhanceTrace(somaTrace);
@@ -215,17 +216,17 @@ describe('Trace Enhancement Service', () => {
         cartographerState: null,
         vaultChanges: [],
         lastUpdated: Date.now(),
-        errors: []
+        errors: [],
       });
 
       const trace = createSampleTrace('soma-harvester');
 
       const detailedResult = await service.enhanceTrace(trace, {
-        includeDetailedSteps: true
+        includeDetailedSteps: true,
       });
 
       const basicResult = await service.enhanceTrace(trace, {
-        includeDetailedSteps: false
+        includeDetailedSteps: false,
       });
 
       expect(detailedResult.enhanced).toBe(true);
@@ -244,24 +245,24 @@ describe('Trace Enhancement Service', () => {
           type: 'harvester',
           lastRun: Date.now(),
           entityCount: 150,
-          filesProcessed: 8
+          filesProcessed: 8,
         } as SOMAHarvesterState,
         synthesizerState: null,
         reconcilerState: null,
         cartographerState: null,
         vaultChanges: [],
         lastUpdated: Date.now(),
-        errors: []
+        errors: [],
       });
 
       const trace = createSampleTrace('soma-harvester');
 
       const withMetrics = await service.enhanceTrace(trace, {
-        includeMetrics: true
+        includeMetrics: true,
       });
 
       const withoutMetrics = await service.enhanceTrace(trace, {
-        includeMetrics: false
+        includeMetrics: false,
       });
 
       expect(withMetrics.enhanced).toBe(true);
@@ -277,29 +278,29 @@ describe('Trace Enhancement Service', () => {
 
     test('respects maxDataAge option', async () => {
       // Create old operational data
-      const oldTimestamp = Date.now() - (2 * 24 * 60 * 60 * 1000); // 2 days old
+      const oldTimestamp = Date.now() - 2 * 24 * 60 * 60 * 1000; // 2 days old
 
       mockDataReader.setMockOperationalData({
         harvesterState: {
           type: 'harvester',
-          lastRun: oldTimestamp
+          lastRun: oldTimestamp,
         } as SOMAHarvesterState,
         synthesizerState: null,
         reconcilerState: null,
         cartographerState: null,
         vaultChanges: [],
         lastUpdated: oldTimestamp,
-        errors: []
+        errors: [],
       });
 
       const trace = createSampleTrace('soma-harvester');
 
       const recentResult = await service.enhanceTrace(trace, {
-        maxDataAge: 24 * 60 * 60 * 1000 // 1 day
+        maxDataAge: 24 * 60 * 60 * 1000, // 1 day
       });
 
       const oldResult = await service.enhanceTrace(trace, {
-        maxDataAge: 3 * 24 * 60 * 60 * 1000 // 3 days
+        maxDataAge: 3 * 24 * 60 * 60 * 1000, // 3 days
       });
 
       // Data too old for first case, acceptable for second
@@ -317,7 +318,7 @@ describe('Trace Enhancement Service', () => {
         cartographerState: null,
         vaultChanges: [],
         lastUpdated: Date.now(),
-        errors: []
+        errors: [],
       });
 
       const trace = createSampleTrace('soma-harvester');
@@ -340,7 +341,7 @@ describe('Trace Enhancement Service', () => {
         cartographerState: null,
         vaultChanges: [],
         lastUpdated: Date.now(),
-        errors: []
+        errors: [],
       });
 
       const trace = createSampleTrace('soma-harvester');
@@ -356,13 +357,17 @@ describe('Trace Enhancement Service', () => {
 
     test('invalidates cache when operational data changes', async () => {
       const initialData = {
-        harvesterState: { type: 'harvester', lastRun: Date.now(), entityCount: 100 } as SOMAHarvesterState,
+        harvesterState: {
+          type: 'harvester',
+          lastRun: Date.now(),
+          entityCount: 100,
+        } as SOMAHarvesterState,
         synthesizerState: null,
         reconcilerState: null,
         cartographerState: null,
         vaultChanges: [],
         lastUpdated: Date.now(),
-        errors: []
+        errors: [],
       };
 
       mockDataReader.setMockOperationalData(initialData);
@@ -380,7 +385,11 @@ describe('Trace Enhancement Service', () => {
       // Change operational data
       mockDataReader.setMockOperationalData({
         ...initialData,
-        harvesterState: { type: 'harvester', lastRun: Date.now(), entityCount: 200 } as SOMAHarvesterState
+        harvesterState: {
+          type: 'harvester',
+          lastRun: Date.now(),
+          entityCount: 200,
+        } as SOMAHarvesterState,
       });
 
       // Invalidate cache
@@ -406,15 +415,15 @@ describe('Trace Enhancement Service', () => {
             totalFiles: 5,
             processedFiles: 3,
             skippedFiles: 1,
-            errorFiles: 1
-          }
+            errorFiles: 1,
+          },
         } as SOMAHarvesterState,
         synthesizerState: null,
         reconcilerState: null,
         cartographerState: null,
         vaultChanges: [],
         lastUpdated: Date.now(),
-        errors: []
+        errors: [],
       });
 
       const trace = createSampleTrace('soma-harvester');
@@ -428,7 +437,7 @@ describe('Trace Enhancement Service', () => {
       expect(enhancedNodes.length).toBeGreaterThan(Object.keys(trace.nodes).length);
 
       // Check for operational data in enhanced nodes
-      const nodesWithOpData = enhancedNodes.filter(node => node.operationalData);
+      const nodesWithOpData = enhancedNodes.filter((node) => node.operationalData);
       expect(nodesWithOpData.length).toBeGreaterThan(0);
     });
 
@@ -442,13 +451,13 @@ describe('Trace Enhancement Service', () => {
           candidatesAnalyzed: 40,
           insightsGenerated: 8,
           llmAnalysisDuration: 25000,
-          confidenceScores: [0.9, 0.85, 0.92, 0.78]
+          confidenceScores: [0.9, 0.85, 0.92, 0.78],
         } as SOMASynthesizerState,
         reconcilerState: null,
         cartographerState: null,
         vaultChanges: [],
         lastUpdated: Date.now(),
-        errors: []
+        errors: [],
       });
 
       const trace = createSampleTrace('soma-synthesizer');
@@ -471,7 +480,7 @@ describe('Trace Enhancement Service', () => {
         cartographerState: null,
         vaultChanges: [],
         lastUpdated: Date.now(),
-        errors: ['Failed to parse harvester state', 'Vault access denied']
+        errors: ['Failed to parse harvester state', 'Vault access denied'],
       });
 
       const trace = createSampleTrace('soma-harvester');
@@ -490,11 +499,11 @@ describe('Trace Enhancement Service', () => {
         },
         isSOMADataAvailable() {
           return true;
-        }
+        },
       } as any;
 
       const brokenService = new TraceEnhancementService({
-        somaDataReader: brokenDataReader
+        somaDataReader: brokenDataReader,
       });
 
       const trace = createSampleTrace('soma-harvester');
@@ -513,13 +522,13 @@ describe('Trace Enhancement Service', () => {
         cartographerState: null,
         vaultChanges: [],
         lastUpdated: Date.now(),
-        errors: []
+        errors: [],
       });
 
       // Create invalid trace structure
       const invalidTrace = {
         ...createSampleTrace('soma-harvester'),
-        nodes: undefined // Invalid nodes structure
+        nodes: undefined, // Invalid nodes structure
       } as any;
 
       const result = await service.enhanceTrace(invalidTrace);
@@ -537,7 +546,7 @@ describe('Trace Enhancement Service', () => {
         cartographerState: null,
         vaultChanges: [],
         lastUpdated: Date.now(),
-        errors: []
+        errors: [],
       });
 
       const trace = createSampleTrace('soma-harvester');
@@ -547,7 +556,7 @@ describe('Trace Enhancement Service', () => {
       expect(firstResult.cacheHit).toBe(false);
 
       // Wait for cache timeout
-      await new Promise(resolve => setTimeout(resolve, 1100));
+      await new Promise((resolve) => setTimeout(resolve, 1100));
 
       // Invalidate stale cache entries
       const invalidationResult = await service.invalidateCacheIfStale();
@@ -566,7 +575,7 @@ describe('Trace Enhancement Service', () => {
         cartographerState: null,
         vaultChanges: [],
         lastUpdated: Date.now(),
-        errors: []
+        errors: [],
       });
 
       const trace = createSampleTrace('soma-harvester');
@@ -576,8 +585,14 @@ describe('Trace Enhancement Service', () => {
       await service.enhanceTrace(trace, { includeDetailedSteps: false, enableCaching: true });
 
       // Both should be cached separately
-      const result1 = await service.enhanceTrace(trace, { includeDetailedSteps: true, enableCaching: true });
-      const result2 = await service.enhanceTrace(trace, { includeDetailedSteps: false, enableCaching: true });
+      const result1 = await service.enhanceTrace(trace, {
+        includeDetailedSteps: true,
+        enableCaching: true,
+      });
+      const result2 = await service.enhanceTrace(trace, {
+        includeDetailedSteps: false,
+        enableCaching: true,
+      });
 
       expect(result1.cacheHit).toBe(true);
       expect(result2.cacheHit).toBe(true);

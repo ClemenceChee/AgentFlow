@@ -1,0 +1,102 @@
+{
+  "id": "node_001",
+  "rootNodeId": "node_001",
+  "nodes": {
+    "node_001": {
+      "id": "node_001",
+      "type": "agent",
+      "name": "soma-synthesizer",
+      "startTime": 1774131613407,
+      "endTime": 1774131736279,
+      "status": "error",
+      "parentId": null,
+      "children": [
+        "node_002"
+      ],
+      "metadata": {},
+      "state": {
+        "exitCode": null,
+        "duration": 122.87,
+        "worker": "synthesizer"
+      }
+    },
+    "node_002": {
+      "id": "node_002",
+      "type": "tool",
+      "name": "llm-call:zo-extract",
+      "startTime": 1774131613407,
+      "endTime": 1774131736279,
+      "status": "error",
+      "parentId": "node_001",
+      "children": [],
+      "metadata": {},
+      "state": {
+        "stage": "zo-extract",
+        "sessionId": "799f858b",
+        "tokensIn": 6887,
+        "tokensOut": 551,
+        "error": "ERROR: Could not extract JSON from LLM response"
+      }
+    }
+  },
+  "edges": [
+    {
+      "from": "node_001",
+      "to": "node_002",
+      "type": "spawned"
+    }
+  ],
+  "startTime": 1774131613407,
+  "endTime": 1774131736279,
+  "status": "error",
+  "trigger": "worker",
+  "agentId": "soma-synthesizer",
+  "events": [
+    {
+      "timestamp": 1774131613407,
+      "eventType": "agent_start",
+      "nodeId": "node_001",
+      "data": {
+        "type": "agent",
+        "name": "soma-synthesizer"
+      }
+    },
+    {
+      "timestamp": 1774131613407,
+      "eventType": "agent_start",
+      "nodeId": "node_002",
+      "data": {
+        "type": "tool",
+        "name": "llm-call:zo-extract"
+      }
+    },
+    {
+      "timestamp": 1774131736279,
+      "eventType": "custom",
+      "nodeId": "node_002",
+      "data": {
+        "action": "error",
+        "message": "ERROR: Could not extract JSON from LLM response"
+      }
+    },
+    {
+      "timestamp": 1774131736279,
+      "eventType": "agent_end",
+      "nodeId": "node_002",
+      "data": {
+        "status": "error"
+      }
+    },
+    {
+      "timestamp": 1774131736279,
+      "eventType": "agent_end",
+      "nodeId": "node_001",
+      "data": {
+        "status": "error"
+      }
+    }
+  ],
+  "traceId": "6d89c0ee28e1",
+  "spanId": "8744798cfe3f",
+  "parentSpanId": null
+}

@@ -1,13 +1,14 @@
 /**
  * Test suite for SOMA external trace discovery functionality
  */
-import { test, expect } from 'vitest';
+
 import * as fs from 'node:fs';
-import * as path from 'node:path';
 import * as os from 'node:os';
-import { TraceWatcher } from '../src/watcher.js';
-import { getDiscoveryPaths } from '../src/config.js';
+import * as path from 'node:path';
+import { expect, test } from 'vitest';
 import type { DashboardUserConfig } from '../src/config.js';
+import { getDiscoveryPaths } from '../src/config.js';
+import { TraceWatcher } from '../src/watcher.js';
 
 test('External trace discovery loads SOMA traces from configured directory', async () => {
   // Create a temporary directory structure
@@ -41,21 +42,21 @@ test('External trace discovery loads SOMA traces from configured directory', asy
           parentId: null,
           children: [],
           metadata: {},
-          state: { worker: 'harvester' }
-        }
+          state: { worker: 'harvester' },
+        },
       },
       edges: [],
-      events: []
+      events: [],
     };
 
     fs.writeFileSync(
       path.join(somaTracesDir, 'soma-harvester-test.json'),
-      JSON.stringify(somaTrace, null, 2)
+      JSON.stringify(somaTrace, null, 2),
     );
 
     // Configure user config with discovery paths
     const userConfig: DashboardUserConfig = {
-      discoveryPaths: [somaTracesDir]
+      discoveryPaths: [somaTracesDir],
     };
 
     // Extract discovery paths and pass as dataDirs (simulating server behavior)
@@ -66,15 +67,15 @@ test('External trace discovery loads SOMA traces from configured directory', asy
       tracesDir,
       dataDirs: discoveryPaths,
       userConfig,
-      maxAgeMs: 24 * 60 * 60 * 1000 // 24 hours
+      maxAgeMs: 24 * 60 * 60 * 1000, // 24 hours
     });
 
     // Wait a moment for file watching to initialize
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
     // Verify the SOMA trace was loaded
     const allTraces = watcher.getAllTraces();
-    const somaTraces = allTraces.filter(trace => trace.agentId === 'soma-harvester');
+    const somaTraces = allTraces.filter((trace) => trace.agentId === 'soma-harvester');
 
     expect(somaTraces).toHaveLength(1);
 
@@ -100,7 +101,7 @@ test('External trace discovery handles missing directories gracefully', async ()
 
   try {
     const userConfig: DashboardUserConfig = {
-      discoveryPaths: [nonExistentDir]
+      discoveryPaths: [nonExistentDir],
     };
 
     const discoveryPaths = getDiscoveryPaths(userConfig);
@@ -109,7 +110,7 @@ test('External trace discovery handles missing directories gracefully', async ()
     const watcher = new TraceWatcher({
       tracesDir,
       dataDirs: discoveryPaths,
-      userConfig
+      userConfig,
     });
 
     // Verify watcher still works
@@ -150,18 +151,18 @@ test('External trace metadata is preserved correctly', async () => {
           parentId: null,
           children: [],
           metadata: {},
-          state: {}
-        }
+          state: {},
+        },
       },
       edges: [],
-      events: []
+      events: [],
     };
 
     const traceFilePath = path.join(externalDir, 'external-trace.json');
     fs.writeFileSync(traceFilePath, JSON.stringify(externalTrace, null, 2));
 
     const userConfig: DashboardUserConfig = {
-      discoveryPaths: [externalDir]
+      discoveryPaths: [externalDir],
     };
 
     const discoveryPaths = getDiscoveryPaths(userConfig);
@@ -169,13 +170,13 @@ test('External trace metadata is preserved correctly', async () => {
     const watcher = new TraceWatcher({
       tracesDir,
       dataDirs: discoveryPaths,
-      userConfig
+      userConfig,
     });
 
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
     const traces = watcher.getAllTraces();
-    const externalTraces = traces.filter(trace => trace.agentId === 'external-agent');
+    const externalTraces = traces.filter((trace) => trace.agentId === 'external-agent');
 
     expect(externalTraces).toHaveLength(1);
 

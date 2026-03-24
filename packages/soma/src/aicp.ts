@@ -8,10 +8,15 @@
  * @module
  */
 
-import type { PreflightResponse, PreflightWarning, PreflightRecommendation, Vault } from './types.js';
 import { queryByLayer } from './layers.js';
+import type {
+  PreflightRecommendation,
+  PreflightResponse,
+  PreflightWarning,
+  Vault,
+} from './types.js';
 
-const DEFAULT_FAILURE_RATE_THRESHOLD = 0.20;
+const DEFAULT_FAILURE_RATE_THRESHOLD = 0.2;
 
 /**
  * Evaluate preflight authorization for an agent.
@@ -33,11 +38,13 @@ export function evaluatePreflight(vault: Vault, agentId: string): PreflightRespo
     return {
       proceed: true,
       warnings: [],
-      recommendations: [{
-        insight: `Agent '${agentId}' is not registered in the vault. Run the pipeline to create an agent profile.`,
-        sourceAgents: [],
-        confidence: 0,
-      }],
+      recommendations: [
+        {
+          insight: `Agent '${agentId}' is not registered in the vault. Run the pipeline to create an agent profile.`,
+          sourceAgents: [],
+          confidence: 0,
+        },
+      ],
       available: true,
       _meta: { durationMs: Date.now() - start },
     };
@@ -90,7 +97,9 @@ export function evaluatePreflight(vault: Vault, agentId: string): PreflightRespo
       warnings.push({
         rule: c.name,
         message: `Active constraint: ${c.name}`,
-        source: c.layer ? `L${c.layer === 'emerging' ? '3' : c.layer === 'canon' ? '4' : '?'} ${c.layer}` : 'vault',
+        source: c.layer
+          ? `L${c.layer === 'emerging' ? '3' : c.layer === 'canon' ? '4' : '?'} ${c.layer}`
+          : 'vault',
       });
     }
   }
@@ -119,7 +128,7 @@ export function evaluatePreflight(vault: Vault, agentId: string): PreflightRespo
     if (peerExec < 5) continue;
 
     const gap = failureRate - peerRate;
-    if (gap >= 0.20) {
+    if (gap >= 0.2) {
       // Find insights that reference both agents
       const insights = vault.list('insight');
       for (const insight of insights) {

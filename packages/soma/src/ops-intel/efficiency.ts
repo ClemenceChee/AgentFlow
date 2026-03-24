@@ -15,7 +15,9 @@ import type {
 } from './types.js';
 
 function extractTokenCost(node: ExecutionNode): number | null {
-  const semantic = (node.metadata as Record<string, unknown>)?.semantic as SemanticContext | undefined;
+  const semantic = (node.metadata as Record<string, unknown>)?.semantic as
+    | SemanticContext
+    | undefined;
   if (semantic?.tokenCost != null && typeof semantic.tokenCost === 'number') {
     return semantic.tokenCost;
   }
@@ -59,7 +61,8 @@ export function getEfficiency(graphs: ExecutionGraph[]): EfficiencyReport {
       const cost = extractTokenCost(node);
       if (cost !== null) totalNodesWithCost++;
 
-      const duration = node.startTime && node.endTime != null ? node.endTime - node.startTime : null;
+      const duration =
+        node.startTime && node.endTime != null ? node.endTime - node.startTime : null;
 
       allNodeCosts.push({
         nodeId: node.id,
@@ -84,10 +87,14 @@ export function getEfficiency(graphs: ExecutionGraph[]): EfficiencyReport {
     });
   }
 
-  const costPerNodeValues = runs.map((r) => r.costPerNode).filter((v) => v > 0).sort((a, b) => a - b);
-  const mean = costPerNodeValues.length > 0
-    ? costPerNodeValues.reduce((a, b) => a + b, 0) / costPerNodeValues.length
-    : 0;
+  const costPerNodeValues = runs
+    .map((r) => r.costPerNode)
+    .filter((v) => v > 0)
+    .sort((a, b) => a - b);
+  const mean =
+    costPerNodeValues.length > 0
+      ? costPerNodeValues.reduce((a, b) => a + b, 0) / costPerNodeValues.length
+      : 0;
 
   const aggregate = {
     mean,

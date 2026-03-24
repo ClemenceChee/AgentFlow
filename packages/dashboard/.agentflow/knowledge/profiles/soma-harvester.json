@@ -1,0 +1,12 @@
+{
+  "agentId": "soma-harvester",
+  "totalRuns": 2,
+  "successCount": 2,
+  "failureCount": 0,
+  "failureRate": 0,
+  "recentDurations": [558294, 382759],
+  "lastConformanceScore": null,
+  "knownBottlenecks": [],
+  "lastPatternTimestamp": null,
+  "updatedAt": "2026-03-24T18:18:50.024Z"
+}
