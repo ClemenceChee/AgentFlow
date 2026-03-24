@@ -212,6 +212,14 @@ export function AicpPage() {
         <div className="aicp-empty">Select an agent to see its operational briefing.</div>
       )}
 
+      {selectedAgent && preflight.loading && !preflight.data && (
+        <div className="aicp-loading">Loading preflight evaluation...</div>
+      )}
+
+      {selectedAgent && preflight.error && (
+        <div className="aicp-empty">Preflight evaluation failed: {preflight.error}</div>
+      )}
+
       {selectedAgent && preflight.data && !preflight.data.available && (
         <div className="aicp-empty">
           SOMA vault not configured. AICP requires a connected vault.

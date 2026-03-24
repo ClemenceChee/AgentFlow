@@ -38,7 +38,19 @@ export function useAicpPreflight(agentId: string | null) {
     try {
       const res = await fetch(`/api/aicp/preflight?agentId=${encodeURIComponent(agentId)}`);
       if (res.ok) {
-        setData(await res.json());
+        const contentType = res.headers.get('content-type') ?? '';
+        if (contentType.includes('application/json')) {
+          setData(await res.json());
+        } else {
+          // Endpoint not available (SPA fallback returned HTML)
+          setData({
+            proceed: true,
+            warnings: [],
+            recommendations: [],
+            available: false,
+            _meta: { durationMs: 0 },
+          });
+        }
       } else {
         setError(`Failed: ${res.status}`);
       }
