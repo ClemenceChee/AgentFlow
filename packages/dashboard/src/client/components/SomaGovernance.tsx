@@ -254,7 +254,16 @@ function GovernanceConfiguration({
     <div style={{ marginBottom: 20 }}>
       <button
         type="button"
-        style={{ cursor: 'pointer', fontSize: 14, color: 'var(--t1)', marginBottom: 8, background: 'none', border: 'none', padding: 0, textAlign: 'left' }}
+        style={{
+          cursor: 'pointer',
+          fontSize: 14,
+          color: 'var(--t1)',
+          marginBottom: 8,
+          background: 'none',
+          border: 'none',
+          padding: 0,
+          textAlign: 'left',
+        }}
         onClick={() => setShowConfig(!showConfig)}
       >
         ⚙️ Governance Configuration {showConfig ? '▼' : '▶'}
@@ -272,7 +281,10 @@ function GovernanceConfiguration({
         >
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
             <div>
-              <label htmlFor="auto-promotion-threshold" style={{ display: 'block', color: 'var(--t2)', marginBottom: 4 }}>
+              <label
+                htmlFor="auto-promotion-threshold"
+                style={{ display: 'block', color: 'var(--t2)', marginBottom: 4 }}
+              >
                 Auto-Promotion Threshold
               </label>
               <input
@@ -293,7 +305,10 @@ function GovernanceConfiguration({
             </div>
 
             <div>
-              <label htmlFor="escalation-threshold" style={{ display: 'block', color: 'var(--t2)', marginBottom: 4 }}>
+              <label
+                htmlFor="escalation-threshold"
+                style={{ display: 'block', color: 'var(--t2)', marginBottom: 4 }}
+              >
                 Escalation Threshold
               </label>
               <input

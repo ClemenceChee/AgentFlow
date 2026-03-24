@@ -196,14 +196,21 @@ function PipelineStatus({ vaultHealth }: { vaultHealth: VaultHealthData | null }
       <button
         type="button"
         className="soma-intel__pipeline-summary"
-        style={{ cursor: 'pointer', background: 'none', border: 'none', padding: 0, textAlign: 'left', width: '100%' }}
+        style={{
+          cursor: 'pointer',
+          background: 'none',
+          border: 'none',
+          padding: 0,
+          textAlign: 'left',
+          width: '100%',
+        }}
         onClick={() => setShowDetails(!showDetails)}
       >
         🔄 Live Intelligence Pipeline Status
         <span style={{ marginLeft: 8, fontSize: 12, color: '#8b949e' }}>
           Insights last updated {staleness} <span style={{ fontSize: 10 }}>▼</span>
         </span>
-      </div>
+      </button>
 
       {showDetails && (
         <div className="soma-intel__worker-details">
@@ -266,6 +273,7 @@ function SmartActions() {
       <div className="soma-intel__smart-actions-title">⚡ Smart Actions</div>
       <div className="soma-intel__action-buttons">
         <button
+          type="button"
           className="soma-intel__action-btn"
           onClick={handleRefreshIntelligence}
           disabled={refreshing}
@@ -284,6 +292,7 @@ function SmartActions() {
         </button>
 
         <button
+          type="button"
           className="soma-intel__action-btn"
           onClick={handleDeepAnalysis}
           disabled={analyzing}

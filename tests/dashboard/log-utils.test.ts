@@ -301,9 +301,9 @@ describe('Log Utils', () => {
     });
 
     it('parses whatsapp group session', () => {
-      expect(
-        parseOpenClawSessionKey('agent:main:whatsapp:group:120363424797383700'),
-      ).toBe('openclaw:whatsapp:120363424797383700');
+      expect(parseOpenClawSessionKey('agent:main:whatsapp:group:120363424797383700')).toBe(
+        'openclaw:whatsapp:120363424797383700',
+      );
     });
 
     it('parses main agent key', () => {

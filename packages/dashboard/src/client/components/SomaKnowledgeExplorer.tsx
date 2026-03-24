@@ -186,6 +186,7 @@ function KnowledgeSmartActions() {
       <span style={{ fontSize: 11, color: 'var(--t3)', marginRight: 4 }}>⚡</span>
       {smartActions.map((action) => (
         <button
+          type="button"
           key={action.key}
           onClick={() => executeOperation(action.key)}
           disabled={operationRunning === action.key}
@@ -244,6 +245,7 @@ function OperationalEntityDetail({
         }}
       >
         <button
+          type="button"
           onClick={() => setShowOpDetail(!showOpDetail)}
           style={{
             padding: '2px 4px',
