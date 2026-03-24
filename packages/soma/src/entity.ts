@@ -10,7 +10,7 @@
 import type { Entity } from './types.js';
 
 const FRONTMATTER_DELIM = '---';
-const WIKILINK_REGEX = /\[\[([^\]]+)\]\]/g;
+const WIKILINK_REGEX = /\[\[([^[\]]+)\]\]/g;
 
 /**
  * Parse a Markdown file with YAML frontmatter into an Entity.
@@ -170,7 +170,7 @@ function serializeYamlField(key: string, value: unknown): string {
     typeof value === 'string' &&
     (value.includes(':') || value.includes('#') || value.includes('\n'))
   ) {
-    return `${key}: "${value.replace(/"/g, '\\"')}"`;
+    return `${key}: "${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
   }
   return `${key}: ${value}`;
 }

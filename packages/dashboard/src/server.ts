@@ -35,6 +35,14 @@ import { TraceWatcher, type WatchedTrace } from './watcher.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+/**
+ * Sanitize a user-supplied path segment to prevent path traversal.
+ * Strips directory separators and traversal sequences, keeping only the basename.
+ */
+function safePath(segment: string): string {
+  return path.basename(segment.replace(/\.\./g, ''));
+}
+
 export interface DashboardConfig {
   port: number;
   tracesDir: string;
@@ -580,8 +588,12 @@ export class DashboardServer {
       try {
         const agentId = req.params.agentId;
 
-        // Read agent entity
-        const agentFile = path.join(somaVault, 'agent', `${agentId.replace(/:/g, '-')}.md`);
+        // Read agent entity (sanitize to prevent path traversal)
+        const agentFile = path.join(
+          somaVault,
+          'agent',
+          `${safePath(agentId.replace(/:/g, '-'))}.md`,
+        );
         let agentData: Record<string, unknown> = {};
         if (fs.existsSync(agentFile)) {
           agentData = parseVaultFrontmatter(fs.readFileSync(agentFile, 'utf-8')) ?? {};
@@ -1189,8 +1201,12 @@ export class DashboardServer {
       const somaVault = this.config.somaVault;
       if (!somaVault) return res.status(404).json({ error: 'Soma vault not configured' });
       try {
-        const { type, id } = req.params;
+        const type = safePath(req.params.type);
+        const id = safePath(req.params.id);
         const filePath = path.join(somaVault, type, `${id}.md`);
+        if (!path.resolve(filePath).startsWith(path.resolve(somaVault))) {
+          return res.status(400).json({ error: 'Invalid path' });
+        }
         if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'Entity not found' });
 
         const content = fs.readFileSync(filePath, 'utf-8');
@@ -1746,14 +1762,18 @@ export class DashboardServer {
     });
 
     // SPA fallback — serve React dashboard
-    this.app.get('*', (_req, res) => {
-      const clientIndex = path.join(__dirname, '../dist/client/index.html');
-      if (fs.existsSync(clientIndex)) {
-        res.sendFile(clientIndex);
-      } else {
-        res.status(404).send('Dashboard not found - public files may not be built');
-      }
-    });
+    this.app.get(
+      '*',
+      rateLimit({ windowMs: 60 * 1000, max: 600, standardHeaders: true, legacyHeaders: false }),
+      (_req, res) => {
+        const clientIndex = path.join(__dirname, '../dist/client/index.html');
+        if (fs.existsSync(clientIndex)) {
+          res.sendFile(clientIndex);
+        } else {
+          res.status(404).send('Dashboard not found - public files may not be built');
+        }
+      },
+    );
   }
 
   private setupWebSocket() {
