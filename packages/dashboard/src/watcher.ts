@@ -1507,24 +1507,20 @@ export class TraceWatcher extends EventEmitter {
           },
         });
 
-        // Parse summary markdown for execution steps (tables with step/status)
-        // Match step tables: | **1. Step Name** | ✅ | Details |
-        const stepPattern =
-          /\|\s*\*?\*?(\d+)\.\s*\*?\*?([^|]+)\*?\*?\s*\|\s*([^|]+)\s*\|\s*([^|]*)\|/g;
-        let stepMatch: RegExpExecArray | null;
+        // Parse execution steps from summary markdown
+        // Format 1: Table rows: | **1. Step Name** | ✅ | Details |
+        // Format 2: Numbered list: 1. **Step Name** — details
         let stepIdx = 0;
+
+        // Try table format first
+        const tablePattern =
+          /\|\s*\*?\*?(\d+)\.\s*\*?\*?([^|]+)\*?\*?\s*\|\s*([^|]+)\s*\|\s*([^|]*)\|/g;
+        let m: RegExpExecArray | null;
         // biome-ignore lint: regex exec loop
-        while ((stepMatch = stepPattern.exec(summary)) !== null) {
+        while ((m = tablePattern.exec(summary)) !== null) {
           stepIdx++;
-          const stepName = stepMatch[2]?.trim() || `Step ${stepIdx}`;
-          const stepStatusText = stepMatch[3]?.trim() || '';
-          const stepStatus =
-            stepStatusText.includes('\u2705') ||
-            stepStatusText.includes('OK') ||
-            stepStatusText.includes('Pass')
-              ? 'completed'
-              : 'failed';
-          const stepDetail = stepMatch[4]?.trim() || '';
+          const stepName = m[2]?.trim().replace(/\*+/g, '') || `Step ${stepIdx}`;
+          const stepDetail = m[4]?.trim() || '';
           const nodeId = `step-${stepIdx}`;
           children.push(nodeId);
           nodes.set(nodeId, {
@@ -1533,11 +1529,38 @@ export class TraceWatcher extends EventEmitter {
             name: stepName,
             startTime: runAtMs + (stepIdx - 1) * Math.floor(durationMs / Math.max(1, stepIdx + 1)),
             endTime: runAtMs + stepIdx * Math.floor(durationMs / Math.max(1, stepIdx + 1)),
-            status: stepStatus,
+            status: m[3]?.includes('\u274C') || m[3]?.includes('Fail') ? 'failed' : 'completed',
             parentId: rootId,
             children: [],
             metadata: { detail: stepDetail },
           });
+        }
+
+        // If no table found, try numbered list: "1. **Step Name** — details" or "1. **Step Name**"
+        if (stepIdx === 0) {
+          const listPattern = /^\s*(\d+)\.\s*\*?\*?([^*\n]+)\*?\*?\s*(?:[-—]\s*(.+))?$/gm;
+          // biome-ignore lint: regex exec loop
+          while ((m = listPattern.exec(summary)) !== null) {
+            // Skip header-like lines
+            if (m[2]?.trim().startsWith('#')) continue;
+            stepIdx++;
+            const stepName = m[2]?.trim().replace(/\*+/g, '') || `Step ${stepIdx}`;
+            const stepDetail = m[3]?.trim() || '';
+            const nodeId = `step-${stepIdx}`;
+            children.push(nodeId);
+            nodes.set(nodeId, {
+              id: nodeId,
+              type: 'tool',
+              name: stepName,
+              startTime:
+                runAtMs + (stepIdx - 1) * Math.floor(durationMs / Math.max(1, stepIdx + 1)),
+              endTime: runAtMs + stepIdx * Math.floor(durationMs / Math.max(1, stepIdx + 1)),
+              status: stepDetail.toLowerCase().includes('fail') ? 'failed' : 'completed',
+              parentId: rootId,
+              children: [],
+              metadata: { detail: stepDetail },
+            });
+          }
         }
 
         // If no steps parsed from summary, create a single summary node
