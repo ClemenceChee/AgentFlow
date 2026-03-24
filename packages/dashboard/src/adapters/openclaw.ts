@@ -183,6 +183,41 @@ export class OpenClawAdapter implements TraceAdapter {
           }
         }
 
+        // Fallback: extract markdown section headers as pseudo-steps
+        if (stepIdx === 0 && summary.length > 50) {
+          const sectionRe = /(?:^|\n)\s*(?:#{1,3}|(?:\*\*[^*\n]{3,50}\*\*))\s*(.+)/g;
+          while ((m = sectionRe.exec(summary)) !== null) {
+            const heading =
+              m[1]
+                ?.trim()
+                .replace(/\*+/g, '')
+                .replace(/^#+\s*/, '') || '';
+            if (
+              !heading ||
+              heading.length < 3 ||
+              heading.startsWith('|') ||
+              heading.startsWith('---')
+            )
+              continue;
+            stepIdx++;
+            const nodeId = `section-${stepIdx}`;
+            rootChildren.push(nodeId);
+            nodes[nodeId] = {
+              id: nodeId,
+              type: 'custom',
+              name: heading.slice(0, 60),
+              status: 'completed',
+              startTime:
+                startTime + (stepIdx - 1) * Math.floor(duration / Math.max(1, stepIdx + 1)),
+              endTime: startTime + stepIdx * Math.floor(duration / Math.max(1, stepIdx + 1)),
+              parentId: 'root',
+              children: [],
+              metadata: {},
+            };
+            if (stepIdx >= 10) break; // Cap to avoid noise
+          }
+        }
+
         nodes['root'] = {
           id: 'root',
           type: 'cron-job',
