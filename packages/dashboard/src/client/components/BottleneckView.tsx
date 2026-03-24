@@ -49,7 +49,8 @@ export function BottleneckView({ model }: { model: ProcessModelData }) {
     const layers = new Map<string, number>();
     const incoming = new Set(trans.map((e) => e.to));
     const roots = nodeArr.filter((n) => !incoming.has(n));
-    const queue = roots.length > 0 ? [...roots] : nodeArr.length > 0 && nodeArr[0] ? [nodeArr[0]] : [];
+    const queue =
+      roots.length > 0 ? [...roots] : nodeArr.length > 0 && nodeArr[0] ? [nodeArr[0]] : [];
     for (const r of queue) layers.set(r, 0);
     const visited = new Set(queue);
     const bfs = [...queue];

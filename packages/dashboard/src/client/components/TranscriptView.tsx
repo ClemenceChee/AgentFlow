@@ -127,7 +127,8 @@ export function TranscriptView({ trace }: { trace: FullTrace }) {
             .filter(Boolean)
             .join('\n');
         }
-        const config = ROLE_CONFIG[role] ?? ROLE_CONFIG.event ?? { icon: '•', label: 'Unknown', cls: '', origin: 'system' };
+        const config = ROLE_CONFIG[role] ??
+          ROLE_CONFIG.event ?? { icon: '•', label: 'Unknown', cls: '', origin: 'system' };
         const isThinking = role === 'thinking';
         const isError = !!raw.error;
         const isHuman = config.origin === 'user';

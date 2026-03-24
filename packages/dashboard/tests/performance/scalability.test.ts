@@ -177,7 +177,10 @@ describe('Performance and Scalability Tests', () => {
           agentId: `update-agent-${i % 5}`,
         });
 
-        fs.writeFileSync(path.join(tracesDir, `initial-${i}.json`), traceToJson(trace as unknown as Record<string, unknown>));
+        fs.writeFileSync(
+          path.join(tracesDir, `initial-${i}.json`),
+          traceToJson(trace as unknown as Record<string, unknown>),
+        );
       }
 
       server = new DashboardServer({
@@ -202,7 +205,10 @@ describe('Performance and Scalability Tests', () => {
               nodeCount: Math.floor(Math.random() * 8) + 2,
             });
 
-            fs.writeFileSync(path.join(tracesDir, `frequent-${i}.json`), traceToJson(trace as unknown as Record<string, unknown>));
+            fs.writeFileSync(
+              path.join(tracesDir, `frequent-${i}.json`),
+              traceToJson(trace as unknown as Record<string, unknown>),
+            );
 
             resolve();
           }, i * 50); // Stagger updates every 50ms
@@ -359,7 +365,10 @@ describe('Performance and Scalability Tests', () => {
         });
 
         const createTime = Date.now();
-        fs.writeFileSync(path.join(tracesDir, `latency-${i}.json`), traceToJson(trace as unknown as Record<string, unknown>));
+        fs.writeFileSync(
+          path.join(tracesDir, `latency-${i}.json`),
+          traceToJson(trace as unknown as Record<string, unknown>),
+        );
 
         // Poll for trace to appear
         let detectedTime = 0;
@@ -421,7 +430,10 @@ describe('Performance and Scalability Tests', () => {
               agentId: `concurrent-${i}`,
             });
 
-            fs.writeFileSync(path.join(tracesDir, `concurrent-${i}.json`), traceToJson(trace as unknown as Record<string, unknown>));
+            fs.writeFileSync(
+              path.join(tracesDir, `concurrent-${i}.json`),
+              traceToJson(trace as unknown as Record<string, unknown>),
+            );
 
             resolve();
           }, Math.random() * 100); // Random timing up to 100ms
@@ -474,7 +486,10 @@ describe('Performance and Scalability Tests', () => {
           nodeCount: Math.floor(Math.random() * 10) + 3,
         });
 
-        fs.writeFileSync(path.join(tracesDir, `api-load-${i}.json`), traceToJson(trace as unknown as Record<string, unknown>));
+        fs.writeFileSync(
+          path.join(tracesDir, `api-load-${i}.json`),
+          traceToJson(trace as unknown as Record<string, unknown>),
+        );
       }
 
       server = new DashboardServer({

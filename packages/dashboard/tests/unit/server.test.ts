@@ -212,7 +212,9 @@ describe('DashboardServer', () => {
           .expect(200);
 
         const allTraces2 = allTracesResponse.body.traces ?? allTracesResponse.body;
-        const regularTrace = allTraces2.find((t: Record<string, unknown>) => t.sourceType === 'trace');
+        const regularTrace = allTraces2.find(
+          (t: Record<string, unknown>) => t.sourceType === 'trace',
+        );
         if (regularTrace) {
           const response = await request(`http://localhost:${port}`)
             .get(`/api/traces/${regularTrace.filename}/events`)

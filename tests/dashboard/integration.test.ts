@@ -177,7 +177,9 @@ describe('Integration: Full Pipeline', () => {
     const { status, body } = await httpGet(`${baseUrl}/api/traces`);
     expect(status).toBe(200);
     // Should have loaded the log file in some form
-    const logTraces = body.traces.filter((t: TestTrace) => t.filename === 'openclaw-integration.log');
+    const logTraces = body.traces.filter(
+      (t: TestTrace) => t.filename === 'openclaw-integration.log',
+    );
     expect(logTraces.length).toBeGreaterThanOrEqual(1);
   }, 10000);
 

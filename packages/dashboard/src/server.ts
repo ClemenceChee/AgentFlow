@@ -66,7 +66,10 @@ function parseVaultFrontmatter(content: string): Record<string, unknown> | null 
     // YAML list item (- value)
     if (line.match(/^\s*-\s/) && currentKey) {
       if (!collectingList) collectingList = [];
-      const val = line.replace(/^\s*-\s*/, '').trim().replace(/^["']|["']$/g, '');
+      const val = line
+        .replace(/^\s*-\s*/, '')
+        .trim()
+        .replace(/^["']|["']$/g, '');
       collectingList.push(val);
       continue;
     }
@@ -87,7 +90,11 @@ function parseVaultFrontmatter(content: string): Record<string, unknown> | null 
 
     // Inline JSON array: ["a", "b"]
     if (val.startsWith('[') && val.endsWith(']')) {
-      try { fm[currentKey] = JSON.parse(val); } catch { fm[currentKey] = val; }
+      try {
+        fm[currentKey] = JSON.parse(val);
+      } catch {
+        fm[currentKey] = val;
+      }
       currentKey = '';
       continue;
     }
@@ -114,7 +121,11 @@ function parseVaultFrontmatter(content: string): Record<string, unknown> | null 
     if (fm[key] && !Array.isArray(fm[key])) {
       const str = String(fm[key]);
       if (str.startsWith('[')) {
-        try { fm[key] = JSON.parse(str); } catch { fm[key] = [str]; }
+        try {
+          fm[key] = JSON.parse(str);
+        } catch {
+          fm[key] = [str];
+        }
       } else {
         fm[key] = [str];
       }
@@ -321,12 +332,19 @@ export class DashboardServer {
         }
         const serialized = serializeTrace(trace);
         const graph = loadGraph(serialized);
-        const nodes = [...graph.nodes.values()].sort((a, b) => (a.startTime ?? 0) - (b.startTime ?? 0));
+        const nodes = [...graph.nodes.values()].sort(
+          (a, b) => (a.startTime ?? 0) - (b.startTime ?? 0),
+        );
 
         const steps = nodes.map((n, i) => {
           const dur = n.endTime != null ? n.endTime - n.startTime : null;
-          const sem = (n.metadata as Record<string, unknown>)?.semantic as Record<string, unknown> | undefined;
-          const tokenCost = (sem?.tokenCost as number) ?? (n.state as Record<string, unknown>)?.tokenCost as number ?? null;
+          const sem = (n.metadata as Record<string, unknown>)?.semantic as
+            | Record<string, unknown>
+            | undefined;
+          const tokenCost =
+            (sem?.tokenCost as number) ??
+            ((n.state as Record<string, unknown>)?.tokenCost as number) ??
+            null;
           return {
             index: i + 1,
             nodeId: n.id,
@@ -338,7 +356,9 @@ export class DashboardServer {
           };
         });
 
-        const succeeded = steps.filter((s) => s.status === 'completed' || s.status === 'success').length;
+        const succeeded = steps.filter(
+          (s) => s.status === 'completed' || s.status === 'success',
+        ).length;
         const failed = steps.filter((s) => s.status === 'failed').length;
         const totalDur = graph.endTime != null ? graph.endTime - graph.startTime : null;
         const totalCost = steps.reduce((sum, s) => sum + (s.tokenCost ?? 0), 0) || null;
@@ -555,11 +575,13 @@ export class DashboardServer {
             const { findVariantsWithModel } = await import(
               /* webpackIgnore: true */ 'soma/ops-intel/variants.js'
             );
-            modelVariants = findVariantsWithModel(graphs, { includeModel: true }).map((v: { pathSignature: string; count: number; percentage: number }) => ({
-              pathSignature: v.pathSignature,
-              count: v.count,
-              percentage: v.percentage,
-            }));
+            modelVariants = findVariantsWithModel(graphs, { includeModel: true }).map(
+              (v: { pathSignature: string; count: number; percentage: number }) => ({
+                pathSignature: v.pathSignature,
+                count: v.count,
+                percentage: v.percentage,
+              }),
+            );
           } catch {
             // SOMA not available — return empty model variants
           }
@@ -614,7 +636,8 @@ export class DashboardServer {
 
         // Gather related intelligence from vault
         const knowledgeTypes = ['decision', 'insight', 'constraint', 'contradiction', 'policy'];
-        const intelligence: { type: string; name: string; claim: string; confidence?: string }[] = [];
+        const intelligence: { type: string; name: string; claim: string; confidence?: string }[] =
+          [];
 
         for (const kt of knowledgeTypes) {
           const dir = path.join(somaVault, kt);
@@ -623,7 +646,8 @@ export class DashboardServer {
             if (!f.endsWith('.md')) continue;
             try {
               const content = fs.readFileSync(path.join(dir, f), 'utf-8');
-              if (!content.includes(agentId) && !content.includes(agentId.replace(/:/g, '-'))) continue;
+              if (!content.includes(agentId) && !content.includes(agentId.replace(/:/g, '-')))
+                continue;
               const parsed = parseVaultFrontmatter(content);
               if (!parsed) continue;
               intelligence.push({
@@ -632,7 +656,9 @@ export class DashboardServer {
                 claim: String(parsed.claim ?? '').slice(0, 150),
                 confidence: parsed.confidence as string | undefined,
               });
-            } catch { /* skip */ }
+            } catch {
+              /* skip */
+            }
           }
         }
 
@@ -676,7 +702,9 @@ export class DashboardServer {
               drift = { status: 'insufficient_data', dataPoints: agentHistory.length };
             }
           }
-        } catch { /* no drift data */ }
+        } catch {
+          /* no drift data */
+        }
 
         res.json({
           agentId,
@@ -687,7 +715,7 @@ export class DashboardServer {
           intelligence: {
             total: intelligence.length,
             byType: Object.fromEntries(
-              knowledgeTypes.map((t) => [t, intelligence.filter((i) => i.type === t)])
+              knowledgeTypes.map((t) => [t, intelligence.filter((i) => i.type === t)]),
             ),
           },
           peers,
@@ -713,14 +741,23 @@ export class DashboardServer {
         if (sessionEvents && sessionEvents.length > 0) {
           // Session trace — extract from session events
           try {
-            import('soma/ops-intel/decision-extraction.js').then(({ extractDecisionsFromSession, computePatternSignature }) => {
-              decisions = extractDecisionsFromSession(sessionEvents as Record<string, unknown>[]);
-              res.json({ decisions, pattern: computePatternSignature(decisions as { action: string; index: number; outcome: string }[]) });
-            }).catch(() => {
-              res.json({ decisions: [], pattern: '' });
-            });
+            import('soma/ops-intel/decision-extraction.js')
+              .then(({ extractDecisionsFromSession, computePatternSignature }) => {
+                decisions = extractDecisionsFromSession(sessionEvents as Record<string, unknown>[]);
+                res.json({
+                  decisions,
+                  pattern: computePatternSignature(
+                    decisions as { action: string; index: number; outcome: string }[],
+                  ),
+                });
+              })
+              .catch(() => {
+                res.json({ decisions: [], pattern: '' });
+              });
             return;
-          } catch { /* fallback */ }
+          } catch {
+            /* fallback */
+          }
         }
 
         // JSON trace — extract from nodes
@@ -738,7 +775,9 @@ export class DashboardServer {
           index: i,
         }));
 
-        const pattern = decisions.map((d: unknown) => (d as { action: string }).action).join('\u2192');
+        const pattern = decisions
+          .map((d: unknown) => (d as { action: string }).action)
+          .join('\u2192');
         res.json({ decisions, pattern });
       } catch {
         res.status(500).json({ error: 'Failed to extract decisions' });
@@ -1121,7 +1160,15 @@ export class DashboardServer {
       if (!somaVault) return res.json({ entities: [], total: 0 });
       try {
         // Read entities directly from vault directory (markdown files with YAML frontmatter)
-        const entityTypes = ['agent', 'decision', 'insight', 'constraint', 'contradiction', 'policy', 'archetype'];
+        const entityTypes = [
+          'agent',
+          'decision',
+          'insight',
+          'constraint',
+          'contradiction',
+          'policy',
+          'archetype',
+        ];
         let entities: Record<string, unknown>[] = [];
 
         for (const entityType of entityTypes) {
@@ -1133,7 +1180,10 @@ export class DashboardServer {
               const content = fs.readFileSync(path.join(dir, file), 'utf-8');
               const parsed = parseVaultFrontmatter(content);
               if (!parsed) continue;
-              const body = content.slice(content.indexOf('---', 4) + 3).trim().slice(0, 500);
+              const body = content
+                .slice(content.indexOf('---', 4) + 3)
+                .trim()
+                .slice(0, 500);
               entities.push({
                 ...parsed,
                 type: parsed.type || entityType,
@@ -1141,7 +1191,9 @@ export class DashboardServer {
                 name: parsed.name || file.replace('.md', ''),
                 body,
               });
-            } catch { /* skip unparseable files */ }
+            } catch {
+              /* skip unparseable files */
+            }
           }
         }
 
@@ -1189,7 +1241,7 @@ export class DashboardServer {
         const body = content.slice(content.indexOf('---', 4) + 3).trim();
 
         // For agent entities, gather related intelligence from the vault
-        let agentKnowledge: Record<string, unknown>[] = [];
+        const agentKnowledge: Record<string, unknown>[] = [];
         if (type === 'agent') {
           const agentName = fm.name || fm.agentId || id;
           const knowledgeTypes = ['decision', 'insight', 'constraint', 'contradiction', 'policy'];
@@ -1212,7 +1264,9 @@ export class DashboardServer {
                   confidence: parsed.confidence || '',
                   layer: parsed.layer || '',
                 });
-              } catch { /* skip */ }
+              } catch {
+                /* skip */
+              }
             }
           }
         }
@@ -1222,9 +1276,10 @@ export class DashboardServer {
           type,
           id,
           name: fm.name || id,
-          body: type === 'agent' && !body
-            ? `Agent with ${fm.totalExecutions ?? 0} executions, ${((1 - Number(fm.failureRate || 0)) * 100).toFixed(1)}% success rate.`
-            : body,
+          body:
+            type === 'agent' && !body
+              ? `Agent with ${fm.totalExecutions ?? 0} executions, ${((1 - Number(fm.failureRate || 0)) * 100).toFixed(1)}% success rate.`
+              : body,
           knowledge: agentKnowledge,
         });
       } catch {
@@ -1245,7 +1300,9 @@ export class DashboardServer {
             const nodes = t.nodes;
             if (!nodes || (typeof nodes === 'object' && Object.keys(nodes).length === 0)) continue;
             graphs.push(loadGraph(t));
-          } catch { /* skip non-graph traces */ }
+          } catch {
+            /* skip non-graph traces */
+          }
         }
         try {
           const { getEfficiency } = await import(
@@ -1267,16 +1324,31 @@ export class DashboardServer {
         const report = JSON.parse(fs.readFileSync(reportPath, 'utf-8'));
         const agents = report.agents ?? [];
         const runs = agents.map((a: Record<string, unknown>) => ({
-          graphId: a.name, agentId: a.name,
+          graphId: a.name,
+          agentId: a.name,
           totalTokenCost: (a.totalTokenCost as number) ?? 0,
           completedNodes: (a.totalRuns as number) ?? 0,
-          costPerNode: (a.totalTokenCost as number ?? 0) / Math.max(1, (a.totalRuns as number) ?? 1),
+          costPerNode:
+            ((a.totalTokenCost as number) ?? 0) / Math.max(1, (a.totalRuns as number) ?? 1),
         }));
-        const costs = runs.map((r: { costPerNode: number }) => r.costPerNode).filter((c: number) => c > 0).sort((a: number, b: number) => a - b);
-        const mean = costs.length > 0 ? costs.reduce((a: number, b: number) => a + b, 0) / costs.length : 0;
+        const costs = runs
+          .map((r: { costPerNode: number }) => r.costPerNode)
+          .filter((c: number) => c > 0)
+          .sort((a: number, b: number) => a - b);
+        const mean =
+          costs.length > 0 ? costs.reduce((a: number, b: number) => a + b, 0) / costs.length : 0;
         const median = costs.length > 0 ? costs[Math.floor(costs.length / 2)] : 0;
-        const p95 = costs.length > 0 ? costs[Math.min(costs.length - 1, Math.ceil(costs.length * 0.95) - 1)] : 0;
-        res.json({ runs, aggregate: { mean, median, p95 }, flags: [], nodeCosts: [], dataCoverage: agents.length > 0 ? 1 : 0 });
+        const p95 =
+          costs.length > 0
+            ? costs[Math.min(costs.length - 1, Math.ceil(costs.length * 0.95) - 1)]
+            : 0;
+        res.json({
+          runs,
+          aggregate: { mean, median, p95 },
+          flags: [],
+          nodeCosts: [],
+          dataCoverage: agents.length > 0 ? 1 : 0,
+        });
       } catch {
         res.status(500).json({ error: 'Failed to compute efficiency' });
       }
@@ -1301,9 +1373,7 @@ export class DashboardServer {
 
         // Try SOMA ops-intel library
         try {
-          const { detectDrift } = await import(
-            /* webpackIgnore: true */ 'soma/ops-intel/drift.js'
-          );
+          const { detectDrift } = await import(/* webpackIgnore: true */ 'soma/ops-intel/drift.js');
           const driftReport = detectDrift(agentHistory);
           return res.json({ drift: driftReport, points: agentHistory });
         } catch {
@@ -1313,18 +1383,28 @@ export class DashboardServer {
         // Fallback: inline regression
         const n = agentHistory.length;
         if (n < 10) {
-          return res.json({ drift: { status: 'insufficient_data', slope: 0, r2: 0, windowSize: n, dataPoints: n }, points: agentHistory });
+          return res.json({
+            drift: { status: 'insufficient_data', slope: 0, r2: 0, windowSize: n, dataPoints: n },
+            points: agentHistory,
+          });
         }
-        let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+        let sumX = 0,
+          sumY = 0,
+          sumXY = 0,
+          sumX2 = 0;
         for (let i = 0; i < n; i++) {
           const y = agentHistory[i]!.score;
-          sumX += i; sumY += y; sumXY += i * y; sumX2 += i * i;
+          sumX += i;
+          sumY += y;
+          sumXY += i * y;
+          sumX2 += i * i;
         }
         const denom = n * sumX2 - sumX * sumX;
         const slope = denom !== 0 ? (n * sumXY - sumX * sumY) / denom : 0;
         const intercept = (sumY - slope * sumX) / n;
         const meanY = sumY / n;
-        let ssRes = 0, ssTot = 0;
+        let ssRes = 0,
+          ssTot = 0;
         for (let i = 0; i < n; i++) {
           const y = agentHistory[i]!.score;
           ssRes += (y - (intercept + slope * i)) ** 2;
@@ -1332,7 +1412,10 @@ export class DashboardServer {
         }
         const r2 = ssTot > 0 ? 1 - ssRes / ssTot : 0;
         const status = r2 > 0.3 ? (slope < 0 ? 'degrading' : 'improving') : 'stable';
-        res.json({ drift: { status, slope, r2, windowSize: n, dataPoints: n }, points: agentHistory });
+        res.json({
+          drift: { status, slope, r2, windowSize: n, dataPoints: n },
+          points: agentHistory,
+        });
       } catch {
         res.status(404).json({ error: 'Drift detection not available' });
       }
@@ -1346,7 +1429,12 @@ export class DashboardServer {
         const insightDir = path.join(somaVault, 'insight');
         if (!fs.existsSync(insightDir)) return res.json({ insights: [], pairs: [] });
 
-        const crossAgent: { name: string; claim: string; sourceAgents: string[]; tags: string[] }[] = [];
+        const crossAgent: {
+          name: string;
+          claim: string;
+          sourceAgents: string[];
+          tags: string[];
+        }[] = [];
 
         for (const file of fs.readdirSync(insightDir)) {
           if (!file.endsWith('.md')) continue;
@@ -1363,7 +1451,9 @@ export class DashboardServer {
               sourceAgents: sa,
               tags: (parsed.tags as string[]) ?? [],
             });
-          } catch { /* skip */ }
+          } catch {
+            /* skip */
+          }
         }
 
         // Group by agent pair

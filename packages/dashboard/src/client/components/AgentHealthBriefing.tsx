@@ -50,8 +50,18 @@ export function AgentHealthBriefing({ agentId }: { agentId: string }) {
       .catch((e) => setError(e.message));
   }, [agentId]);
 
-  if (error) return <div className="briefing"><em>Briefing unavailable</em></div>;
-  if (!data) return <div className="briefing"><em>Loading briefing...</em></div>;
+  if (error)
+    return (
+      <div className="briefing">
+        <em>Briefing unavailable</em>
+      </div>
+    );
+  if (!data)
+    return (
+      <div className="briefing">
+        <em>Loading briefing...</em>
+      </div>
+    );
 
   const cfg = STATUS_CONFIG[data.status];
 
@@ -63,7 +73,8 @@ export function AgentHealthBriefing({ agentId }: { agentId: string }) {
         <div>
           <strong style={{ color: cfg.color }}>{cfg.label}</strong>
           <span style={{ marginLeft: 8, color: 'var(--t2)' }}>
-            {(data.failureRate * 100).toFixed(1)}% failure rate ({data.failureCount}/{data.totalExecutions})
+            {(data.failureRate * 100).toFixed(1)}% failure rate ({data.failureCount}/
+            {data.totalExecutions})
           </span>
         </div>
       </div>
@@ -82,10 +93,16 @@ export function AgentHealthBriefing({ agentId }: { agentId: string }) {
       {['contradiction', 'constraint', 'decision', 'policy', 'insight'].map((type) => {
         const items = data.intelligence.byType[type];
         if (!items || items.length === 0) return null;
-        const label = type === 'contradiction' ? '\u26A0 Contradictions' :
-          type === 'constraint' ? 'Why It Fails' :
-          type === 'decision' ? 'What To Do' :
-          type === 'policy' ? 'Active Policies' : 'Insights';
+        const label =
+          type === 'contradiction'
+            ? '\u26A0 Contradictions'
+            : type === 'constraint'
+              ? 'Why It Fails'
+              : type === 'decision'
+                ? 'What To Do'
+                : type === 'policy'
+                  ? 'Active Policies'
+                  : 'Insights';
 
         return (
           <div key={type} className="briefing__section">
@@ -98,9 +115,7 @@ export function AgentHealthBriefing({ agentId }: { agentId: string }) {
                 {item.claim && <div className="briefing__item-claim">{item.claim}</div>}
               </div>
             ))}
-            {items.length > 3 && (
-              <div className="briefing__more">+ {items.length - 3} more</div>
-            )}
+            {items.length > 3 && <div className="briefing__more">+ {items.length - 3} more</div>}
           </div>
         );
       })}
@@ -119,7 +134,12 @@ export function AgentHealthBriefing({ agentId }: { agentId: string }) {
                     className="briefing__peer-fill"
                     style={{
                       width: `${peer.successRate * 100}%`,
-                      background: peer.successRate > 0.9 ? 'var(--ok)' : peer.successRate > 0.5 ? 'var(--warn, orange)' : 'var(--fail)',
+                      background:
+                        peer.successRate > 0.9
+                          ? 'var(--ok)'
+                          : peer.successRate > 0.5
+                            ? 'var(--warn, orange)'
+                            : 'var(--fail)',
                     }}
                   />
                 </span>

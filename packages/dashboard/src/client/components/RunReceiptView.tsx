@@ -4,7 +4,6 @@
  * Fetches from /api/traces/:filename/receipt when available, falls back to client-side reconstruction.
  */
 
-import { useEffect, useState } from 'react';
 import type { FullTrace } from '../hooks/useSelectedTrace';
 
 function fmtDur(ms: number | null): string {

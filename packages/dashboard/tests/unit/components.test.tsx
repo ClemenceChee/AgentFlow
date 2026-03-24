@@ -2,14 +2,14 @@
  * @vitest-environment jsdom
  */
 
-import { describe, it, expect, afterEach } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
+import { afterEach, describe, expect, it } from 'vitest';
 import { GuardExplanationCard } from '../../src/client/components/GuardExplanationCard';
 import { RunReceiptView } from '../../src/client/components/RunReceiptView';
 import { VariantExplorer } from '../../src/client/components/VariantExplorer';
-import type { FullTrace } from '../../src/client/hooks/useSelectedTrace';
 import type { ProcessVariant } from '../../src/client/hooks/useProcessModel';
+import type { FullTrace } from '../../src/client/hooks/useSelectedTrace';
 
 afterEach(() => cleanup());
 

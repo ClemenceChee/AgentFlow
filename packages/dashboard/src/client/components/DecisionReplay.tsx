@@ -76,12 +76,14 @@ export function DecisionReplay({ filename }: { filename: string }) {
           const isExpanded = expanded.has(d.index);
 
           return (
-            <div
+            <button
+              type="button"
               key={d.index}
               className={`decision-replay__step ${style.className}`}
               onClick={() => {
                 const next = new Set(expanded);
-                if (isExpanded) next.delete(d.index); else next.add(d.index);
+                if (isExpanded) next.delete(d.index);
+                else next.add(d.index);
                 setExpanded(next);
               }}
             >
@@ -111,7 +113,7 @@ export function DecisionReplay({ filename }: { filename: string }) {
                   )}
                 </div>
               )}
-            </div>
+            </button>
           );
         })}
       </div>
