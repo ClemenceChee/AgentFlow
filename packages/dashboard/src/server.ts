@@ -13,6 +13,7 @@ import {
   findVariants,
   getBottlenecks,
   loadGraph,
+  toReceipt,
 } from 'agentflow-core';
 import chokidar from 'chokidar';
 import express from 'express';
@@ -332,51 +333,8 @@ export class DashboardServer {
         }
         const serialized = serializeTrace(trace);
         const graph = loadGraph(serialized);
-        const nodes = [...graph.nodes.values()].sort(
-          (a, b) => (a.startTime ?? 0) - (b.startTime ?? 0),
-        );
-
-        const steps = nodes.map((n, i) => {
-          const dur = n.endTime != null ? n.endTime - n.startTime : null;
-          const sem = (n.metadata as Record<string, unknown>)?.semantic as
-            | Record<string, unknown>
-            | undefined;
-          const tokenCost =
-            (sem?.tokenCost as number) ??
-            ((n.state as Record<string, unknown>)?.tokenCost as number) ??
-            null;
-          return {
-            index: i + 1,
-            nodeId: n.id,
-            name: n.name,
-            type: n.type,
-            status: n.status,
-            durationMs: dur,
-            tokenCost,
-          };
-        });
-
-        const succeeded = steps.filter(
-          (s) => s.status === 'completed' || s.status === 'success',
-        ).length;
-        const failed = steps.filter((s) => s.status === 'failed').length;
-        const totalDur = graph.endTime != null ? graph.endTime - graph.startTime : null;
-        const totalCost = steps.reduce((sum, s) => sum + (s.tokenCost ?? 0), 0) || null;
-
-        res.json({
-          runId: graph.id,
-          agentId: graph.agentId,
-          status: graph.status,
-          durationMs: totalDur,
-          steps,
-          aggregate: {
-            attempted: steps.length,
-            succeeded,
-            failed,
-            skipped: steps.length - succeeded - failed,
-          },
-          totalTokenCost: totalCost,
-        });
+        const receipt = toReceipt(graph);
+        res.json(receipt);
       } catch (_error) {
         res.status(500).json({ error: 'Failed to generate receipt' });
       }
@@ -573,7 +531,7 @@ export class DashboardServer {
         if (byModel) {
           try {
             const { findVariantsWithModel } = await import(
-              /* webpackIgnore: true */ 'soma/ops-intel/variants.js'
+              /* webpackIgnore: true */ 'soma/ops-intel'
             );
             modelVariants = findVariantsWithModel(graphs, { includeModel: true }).map(
               (v: { pathSignature: string; count: number; percentage: number }) => ({
@@ -692,7 +650,7 @@ export class DashboardServer {
             if (agentHistory.length >= 10) {
               try {
                 const { detectDrift: dd } = await import(
-                  /* webpackIgnore: true */ 'soma/ops-intel/drift.js'
+                  /* webpackIgnore: true */ 'soma/ops-intel'
                 );
                 drift = dd(agentHistory);
               } catch {
@@ -741,7 +699,7 @@ export class DashboardServer {
         if (sessionEvents && sessionEvents.length > 0) {
           // Session trace — extract from session events
           try {
-            import('soma/ops-intel/decision-extraction.js')
+            import('soma/ops-intel')
               .then(({ extractDecisionsFromSession, computePatternSignature }) => {
                 decisions = extractDecisionsFromSession(sessionEvents as Record<string, unknown>[]);
                 res.json({
@@ -1305,9 +1263,7 @@ export class DashboardServer {
           }
         }
         try {
-          const { getEfficiency } = await import(
-            /* webpackIgnore: true */ 'soma/ops-intel/efficiency.js'
-          );
+          const { getEfficiency } = await import(/* webpackIgnore: true */ 'soma/ops-intel');
           const report = getEfficiency(graphs);
           return res.json(report);
         } catch {
@@ -1373,7 +1329,7 @@ export class DashboardServer {
 
         // Try SOMA ops-intel library
         try {
-          const { detectDrift } = await import(/* webpackIgnore: true */ 'soma/ops-intel/drift.js');
+          const { detectDrift } = await import(/* webpackIgnore: true */ 'soma/ops-intel');
           const driftReport = detectDrift(agentHistory);
           return res.json({ drift: driftReport, points: agentHistory });
         } catch {
