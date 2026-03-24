@@ -1533,12 +1533,6 @@ export class TraceWatcher extends EventEmitter {
 
   /** Unique key for a file across directories. Includes agentId to prevent collisions between agents. */
   private traceKey(filePath: string, agentId?: string): string {
-    // For OpenClaw session traces, key on file path only — agentId is resolved
-    // from the manifest and may change, so including it would create ghost entries
-    const isOpenClawSession =
-      filePath.includes('.openclaw/') &&
-      (filePath.includes('/sessions/') || filePath.includes('/cron/runs/'));
-
     let fileKey: string;
     // Use relative path from any watched dir, or absolute path as fallback
     for (const dir of this.allWatchDirs) {
@@ -1548,11 +1542,11 @@ export class TraceWatcher extends EventEmitter {
         const dirParts = dir.split(path.sep).filter(Boolean);
         const dirSuffix = dirParts.slice(-2).join('/');
         fileKey = `${path.relative(dir, filePath).replace(/\\/g, '/')}@${dirSuffix}`;
-        return !isOpenClawSession && agentId ? `${fileKey}#${agentId}` : fileKey;
+        return agentId ? `${fileKey}#${agentId}` : fileKey;
       }
     }
     fileKey = filePath;
-    return !isOpenClawSession && agentId ? `${fileKey}#${agentId}` : fileKey;
+    return agentId ? `${fileKey}#${agentId}` : fileKey;
   }
 
   private startWatching() {
