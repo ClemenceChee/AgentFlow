@@ -88,10 +88,14 @@ function KnowledgeStatusIndicators({ opContext }: { opContext: OperationalContex
   const { vault_health, knowledge_freshness } = opContext;
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'idle': return '#3fb950';
-      case 'indexing': return '#d29922';
-      case 'error': return '#f85149';
-      default: return '#8b949e';
+      case 'idle':
+        return '#3fb950';
+      case 'indexing':
+        return '#d29922';
+      case 'error':
+        return '#f85149';
+      default:
+        return '#8b949e';
     }
   };
 
@@ -104,16 +108,18 @@ function KnowledgeStatusIndicators({ opContext }: { opContext: OperationalContex
   };
 
   return (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: 12,
-      fontSize: 11,
-      color: 'var(--t3)',
-      padding: '4px 0',
-      borderBottom: '1px solid var(--bd)',
-      marginBottom: 8,
-    }}>
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        fontSize: 11,
+        color: 'var(--t3)',
+        padding: '4px 0',
+        borderBottom: '1px solid var(--bd)',
+        marginBottom: 8,
+      }}
+    >
       {/* Indexing Status */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
         <div
@@ -155,7 +161,7 @@ function KnowledgeSmartActions() {
       // });
 
       // Mock delay for demo
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await new Promise((resolve) => setTimeout(resolve, 1500));
     } catch (error) {
       console.error(`Failed to execute ${operation}:`, error);
     } finally {
@@ -170,13 +176,15 @@ function KnowledgeSmartActions() {
   ];
 
   return (
-    <div style={{
-      display: 'flex',
-      gap: 6,
-      alignItems: 'center',
-    }}>
+    <div
+      style={{
+        display: 'flex',
+        gap: 6,
+        alignItems: 'center',
+      }}
+    >
       <span style={{ fontSize: 11, color: 'var(--t3)', marginRight: 4 }}>⚡</span>
-      {smartActions.map(action => (
+      {smartActions.map((action) => (
         <button
           key={action.key}
           onClick={() => executeOperation(action.key)}
@@ -203,7 +211,10 @@ function KnowledgeSmartActions() {
 }
 
 // Contextual Detail Drawer - Enhanced entity detail with operational context
-function OperationalEntityDetail({ entity, opContext }: {
+function OperationalEntityDetail({
+  entity,
+  opContext,
+}: {
   entity: EntityDetail | null;
   opContext: OperationalContext | null;
 }) {
@@ -224,12 +235,14 @@ function OperationalEntityDetail({ entity, opContext }: {
   return (
     <div style={{ position: 'relative' }}>
       {/* Operational Context Toggle */}
-      <div style={{
-        position: 'absolute',
-        top: -2,
-        right: 32,
-        zIndex: 10,
-      }}>
+      <div
+        style={{
+          position: 'absolute',
+          top: -2,
+          right: 32,
+          zIndex: 10,
+        }}
+      >
         <button
           onClick={() => setShowOpDetail(!showOpDetail)}
           style={{
@@ -248,20 +261,22 @@ function OperationalEntityDetail({ entity, opContext }: {
 
       {/* Operational Details Drawer */}
       {showOpDetail && (
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          right: -200,
-          width: 180,
-          padding: 8,
-          background: 'var(--bg2)',
-          border: '1px solid var(--bd)',
-          borderRadius: 4,
-          fontSize: 10,
-          color: 'var(--t2)',
-          zIndex: 20,
-          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-        }}>
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            right: -200,
+            width: 180,
+            padding: 8,
+            background: 'var(--bg2)',
+            border: '1px solid var(--bd)',
+            borderRadius: 4,
+            fontSize: 10,
+            color: 'var(--t2)',
+            zIndex: 20,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+          }}
+        >
           <div style={{ fontWeight: 600, marginBottom: 6, color: 'var(--t1)' }}>
             Operational Context
           </div>
@@ -276,14 +291,17 @@ function OperationalEntityDetail({ entity, opContext }: {
           ))}
 
           <div style={{ marginBottom: 2, marginTop: 6 }}>
-            <span style={{ color: 'var(--t3)' }}>Related Ops:</span> {entityOpData.related_operations}
+            <span style={{ color: 'var(--t3)' }}>Related Ops:</span>{' '}
+            {entityOpData.related_operations}
           </div>
 
           <div style={{ marginBottom: 2 }}>
             <span style={{ color: 'var(--t3)' }}>Gov Status:</span>{' '}
-            <span style={{
-              color: entityOpData.governance_status === 'pending-review' ? '#d29922' : '#3fb950'
-            }}>
+            <span
+              style={{
+                color: entityOpData.governance_status === 'pending-review' ? '#d29922' : '#3fb950',
+              }}
+            >
               {entityOpData.governance_status}
             </span>
           </div>

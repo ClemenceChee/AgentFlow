@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import type { FullTrace } from '../hooks/useSelectedTrace';
 import { AgentFlow } from './AgentFlow';
 import { DecisionReplay } from './DecisionReplay';
@@ -54,9 +54,10 @@ function useEnhancedSOMATrace(trace: FullTrace | null): EnhancedSOMATrace | null
     }
 
     // Check if this is a SOMA trace (basic heuristic - could be improved)
-    const isSOMATrace = trace.agentId?.toLowerCase().includes('soma') ||
+    const isSOMATrace =
+      trace.agentId?.toLowerCase().includes('soma') ||
       trace.name?.toLowerCase().includes('soma') ||
-      Object.values(trace.nodes).some(node => node.type?.toLowerCase().includes('soma'));
+      Object.values(trace.nodes).some((node) => node.type?.toLowerCase().includes('soma'));
 
     if (!isSOMATrace) {
       setEnhancedTrace(null);
@@ -75,7 +76,7 @@ function useEnhancedSOMATrace(trace: FullTrace | null): EnhancedSOMATrace | null
         entityChanges: Math.floor(Math.random() * 50),
         filesProcessed: Math.floor(Math.random() * 20),
         insightsGenerated: Math.floor(Math.random() * 10),
-        errorsEncountered: Object.values(trace.nodes).filter(n => n.status === 'failed').length,
+        errorsEncountered: Object.values(trace.nodes).filter((n) => n.status === 'failed').length,
       },
     };
 
@@ -86,20 +87,22 @@ function useEnhancedSOMATrace(trace: FullTrace | null): EnhancedSOMATrace | null
 }
 
 // Helper function to detect SOMA worker type from trace
-function detectSOMAWorkerType(trace: FullTrace): 'harvester' | 'reconciler' | 'synthesizer' | 'cartographer' {
+function detectSOMAWorkerType(
+  trace: FullTrace,
+): 'harvester' | 'reconciler' | 'synthesizer' | 'cartographer' {
   const nodes = Object.values(trace.nodes);
 
   // Look for indicators in node types, names, or metadata
-  if (nodes.some(n => n.type?.includes('harvest') || n.name?.includes('harvest'))) {
+  if (nodes.some((n) => n.type?.includes('harvest') || n.name?.includes('harvest'))) {
     return 'harvester';
   }
-  if (nodes.some(n => n.type?.includes('reconcile') || n.name?.includes('reconcile'))) {
+  if (nodes.some((n) => n.type?.includes('reconcile') || n.name?.includes('reconcile'))) {
     return 'reconciler';
   }
-  if (nodes.some(n => n.type?.includes('synthesize') || n.name?.includes('synthesize'))) {
+  if (nodes.some((n) => n.type?.includes('synthesize') || n.name?.includes('synthesize'))) {
     return 'synthesizer';
   }
-  if (nodes.some(n => n.type?.includes('cartographer') || n.name?.includes('map'))) {
+  if (nodes.some((n) => n.type?.includes('cartographer') || n.name?.includes('map'))) {
     return 'cartographer';
   }
 
@@ -146,7 +149,7 @@ function generateMockSOMASteps(trace: FullTrace): SOMAExecutionStep[] {
         id: 'step-3',
         name: 'Event Ingestion',
         type: 'harvester',
-        status: nodes.some(n => n.status === 'failed') ? 'failed' : 'completed',
+        status: nodes.some((n) => n.status === 'failed') ? 'failed' : 'completed',
         startTime: trace.startTime + 8000,
         endTime: trace.endTime,
         duration: trace.endTime - (trace.startTime + 8000),
@@ -190,7 +193,7 @@ function generateMockSOMASteps(trace: FullTrace): SOMAExecutionStep[] {
         id: 'step-3',
         name: 'Deduplication',
         type: 'synthesizer',
-        status: nodes.some(n => n.status === 'failed') ? 'failed' : 'completed',
+        status: nodes.some((n) => n.status === 'failed') ? 'failed' : 'completed',
         startTime: trace.startTime + 25000,
         endTime: trace.endTime,
         duration: trace.endTime - (trace.startTime + 25000),
@@ -220,7 +223,7 @@ function generateMockSOMASteps(trace: FullTrace): SOMAExecutionStep[] {
         id: 'step-2',
         name: 'Entity Merging',
         type: 'reconciler',
-        status: nodes.some(n => n.status === 'failed') ? 'failed' : 'completed',
+        status: nodes.some((n) => n.status === 'failed') ? 'failed' : 'completed',
         startTime: trace.startTime + 3000,
         endTime: trace.endTime,
         duration: trace.endTime - (trace.startTime + 3000),
@@ -264,7 +267,7 @@ function generateMockSOMASteps(trace: FullTrace): SOMAExecutionStep[] {
         id: 'step-3',
         name: 'Relationship Mapping',
         type: 'cartographer',
-        status: nodes.some(n => n.status === 'failed') ? 'failed' : 'completed',
+        status: nodes.some((n) => n.status === 'failed') ? 'failed' : 'completed',
         startTime: trace.startTime + 20000,
         endTime: trace.endTime,
         duration: trace.endTime - (trace.startTime + 20000),
@@ -313,20 +316,29 @@ function SOMAStepsView({ enhancedTrace }: { enhancedTrace: EnhancedSOMATrace | n
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'completed': return '#3fb950';
-      case 'failed': return '#f85149';
-      case 'running': return '#d29922';
-      default: return '#8b949e';
+      case 'completed':
+        return '#3fb950';
+      case 'failed':
+        return '#f85149';
+      case 'running':
+        return '#d29922';
+      default:
+        return '#8b949e';
     }
   };
 
   const getWorkerIcon = (worker: string) => {
     switch (worker) {
-      case 'harvester': return '🌾';
-      case 'reconciler': return '🔧';
-      case 'synthesizer': return '🧪';
-      case 'cartographer': return '🗺️';
-      default: return '⚙️';
+      case 'harvester':
+        return '🌾';
+      case 'reconciler':
+        return '🔧';
+      case 'synthesizer':
+        return '🧪';
+      case 'cartographer':
+        return '🗺️';
+      default:
+        return '⚙️';
     }
   };
 
@@ -335,7 +347,8 @@ function SOMAStepsView({ enhancedTrace }: { enhancedTrace: EnhancedSOMATrace | n
       {/* Worker Header */}
       <div className="soma-steps__header">
         <h3 className="soma-steps__title">
-          {getWorkerIcon(enhancedTrace.worker)} SOMA {enhancedTrace.worker.charAt(0).toUpperCase() + enhancedTrace.worker.slice(1)} Execution
+          {getWorkerIcon(enhancedTrace.worker)} SOMA{' '}
+          {enhancedTrace.worker.charAt(0).toUpperCase() + enhancedTrace.worker.slice(1)} Execution
         </h3>
         <div className="soma-steps__meta">
           <span className="soma-steps__enhanced-badge">Enhanced View</span>
@@ -348,19 +361,25 @@ function SOMAStepsView({ enhancedTrace }: { enhancedTrace: EnhancedSOMATrace | n
           {enhancedTrace.operationalData.entityChanges !== undefined && (
             <div className="soma-steps__summary-item">
               <span className="soma-steps__summary-label">Entity Changes</span>
-              <span className="soma-steps__summary-value">{enhancedTrace.operationalData.entityChanges}</span>
+              <span className="soma-steps__summary-value">
+                {enhancedTrace.operationalData.entityChanges}
+              </span>
             </div>
           )}
           {enhancedTrace.operationalData.filesProcessed !== undefined && (
             <div className="soma-steps__summary-item">
               <span className="soma-steps__summary-label">Files Processed</span>
-              <span className="soma-steps__summary-value">{enhancedTrace.operationalData.filesProcessed}</span>
+              <span className="soma-steps__summary-value">
+                {enhancedTrace.operationalData.filesProcessed}
+              </span>
             </div>
           )}
           {enhancedTrace.operationalData.insightsGenerated !== undefined && (
             <div className="soma-steps__summary-item">
               <span className="soma-steps__summary-label">Insights Generated</span>
-              <span className="soma-steps__summary-value">{enhancedTrace.operationalData.insightsGenerated}</span>
+              <span className="soma-steps__summary-value">
+                {enhancedTrace.operationalData.insightsGenerated}
+              </span>
             </div>
           )}
           {enhancedTrace.operationalData.errorsEncountered !== undefined && (
@@ -368,7 +387,10 @@ function SOMAStepsView({ enhancedTrace }: { enhancedTrace: EnhancedSOMATrace | n
               <span className="soma-steps__summary-label">Errors</span>
               <span
                 className="soma-steps__summary-value"
-                style={{ color: enhancedTrace.operationalData.errorsEncountered > 0 ? '#f85149' : '#3fb950' }}
+                style={{
+                  color:
+                    enhancedTrace.operationalData.errorsEncountered > 0 ? '#f85149' : '#3fb950',
+                }}
               >
                 {enhancedTrace.operationalData.errorsEncountered}
               </span>
@@ -391,12 +413,14 @@ function SOMAStepsView({ enhancedTrace }: { enhancedTrace: EnhancedSOMATrace | n
                 <span className="soma-steps__step-name">{step.name}</span>
                 <span className="soma-steps__step-meta">
                   {step.duration && fmtDur(step.duration)}
-                  <span style={{
-                    color: getStatusColor(step.status),
-                    fontWeight: 600,
-                    textTransform: 'uppercase',
-                    marginLeft: 8,
-                  }}>
+                  <span
+                    style={{
+                      color: getStatusColor(step.status),
+                      fontWeight: 600,
+                      textTransform: 'uppercase',
+                      marginLeft: 8,
+                    }}
+                  >
                     {step.status}
                   </span>
                 </span>
@@ -404,9 +428,7 @@ function SOMAStepsView({ enhancedTrace }: { enhancedTrace: EnhancedSOMATrace | n
             </div>
 
             <div className="soma-steps__step-details">
-              <div className="soma-steps__step-description">
-                {step.details.description}
-              </div>
+              <div className="soma-steps__step-description">{step.details.description}</div>
 
               {step.details.output && (
                 <div className="soma-steps__step-output">
@@ -423,9 +445,7 @@ function SOMAStepsView({ enhancedTrace }: { enhancedTrace: EnhancedSOMATrace | n
 
               {step.details.metadata && (
                 <details className="soma-steps__step-metadata">
-                  <summary className="soma-steps__step-metadata-toggle">
-                    Technical Details
-                  </summary>
+                  <summary className="soma-steps__step-metadata-toggle">Technical Details</summary>
                   <pre className="soma-steps__step-metadata-content">
                     {JSON.stringify(step.details.metadata, null, 2)}
                   </pre>

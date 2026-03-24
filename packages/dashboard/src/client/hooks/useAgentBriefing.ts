@@ -40,9 +40,9 @@ export function useAgentBriefing(agentId: string | null) {
         // Normalize peers: API may return { name, successRate, runs } or { name, failureRate, totalExecutions }
         const peers = (raw.peers ?? []).map((p: Record<string, unknown>) => ({
           name: p.name as string,
-          failureRate: (p.failureRate as number) ?? (1 - ((p.successRate as number) ?? 1)),
+          failureRate: (p.failureRate as number) ?? 1 - ((p.successRate as number) ?? 1),
           totalExecutions: (p.totalExecutions as number) ?? (p.runs as number) ?? 0,
-          successRate: (p.successRate as number) ?? (1 - ((p.failureRate as number) ?? 0)),
+          successRate: (p.successRate as number) ?? 1 - ((p.failureRate as number) ?? 0),
         }));
         setData({ ...raw, intelligence: intel, peers });
       } else {

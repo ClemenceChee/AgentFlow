@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AgentProfile } from './components/AgentProfile';
+import { AicpPage } from './components/AicpPage';
 import { AlertBanner } from './components/AlertBanner';
 import { ExecSidebar } from './components/ExecSidebar';
 import { ExecutionDetail } from './components/ExecutionDetail';
 import { HealthBanner } from './components/HealthBanner';
 import { SettingsPanel } from './components/SettingsPanel';
 import { SomaPage } from './components/SomaPage';
-import { AicpPage } from './components/AicpPage';
 import { SummaryBar } from './components/SummaryBar';
 import { TopSection } from './components/TopSection';
 import { useAgents } from './hooks/useAgents';

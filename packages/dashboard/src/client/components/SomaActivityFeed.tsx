@@ -3,16 +3,52 @@ import { useEffect, useRef, useState } from 'react';
 // Types for multi-layer operational intelligence
 interface OperationalIntelligence {
   worker_operations: {
-    harvester: { status: 'running' | 'idle' | 'error'; last_run: number; next_run: number; interval: string };
-    reconciler: { status: 'running' | 'idle' | 'error'; last_run: number; next_run: number; interval: string };
-    synthesizer: { status: 'running' | 'idle' | 'error'; last_run: number; next_run: number; interval: string };
-    cartographer: { status: 'running' | 'idle' | 'error'; last_run: number; next_run: number; interval: string };
+    harvester: {
+      status: 'running' | 'idle' | 'error';
+      last_run: number;
+      next_run: number;
+      interval: string;
+    };
+    reconciler: {
+      status: 'running' | 'idle' | 'error';
+      last_run: number;
+      next_run: number;
+      interval: string;
+    };
+    synthesizer: {
+      status: 'running' | 'idle' | 'error';
+      last_run: number;
+      next_run: number;
+      interval: string;
+    };
+    cartographer: {
+      status: 'running' | 'idle' | 'error';
+      last_run: number;
+      next_run: number;
+      interval: string;
+    };
   };
   vault_operations: {
-    l1_archive: { health: 'healthy' | 'degraded' | 'critical'; growth_rate: number; integrity_score: number };
-    l2_working: { health: 'healthy' | 'degraded' | 'critical'; growth_rate: number; integrity_score: number };
-    l3_emerging: { health: 'healthy' | 'degraded' | 'critical'; growth_rate: number; integrity_score: number };
-    l4_canon: { health: 'healthy' | 'degraded' | 'critical'; growth_rate: number; integrity_score: number };
+    l1_archive: {
+      health: 'healthy' | 'degraded' | 'critical';
+      growth_rate: number;
+      integrity_score: number;
+    };
+    l2_working: {
+      health: 'healthy' | 'degraded' | 'critical';
+      growth_rate: number;
+      integrity_score: number;
+    };
+    l3_emerging: {
+      health: 'healthy' | 'degraded' | 'critical';
+      growth_rate: number;
+      integrity_score: number;
+    };
+    l4_canon: {
+      health: 'healthy' | 'degraded' | 'critical';
+      growth_rate: number;
+      integrity_score: number;
+    };
   };
   governance_operations: {
     agentic_review_performance: number;
@@ -35,10 +71,30 @@ function useOperationalIntelligence(): OperationalIntelligence | null {
     // TODO: Replace with actual API call to SOMA operational intelligence endpoint
     const mockData: OperationalIntelligence = {
       worker_operations: {
-        harvester: { status: 'running', last_run: Date.now() - 45000, next_run: Date.now() + 15000, interval: '60s' },
-        reconciler: { status: 'idle', last_run: Date.now() - 120000, next_run: Date.now() + 180000, interval: '5min' },
-        synthesizer: { status: 'running', last_run: Date.now() - 1800000, next_run: Date.now() + 1800000, interval: '1hr' },
-        cartographer: { status: 'idle', last_run: Date.now() - 300000, next_run: 0, interval: 'on-change' },
+        harvester: {
+          status: 'running',
+          last_run: Date.now() - 45000,
+          next_run: Date.now() + 15000,
+          interval: '60s',
+        },
+        reconciler: {
+          status: 'idle',
+          last_run: Date.now() - 120000,
+          next_run: Date.now() + 180000,
+          interval: '5min',
+        },
+        synthesizer: {
+          status: 'running',
+          last_run: Date.now() - 1800000,
+          next_run: Date.now() + 1800000,
+          interval: '1hr',
+        },
+        cartographer: {
+          status: 'idle',
+          last_run: Date.now() - 300000,
+          next_run: 0,
+          interval: 'on-change',
+        },
       },
       vault_operations: {
         l1_archive: { health: 'healthy', growth_rate: 2.4, integrity_score: 0.98 },
@@ -61,7 +117,7 @@ function useOperationalIntelligence(): OperationalIntelligence | null {
 
     // Update every 5 seconds for demo
     const interval = setInterval(() => {
-      setOpIntel(prevData => {
+      setOpIntel((prevData) => {
         if (!prevData) return mockData;
         // Simulate some updates
         return {
@@ -70,7 +126,10 @@ function useOperationalIntelligence(): OperationalIntelligence | null {
             ...prevData.worker_operations,
             harvester: {
               ...prevData.worker_operations.harvester,
-              last_run: prevData.worker_operations.harvester.status === 'running' ? Date.now() - Math.random() * 10000 : prevData.worker_operations.harvester.last_run,
+              last_run:
+                prevData.worker_operations.harvester.status === 'running'
+                  ? Date.now() - Math.random() * 10000
+                  : prevData.worker_operations.harvester.last_run,
             },
           },
         };
@@ -104,7 +163,9 @@ const ACTION_ICONS: Record<string, string> = {
 
 // Multi-Layer Operations Center component
 function MultiLayerOperationsCenter({ opIntel }: { opIntel: OperationalIntelligence | null }) {
-  const [activeTab, setActiveTab] = useState<'workers' | 'vault' | 'governance' | 'cross-system'>('workers');
+  const [activeTab, setActiveTab] = useState<'workers' | 'vault' | 'governance' | 'cross-system'>(
+    'workers',
+  );
 
   if (!opIntel) return null;
 
@@ -120,13 +181,20 @@ function MultiLayerOperationsCenter({ opIntel }: { opIntel: OperationalIntellige
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'running': return '#3fb950';
-      case 'idle': return '#58a6ff';
-      case 'error': return '#f85149';
-      case 'healthy': return '#3fb950';
-      case 'degraded': return '#d29922';
-      case 'critical': return '#f85149';
-      default: return '#8b949e';
+      case 'running':
+        return '#3fb950';
+      case 'idle':
+        return '#58a6ff';
+      case 'error':
+        return '#f85149';
+      case 'healthy':
+        return '#3fb950';
+      case 'degraded':
+        return '#d29922';
+      case 'critical':
+        return '#f85149';
+      default:
+        return '#8b949e';
     }
   };
 
@@ -143,8 +211,9 @@ function MultiLayerOperationsCenter({ opIntel }: { opIntel: OperationalIntellige
           { key: 'vault', label: 'Vault Operations' },
           { key: 'governance', label: 'Governance Operations' },
           { key: 'cross-system', label: 'Cross-System Operations' },
-        ].map(tab => (
+        ].map((tab) => (
           <button
+            type="button"
             key={tab.key}
             onClick={() => setActiveTab(tab.key as any)}
             style={{
@@ -166,28 +235,45 @@ function MultiLayerOperationsCenter({ opIntel }: { opIntel: OperationalIntellige
       {activeTab === 'workers' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
           {Object.entries(opIntel.worker_operations).map(([worker, data]) => (
-            <div key={worker} style={{
-              padding: 12,
-              background: 'var(--bg2)',
-              border: `1px solid ${getStatusColor(data.status)}33`,
-              borderRadius: 6,
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--t1)', textTransform: 'capitalize' }}>
+            <div
+              key={worker}
+              style={{
+                padding: 12,
+                background: 'var(--bg2)',
+                border: `1px solid ${getStatusColor(data.status)}33`,
+                borderRadius: 6,
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: 4,
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: 'var(--t1)',
+                    textTransform: 'capitalize',
+                  }}
+                >
                   {worker}
                 </span>
-                <span style={{
-                  fontSize: 10,
-                  color: getStatusColor(data.status),
-                  fontWeight: 600,
-                  textTransform: 'uppercase',
-                }}>
+                <span
+                  style={{
+                    fontSize: 10,
+                    color: getStatusColor(data.status),
+                    fontWeight: 600,
+                    textTransform: 'uppercase',
+                  }}
+                >
                   {data.status}
                 </span>
               </div>
-              <div style={{ fontSize: 10, color: 'var(--t3)' }}>
-                Interval: {data.interval}
-              </div>
+              <div style={{ fontSize: 10, color: 'var(--t3)' }}>Interval: {data.interval}</div>
               <div style={{ fontSize: 10, color: 'var(--t3)' }}>
                 Last: {formatTime(data.last_run)}
               </div>
@@ -205,22 +291,34 @@ function MultiLayerOperationsCenter({ opIntel }: { opIntel: OperationalIntellige
       {activeTab === 'vault' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
           {Object.entries(opIntel.vault_operations).map(([layer, data]) => (
-            <div key={layer} style={{
-              padding: 12,
-              background: 'var(--bg2)',
-              border: `1px solid ${getStatusColor(data.health)}33`,
-              borderRadius: 6,
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+            <div
+              key={layer}
+              style={{
+                padding: 12,
+                background: 'var(--bg2)',
+                border: `1px solid ${getStatusColor(data.health)}33`,
+                borderRadius: 6,
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: 4,
+                }}
+              >
                 <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--t1)' }}>
                   {layer.replace('_', ' ').toUpperCase()}
                 </span>
-                <span style={{
-                  fontSize: 10,
-                  color: getStatusColor(data.health),
-                  fontWeight: 600,
-                  textTransform: 'uppercase',
-                }}>
+                <span
+                  style={{
+                    fontSize: 10,
+                    color: getStatusColor(data.health),
+                    fontWeight: 600,
+                    textTransform: 'uppercase',
+                  }}
+                >
                   {data.health}
                 </span>
               </div>
@@ -237,12 +335,14 @@ function MultiLayerOperationsCenter({ opIntel }: { opIntel: OperationalIntellige
 
       {/* Governance Operations */}
       {activeTab === 'governance' && (
-        <div style={{
-          padding: 12,
-          background: 'var(--bg2)',
-          border: '1px solid var(--bd)',
-          borderRadius: 6,
-        }}>
+        <div
+          style={{
+            padding: 12,
+            background: 'var(--bg2)',
+            border: '1px solid var(--bd)',
+            borderRadius: 6,
+          }}
+        >
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
             <div>
               <div style={{ fontSize: 11, color: 'var(--t3)' }}>Agentic Review Performance</div>
@@ -268,12 +368,14 @@ function MultiLayerOperationsCenter({ opIntel }: { opIntel: OperationalIntellige
 
       {/* Cross-System Operations */}
       {activeTab === 'cross-system' && (
-        <div style={{
-          padding: 12,
-          background: 'var(--bg2)',
-          border: '1px solid var(--bd)',
-          borderRadius: 6,
-        }}>
+        <div
+          style={{
+            padding: 12,
+            background: 'var(--bg2)',
+            border: '1px solid var(--bd)',
+            borderRadius: 6,
+          }}
+        >
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
             <div>
               <div style={{ fontSize: 11, color: 'var(--t3)' }}>Policy Bridge Effectiveness</div>
@@ -315,7 +417,7 @@ function ManualOperations() {
       // });
 
       // Mock delay for demo
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise((resolve) => setTimeout(resolve, 2000));
     } catch (error) {
       console.error(`Failed to execute ${operation}:`, error);
     } finally {
@@ -334,13 +436,12 @@ function ManualOperations() {
 
   return (
     <div style={{ marginBottom: 24 }}>
-      <h4 style={{ color: 'var(--t1)', margin: '0 0 12px', fontSize: 14 }}>
-        🚀 Manual Operations
-      </h4>
+      <h4 style={{ color: 'var(--t1)', margin: '0 0 12px', fontSize: 14 }}>🚀 Manual Operations</h4>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-        {operations.map(op => (
+        {operations.map((op) => (
           <button
+            type="button"
             key={op.key}
             onClick={() => executeOperation(op.key)}
             disabled={executing === op.key}

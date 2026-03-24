@@ -10,12 +10,7 @@ import { SomaIntelligence } from './SomaIntelligence';
 import { SomaKnowledgeExplorer } from './SomaKnowledgeExplorer';
 import { SomaPolicyEditor } from './SomaPolicyEditor';
 
-export type SomaView =
-  | 'intelligence'
-  | 'review'
-  | 'policies'
-  | 'knowledge'
-  | 'activity';
+export type SomaView = 'intelligence' | 'review' | 'policies' | 'knowledge' | 'activity';
 
 const PAID_VIEWS: SomaView[] = ['review', 'policies', 'knowledge', 'activity'];
 

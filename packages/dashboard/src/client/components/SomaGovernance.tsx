@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import type { GovernanceData } from '../hooks/useSomaGovernance';
 
 // Types for agentic governance data
@@ -135,26 +135,39 @@ function AgenticControlCenter({ agenticData }: { agenticData: AgenticGovernanceD
       </h4>
 
       {/* Active Governance Queue */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 16 }}>
-        <div style={{
-          padding: 12,
-          background: 'var(--bg2)',
-          border: '1px solid #58a6ff33',
-          borderRadius: 6
-        }}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, 1fr)',
+          gap: 12,
+          marginBottom: 16,
+        }}
+      >
+        <div
+          style={{
+            padding: 12,
+            background: 'var(--bg2)',
+            border: '1px solid #58a6ff33',
+            borderRadius: 6,
+          }}
+        >
           <div style={{ fontSize: 11, color: '#58a6ff', fontWeight: 600 }}>Auto-Processing</div>
           <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--t1)' }}>
             {active_queue.auto_processing}
           </div>
-          <div style={{ fontSize: 10, color: 'var(--t3)' }}>of {active_queue.total_pending} total</div>
+          <div style={{ fontSize: 10, color: 'var(--t3)' }}>
+            of {active_queue.total_pending} total
+          </div>
         </div>
 
-        <div style={{
-          padding: 12,
-          background: 'var(--bg2)',
-          border: '1px solid #d2992233',
-          borderRadius: 6
-        }}>
+        <div
+          style={{
+            padding: 12,
+            background: 'var(--bg2)',
+            border: '1px solid #d2992233',
+            borderRadius: 6,
+          }}
+        >
           <div style={{ fontSize: 11, color: '#d29922', fontWeight: 600 }}>Human Escalation</div>
           <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--t1)' }}>
             {active_queue.human_escalation}
@@ -162,12 +175,14 @@ function AgenticControlCenter({ agenticData }: { agenticData: AgenticGovernanceD
           <div style={{ fontSize: 10, color: 'var(--t3)' }}>require manual review</div>
         </div>
 
-        <div style={{
-          padding: 12,
-          background: 'var(--bg2)',
-          border: '1px solid #3fb95033',
-          borderRadius: 6
-        }}>
+        <div
+          style={{
+            padding: 12,
+            background: 'var(--bg2)',
+            border: '1px solid #3fb95033',
+            borderRadius: 6,
+          }}
+        >
           <div style={{ fontSize: 11, color: '#3fb950', fontWeight: 600 }}>Pipeline Efficiency</div>
           <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--t1)' }}>
             {(promotion_pipeline.efficiency_score * 100).toFixed(0)}%
@@ -183,7 +198,9 @@ function AgenticControlCenter({ agenticData }: { agenticData: AgenticGovernanceD
         <div style={{ fontSize: 12, color: 'var(--t2)', marginBottom: 8 }}>
           Governance Agent Performance & Meta-Learning
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, fontSize: 11 }}>
+        <div
+          style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, fontSize: 11 }}
+        >
           <div>
             <span style={{ color: 'var(--t3)' }}>Accuracy:</span>{' '}
             <span style={{ fontWeight: 600, color: 'var(--t1)' }}>
@@ -204,7 +221,12 @@ function AgenticControlCenter({ agenticData }: { agenticData: AgenticGovernanceD
           </div>
           <div>
             <span style={{ color: 'var(--t3)' }}>Learning:</span>{' '}
-            <span style={{ fontWeight: 600, color: agent_performance.meta_learning_score > 0.8 ? '#3fb950' : '#d29922' }}>
+            <span
+              style={{
+                fontWeight: 600,
+                color: agent_performance.meta_learning_score > 0.8 ? '#3fb950' : '#d29922',
+              }}
+            >
               {(agent_performance.meta_learning_score * 100).toFixed(0)}%
             </span>
           </div>
@@ -217,7 +239,7 @@ function AgenticControlCenter({ agenticData }: { agenticData: AgenticGovernanceD
 // Governance Configuration Panel
 function GovernanceConfiguration({
   agenticData,
-  onConfigUpdate
+  onConfigUpdate,
 }: {
   agenticData: AgenticGovernanceData | null;
   onConfigUpdate: (config: Partial<AgenticGovernanceData['governance_config']>) => void;
@@ -230,27 +252,31 @@ function GovernanceConfiguration({
 
   return (
     <div style={{ marginBottom: 20 }}>
-      <div
-        style={{ cursor: 'pointer', fontSize: 14, color: 'var(--t1)', marginBottom: 8 }}
+      <button
+        type="button"
+        style={{ cursor: 'pointer', fontSize: 14, color: 'var(--t1)', marginBottom: 8, background: 'none', border: 'none', padding: 0, textAlign: 'left' }}
         onClick={() => setShowConfig(!showConfig)}
       >
         ⚙️ Governance Configuration {showConfig ? '▼' : '▶'}
-      </div>
+      </button>
 
       {showConfig && (
-        <div style={{
-          padding: 12,
-          background: 'var(--bg2)',
-          border: '1px solid var(--bd)',
-          borderRadius: 6,
-          fontSize: 12
-        }}>
+        <div
+          style={{
+            padding: 12,
+            background: 'var(--bg2)',
+            border: '1px solid var(--bd)',
+            borderRadius: 6,
+            fontSize: 12,
+          }}
+        >
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
             <div>
-              <label style={{ display: 'block', color: 'var(--t2)', marginBottom: 4 }}>
+              <label htmlFor="auto-promotion-threshold" style={{ display: 'block', color: 'var(--t2)', marginBottom: 4 }}>
                 Auto-Promotion Threshold
               </label>
               <input
+                id="auto-promotion-threshold"
                 type="range"
                 min="0.5"
                 max="1"
@@ -267,10 +293,11 @@ function GovernanceConfiguration({
             </div>
 
             <div>
-              <label style={{ display: 'block', color: 'var(--t2)', marginBottom: 4 }}>
+              <label htmlFor="escalation-threshold" style={{ display: 'block', color: 'var(--t2)', marginBottom: 4 }}>
                 Escalation Threshold
               </label>
               <input
+                id="escalation-threshold"
                 type="range"
                 min="0.3"
                 max="0.8"
@@ -292,9 +319,7 @@ function GovernanceConfiguration({
               <input
                 type="checkbox"
                 checked={governance_config.meta_learning_enabled}
-                onChange={(e) =>
-                  onConfigUpdate({ meta_learning_enabled: e.target.checked })
-                }
+                onChange={(e) => onConfigUpdate({ meta_learning_enabled: e.target.checked })}
               />
               <span>Meta-Learning Enabled</span>
             </label>
@@ -303,9 +328,7 @@ function GovernanceConfiguration({
               <input
                 type="checkbox"
                 checked={governance_config.feedback_loop_active}
-                onChange={(e) =>
-                  onConfigUpdate({ feedback_loop_active: e.target.checked })
-                }
+                onChange={(e) => onConfigUpdate({ feedback_loop_active: e.target.checked })}
               />
               <span>Policy Bridge Feedback Loop</span>
             </label>
@@ -328,17 +351,21 @@ function GovernanceAnalytics({ agenticData }: { agenticData: AgenticGovernanceDa
         📊 Governance Analytics
       </h4>
 
-      <div style={{
-        padding: 12,
-        background: 'var(--bg2)',
-        border: '1px solid var(--bd)',
-        borderRadius: 6
-      }}>
+      <div
+        style={{
+          padding: 12,
+          background: 'var(--bg2)',
+          border: '1px solid var(--bd)',
+          borderRadius: 6,
+        }}
+      >
         <div style={{ fontSize: 12, color: 'var(--t2)', marginBottom: 8 }}>
           Real-time AgentFlow Policy Enforcement Feedback
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, fontSize: 11 }}>
+        <div
+          style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, fontSize: 11 }}
+        >
           <div>
             <span style={{ color: 'var(--t3)' }}>Enforcements:</span>{' '}
             <span style={{ fontWeight: 600, color: 'var(--t1)' }}>
@@ -353,21 +380,25 @@ function GovernanceAnalytics({ agenticData }: { agenticData: AgenticGovernanceDa
           </div>
           <div>
             <span style={{ color: 'var(--t3)' }}>Feedback Score:</span>{' '}
-            <span style={{
-              fontWeight: 600,
-              color: agentflow_feedback.feedback_score > 0.9 ? '#3fb950' : '#d29922'
-            }}>
+            <span
+              style={{
+                fontWeight: 600,
+                color: agentflow_feedback.feedback_score > 0.9 ? '#3fb950' : '#d29922',
+              }}
+            >
               {(agentflow_feedback.feedback_score * 100).toFixed(0)}%
             </span>
           </div>
         </div>
 
-        <div style={{
-          marginTop: 8,
-          fontSize: 10,
-          color: 'var(--t3)',
-          fontStyle: 'italic'
-        }}>
+        <div
+          style={{
+            marginTop: 8,
+            fontSize: 10,
+            color: 'var(--t3)',
+            fontStyle: 'italic',
+          }}
+        >
           Policy effectiveness measured through closed feedback loop with AgentFlow guards
         </div>
       </div>

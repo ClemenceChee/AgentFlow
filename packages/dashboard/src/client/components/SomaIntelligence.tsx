@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import type { SomaReport } from '../hooks/useSomaReport';
 import { EfficiencyPanel, EfficiencyTeaser } from './EfficiencyPanel';
 import { GuardExplanationCard } from './GuardExplanationCard';
@@ -34,7 +34,7 @@ function useVaultHealth(): VaultHealthData | null {
         reconciler: Date.now() - 47 * 60 * 1000, // 47min ago
         synthesizer: Date.now() - 2.1 * 60 * 60 * 1000, // 2.1h ago
         cartographer: Date.now() - 15 * 60 * 1000, // 15min ago
-      }
+      },
     };
     setVaultHealth(mockData);
   }, []);
@@ -148,9 +148,7 @@ function VaultHealthIndicators({ vaultHealth }: { vaultHealth: VaultHealthData |
 
   return (
     <div className="soma-intel__vault-health">
-      <div className="soma-intel__vault-health-title">
-        📊 Vault Health Indicators
-      </div>
+      <div className="soma-intel__vault-health-title">📊 Vault Health Indicators</div>
       <div className="soma-intel__vault-layers">
         {layerData.map((layer, index) => (
           <span key={layer.key}>
@@ -183,17 +181,22 @@ function PipelineStatus({ vaultHealth }: { vaultHealth: VaultHealthData | null }
     { name: 'Harvester', interval: '60s', lastRun: vaultHealth.last_worker_run.harvester },
     { name: 'Reconciler', interval: '5min', lastRun: vaultHealth.last_worker_run.reconciler },
     { name: 'Synthesizer', interval: '1hr', lastRun: vaultHealth.last_worker_run.synthesizer },
-    { name: 'Cartographer', interval: 'on-change', lastRun: vaultHealth.last_worker_run.cartographer },
+    {
+      name: 'Cartographer',
+      interval: 'on-change',
+      lastRun: vaultHealth.last_worker_run.cartographer,
+    },
   ];
 
-  const latestUpdate = Math.max(...workers.map(w => w.lastRun || 0));
+  const latestUpdate = Math.max(...workers.map((w) => w.lastRun || 0));
   const staleness = latestUpdate ? timeAgo(new Date(latestUpdate).toISOString()) : 'never';
 
   return (
     <div className="soma-intel__pipeline">
-      <div
+      <button
+        type="button"
         className="soma-intel__pipeline-summary"
-        style={{ cursor: 'pointer' }}
+        style={{ cursor: 'pointer', background: 'none', border: 'none', padding: 0, textAlign: 'left', width: '100%' }}
         onClick={() => setShowDetails(!showDetails)}
       >
         🔄 Live Intelligence Pipeline Status
@@ -205,7 +208,7 @@ function PipelineStatus({ vaultHealth }: { vaultHealth: VaultHealthData | null }
       {showDetails && (
         <div className="soma-intel__worker-details">
           <div className="soma-intel__worker-grid">
-            {workers.map(worker => (
+            {workers.map((worker) => (
               <div key={worker.name} className="soma-intel__worker">
                 <div className="soma-intel__worker-name">{worker.name}</div>
                 <div className="soma-intel__worker-interval">({worker.interval})</div>
@@ -237,7 +240,7 @@ function SmartActions() {
       // });
 
       // Mock delay for demo
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise((resolve) => setTimeout(resolve, 2000));
     } catch (error) {
       console.error('Failed to refresh intelligence:', error);
     } finally {
@@ -250,7 +253,7 @@ function SmartActions() {
     try {
       // TODO: Call external command API for deep analysis
       // Mock delay for demo
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await new Promise((resolve) => setTimeout(resolve, 1500));
     } catch (error) {
       console.error('Failed to start deep analysis:', error);
     } finally {
@@ -260,9 +263,7 @@ function SmartActions() {
 
   return (
     <div className="soma-intel__smart-actions">
-      <div className="soma-intel__smart-actions-title">
-        ⚡ Smart Actions
-      </div>
+      <div className="soma-intel__smart-actions-title">⚡ Smart Actions</div>
       <div className="soma-intel__action-buttons">
         <button
           className="soma-intel__action-btn"
