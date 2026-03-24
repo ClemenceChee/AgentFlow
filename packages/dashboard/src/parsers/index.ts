@@ -11,6 +11,7 @@ export {
   extractTimestamp,
   getUniversalNodeStatus,
   openClawSessionIdToAgent,
+  parseOpenClawSessionKey,
   parseTimestamp,
   parseValue,
   stripAnsi,

@@ -208,9 +208,65 @@ export function getUniversalNodeStatus(activity: Record<string, unknown>): strin
 }
 
 /** Extract agent name from OpenClaw sessionId prefix. */
-export function openClawSessionIdToAgent(sessionId: string): string {
-  // Extract the first segment before the first hyphen-UUID pattern
+export function openClawSessionIdToAgent(
+  sessionId: string,
+  lookupMap?: Map<string, string>,
+): string {
+  // Use manifest lookup if available
+  if (lookupMap?.has(sessionId)) {
+    return lookupMap.get(sessionId)!;
+  }
+  // Fallback: extract the first segment before the first hyphen-UUID pattern
   const firstSegment = sessionId.split('-')[0];
   if (firstSegment) return firstSegment;
   return 'openclaw';
+}
+
+/**
+ * Parse an OpenClaw sessions.json key to extract a resolved agentId.
+ *
+ * Key formats:
+ *   agent:main:cron:newsletter-digest-daily       → openclaw:newsletter-digest-daily
+ *   agent:main:cron:newsletter-digest-daily:run:X  → openclaw:newsletter-digest-daily
+ *   agent:main:telegram:slash:6549702894           → openclaw:telegram:6549702894
+ *   agent:main:whatsapp:group:120363...            → openclaw:whatsapp:120363...
+ *   agent:main:main                                → openclaw:main
+ *
+ * Returns null for unrecognized formats.
+ */
+export function parseOpenClawSessionKey(key: string): string | null {
+  const parts = key.split(':');
+  // Minimum: agent:{name}:{something}
+  if (parts.length < 3 || parts[0] !== 'agent') return null;
+
+  const agentName = parts[1]; // typically "main"
+  const kind = parts[2]; // "cron", "telegram", "whatsapp", or the agent name itself
+
+  // agent:main:main → openclaw:main
+  if (parts.length === 3 && kind === agentName) {
+    return `openclaw:${agentName}`;
+  }
+
+  // agent:main:cron:{jobId} or agent:main:cron:{jobId}:run:{uuid}
+  if (kind === 'cron' && parts.length >= 4) {
+    // jobId may contain colons if it has sub-parts, but :run: marks the boundary
+    const runIdx = parts.indexOf('run', 4);
+    const jobParts = runIdx > 0 ? parts.slice(3, runIdx) : parts.slice(3);
+    const jobId = jobParts.join('-');
+    return jobId ? `openclaw:${jobId}` : null;
+  }
+
+  // agent:main:{channel}:{subtype}:{target} (telegram:slash:ID, whatsapp:group:ID)
+  if (parts.length >= 5) {
+    const target = parts[4];
+    return `openclaw:${kind}:${target}`;
+  }
+
+  // agent:main:{channel}:{target} (simpler format)
+  if (parts.length >= 4) {
+    const target = parts[3];
+    return `openclaw:${kind}:${target}`;
+  }
+
+  return null;
 }
