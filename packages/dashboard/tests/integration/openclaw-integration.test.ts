@@ -4,7 +4,7 @@ import * as path from 'node:path';
 import getPort from 'get-port';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { DashboardServer } from '../../src/server.js';
-import { TestDataGenerator, traceToJson } from '../fixtures/test-data-generator.js';
+import { TestDataGenerator } from '../fixtures/test-data-generator.js';
 
 describe('OpenClaw Integration Tests', () => {
   let tempDir: string;

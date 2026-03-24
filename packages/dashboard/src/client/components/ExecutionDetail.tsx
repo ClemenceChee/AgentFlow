@@ -1,16 +1,25 @@
 import { useState } from 'react';
 import type { FullTrace } from '../hooks/useSelectedTrace';
 import { AgentFlow } from './AgentFlow';
+import { DecisionReplay } from './DecisionReplay';
 import { DependencyTree } from './DependencyTree';
 import { FlameChart } from './FlameChart';
 import { GuardExplanationCard, type Violation } from './GuardExplanationCard';
 import { MetricsView } from './MetricsView';
 import { RunReceiptView } from './RunReceiptView';
-import { DecisionReplay } from './DecisionReplay';
 import { StateMachine } from './StateMachine';
 import { TranscriptView } from './TranscriptView';
 
-type Tab = 'flame' | 'flow' | 'metrics' | 'deps' | 'state' | 'summary' | 'transcript' | 'receipt' | 'decisions';
+type Tab =
+  | 'flame'
+  | 'flow'
+  | 'metrics'
+  | 'deps'
+  | 'state'
+  | 'summary'
+  | 'transcript'
+  | 'receipt'
+  | 'decisions';
 
 function fmtDur(ms: number): string {
   if (ms < 1000) return `${Math.round(ms)}ms`;
@@ -137,7 +146,9 @@ function SummaryContent({ trace }: { trace: FullTrace }) {
         <div className="sc-failures">
           <h4 className="sc-failures__title">{'\u2718'} Failed Nodes</h4>
           {failedNodes.map((n) => {
-            const violation = (n.metadata?.guardViolation ?? n.state?.guardViolation) as Violation | undefined;
+            const violation = (n.metadata?.guardViolation ?? n.state?.guardViolation) as
+              | Violation
+              | undefined;
             return (
               <div key={n.id} className="sc-failure">
                 <span className="sc-failure__type">{n.type}:</span>

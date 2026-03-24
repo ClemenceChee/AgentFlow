@@ -51,9 +51,7 @@ export function CrossAgentView() {
           {pair.insights.map((insight, i) => (
             <div key={i} className="cross-agent__insight">
               <div className="cross-agent__insight-name">{insight.name}</div>
-              {insight.claim && (
-                <div className="cross-agent__insight-claim">{insight.claim}</div>
-              )}
+              {insight.claim && <div className="cross-agent__insight-claim">{insight.claim}</div>}
             </div>
           ))}
         </div>

@@ -3,12 +3,12 @@ import type { AgentStats } from '../hooks/useAgents';
 import type { ProcessModelData, ProcessVariant } from '../hooks/useProcessModel';
 import { useSomaReport } from '../hooks/useSomaReport';
 import type { TraceEntry } from '../hooks/useTraces';
+import { AgentHealthBriefing } from './AgentHealthBriefing';
 import { BottleneckView } from './BottleneckView';
 import { DottedChart } from './DottedChart';
 import { ProcessMapView } from './ProcessMapView';
 import { SomaIntelligence } from './SomaIntelligence';
 import { VariantExplorer } from './VariantExplorer';
-import { AgentHealthBriefing } from './AgentHealthBriefing';
 
 type Tab = 'process-map' | 'variants' | 'bottlenecks' | 'dotted' | 'intelligence' | 'briefing';
 
@@ -41,8 +41,10 @@ export function AgentProfile({
 
   useEffect(() => {
     fetch(`/api/agents/${encodeURIComponent(agentId)}/variants?by=model`)
-      .then((r) => r.ok ? r.json() : null)
-      .then((d) => { if (d?.modelVariants?.length > 0) setModelVariants(d.modelVariants); })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d?.modelVariants?.length > 0) setModelVariants(d.modelVariants);
+      })
       .catch(() => {});
   }, [agentId]);
 
@@ -116,7 +118,11 @@ export function AgentProfile({
           <ProcessMapView model={processModel} />
         )}
         {!processModelLoading && processModel && tab === 'variants' && (
-          <VariantExplorer variants={processModel.variants} modelVariants={modelVariants} isPro={!!somaReport} />
+          <VariantExplorer
+            variants={processModel.variants}
+            modelVariants={modelVariants}
+            isPro={!!somaReport}
+          />
         )}
         {!processModelLoading && processModel && tab === 'bottlenecks' && (
           <BottleneckView model={processModel} />

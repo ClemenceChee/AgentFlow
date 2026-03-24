@@ -50,7 +50,10 @@ describe('Multi-Agent Integration Tests', () => {
           includeTimings: true,
         });
 
-        fs.writeFileSync(path.join(alfredDir, `alfred-${i}.json`), traceToJson(alfredTrace as unknown as Record<string, unknown>));
+        fs.writeFileSync(
+          path.join(alfredDir, `alfred-${i}.json`),
+          traceToJson(alfredTrace as unknown as Record<string, unknown>),
+        );
       }
 
       // Create OpenClaw session traces (JSONL format)
@@ -143,7 +146,10 @@ describe('Multi-Agent Integration Tests', () => {
         sweepId: 'sweep-123',
       };
 
-      fs.writeFileSync(path.join(alfredDir, 'alfred-isolated.json'), traceToJson(alfredTrace as unknown as Record<string, unknown>));
+      fs.writeFileSync(
+        path.join(alfredDir, 'alfred-isolated.json'),
+        traceToJson(alfredTrace as unknown as Record<string, unknown>),
+      );
 
       // Create OpenClaw session with different metadata
       const openclawTrace = TestDataGenerator.createSessionTrace({
@@ -219,7 +225,10 @@ describe('Multi-Agent Integration Tests', () => {
               failureRate: Math.random() < 0.1 ? 0.3 : 0,
             });
 
-            fs.writeFileSync(path.join(heavyDir, `heavy-${i}.json`), traceToJson(trace as unknown as Record<string, unknown>));
+            fs.writeFileSync(
+              path.join(heavyDir, `heavy-${i}.json`),
+              traceToJson(trace as unknown as Record<string, unknown>),
+            );
             resolve();
           });
         });
@@ -446,7 +455,10 @@ describe('Multi-Agent Integration Tests', () => {
             trigger: `trigger-${i}`,
           });
 
-          fs.writeFileSync(path.join(tracesDir, `${agentId}-${i}.json`), traceToJson(trace as unknown as Record<string, unknown>));
+          fs.writeFileSync(
+            path.join(tracesDir, `${agentId}-${i}.json`),
+            traceToJson(trace as unknown as Record<string, unknown>),
+          );
         }
       }
 
@@ -468,7 +480,10 @@ describe('Multi-Agent Integration Tests', () => {
         failureRate: 0.2,
       });
 
-      fs.writeFileSync(path.join(tracesDir, 'agent-A-updated.json'), traceToJson(updatedTrace as unknown as Record<string, unknown>));
+      fs.writeFileSync(
+        path.join(tracesDir, 'agent-A-updated.json'),
+        traceToJson(updatedTrace as unknown as Record<string, unknown>),
+      );
 
       // Wait for update
       await new Promise((resolve) => setTimeout(resolve, 3000));
@@ -509,7 +524,10 @@ describe('Multi-Agent Integration Tests', () => {
         includeTimings: true,
       });
 
-      fs.writeFileSync(path.join(tracesDir, 'hybrid-json.json'), traceToJson(jsonTrace as unknown as Record<string, unknown>));
+      fs.writeFileSync(
+        path.join(tracesDir, 'hybrid-json.json'),
+        traceToJson(jsonTrace as unknown as Record<string, unknown>),
+      );
 
       // Create JSONL session trace for same agent
       const sessionTrace = TestDataGenerator.createSessionTrace({
@@ -540,8 +558,6 @@ describe('Multi-Agent Integration Tests', () => {
       await new Promise((resolve) => setTimeout(resolve, 3000));
 
       const traces = server.getTraces();
-      const hybridTraces = traces.filter((t) => t.agentId === agentId);
-
       // JSON trace should be found with the agentId; JSONL session may have derived agentId
       const jsonTraceLoaded = traces.find((t) => t.agentId === agentId && t.sourceType === 'trace');
       expect(jsonTraceLoaded).toBeDefined();
@@ -566,7 +582,10 @@ describe('Multi-Agent Integration Tests', () => {
         failureRate: 0,
       });
 
-      fs.writeFileSync(path.join(tracesDir, 'success.json'), traceToJson(successTrace as unknown as Record<string, unknown>));
+      fs.writeFileSync(
+        path.join(tracesDir, 'success.json'),
+        traceToJson(successTrace as unknown as Record<string, unknown>),
+      );
 
       // Create failed JSON trace
       const failTrace = TestDataGenerator.createExecutionGraph({
@@ -575,7 +594,10 @@ describe('Multi-Agent Integration Tests', () => {
         failureRate: 1,
       });
 
-      fs.writeFileSync(path.join(tracesDir, 'failure.json'), traceToJson(failTrace as unknown as Record<string, unknown>));
+      fs.writeFileSync(
+        path.join(tracesDir, 'failure.json'),
+        traceToJson(failTrace as unknown as Record<string, unknown>),
+      );
 
       // Create session with tool error
       const sessionTrace = TestDataGenerator.createSessionTrace({

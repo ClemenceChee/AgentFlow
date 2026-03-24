@@ -407,7 +407,9 @@ export class TraceWatcher extends EventEmitter {
         // Create unique key for each trace from the same file
         const traceAgentId = (trace as WatchedTrace).agentId;
         const key =
-          traces.length === 1 ? this.traceKey(filePath, traceAgentId) : `${this.traceKey(filePath, traceAgentId)}-${i}`;
+          traces.length === 1
+            ? this.traceKey(filePath, traceAgentId)
+            : `${this.traceKey(filePath, traceAgentId)}-${i}`;
         this.traces.set(key, trace as WatchedTrace);
       }
 
@@ -860,7 +862,9 @@ export class TraceWatcher extends EventEmitter {
       } as WatchedTrace;
 
       const key =
-        sessions.size === 1 ? this.traceKey(filePath, agentId) : `${this.traceKey(filePath, agentId)}-${traceIndex}`;
+        sessions.size === 1
+          ? this.traceKey(filePath, agentId)
+          : `${this.traceKey(filePath, agentId)}-${traceIndex}`;
       this.traces.set(key, trace);
       traceIndex++;
     }

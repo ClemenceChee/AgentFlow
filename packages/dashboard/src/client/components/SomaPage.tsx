@@ -2,13 +2,13 @@ import { useState } from 'react';
 import { useSomaGovernance } from '../hooks/useSomaGovernance';
 import { useSomaReport } from '../hooks/useSomaReport';
 import type { SomaTier } from '../hooks/useSomaTier';
+import { CrossAgentView } from './CrossAgentView';
 import { DriftChart } from './DriftChart';
 import { SomaActivityFeed } from './SomaActivityFeed';
 import { SomaGovernance } from './SomaGovernance';
 import { SomaIntelligence } from './SomaIntelligence';
 import { SomaKnowledgeExplorer } from './SomaKnowledgeExplorer';
 import { SomaPolicyEditor } from './SomaPolicyEditor';
-import { CrossAgentView } from './CrossAgentView';
 
 export type SomaView = 'intelligence' | 'review' | 'policies' | 'knowledge' | 'activity';
 

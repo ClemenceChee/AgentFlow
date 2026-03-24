@@ -103,7 +103,13 @@ export function DriftChart({ apiBase, agentId }: { apiBase: string; agentId: str
 
         {/* Data points */}
         {points.map((p, i) => (
-          <circle key={p.timestamp} cx={scaleX(i, n)} cy={scaleY(p.score)} r={2} fill="var(--accent)" />
+          <circle
+            key={p.timestamp}
+            cx={scaleX(i, n)}
+            cy={scaleY(p.score)}
+            r={2}
+            fill="var(--accent)"
+          />
         ))}
 
         {/* Regression line */}

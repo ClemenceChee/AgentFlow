@@ -2,10 +2,10 @@
  * @vitest-environment jsdom
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
-import { EfficiencyPanel } from '../../src/client/components/EfficiencyPanel';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DriftChart } from '../../src/client/components/DriftChart';
+import { EfficiencyPanel } from '../../src/client/components/EfficiencyPanel';
 
 // ---------------------------------------------------------------------------
 // EfficiencyPanel
@@ -19,7 +19,13 @@ describe('EfficiencyPanel', () => {
   it('renders aggregate stats', async () => {
     const mockReport = {
       runs: [
-        { graphId: 'g1', agentId: 'a1', totalTokenCost: 1000, completedNodes: 10, costPerNode: 100 },
+        {
+          graphId: 'g1',
+          agentId: 'a1',
+          totalTokenCost: 1000,
+          completedNodes: 10,
+          costPerNode: 100,
+        },
       ],
       aggregate: { mean: 120, median: 95, p95: 340 },
       flags: [],
