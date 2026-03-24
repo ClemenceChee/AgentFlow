@@ -9,12 +9,8 @@
 
 import { existsSync, readFileSync } from 'node:fs';
 import { createVault } from '../vault.js';
-import {
-  computePatternSignature,
-  extractDecisionsFromNodes,
-  extractDecisionsFromSession,
-} from './decision-extraction.js';
-import type { AgentBriefingResult, DecisionReplayResult, NormalizedDecision } from './types.js';
+import { extractDecisionsFromSession, extractDecisionsFromNodes, computePatternSignature } from './decision-extraction.js';
+import type { DecisionReplayResult, AgentBriefingResult } from './types.js';
 
 /**
  * Extract decision chain from a trace file as structured data.
@@ -46,12 +42,9 @@ export function getDecisionReplayData(options: {
     return { error: `Trace not found: ${trace}` };
   }
 
-  let decisions: NormalizedDecision[];
+  let decisions;
   if (isJsonl) {
-    const events = content
-      .split('\n')
-      .filter((l) => l.trim())
-      .map((l) => JSON.parse(l));
+    const events = content.split('\n').filter((l) => l.trim()).map((l) => JSON.parse(l));
     decisions = extractDecisionsFromSession(events);
   } else {
     // JSON graph — parse nodes
@@ -59,19 +52,7 @@ export function getDecisionReplayData(options: {
       const parsed = JSON.parse(content);
       const nodes = parsed.nodes ?? parsed;
       decisions = extractDecisionsFromNodes(
-        nodes as unknown as Record<
-          string,
-          {
-            id: string;
-            type: string;
-            name: string;
-            status: string;
-            startTime: number;
-            endTime: number | null;
-            metadata?: Record<string, unknown>;
-            state?: Record<string, unknown>;
-          }
-        >,
+        nodes as unknown as Record<string, { id: string; type: string; name: string; status: string; startTime: number; endTime: number | null; metadata?: Record<string, unknown>; state?: Record<string, unknown> }>,
       );
     } catch {
       return { error: `Failed to parse trace file: ${trace}` };
@@ -106,9 +87,7 @@ export function getAgentBriefingData(options: {
 
   const vault = createVault({ baseDir: vaultDir });
   const agents = vault.list('agent');
-  const agent = agents.find(
-    (a) => a.name === agentId || (a as Record<string, unknown>).agentId === agentId,
-  );
+  const agent = agents.find((a) => a.name === agentId || (a as Record<string, unknown>).agentId === agentId);
 
   if (!agent) {
     return {
@@ -121,12 +100,7 @@ export function getAgentBriefingData(options: {
   const totalExecutions = (data.totalExecutions as number) ?? 0;
   const failureRate = (data.failureRate as number) ?? 0;
   const failureCount = (data.failureCount as number) ?? 0;
-  const status =
-    failureRate > 0.5
-      ? ('CRITICAL' as const)
-      : failureRate > 0.1
-        ? ('DEGRADED' as const)
-        : ('HEALTHY' as const);
+  const status = failureRate > 0.5 ? 'CRITICAL' as const : failureRate > 0.1 ? 'DEGRADED' as const : 'HEALTHY' as const;
 
   // Gather related intelligence
   const entityTypes = ['decision', 'insight', 'constraint', 'contradiction', 'policy'];
@@ -150,8 +124,8 @@ export function getAgentBriefingData(options: {
   const peers = agents
     .map((a) => ({
       name: a.name,
-      failureRate: ((a as Record<string, unknown>).failureRate as number) ?? 0,
-      totalExecutions: ((a as Record<string, unknown>).totalExecutions as number) ?? 0,
+      failureRate: (a as Record<string, unknown>).failureRate as number ?? 0,
+      totalExecutions: (a as Record<string, unknown>).totalExecutions as number ?? 0,
     }))
     .filter((a) => a.totalExecutions > 0)
     .sort((a, b) => a.failureRate - b.failureRate);

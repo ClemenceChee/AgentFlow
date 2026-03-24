@@ -7,8 +7,9 @@
  * @module
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { mkdirSync } from 'node:fs';
 import type { VectorSearchResult, VectorStore } from './types.js';
 
 // ---------------------------------------------------------------------------
@@ -77,10 +78,7 @@ export function createJsonVectorStore(filePath: string): VectorStore {
     dirty = false;
   }
 
-  function matchesFilter(
-    metadata: Record<string, unknown>,
-    filter: Record<string, unknown>,
-  ): boolean {
+  function matchesFilter(metadata: Record<string, unknown>, filter: Record<string, unknown>): boolean {
     for (const [key, value] of Object.entries(filter)) {
       const actual = metadata[key];
       if (Array.isArray(value)) {
@@ -154,7 +152,7 @@ export function createJsonVectorStore(filePath: string): VectorStore {
 export function createLanceVectorStore(_dirPath: string): VectorStore {
   throw new Error(
     'LanceDB vector store not yet implemented. Install @lancedb/lancedb and check back. ' +
-      'For now, use createJsonVectorStore() as the default.',
+    'For now, use createJsonVectorStore() as the default.',
   );
 }
 
@@ -172,6 +170,6 @@ export function createLanceVectorStore(_dirPath: string): VectorStore {
 export function createMilvusVectorStore(_url: string): VectorStore {
   throw new Error(
     'Milvus vector store not yet implemented. ' +
-      'For now, use createJsonVectorStore() as the default.',
+    'For now, use createJsonVectorStore() as the default.',
   );
 }

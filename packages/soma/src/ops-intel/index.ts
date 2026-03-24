@@ -7,36 +7,38 @@
  * @module
  */
 
+export { getEfficiency } from './efficiency.js';
+export { detectDrift, trackConformanceTrend } from './drift.js';
+export { evaluateAssertions, createGuardedBuilder } from './assertions.js';
 export type { SomaGuardedBuilder } from './assertions.js';
-export { createGuardedBuilder, evaluateAssertions } from './assertions.js';
-export { getAgentBriefingData, getDecisionReplayData } from './dashboard-api.js';
+export { findVariantsWithModel } from './variants.js';
 export {
+  extractDecisionsFromSession,
+  extractDecisionsFromNodes,
+  extractDecisionsFromLangChain,
   computePatternSignature,
   computeToolPatternSignature,
-  extractDecisionsFromLangChain,
-  extractDecisionsFromNodes,
-  extractDecisionsFromSession,
 } from './decision-extraction.js';
-export { detectDrift, trackConformanceTrend } from './drift.js';
-export { getEfficiency } from './efficiency.js';
+
+export { getDecisionReplayData, getAgentBriefingData } from './dashboard-api.js';
+
 // Types — re-exported so consumers of soma/ops-intel get full type coverage
 export type {
-  AgentBriefingData,
-  AgentBriefingResult,
-  ConformanceHistory,
+  GuardViolation,
+  GuardExplanation,
+  OutcomeAssertion,
+  NodeCost,
+  EfficiencyFlag,
+  RunEfficiency,
+  EfficiencyReport,
   ConformanceHistoryEntry,
-  DecisionReplayData,
-  DecisionReplayResult,
+  ConformanceHistory,
   DriftOptions,
   DriftReport,
-  EfficiencyFlag,
-  EfficiencyReport,
-  GuardExplanation,
-  GuardViolation,
-  NodeCost,
   NormalizedDecision,
-  OutcomeAssertion,
-  RunEfficiency,
   VariantOptions,
+  DecisionReplayData,
+  AgentBriefingData,
+  DecisionReplayResult,
+  AgentBriefingResult,
 } from './types.js';
-export { findVariantsWithModel } from './variants.js';

@@ -14,9 +14,9 @@
  */
 
 import type { AgentProfile, PolicySource } from 'agentflow-core';
-import { queryByLayer } from './layers.js';
 import type { AgentEntity, Entity, KnowledgeLayer, Vault } from './types.js';
 import { LAYER_SEMANTIC_WEIGHTS } from './types.js';
+import { queryByLayer } from './layers.js';
 
 // ---------------------------------------------------------------------------
 // Layer-aware query types
@@ -64,14 +64,11 @@ export class PolicyBridgeError extends Error {
 
 export interface LayerPolicyBridge {
   /** Query by intent (enforce, advise, brief, route, all). */
-  query(
-    intent: PolicyBridgeIntent,
-    options?: {
-      topic?: string;
-      team_id?: string;
-      limit?: number;
-    },
-  ): PolicyBridgeResult[] | StratifiedResults;
+  query(intent: PolicyBridgeIntent, options?: {
+    topic?: string;
+    team_id?: string;
+    limit?: number;
+  }): PolicyBridgeResult[] | StratifiedResults;
 
   /** Legacy PolicySource interface for AgentFlow guards. */
   policySource: PolicySource;
@@ -93,11 +90,10 @@ export function createPolicyBridge(vault: Vault): LayerPolicyBridge {
   function filterByTopic(entries: Entity[], topic?: string): Entity[] {
     if (!topic) return entries;
     const lower = topic.toLowerCase();
-    return entries.filter(
-      (e) =>
-        e.name.toLowerCase().includes(lower) ||
-        e.body.toLowerCase().includes(lower) ||
-        e.tags.some((t) => t.toLowerCase().includes(lower)),
+    return entries.filter((e) =>
+      e.name.toLowerCase().includes(lower) ||
+      e.body.toLowerCase().includes(lower) ||
+      e.tags.some((t) => t.toLowerCase().includes(lower)),
     );
   }
 
@@ -114,18 +110,12 @@ export function createPolicyBridge(vault: Vault): LayerPolicyBridge {
         // Combined query: return stratified results from all four layers
         const result: StratifiedResults = {
           canon: tagResults(filterByTopic(queryByLayer(vault, 'canon', { limit }), topic), 'canon'),
-          emerging: tagResults(
-            filterByTopic(queryByLayer(vault, 'emerging', { limit }), topic),
-            'emerging',
-          ),
+          emerging: tagResults(filterByTopic(queryByLayer(vault, 'emerging', { limit }), topic), 'emerging'),
           working: tagResults(
             filterByTopic(queryByLayer(vault, 'working', { limit, team_id: teamId }), topic),
             'working',
           ),
-          archive: tagResults(
-            filterByTopic(queryByLayer(vault, 'archive', { limit }), topic),
-            'archive',
-          ),
+          archive: tagResults(filterByTopic(queryByLayer(vault, 'archive', { limit }), topic), 'archive'),
         };
         return result;
       }
@@ -133,9 +123,7 @@ export function createPolicyBridge(vault: Vault): LayerPolicyBridge {
       // Single-layer query
       const layer = INTENT_TO_LAYER[intent];
       if (!layer) {
-        throw new PolicyBridgeError(
-          `Unknown intent: '${intent}'. Use: enforce, advise, brief, route, or all.`,
-        );
+        throw new PolicyBridgeError(`Unknown intent: '${intent}'. Use: enforce, advise, brief, route, or all.`);
       }
 
       // Enforce team_id requirement for brief (L2) queries
@@ -182,7 +170,7 @@ export function createSomaPolicySource(vault: Vault): PolicySource {
       const normalized = agentId.toLowerCase().replace(/[^a-z0-9]+/g, '-');
       const executions = vault.list('execution', { agentId: normalized, limit: 1 });
       if (executions.length === 0) return null;
-      return ((executions[0] as Record<string, unknown>).conformanceScore as number) ?? null;
+      return (executions[0] as Record<string, unknown>).conformanceScore as number ?? null;
     },
 
     getAgentProfile(agentId: string): AgentProfile | null {

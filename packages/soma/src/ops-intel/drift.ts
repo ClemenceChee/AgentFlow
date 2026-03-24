@@ -4,7 +4,11 @@
  * @module
  */
 
-import type { ConformanceHistory, DriftOptions, DriftReport } from './types.js';
+import type {
+  ConformanceHistory,
+  DriftOptions,
+  DriftReport,
+} from './types.js';
 
 /**
  * Append a new conformance score entry to history.
@@ -33,7 +37,10 @@ export function trackConformanceTrend(
  * - status='improving' when slope > 0 AND R² > 0.3
  * - status='stable' when R² < 0.3 (noise, not trend)
  */
-export function detectDrift(history: ConformanceHistory, options?: DriftOptions): DriftReport {
+export function detectDrift(
+  history: ConformanceHistory,
+  options?: DriftOptions,
+): DriftReport {
   const windowSize = options?.windowSize ?? 50;
   const window = history.slice(-windowSize);
   const n = window.length;
@@ -81,17 +88,16 @@ export function detectDrift(history: ConformanceHistory, options?: DriftOptions)
   const currentScore = window[n - 1]!.score;
   const agentId = window[n - 1]!.agentId;
 
-  const alert =
-    status === 'degrading'
-      ? {
-          type: 'conformance_trend_degradation' as const,
-          agentId,
-          currentScore,
-          trendSlope: slope,
-          windowSize: n,
-          message: `Agent '${agentId}' conformance declining (slope: ${slope.toFixed(4)}/run, R²: ${r2.toFixed(2)}, current: ${(currentScore * 100).toFixed(0)}%)`,
-        }
-      : undefined;
+  const alert = status === 'degrading'
+    ? {
+        type: 'conformance_trend_degradation' as const,
+        agentId,
+        currentScore,
+        trendSlope: slope,
+        windowSize: n,
+        message: `Agent '${agentId}' conformance declining (slope: ${slope.toFixed(4)}/run, R²: ${r2.toFixed(2)}, current: ${(currentScore * 100).toFixed(0)}%)`,
+      }
+    : undefined;
 
   return { status, slope, r2, windowSize: n, dataPoints: n, alert };
 }

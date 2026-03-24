@@ -10,7 +10,7 @@
  * @module
  */
 
-import type { Entity, KnowledgeLayer, LayersConfig, QueryFilter, Vault } from './types.js';
+import type { Entity, KnowledgeLayer, LayersConfig, Vault, QueryFilter } from './types.js';
 import { LAYER_REQUIRED_FIELDS, WORKER_WRITE_PERMISSIONS } from './types.js';
 
 // ---------------------------------------------------------------------------
@@ -71,28 +71,18 @@ export function validateLayerFields(entity: Partial<Entity>): LayerValidationErr
   // L3: confidence_score must be 0.0-1.0
   if (layer === 'emerging' && entity.confidence_score !== undefined) {
     if (entity.confidence_score < 0 || entity.confidence_score > 1) {
-      errors.push({
-        field: 'confidence_score',
-        message: 'confidence_score must be between 0.0 and 1.0',
-      });
+      errors.push({ field: 'confidence_score', message: 'confidence_score must be between 0.0 and 1.0' });
     }
   }
 
   // L3: evidence_links must be an array
-  if (
-    layer === 'emerging' &&
-    entity.evidence_links !== undefined &&
-    !Array.isArray(entity.evidence_links)
-  ) {
+  if (layer === 'emerging' && entity.evidence_links !== undefined && !Array.isArray(entity.evidence_links)) {
     errors.push({ field: 'evidence_links', message: 'evidence_links must be an array' });
   }
 
   // L1 and L4 must not have decay_at
   if ((layer === 'archive' || layer === 'canon') && entity.decay_at) {
-    errors.push({
-      field: 'decay_at',
-      message: `L${layer === 'archive' ? '1' : '4'} entries must not have decay_at`,
-    });
+    errors.push({ field: 'decay_at', message: `L${layer === 'archive' ? '1' : '4'} entries must not have decay_at` });
   }
 
   return errors;
@@ -108,9 +98,7 @@ export class LayerPermissionError extends Error {
     public readonly layer: KnowledgeLayer,
     public readonly permittedLayers: readonly KnowledgeLayer[],
   ) {
-    super(
-      `Worker '${worker}' is not authorized to write to layer '${layer}'. Permitted layers: [${permittedLayers.join(', ')}]`,
-    );
+    super(`Worker '${worker}' is not authorized to write to layer '${layer}'. Permitted layers: [${permittedLayers.join(', ')}]`);
     this.name = 'LayerPermissionError';
   }
 }

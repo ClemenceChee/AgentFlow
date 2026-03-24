@@ -1261,6 +1261,39 @@ export class DashboardServer {
       }
     });
 
+    // AICP: Preflight authorization endpoint
+    this.app.get('/api/aicp/preflight', async (req, res) => {
+      const agentId = req.query.agentId as string;
+      if (!agentId) {
+        return res.status(400).json({ error: 'agentId query parameter required' });
+      }
+      const somaVault = this.config.somaVault;
+      if (!somaVault) {
+        return res.json({
+          proceed: true,
+          warnings: [],
+          recommendations: [],
+          available: false,
+          _meta: { durationMs: 0 },
+        });
+      }
+      try {
+        const { evaluatePreflight } = await import(/* webpackIgnore: true */ 'soma');
+        const { createVault } = await import(/* webpackIgnore: true */ 'soma');
+        const vault = createVault({ baseDir: somaVault });
+        const result = evaluatePreflight(vault, safePath(agentId));
+        res.json(result);
+      } catch {
+        res.json({
+          proceed: true,
+          warnings: [],
+          recommendations: [],
+          available: false,
+          _meta: { durationMs: 0 },
+        });
+      }
+    });
+
     // Ops-Intel: Efficiency (premium — calls SOMA getEfficiency with fallback)
     this.app.get('/api/soma/efficiency', async (_req, res) => {
       try {

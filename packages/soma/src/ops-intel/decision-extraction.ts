@@ -40,12 +40,7 @@ function enrichActionName(toolName: string, args?: Record<string, unknown>): str
     for (let i = parts.length - 2; i >= 0; i--) {
       const seg = parts[i]!;
       // Skip generic path segments (home dirs, hidden config dirs, temp dirs)
-      if (
-        seg.startsWith('.') ||
-        /^(home|tmp|var|usr|etc|lib)$/.test(seg) ||
-        /^[a-z]{1,3}\d*$/.test(seg)
-      )
-        continue;
+      if (seg.startsWith('.') || /^(home|tmp|var|usr|etc|lib)$/.test(seg) || /^[a-z]{1,3}\d*$/.test(seg)) continue;
       return `${toolName}:${seg}`;
     }
   }
@@ -60,9 +55,7 @@ function enrichActionName(toolName: string, args?: Record<string, unknown>): str
     try {
       const host = new URL(args.url).hostname.replace('www.', '');
       return `${toolName}:${host}`;
-    } catch {
-      /* not a URL */
-    }
+    } catch { /* not a URL */ }
   }
 
   return toolName;
@@ -115,7 +108,7 @@ export function extractDecisionsFromSession(events: SessionEvent[]): NormalizedD
           const toolId = item.tool_use_id as string;
           if (toolId) {
             toolResultsById.set(toolId, {
-              isError: !!item.is_error,
+              isError: !!(item.is_error),
               content: String(item.content ?? '').slice(0, MAX_OUTPUT_LEN),
             });
           }
@@ -165,8 +158,7 @@ export function extractDecisionsFromSession(events: SessionEvent[]): NormalizedD
         const result = toolResultsById.get(toolId) ?? toolResultsByParentId.get(eventId);
 
         const toolName = String(item.name ?? 'unattributed');
-        if (!item.name)
-          console.warn(`[Decision-Extraction] Tool call missing name, using 'unattributed'`);
+        if (!item.name) console.warn(`[Decision-Extraction] Tool call missing name, using 'unattributed'`);
         const args = (item.input ?? item.arguments) as Record<string, unknown> | undefined;
 
         // Enrich action name with context from arguments
@@ -211,9 +203,7 @@ interface TraceNode {
  * Extract decisions from AgentFlow ExecutionGraph nodes.
  * Tool and action nodes are treated as decisions.
  */
-export function extractDecisionsFromNodes(
-  nodes: Record<string, TraceNode> | Map<string, TraceNode>,
-): NormalizedDecision[] {
+export function extractDecisionsFromNodes(nodes: Record<string, TraceNode> | Map<string, TraceNode>): NormalizedDecision[] {
   const nodeList = nodes instanceof Map ? [...nodes.values()] : Object.values(nodes);
   const sorted = nodeList
     .filter((n) => n.type === 'tool' || n.type === 'action' || n.type === 'decision')
@@ -228,16 +218,8 @@ export function extractDecisionsFromNodes(
       action: node.name,
       tool: node.name,
       args: node.metadata as Record<string, unknown> | undefined,
-      outcome: isTimeout
-        ? 'timeout'
-        : isFailed
-          ? 'failed'
-          : node.status === 'skipped'
-            ? 'skipped'
-            : 'ok',
-      output:
-        truncate(String(node.state?.result ?? node.state?.summary ?? ''), MAX_OUTPUT_LEN) ||
-        undefined,
+      outcome: isTimeout ? 'timeout' : isFailed ? 'failed' : node.status === 'skipped' ? 'skipped' : 'ok',
+      output: truncate(String(node.state?.result ?? node.state?.summary ?? ''), MAX_OUTPUT_LEN) || undefined,
       error: isFailed ? truncate(String(node.state?.error ?? ''), MAX_OUTPUT_LEN) : undefined,
       durationMs: dur,
       index,
@@ -306,10 +288,7 @@ export function computePatternSignature(decisions: NormalizedDecision[]): string
 
   // Normalize action names: lowercase, strip numeric suffixes
   const actions = decisions.map((d) =>
-    d.action
-      .toLowerCase()
-      .replace(/[-_]\d+$/g, '')
-      .replace(/\s+/g, '_'),
+    d.action.toLowerCase().replace(/[-_]\d+$/g, '').replace(/\s+/g, '_'),
   );
 
   // Collapse consecutive repeats
@@ -338,10 +317,7 @@ export function computeToolPatternSignature(decisions: NormalizedDecision[]): st
   if (decisions.length === 0) return '';
 
   const actions = decisions.map((d) => {
-    const action = d.action
-      .toLowerCase()
-      .replace(/[-_]\d+$/g, '')
-      .replace(/\s+/g, '_');
+    const action = d.action.toLowerCase().replace(/[-_]\d+$/g, '').replace(/\s+/g, '_');
     const tool = d.tool ? d.tool.toLowerCase().replace(/[-_]\d+$/g, '') : '';
     return tool && tool !== action ? `${action}:${tool}` : action;
   });

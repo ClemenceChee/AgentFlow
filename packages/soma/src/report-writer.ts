@@ -8,10 +8,10 @@
  * @module
  */
 
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { queryByLayer } from './layers.js';
 import type { KnowledgeLayer, Vault } from './types.js';
+import { queryByLayer } from './layers.js';
 
 export interface SomaReportAgent {
   name: string;
@@ -94,20 +94,18 @@ export function buildReport(vault: Vault, guardThreshold = 0.3): SomaReport {
   const policyEntities = vault.list('policy');
 
   // Agent stats
-  const reportAgents: SomaReportAgent[] = agents
-    .map((a) => {
-      const data = a as Record<string, unknown>;
-      const totalRuns = (data.totalExecutions as number) ?? 0;
-      const failureRate = (data.failureRate as number) ?? 0;
-      const failures = Math.round(totalRuns * failureRate);
+  const reportAgents: SomaReportAgent[] = agents.map((a) => {
+    const data = a as Record<string, unknown>;
+    const totalRuns = (data.totalExecutions as number) ?? 0;
+    const failureRate = (data.failureRate as number) ?? 0;
+    const failures = Math.round(totalRuns * failureRate);
 
-      let status: SomaReportAgent['status'] = 'healthy';
-      if (failureRate > guardThreshold) status = 'critical';
-      else if (failureRate > guardThreshold * 0.5) status = 'warning';
+    let status: SomaReportAgent['status'] = 'healthy';
+    if (failureRate > guardThreshold) status = 'critical';
+    else if (failureRate > guardThreshold * 0.5) status = 'warning';
 
-      return { name: a.name, totalRuns, failures, failureRate, status };
-    })
-    .sort((a, b) => b.totalRuns - a.totalRuns);
+    return { name: a.name, totalRuns, failures, failureRate, status };
+  }).sort((a, b) => b.totalRuns - a.totalRuns);
 
   // Insights — sorted by confidence (high first), capped at 15
   const confidenceOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
@@ -118,8 +116,8 @@ export function buildReport(vault: Vault, guardThreshold = 0.3): SomaReport {
       return {
         type: e.type,
         title: e.name,
-        claim: (data.claim as string) ?? '',
-        confidence: (data.confidence as string) ?? 'medium',
+        claim: data.claim as string ?? '',
+        confidence: data.confidence as string ?? 'medium',
         layer: data.layer as KnowledgeLayer | undefined,
         confidence_score: data.confidence_score as number | undefined,
         proposal_status: data.status as string | undefined,
@@ -132,16 +130,15 @@ export function buildReport(vault: Vault, guardThreshold = 0.3): SomaReport {
 
   // Policies — sorted by enforcement severity, capped at 10
   const enforcementOrder: Record<string, number> = { error: 0, abort: 1, warn: 2, info: 3 };
-  const reportPolicies: SomaReportPolicy[] = policyEntities
-    .map((p) => {
-      const data = p as Record<string, unknown>;
-      return {
-        name: p.name,
-        enforcement: (data.enforcement as string) ?? 'warn',
-        scope: (data.scope as string) ?? 'unattributed',
-        conditions: (data.conditions as string) ?? '',
-      };
-    })
+  const reportPolicies: SomaReportPolicy[] = policyEntities.map((p) => {
+    const data = p as Record<string, unknown>;
+    return {
+      name: p.name,
+      enforcement: (data.enforcement as string) ?? 'warn',
+      scope: (data.scope as string) ?? 'unattributed',
+      conditions: (data.conditions as string) ?? '',
+    };
+  })
     .sort((a, b) => (enforcementOrder[a.enforcement] ?? 3) - (enforcementOrder[b.enforcement] ?? 3))
     .slice(0, 10);
 
@@ -151,10 +148,9 @@ export function buildReport(vault: Vault, guardThreshold = 0.3): SomaReport {
     .map((a) => ({
       agent: a.name,
       action: (a.failureRate > guardThreshold ? 'block' : 'allow') as 'allow' | 'block',
-      reason:
-        a.failureRate > guardThreshold
-          ? `Failure rate ${(a.failureRate * 100).toFixed(1)}% exceeds threshold ${(guardThreshold * 100).toFixed(0)}%`
-          : `Failure rate ${(a.failureRate * 100).toFixed(1)}% is within threshold`,
+      reason: a.failureRate > guardThreshold
+        ? `Failure rate ${(a.failureRate * 100).toFixed(1)}% exceeds threshold ${(guardThreshold * 100).toFixed(0)}%`
+        : `Failure rate ${(a.failureRate * 100).toFixed(1)}% is within threshold`,
     }));
 
   // Layer counts via queryByLayer

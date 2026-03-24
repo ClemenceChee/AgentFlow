@@ -9,30 +9,14 @@
  */
 
 // Re-export what already exists in agentflow-core
-export type {
-  ExecutionGraph,
-  ExecutionNode,
-  GraphBuilder,
-  GraphStatus,
-  NodeStatus,
-  NodeType,
-  SemanticContext,
-  Variant,
-} from 'agentflow-core';
+export type { ExecutionGraph, ExecutionNode, NodeType, NodeStatus, GraphStatus, GraphBuilder, SemanticContext, Variant } from 'agentflow-core';
 
 /**
  * Extended guard violation that includes outcome_mismatch (SOMA premium).
  * Once agentflow-core publishes the updated type, this can be replaced with a re-export.
  */
 export interface GuardViolation {
-  readonly type:
-    | 'timeout'
-    | 'reasoning-loop'
-    | 'spawn-explosion'
-    | 'high-failure-rate'
-    | 'conformance-drift'
-    | 'known-bottleneck'
-    | 'outcome_mismatch';
+  readonly type: 'timeout' | 'reasoning-loop' | 'spawn-explosion' | 'high-failure-rate' | 'conformance-drift' | 'known-bottleneck' | 'outcome_mismatch';
   readonly nodeId: string;
   readonly message: string;
   readonly timestamp: number;

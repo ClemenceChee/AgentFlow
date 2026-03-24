@@ -22,18 +22,8 @@ export interface MigrationResult {
  * Idempotent: entities already having a `layer` field are skipped.
  */
 export function migrateToLayers(vault: Vault): MigrationResult {
-  const allTypes = [
-    'agent',
-    'execution',
-    'archetype',
-    'insight',
-    'policy',
-    'decision',
-    'assumption',
-    'constraint',
-    'contradiction',
-    'synthesis',
-  ];
+  const allTypes = ['agent', 'execution', 'archetype', 'insight', 'policy', 'decision',
+    'assumption', 'constraint', 'contradiction', 'synthesis'];
 
   let migrated = 0;
   let skipped = 0;
@@ -54,9 +44,7 @@ export function migrateToLayers(vault: Vault): MigrationResult {
         } as Partial<Entity>);
         migrated++;
       } catch (err) {
-        console.error(
-          `[Migration] Failed to migrate ${type}/${entity.id}: ${err instanceof Error ? err.message : String(err)}`,
-        );
+        console.error(`[Migration] Failed to migrate ${type}/${entity.id}: ${err instanceof Error ? err.message : String(err)}`);
         errors++;
       }
     }

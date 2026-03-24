@@ -10,8 +10,8 @@
  * @module
  */
 
-import { queryByLayer, writeToLayer } from './layers.js';
 import type { AutoPromoteConfig, Entity, Vault } from './types.js';
+import { queryByLayer, writeToLayer } from './layers.js';
 
 export class GovernanceError extends Error {
   constructor(message: string) {
@@ -60,17 +60,13 @@ export function createGovernanceAPI(vault: Vault): GovernanceAPI {
         const l2Entries = queryByLayer(vault, 'working');
         const l2Entry = l2Entries.find((e) => e.id === entryId);
         if (l2Entry) {
-          throw new GovernanceError(
-            `L2 entries cannot be promoted. Entry '${entryId}' is in Working Memory (L2).`,
-          );
+          throw new GovernanceError(`L2 entries cannot be promoted. Entry '${entryId}' is in Working Memory (L2).`);
         }
         throw new GovernanceError(`Entry '${entryId}' not found in L3 (Emerging Knowledge).`);
       }
 
       if (entry.layer === 'working') {
-        throw new GovernanceError(
-          `L2 entries cannot be promoted. Entry '${entryId}' is in Working Memory (L2).`,
-        );
+        throw new GovernanceError(`L2 entries cannot be promoted. Entry '${entryId}' is in Working Memory (L2).`);
       }
 
       if (entry.status === 'promoted') {
@@ -118,9 +114,7 @@ export function createGovernanceAPI(vault: Vault): GovernanceAPI {
         const l2Entries = queryByLayer(vault, 'working');
         const l2Entry = l2Entries.find((e) => e.id === entryId);
         if (l2Entry) {
-          throw new GovernanceError(
-            `L2 entries cannot be rejected via governance. Entry '${entryId}' is in Working Memory (L2).`,
-          );
+          throw new GovernanceError(`L2 entries cannot be rejected via governance. Entry '${entryId}' is in Working Memory (L2).`);
         }
         throw new GovernanceError(`Entry '${entryId}' not found in L3 (Emerging Knowledge).`);
       }
@@ -166,9 +160,8 @@ export function createGovernanceAPI(vault: Vault): GovernanceAPI {
         for (const linkId of evidenceLinks) {
           const linked = l1Entries.find((e) => e.id === linkId);
           if (linked) {
-            const agentId =
-              ((linked as Record<string, unknown>).agent_id as string) ??
-              ((linked as Record<string, unknown>).agentId as string);
+            const agentId = (linked as Record<string, unknown>).agent_id as string
+              ?? (linked as Record<string, unknown>).agentId as string;
             if (agentId) agentIds.add(agentId);
           }
         }
@@ -182,9 +175,7 @@ export function createGovernanceAPI(vault: Vault): GovernanceAPI {
         try {
           const l4Id = this.promote(entry.id, 'auto-promote');
           promoted.push(l4Id);
-          console.log(
-            `[Governance] Auto-promoted '${entry.name}' (confidence: ${confidence}, agents: ${agentIds.size})`,
-          );
+          console.log(`[Governance] Auto-promoted '${entry.name}' (confidence: ${confidence}, agents: ${agentIds.size})`);
         } catch {
           skipped++;
         }

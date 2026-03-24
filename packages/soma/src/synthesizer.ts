@@ -8,12 +8,12 @@
  */
 
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import type { AnalysisFn } from 'agentflow-core';
-import { enforceWritePermission, queryByLayer, writeToLayer } from './layers.js';
-import type { Entity, SynthesizerConfig, Vault } from './types.js';
 import { resolveAgentId } from './types.js';
+import type { Entity, SynthesizerConfig, Vault } from './types.js';
+import { queryByLayer, writeToLayer, enforceWritePermission } from './layers.js';
 import { vaultEntityCount } from './vault.js';
 
 const DEFAULT_SCORE_THRESHOLD = 0.4;
@@ -21,34 +21,10 @@ const DEFAULT_DEDUP_THRESHOLD = 0.7;
 
 /** Configurable keyword signals for candidate scoring. */
 const SCORING_KEYWORDS: { category: string; keywords: string[]; weight: number }[] = [
-  {
-    category: 'decision',
-    keywords: ['decided', 'chose', 'selected', 'opted', 'picked', 'agreed', 'concluded'],
-    weight: 0.15,
-  },
-  {
-    category: 'assumption',
-    keywords: ['assumed', 'expected', 'believed', 'thought', 'predicted', 'hypothesized'],
-    weight: 0.15,
-  },
-  {
-    category: 'constraint',
-    keywords: ['must', 'cannot', 'required', 'blocked', 'limited', 'restricted', 'prevented'],
-    weight: 0.15,
-  },
-  {
-    category: 'contradiction',
-    keywords: [
-      'contradicts',
-      'conflicts',
-      'inconsistent',
-      'disagrees',
-      'but',
-      'however',
-      'although',
-    ],
-    weight: 0.15,
-  },
+  { category: 'decision', keywords: ['decided', 'chose', 'selected', 'opted', 'picked', 'agreed', 'concluded'], weight: 0.15 },
+  { category: 'assumption', keywords: ['assumed', 'expected', 'believed', 'thought', 'predicted', 'hypothesized'], weight: 0.15 },
+  { category: 'constraint', keywords: ['must', 'cannot', 'required', 'blocked', 'limited', 'restricted', 'prevented'], weight: 0.15 },
+  { category: 'contradiction', keywords: ['contradicts', 'conflicts', 'inconsistent', 'disagrees', 'but', 'however', 'although'], weight: 0.15 },
 ];
 
 interface LearningSpec {
@@ -85,11 +61,7 @@ function md5(content: string): string {
 /**
  * Create a Synthesizer worker.
  */
-export function createSynthesizer(
-  vault: Vault,
-  analysisFn: AnalysisFn,
-  config?: SynthesizerConfig,
-) {
+export function createSynthesizer(vault: Vault, analysisFn: AnalysisFn, config?: SynthesizerConfig) {
   const scoreThreshold = config?.scoreThreshold ?? DEFAULT_SCORE_THRESHOLD;
   const dedupThreshold = config?.dedupThreshold ?? DEFAULT_DEDUP_THRESHOLD;
   const stateFile = config?.stateFile ?? '.soma/synthesizer-state.json';
@@ -107,9 +79,7 @@ export function createSynthesizer(
         hashes = new Map();
         lastAnalysisHash = '';
       } else if (raw.entityCount != null && currentCount < raw.entityCount) {
-        console.log(
-          `[Synthesizer] Vault entity count decreased (${raw.entityCount} → ${currentCount}) — resetting state`,
-        );
+        console.log(`[Synthesizer] Vault entity count decreased (${raw.entityCount} → ${currentCount}) — resetting state`);
         hashes = new Map();
         lastAnalysisHash = '';
       } else {
@@ -118,22 +88,16 @@ export function createSynthesizer(
       }
       savedEntityCount = currentCount;
     }
-  } catch {
-    /* fresh */
-  }
+  } catch { /* fresh */ }
 
   function saveState(): void {
     const dir = dirname(stateFile);
     if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-    writeFileSync(
-      stateFile,
-      JSON.stringify({
-        hashes: Object.fromEntries(hashes),
-        lastAnalysisHash,
-        entityCount: savedEntityCount ?? vaultEntityCount(vault.baseDir),
-      }),
-      'utf-8',
-    );
+    writeFileSync(stateFile, JSON.stringify({
+      hashes: Object.fromEntries(hashes),
+      lastAnalysisHash,
+      entityCount: savedEntityCount ?? vaultEntityCount(vault.baseDir),
+    }), 'utf-8');
   }
 
   /** Score a candidate entity for distillation potential. */
@@ -163,18 +127,13 @@ export function createSynthesizer(
     for (const spec of specs) {
       let found = false;
       for (const existing of merged) {
-        if (
-          existing.type === spec.type &&
-          overlapCoefficient(existing.title, spec.title) >= dedupThreshold
-        ) {
+        if (existing.type === spec.type && overlapCoefficient(existing.title, spec.title) >= dedupThreshold) {
           // Merge: combine evidence, bump confidence
           existing.sourceCount += spec.sourceCount;
           existing.evidence = [...new Set([...existing.evidence, ...spec.evidence])];
           existing.sourceIds = [...new Set([...existing.sourceIds, ...spec.sourceIds])];
-          if (existing.sourceCount >= 3 && existing.confidence === 'low')
-            existing.confidence = 'medium';
-          if (existing.sourceCount >= 2 && existing.confidence === 'medium')
-            existing.confidence = 'high';
+          if (existing.sourceCount >= 3 && existing.confidence === 'low') existing.confidence = 'medium';
+          if (existing.sourceCount >= 2 && existing.confidence === 'medium') existing.confidence = 'high';
           found = true;
           break;
         }
@@ -192,8 +151,8 @@ export function createSynthesizer(
     ];
 
     return merged.filter((spec) => {
-      return !existingLearnings.some(
-        (existing) => overlapCoefficient(existing.name, spec.title) >= 0.8,
+      return !existingLearnings.some((existing) =>
+        overlapCoefficient(existing.name, spec.title) >= 0.8,
       );
     });
   }
@@ -211,9 +170,7 @@ export function createSynthesizer(
         ...vault.list('insight'),
         ...vault.list('agent'),
         ...vault.list('decision'),
-      ].filter(
-        (e) => !e.tags.includes('synthesized') && !(e as Record<string, unknown>).decayed_from,
-      );
+      ].filter((e) => !e.tags.includes('synthesized') && !(e as Record<string, unknown>).decayed_from);
 
       // Score and filter candidates
       const candidates = allEntities
@@ -262,8 +219,7 @@ export function createSynthesizer(
             status: 'active',
             claim: spec.claim,
             confidence: spec.confidence,
-            confidence_score:
-              spec.confidence === 'high' ? 0.9 : spec.confidence === 'medium' ? 0.6 : 0.3,
+            confidence_score: spec.confidence === 'high' ? 0.9 : spec.confidence === 'medium' ? 0.6 : 0.3,
             evidence: spec.evidence,
             evidence_links: spec.sourceIds,
             sourceIds: spec.sourceIds,
@@ -280,16 +236,12 @@ export function createSynthesizer(
 
       // Check if any insights suggest policies
       for (const spec of deduplicated) {
-        if (
-          spec.confidence === 'high' &&
-          (spec.type === 'constraint' || spec.type === 'decision')
-        ) {
+        if (spec.confidence === 'high' && (spec.type === 'constraint' || spec.type === 'decision')) {
           try {
             const policyPrompt = `Based on this ${spec.type}: "${spec.claim}", suggest a guard policy. Return JSON: { "scope": "...", "conditions": "...", "enforcement": "warn|error|abort", "thresholds": {} }`;
             const policyResponse = await analysisFn(policyPrompt);
             const policyData = JSON.parse(policyResponse);
-            if (!policyData.scope)
-              console.warn(`[Synthesizer] Policy for '${spec.title}' missing scope`);
+            if (!policyData.scope) console.warn(`[Synthesizer] Policy for '${spec.title}' missing scope`);
             writeToLayer(vault, 'synthesizer', 'emerging', {
               type: 'policy',
               name: `Policy: ${spec.title}`,
@@ -337,9 +289,7 @@ export function createSynthesizer(
         if (total === 0) continue;
         const failRate = (data.failureRate as number) ?? 0;
         const failCount = Math.round(total * failRate);
-        agentSummaries.push(
-          `- ${agent.name}: ${total} runs, ${failCount} failures (${(failRate * 100).toFixed(1)}%)`,
-        );
+        agentSummaries.push(`- ${agent.name}: ${total} runs, ${failCount} failures (${(failRate * 100).toFixed(1)}%)`);
       }
       const statsString = agentSummaries.join('\n');
 
@@ -351,14 +301,7 @@ export function createSynthesizer(
       }
 
       // --- Collect existing knowledge to include in prompt ---
-      const existingTypes = [
-        'insight',
-        'decision',
-        'assumption',
-        'constraint',
-        'contradiction',
-        'synthesis',
-      ];
+      const existingTypes = ['insight', 'decision', 'assumption', 'constraint', 'contradiction', 'synthesis'];
       const existingTitles: string[] = [];
       for (const type of existingTypes) {
         for (const e of vault.list(type)) {
@@ -369,10 +312,9 @@ export function createSynthesizer(
         existingTitles.push(`[policy] ${p.name}`);
       }
 
-      const existingKnowledgeSection =
-        existingTitles.length > 0
-          ? `\nThe following insights and policies ALREADY EXIST in the knowledge vault.\nDo NOT repeat or rephrase these. Only return genuinely NEW findings:\n${existingTitles.map((t) => `- ${t}`).join('\n')}\n`
-          : '';
+      const existingKnowledgeSection = existingTitles.length > 0
+        ? `\nThe following insights and policies ALREADY EXIST in the knowledge vault.\nDo NOT repeat or rephrase these. Only return genuinely NEW findings:\n${existingTitles.map(t => `- ${t}`).join('\n')}\n`
+        : '';
 
       const prompt = `You are analyzing AI agent execution statistics from an organizational knowledge vault.
 
@@ -410,11 +352,7 @@ Return [] if all meaningful insights are already covered above.`;
         }
         const match = response.match(/\[[\s\S]*\]/);
         if (!match) {
-          console.warn(
-            '[Soma Synthesizer] No JSON array found in LLM response (' +
-              response.length +
-              ' chars)',
-          );
+          console.warn('[Soma Synthesizer] No JSON array found in LLM response (' + response.length + ' chars)');
           return 0;
         }
 
@@ -432,9 +370,7 @@ Return [] if all meaningful insights are already covered above.`;
             try {
               parsed = JSON.parse(fixable);
             } catch {
-              console.warn(
-                '[Soma Synthesizer] Could not parse LLM JSON response (even after repair)',
-              );
+              console.warn('[Soma Synthesizer] Could not parse LLM JSON response (even after repair)');
               return 0;
             }
           } else {
@@ -461,29 +397,20 @@ Return [] if all meaningful insights are already covered above.`;
           const agentIds = Array.isArray(item.agentIds) ? item.agentIds.map(String) : [];
 
           // Check for existing match — supersede or skip
-          const existingMatch = vault
-            .list(entityType)
-            .find((e) => overlapCoefficient(e.name, title) >= dedupThreshold);
+          const existingMatch = vault.list(entityType).find(
+            (e) => overlapCoefficient(e.name, title) >= dedupThreshold,
+          );
 
           if (existingMatch) {
-            const existingConf =
-              ((existingMatch as Record<string, unknown>).confidence as string) ?? 'low';
+            const existingConf = (existingMatch as Record<string, unknown>).confidence as string ?? 'low';
             const existingEvidence = (existingMatch as Record<string, unknown>).evidence;
-            const existingEvidenceArr = Array.isArray(existingEvidence)
-              ? existingEvidence.map(String)
-              : [];
+            const existingEvidenceArr = Array.isArray(existingEvidence) ? existingEvidence.map(String) : [];
             const newEvidenceItems = evidence.filter((ev) => !existingEvidenceArr.includes(ev));
 
             // Supersede if new version has higher confidence or new evidence
-            if (
-              (confidenceRank[confidence] ?? 0) > (confidenceRank[existingConf] ?? 0) ||
-              newEvidenceItems.length > 0
-            ) {
+            if ((confidenceRank[confidence] ?? 0) > (confidenceRank[existingConf] ?? 0) || newEvidenceItems.length > 0) {
               const mergedEvidence = [...new Set([...existingEvidenceArr, ...evidence])];
-              const bestConfidence =
-                (confidenceRank[confidence] ?? 0) >= (confidenceRank[existingConf] ?? 0)
-                  ? confidence
-                  : existingConf;
+              const bestConfidence = (confidenceRank[confidence] ?? 0) >= (confidenceRank[existingConf] ?? 0) ? confidence : existingConf;
               vault.update(existingMatch.id, {
                 claim,
                 confidence: bestConfidence,
@@ -514,15 +441,11 @@ Return [] if all meaningful insights are already covered above.`;
               body: `## ${title}\n\n${claim}\n\n### Evidence\n${evidence.map((e: string) => `- ${e}`).join('\n')}`,
             } as Partial<Entity> & { type: string; name: string });
             created++;
-          } catch {
-            /* skip */
-          }
+          } catch { /* skip */ }
         }
 
         if (skippedDupes > 0 || superseded > 0) {
-          console.log(
-            `[Soma Synthesizer] ${skippedDupes} skipped, ${superseded} superseded, ${created} new`,
-          );
+          console.log(`[Soma Synthesizer] ${skippedDupes} skipped, ${superseded} superseded, ${created} new`);
         }
 
         // Store hash so we skip next time if nothing changed
@@ -531,10 +454,7 @@ Return [] if all meaningful insights are already covered above.`;
         // Check for policy suggestions from high-confidence constraints
         for (const rawItem2 of parsed) {
           const item2 = rawItem2 as Record<string, unknown>;
-          if (
-            item2.confidence === 'high' &&
-            (item2.type === 'constraint' || item2.type === 'decision')
-          ) {
+          if (item2.confidence === 'high' && (item2.type === 'constraint' || item2.type === 'decision')) {
             const policyTitle = `Policy: ${item2.title}`;
 
             // Dedup: skip if similar policy already exists
@@ -548,8 +468,7 @@ Return [] if all meaningful insights are already covered above.`;
               const policyMatch = policyResponse.match(/\{[\s\S]*\}/);
               if (policyMatch) {
                 const policyData = JSON.parse(policyMatch[0]);
-                if (!policyData.scope)
-                  console.warn(`[Synthesizer] Policy '${policyTitle}' missing scope`);
+                if (!policyData.scope) console.warn(`[Synthesizer] Policy '${policyTitle}' missing scope`);
                 writeToLayer(vault, 'synthesizer', 'emerging', {
                   type: 'policy',
                   name: policyTitle,
@@ -562,23 +481,18 @@ Return [] if all meaningful insights are already covered above.`;
                   evidence_links: (item2.agentIds as string[]) ?? [],
                   decay_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
                   tags: ['synthesized', 'auto-policy', 'agent-analysis'],
-                  related: ((item2.agentIds as string[]) ?? []).map((id: string) => `agent/${id}`),
+                  related: (item2.agentIds as string[] ?? []).map((id: string) => `agent/${id}`),
                   body: `Auto-generated policy from ${item2.type}: ${item2.claim}`,
                 } as Partial<Entity> & { type: string; name: string });
               }
-            } catch {
-              /* policy creation is best-effort */
-            }
+            } catch { /* policy creation is best-effort */ }
           }
         }
 
         saveState();
         return created;
       } catch (err) {
-        console.error(
-          '[Soma Synthesizer] analyzeAgents error:',
-          err instanceof Error ? err.message : String(err),
-        );
+        console.error('[Soma Synthesizer] analyzeAgents error:', err instanceof Error ? err.message : String(err));
         return 0;
       }
     },
@@ -603,9 +517,7 @@ Return [] if all meaningful insights are already covered above.`;
       const byAgent = new Map<string, Entity[]>();
       for (const entry of l1Entries) {
         if (!entry.agent_id) {
-          console.warn(
-            `[Synthesizer] Skipping entry ${entry.id} from agent grouping: missing agent_id`,
-          );
+          console.warn(`[Synthesizer] Skipping entry ${entry.id} from agent grouping: missing agent_id`);
           continue;
         }
         if (!byAgent.has(entry.agent_id)) byAgent.set(entry.agent_id, []);
@@ -613,12 +525,7 @@ Return [] if all meaningful insights are already covered above.`;
       }
 
       // Find recurring patterns (content that appears across multiple agents)
-      const patternCandidates: {
-        content: string;
-        evidenceIds: string[];
-        agentCount: number;
-        sourceAgents: string[];
-      }[] = [];
+      const patternCandidates: { content: string; evidenceIds: string[]; agentCount: number; sourceAgents: string[] }[] = [];
 
       const l1Array = l1Entries.filter((e) => !e.superseded_by); // Skip superseded
       for (let i = 0; i < l1Array.length; i++) {
@@ -654,8 +561,7 @@ Return [] if all meaningful insights are already covered above.`;
       let created = 0;
       const decayAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(); // 90 days default
 
-      for (const candidate of patternCandidates.slice(0, 20)) {
-        // Cap at 20 per run
+      for (const candidate of patternCandidates.slice(0, 20)) { // Cap at 20 per run
         try {
           const prompt = `You are analyzing recurring patterns found across ${candidate.agentCount} agents and ${candidate.evidenceIds.length} traces.
 
@@ -676,8 +582,8 @@ Set confidence based on: number of supporting traces (${candidate.evidenceIds.le
 
           // Dedup: check if similar proposal already exists in L3
           const existingL3 = queryByLayer(vault, 'emerging');
-          const isDuplicate = existingL3.some(
-            (e) => overlapCoefficient(e.name, String(data.title)) >= dedupThreshold,
+          const isDuplicate = existingL3.some((e) =>
+            overlapCoefficient(e.name, String(data.title)) >= dedupThreshold,
           );
           if (isDuplicate) continue;
 
@@ -720,12 +626,8 @@ Set confidence based on: number of supporting traces (${candidate.evidenceIds.le
       // Group by decision_type
       const byType = new Map<string, Entity[]>();
       for (const d of decisions) {
-        const dtype =
-          ((d as Record<string, unknown>).decision_type as string) ?? 'untyped:decision';
-        if (!(d as Record<string, unknown>).decision_type)
-          console.warn(
-            `[Synthesizer] Decision ${d.id} missing decision_type, using 'untyped:decision'`,
-          );
+        const dtype = (d as Record<string, unknown>).decision_type as string ?? 'untyped:decision';
+        if (!(d as Record<string, unknown>).decision_type) console.warn(`[Synthesizer] Decision ${d.id} missing decision_type, using 'untyped:decision'`);
         if (!byType.has(dtype)) byType.set(dtype, []);
         byType.get(dtype)!.push(d);
       }
@@ -763,17 +665,15 @@ Set confidence based on: number of supporting traces (${candidate.evidenceIds.le
 
         // Generate L3 proposals from clusters
         for (const cluster of clusters.slice(0, 10)) {
-          const agents = [
-            ...new Set(cluster.map((e) => (e as Record<string, unknown>).agent_id).filter(Boolean)),
-          ];
+          const agents = [...new Set(cluster.map((e) => (e as Record<string, unknown>).agent_id).filter(Boolean))];
           const evidenceIds = cluster.map((e) => e.id);
-          const confidenceScore = Math.min(0.9, 0.3 + cluster.length * 0.1 + agents.length * 0.1);
+          const confidenceScore = Math.min(0.9, 0.3 + (cluster.length * 0.1) + (agents.length * 0.1));
           const title = `${decisionType} pattern: ${cluster[0]!.name.slice(0, 60)}`;
 
           // Dedup: check if similar proposal already exists in L3
           const existingL3 = queryByLayer(vault, 'emerging');
-          const isDuplicate = existingL3.some(
-            (e) => overlapCoefficient(e.name, title) >= dedupThreshold,
+          const isDuplicate = existingL3.some((e) =>
+            overlapCoefficient(e.name, title) >= dedupThreshold,
           );
           if (isDuplicate) continue;
 
@@ -812,34 +712,19 @@ Set confidence based on: number of supporting traces (${candidate.evidenceIds.le
       const agents = vault.list('agent');
 
       // Build per-agent decision data
-      const agentDecisions = new Map<
-        string,
-        {
-          patterns: string[];
-          successRate: number;
-          decisions: Array<{ action: string; outcome: string; tool?: string }[]>;
-        }
-      >();
+      const agentDecisions = new Map<string, { patterns: string[]; successRate: number; decisions: Array<{ action: string; outcome: string; tool?: string }[]> }>();
 
       for (const exec of executions) {
         const data = exec as Record<string, unknown>;
         const agentId = resolveAgentId(data);
-        const decisions = data.decisions as
-          | Array<{ action: string; outcome: string; tool?: string }>
-          | undefined;
+        const decisions = data.decisions as Array<{ action: string; outcome: string; tool?: string }> | undefined;
         const pattern = data.decisionPattern as string | undefined;
         if (!agentId || !decisions || decisions.length === 0) continue;
 
         if (!agentDecisions.has(agentId)) {
-          const agent = agents.find(
-            (a) => a.name === agentId || (a as Record<string, unknown>).agentId === agentId,
-          );
-          const failureRate = ((agent as Record<string, unknown>)?.failureRate as number) ?? 0;
-          agentDecisions.set(agentId, {
-            patterns: [],
-            successRate: 1 - failureRate,
-            decisions: [],
-          });
+          const agent = agents.find((a) => a.name === agentId || (a as Record<string, unknown>).agentId === agentId);
+          const failureRate = (agent as Record<string, unknown>)?.failureRate as number ?? 0;
+          agentDecisions.set(agentId, { patterns: [], successRate: 1 - failureRate, decisions: [] });
         }
 
         const entry = agentDecisions.get(agentId)!;
@@ -848,9 +733,7 @@ Set confidence based on: number of supporting traces (${candidate.evidenceIds.le
       }
 
       // Need at least 2 agents with decision data
-      const agentsWithData = [...agentDecisions.entries()].filter(
-        ([, v]) => v.decisions.length >= 3,
-      );
+      const agentsWithData = [...agentDecisions.entries()].filter(([, v]) => v.decisions.length >= 3);
       if (agentsWithData.length < 2) return 0;
 
       // Find pairs with >20% success rate gap
@@ -864,10 +747,10 @@ Set confidence based on: number of supporting traces (${candidate.evidenceIds.le
           const gap = Math.abs(dataA.successRate - dataB.successRate);
           if (gap < 0.2) continue; // Need meaningful difference
 
-          const [winner, winnerData] =
-            dataA.successRate > dataB.successRate ? [agentA, dataA] : [agentB, dataB];
-          const [loser, loserData] =
-            dataA.successRate > dataB.successRate ? [agentB, dataB] : [agentA, dataA];
+          const [winner, winnerData] = dataA.successRate > dataB.successRate
+            ? [agentA, dataA] : [agentB, dataB];
+          const [loser, loserData] = dataA.successRate > dataB.successRate
+            ? [agentB, dataB] : [agentA, dataA];
 
           // Build action frequency + outcome maps
           const winnerActions = new Map<string, { total: number; ok: number }>();
@@ -908,43 +791,36 @@ Set confidence based on: number of supporting traces (${candidate.evidenceIds.le
 
           const insightName = `Decision divergence: ${loser} vs ${winner}`;
           const existingL3 = queryByLayer(vault, 'emerging');
-          if (existingL3.some((e) => overlapCoefficient(e.name, insightName) >= dedupThreshold))
-            continue;
+          if (existingL3.some((e) => overlapCoefficient(e.name, insightName) >= dedupThreshold)) continue;
 
           // Build claim with per-action success rates
-          const fmtRate = (stats: { total: number; ok: number }) =>
-            `${((stats.ok / Math.max(1, stats.total)) * 100).toFixed(0)}%`;
-          const claim =
-            `${winner} (${(winnerData.successRate * 100).toFixed(0)}% overall) and ${loser} (${(loserData.successRate * 100).toFixed(0)}% overall) show different decision patterns. ` +
-            (winnerOnly.length > 0
-              ? `${winner} uses: ${winnerOnly
-                  .slice(0, 3)
-                  .map((a) => `${a} (${fmtRate(winnerActions.get(a)!)} success)`)
-                  .join(', ')}. `
-              : '') +
-            (loserOnly.length > 0
-              ? `${loser} uses instead: ${loserOnly
-                  .slice(0, 3)
-                  .map((a) => `${a} (${fmtRate(loserActions.get(a)!)} success)`)
-                  .join(', ')}.`
-              : '');
+          const fmtRate = (stats: { total: number; ok: number }) => `${((stats.ok / Math.max(1, stats.total)) * 100).toFixed(0)}%`;
+          const claim = `${winner} (${(winnerData.successRate * 100).toFixed(0)}% overall) and ${loser} (${(loserData.successRate * 100).toFixed(0)}% overall) show different decision patterns. ` +
+            (winnerOnly.length > 0 ? `${winner} uses: ${winnerOnly.slice(0, 3).map((a) => `${a} (${fmtRate(winnerActions.get(a)!)} success)`).join(', ')}. ` : '') +
+            (loserOnly.length > 0 ? `${loser} uses instead: ${loserOnly.slice(0, 3).map((a) => `${a} (${fmtRate(loserActions.get(a)!)} success)`).join(', ')}.` : '');
+
+          // Detect AICP-mediated knowledge flow
+          const hasAicpPreflight = [...winnerData.decisions, ...loserData.decisions]
+            .some((chain) => chain.some((d) => d.action === 'aicp-preflight'));
+          const via = hasAicpPreflight ? 'aicp-preflight' : undefined;
+          const tags = ['synthesized', 'divergence', 'actionable'];
+          if (via) tags.push('aicp-mediated');
 
           try {
             writeToLayer(vault, 'synthesizer', 'emerging', {
               type: 'insight',
               name: insightName,
               status: 'active',
-              tags: ['synthesized', 'divergence', 'actionable'],
+              tags,
               claim,
+              via,
               confidence_score: Math.min(0.9, 0.5 + gap),
               evidence_links: [winner, loser],
               source_agents: [winner, loser],
               body: `## Decision Divergence\n\n${claim}\n\n### ${winner} actions\n${[...winnerActions.entries()].map(([a, s]) => `- ${a} (${s.total}x, ${fmtRate(s)} success)`).join('\n')}\n\n### ${loser} actions\n${[...loserActions.entries()].map(([a, s]) => `- ${a} (${s.total}x, ${fmtRate(s)} success)`).join('\n')}`,
             } as Partial<Entity> & { type: string; name: string });
             created++;
-          } catch {
-            /* skip duplicates */
-          }
+          } catch { /* skip duplicates */ }
         }
       }
 

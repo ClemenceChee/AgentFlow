@@ -6,7 +6,7 @@
  */
 
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
-import { basename, extname, join } from 'node:path';
+import { join, extname, basename } from 'node:path';
 import type { ExecutionEvent } from 'agentflow-core';
 
 export interface ScanResult {
@@ -39,11 +39,7 @@ function mapStatus(status: string): 'running' | 'completed' | 'failed' {
  * Compute a simple path signature from nodes.
  */
 function computePathSignature(nodes: Record<string, unknown>): string {
-  const nodeList = Object.values(nodes) as Array<{
-    type?: string;
-    name?: string;
-    startTime?: number;
-  }>;
+  const nodeList = Object.values(nodes) as Array<{ type?: string; name?: string; startTime?: number }>;
   nodeList.sort((a, b) => (a.startTime ?? 0) - (b.startTime ?? 0));
   return nodeList.map((n) => `${n.type ?? '?'}:${n.name ?? '?'}`).join('→');
 }
@@ -123,13 +119,9 @@ function parseJsonlFile(filePath: string): ExecutionEvent[] {
         const entry = JSON.parse(line) as Record<string, unknown>;
         const event = cronRunToEvent(entry, filePath);
         if (event) events.push(event);
-      } catch {
-        /* skip bad line */
-      }
+      } catch { /* skip bad line */ }
     }
-  } catch {
-    /* skip unreadable file */
-  }
+  } catch { /* skip unreadable file */ }
   return events;
 }
 
@@ -153,9 +145,7 @@ function findTraceFiles(dir: string): string[] {
       } else if (extname(entry) === '.json' || extname(entry) === '.jsonl') {
         results.push(fullPath);
       }
-    } catch {
-      /* skip inaccessible */
-    }
+    } catch { /* skip inaccessible */ }
   }
 
   return results;

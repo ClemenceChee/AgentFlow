@@ -10,7 +10,7 @@
 import type { Entity } from './types.js';
 
 const FRONTMATTER_DELIM = '---';
-const WIKILINK_REGEX = /\[\[([^[\]]+)\]\]/g;
+const WIKILINK_REGEX = /\[\[([^\]]+)\]\]/g;
 
 /**
  * Parse a Markdown file with YAML frontmatter into an Entity.
@@ -33,15 +33,14 @@ export function parseEntity(content: string, defaults?: Partial<Entity>): Entity
   const body = lines.slice(bodyStartLine).join('\n').trim();
 
   // Extract wikilinks from both frontmatter.related and body
-  const fmRelated = Array.isArray(frontmatter.related) ? (frontmatter.related as string[]) : [];
+  const fmRelated = Array.isArray(frontmatter.related) ? frontmatter.related as string[] : [];
   const bodyLinks = extractWikilinks(body);
   const allRelated = [...new Set([...fmRelated, ...bodyLinks])];
 
   const now = new Date().toISOString();
 
   const resolvedType = (frontmatter.type as string) ?? defaults?.type;
-  if (!resolvedType)
-    console.warn(`[Entity] Missing type in frontmatter and defaults, using 'untyped'`);
+  if (!resolvedType) console.warn(`[Entity] Missing type in frontmatter and defaults, using 'untyped'`);
 
   return {
     ...frontmatter,
@@ -51,7 +50,7 @@ export function parseEntity(content: string, defaults?: Partial<Entity>): Entity
     status: (frontmatter.status as string) ?? defaults?.status ?? 'active',
     created: (frontmatter.created as string) ?? defaults?.created ?? now,
     updated: (frontmatter.updated as string) ?? defaults?.updated ?? now,
-    tags: Array.isArray(frontmatter.tags) ? (frontmatter.tags as string[]) : [],
+    tags: Array.isArray(frontmatter.tags) ? frontmatter.tags as string[] : [],
     related: allRelated,
     body,
   };
@@ -103,7 +102,7 @@ function parseSimpleYaml(yaml: string): Record<string, unknown> {
     if (colonIdx <= 0) continue;
 
     const key = line.slice(0, colonIdx).trim();
-    const value = line.slice(colonIdx + 1).trim();
+    let value = line.slice(colonIdx + 1).trim();
 
     // JSON object (starts with { and ends with })
     if (value.startsWith('{') && value.endsWith('}')) {
@@ -123,11 +122,7 @@ function parseSimpleYaml(yaml: string): Record<string, unknown> {
         result[key] = JSON.parse(value);
       } catch {
         // Fall back to simple comma-split for plain string arrays
-        result[key] = value
-          .slice(1, -1)
-          .split(',')
-          .map((s) => s.trim().replace(/^["']|["']$/g, ''))
-          .filter(Boolean);
+        result[key] = value.slice(1, -1).split(',').map((s) => s.trim().replace(/^["']|["']$/g, '')).filter(Boolean);
       }
     } else if (value === '') {
       // Check for multi-line array
@@ -166,11 +161,8 @@ function serializeYamlField(key: string, value: unknown): string {
   if (typeof value === 'object' && value !== null) {
     return `${key}: ${JSON.stringify(value)}`;
   }
-  if (
-    typeof value === 'string' &&
-    (value.includes(':') || value.includes('#') || value.includes('\n'))
-  ) {
-    return `${key}: "${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+  if (typeof value === 'string' && (value.includes(':') || value.includes('#') || value.includes('\n'))) {
+    return `${key}: "${value.replace(/"/g, '\\"')}"`;
   }
   return `${key}: ${value}`;
 }
