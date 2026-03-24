@@ -127,40 +127,90 @@ export class OpenClawAdapter implements TraceAdapter {
         const startTime = entry.runAtMs ?? entry.ts;
         const duration = entry.durationMs ?? 0;
 
+        const runStatus =
+          entry.status === 'ok' ? 'completed' : entry.status === 'error' ? 'failed' : 'unknown';
+
+        // Parse execution steps from summary markdown
+        const summary = entry.summary ?? '';
+        const nodes: NormalizedTrace['nodes'] = {};
+        const rootChildren: string[] = [];
+        let stepIdx = 0;
+        let m: RegExpExecArray | null;
+
+        // Table format: | **1. Step Name** | ✅ | Details |
+        const tableRe = /\|\s*\*?\*?(\d+)\.\s*\*?\*?([^|]+)\*?\*?\s*\|\s*([^|]+)\s*\|\s*([^|]*)\|/g;
+        while ((m = tableRe.exec(summary)) !== null) {
+          stepIdx++;
+          const nodeId = `step-${stepIdx}`;
+          rootChildren.push(nodeId);
+          nodes[nodeId] = {
+            id: nodeId,
+            type: 'tool',
+            name: m[2]?.trim().replace(/\*+/g, '') || `Step ${stepIdx}`,
+            status:
+              m[3]?.includes('\u274C') || m[3]?.toLowerCase().includes('fail')
+                ? 'failed'
+                : 'completed',
+            startTime: startTime + (stepIdx - 1) * Math.floor(duration / Math.max(1, stepIdx + 1)),
+            endTime: startTime + stepIdx * Math.floor(duration / Math.max(1, stepIdx + 1)),
+            parentId: 'root',
+            children: [],
+            metadata: { detail: m[4]?.trim() || '' },
+          };
+        }
+
+        // Fallback: numbered list — 1. **Step** — details
+        if (stepIdx === 0) {
+          const listRe = /^\s*(\d+)\.\s*\*?\*?([^*\n]+)\*?\*?\s*(?:[-\u2014]\s*(.+))?$/gm;
+          while ((m = listRe.exec(summary)) !== null) {
+            if (m[2]?.trim().startsWith('#')) continue;
+            stepIdx++;
+            const nodeId = `step-${stepIdx}`;
+            const detail = m[3]?.trim() || '';
+            rootChildren.push(nodeId);
+            nodes[nodeId] = {
+              id: nodeId,
+              type: 'tool',
+              name: m[2]?.trim().replace(/\*+/g, '') || `Step ${stepIdx}`,
+              status: detail.toLowerCase().includes('fail') ? 'failed' : 'completed',
+              startTime:
+                startTime + (stepIdx - 1) * Math.floor(duration / Math.max(1, stepIdx + 1)),
+              endTime: startTime + stepIdx * Math.floor(duration / Math.max(1, stepIdx + 1)),
+              parentId: 'root',
+              children: [],
+              metadata: { detail },
+            };
+          }
+        }
+
+        nodes['root'] = {
+          id: 'root',
+          type: 'cron-job',
+          name: jobName,
+          status: runStatus,
+          startTime,
+          endTime: startTime + duration,
+          parentId: null,
+          children: rootChildren,
+          metadata: {
+            jobId,
+            summary: entry.summary,
+            error: entry.error,
+            delivered: entry.delivered,
+            deliveryStatus: entry.deliveryStatus,
+          },
+        };
+
         const trace: NormalizedTrace = {
           id: entry.sessionId ?? `${jobId}-${entry.ts}`,
           agentId: `openclaw:${jobId}`,
           name: jobName,
-          status:
-            entry.status === 'ok' ? 'completed' : entry.status === 'error' ? 'failed' : 'unknown',
+          status: runStatus,
           startTime,
           endTime: startTime + duration,
           trigger: 'cron',
           source: 'openclaw',
-          nodes: {
-            root: {
-              id: 'root',
-              type: 'cron-job',
-              name: jobName,
-              status:
-                entry.status === 'ok'
-                  ? 'completed'
-                  : entry.status === 'error'
-                    ? 'failed'
-                    : 'unknown',
-              startTime,
-              endTime: startTime + duration,
-              parentId: null,
-              children: [],
-              metadata: {
-                jobId,
-                summary: entry.summary,
-                error: entry.error,
-                delivered: entry.delivered,
-                deliveryStatus: entry.deliveryStatus,
-              },
-            },
-          },
+          nodes,
           metadata: {
             model: entry.model,
             provider: entry.provider,
