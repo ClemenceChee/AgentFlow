@@ -55,3 +55,6 @@ docs/docs/api/core/
 tests/soma/
 .agentflow/
 traces/
+
+# Local agentflow runtime config (contains environment-specific paths)
+packages/dashboard/agentflow.config.json
