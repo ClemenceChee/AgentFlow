@@ -58,6 +58,88 @@ This context enables:
 - **Access Control** - Enforce team-based privacy boundaries
 - **Learning** - Build operator-specific and team-specific patterns
 
+## Organizational Briefings
+
+AgentFlow now provides intelligent organizational context briefings at the start of each execution session. These briefings leverage SOMA's organizational intelligence to provide relevant context, insights, and recommendations.
+
+### Briefing Features
+
+- **Team Activity Insights** - Recent team sessions, active operators, common patterns
+- **Session Correlation** - Related work, similar patterns, and continuation opportunities  
+- **Performance Intelligence** - System performance metrics and optimization recommendations
+- **Governance Alerts** - Policy compliance requirements and validation triggers
+- **Collaboration Context** - Cross-team activities and knowledge sharing opportunities
+
+### Session Hook Integration
+
+```typescript
+const builder = createGraphBuilder({
+  agentId: 'data-analysis',
+  operatorContext: {
+    operatorId: process.env.OPERATOR_ID!,
+    sessionId: process.env.CLAUDE_CODE_SESSION_ID!,
+    teamId: process.env.TEAM_ID,
+    instanceId: process.env.CLAUDE_CODE_INSTANCE_ID
+  },
+  sessionHooks: {
+    onSessionStart: async (context) => {
+      // Organizational briefing automatically available
+      console.log('📊 Briefing:', context.briefing);
+      console.log('💡 Insights:', context.insights?.length || 0);
+      console.log('⚠️ Warnings:', context.warnings?.length || 0);
+      console.log('📋 Recommendations:', context.recommendations?.length || 0);
+      
+      return { shouldProceed: true };
+    },
+    
+    onSessionInitialized: async (context) => {
+      // Access detailed organizational context
+      if (context.organizationalContext?.briefingAvailable) {
+        console.log(`✅ Team: ${context.organizationalContext.teamContext?.teamId}`);
+        console.log(`📈 Insights: ${context.organizationalContext.insightCount}`);
+        console.log(`🔗 Related: ${context.organizationalContext.relatedSessions.length}`);
+      }
+    }
+  }
+});
+```
+
+### Runtime Access
+
+```typescript
+// Access organizational context during execution
+const orgContext = builder.getOrganizationalContext();
+console.log('Current context:', {
+  operator: orgContext.operatorContext?.operatorId,
+  team: orgContext.teamContext,
+  briefing: orgContext.briefingAvailable,
+  insights: orgContext.insightCount,
+  warnings: orgContext.warningCount
+});
+
+// Get full briefing data
+const briefing = builder.getOrganizationalBriefing();
+if (briefing?.status === 'available') {
+  console.log('Team insights:', briefing.teamContext);
+  console.log('Related sessions:', briefing.relatedSessions);
+  console.log('Recommendations:', briefing.recommendations);
+}
+```
+
+### Execution Graph Metadata
+
+Briefing data is embedded in the ExecutionGraph for downstream access:
+
+```typescript
+const graph = builder.build();
+const briefingMeta = graph.metadata?.organizationalBriefing;
+
+console.log('Briefing Status:', briefingMeta?.status);
+console.log('Team Context:', briefingMeta?.teamContextAvailable);
+console.log('Key Insights:', briefingMeta?.keyInsights);
+console.log('Recommendations:', briefingMeta?.recommendations);
+```
+
 ## Enhanced Event Capture
 
 AgentFlow's SOMA event writer now captures comprehensive organizational metadata:

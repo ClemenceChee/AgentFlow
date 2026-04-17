@@ -186,6 +186,10 @@ export interface AgentFlowConfig {
       sessionId?: string;
       agentId?: string;
       trigger?: string;
+      briefing?: string;
+      insights?: readonly unknown[];
+      warnings?: readonly string[];
+      recommendations?: readonly string[];
     }) => Promise<{
       shouldProceed: boolean;
       briefing?: string;
@@ -202,6 +206,14 @@ export interface AgentFlowConfig {
       sessionId?: string;
       graphId: string;
       traceId: string;
+      briefing?: unknown;
+      organizationalContext?: {
+        briefingAvailable: boolean;
+        briefingSummary?: string;
+        insightCount: number;
+        teamContext?: unknown;
+        relatedSessions: readonly unknown[];
+      };
     }) => Promise<void> | void;
     /** Called when session ends (graph build completes). */
     readonly onSessionEnd?: (context: {
@@ -211,6 +223,13 @@ export interface AgentFlowConfig {
       graphId: string;
       status: 'completed' | 'failed' | 'timeout';
       duration: number;
+      briefing?: unknown;
+      organizationalContext?: {
+        briefingAvailable: boolean;
+        briefingSummary?: string;
+        insightCount: number;
+        teamContext?: unknown;
+      };
     }) => Promise<void> | void;
   };
 }
@@ -323,6 +342,19 @@ export interface GraphBuilder {
    * The builder remains usable after calling this.
    */
   getSnapshot(): ExecutionGraph;
+
+  /** Get organizational briefing if available (may return null if briefing hasn't been generated yet). */
+  getOrganizationalBriefing(): unknown | null;
+
+  /** Get organizational context summary for execution environment. */
+  getOrganizationalContext(): {
+    operatorContext?: OperatorContext;
+    briefingAvailable: boolean;
+    briefingSummary?: string;
+    teamContext?: string;
+    insightCount: number;
+    warningCount: number;
+  };
 
   /** Freeze and return the completed execution graph. Throws if no root node exists. */
   build(): ExecutionGraph;
