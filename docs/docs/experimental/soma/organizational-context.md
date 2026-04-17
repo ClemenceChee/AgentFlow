@@ -244,6 +244,6 @@ const runConfig = {
 ## Related Documentation
 
 - [SOMA Organizational Context](https://ClemenceChee.github.io/soma/concepts/organizational-context) - Core concepts and system architecture
-- [AgentFlow Session Management](/guides/session-management) - General session management features
-- [AgentFlow Guards](/guides/guards) - Policy-based execution controls
+- [AgentFlow Execution](/getting-started/first-trace) - General execution features
+- [AgentFlow Process Mining](/getting-started/process-mining) - Analysis and pattern detection
 - [SOMA Policy Bridge](/experimental/soma/concepts#policy-bridge) - Policy integration patterns
