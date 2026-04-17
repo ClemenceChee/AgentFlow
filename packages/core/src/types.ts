@@ -97,6 +97,16 @@ export interface DecisionTraceData {
 }
 
 /** The complete execution graph for one agent run. */
+/** Operator context for organizational tracking across AgentFlow and SOMA */
+export interface OperatorContext {
+  readonly operatorId: string;         // UUID of the human operator - REQUIRED
+  readonly sessionId: string;          // Claude Code session ID - REQUIRED
+  readonly teamId?: string;            // Team membership - OPTIONAL
+  readonly instanceId?: string;        // Specific tool invocation ID - OPTIONAL
+  readonly timestamp?: number;         // When the operator action occurred - OPTIONAL
+  readonly userAgent?: string;         // Client/tool information - OPTIONAL
+}
+
 export interface ExecutionGraph {
   readonly id: string;
   readonly rootNodeId: string;
@@ -118,14 +128,7 @@ export interface ExecutionGraph {
   /** Parent span ID, or null if this is the root span. */
   readonly parentSpanId?: string | null;
   /** Operator context for organizational tracking. */
-  readonly operatorContext?: {
-    readonly operatorId: string;         // UUID of the human operator
-    readonly sessionId: string;          // Claude Code session ID
-    readonly teamId?: string;            // Team membership
-    readonly instanceId?: string;        // Specific tool invocation ID
-    readonly timestamp?: number;         // When the operator action occurred
-    readonly userAgent?: string;         // Client/tool information
-  };
+  readonly operatorContext?: OperatorContext;
   /** Arbitrary metadata preserved from the trace file. */
   readonly metadata?: Record<string, unknown>;
 }
@@ -173,14 +176,7 @@ export interface AgentFlowConfig {
   /** Parent span ID for linking to an upstream graph. */
   readonly parentSpanId?: string;
   /** Operator context for organizational tracking. */
-  readonly operatorContext?: {
-    readonly operatorId: string;         // UUID of the human operator
-    readonly sessionId: string;          // Claude Code session ID
-    readonly teamId?: string;            // Team membership
-    readonly instanceId?: string;        // Specific tool invocation ID
-    readonly timestamp?: number;         // When the operator action occurred
-    readonly userAgent?: string;         // Client/tool information
-  };
+  readonly operatorContext?: OperatorContext;
   /** Session initialization hooks for organizational context. */
   readonly sessionHooks?: {
     /** Called before graph construction starts. */
@@ -702,12 +698,7 @@ export interface ExecutionEvent {
   /** UUID of the operator who initiated this execution. */
   readonly operatorId?: string;
   /** Operator context from Claude Code session. */
-  readonly operatorContext?: {
-    readonly sessionId: string;           // Claude Code session ID
-    readonly instanceId?: string;         // Specific tool invocation ID
-    readonly timestamp: number;           // When the operator action occurred
-    readonly userAgent?: string;          // Client/tool information
-  };
+  readonly operatorContext?: OperatorContext;
 }
 
 /** A structured event emitted when process mining discovers a pattern. */
@@ -717,14 +708,7 @@ export interface PatternEvent {
   readonly timestamp: number;
   readonly schemaVersion: number;
   readonly operatorId?: string;
-  readonly operatorContext?: {
-    readonly sessionId: string;
-    readonly operatorId: string;
-    readonly teamId?: string;
-    readonly instanceId?: string;
-    readonly timestamp?: number;
-    readonly userAgent?: string;
-  };
+  readonly operatorContext?: OperatorContext;
   readonly pattern: {
     readonly totalGraphs: number;
     readonly variantCount: number;
