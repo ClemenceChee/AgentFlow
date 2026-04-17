@@ -40,6 +40,8 @@ export interface RunConfig {
   watchDirs?: string[];
   /** File patterns to watch (default: ["*.json"]). */
   watchPatterns?: string[];
+  /** Operator ID for context tracking (default: from environment). */
+  operatorId?: string;
 }
 
 export interface RunResult {
@@ -129,6 +131,7 @@ export async function runTraced(config: RunConfig): Promise<RunResult> {
     tracesDir = './traces',
     watchDirs = [],
     watchPatterns = ['*.json'],
+    operatorId,
   } = config;
 
   if (command.length === 0) {
@@ -139,7 +142,21 @@ export async function runTraced(config: RunConfig): Promise<RunResult> {
   const patterns = watchPatterns.map(globToRegex);
 
   // --- 1. Create orchestrator graph builder ---
-  const orchestrator = createGraphBuilder({ agentId, trigger });
+  const orchestratorConfig: Parameters<typeof createGraphBuilder>[0] = {
+    agentId,
+    trigger,
+    ...(operatorId && {
+      operatorContext: {
+        operatorId,
+        sessionId: process.env?.CLAUDE_CODE_SESSION_ID || `cli-${Date.now()}`,
+        teamId: process.env?.TEAM_ID,
+        instanceId: process.env?.CLAUDE_CODE_INSTANCE_ID,
+        timestamp: Date.now(),
+        userAgent: process.env?.CLAUDE_CODE_USER_AGENT
+      }
+    })
+  };
+  const orchestrator = createGraphBuilder(orchestratorConfig);
   const { traceId, spanId } = orchestrator.traceContext;
 
   // --- 2. Snapshot state dirs ---
@@ -224,12 +241,23 @@ export async function runTraced(config: RunConfig): Promise<RunResult> {
 
   for (const filePath of stateChanges) {
     const childAgentId = agentIdFromFilename(filePath);
-    const childBuilder = createGraphBuilder({
+    const childConfig: Parameters<typeof createGraphBuilder>[0] = {
       agentId: childAgentId,
       trigger: 'state-change',
       traceId,
       parentSpanId: spanId,
-    });
+      ...(operatorId && {
+        operatorContext: {
+          operatorId,
+          sessionId: process.env?.CLAUDE_CODE_SESSION_ID || `cli-${Date.now()}`,
+          teamId: process.env?.TEAM_ID,
+          instanceId: process.env?.CLAUDE_CODE_INSTANCE_ID,
+          timestamp: Date.now(),
+          userAgent: process.env?.CLAUDE_CODE_USER_AGENT
+        }
+      })
+    };
+    const childBuilder = createGraphBuilder(childConfig);
 
     const childRootId = childBuilder.startNode({
       type: 'agent',

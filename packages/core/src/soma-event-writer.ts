@@ -92,6 +92,10 @@ function executionEventToMarkdown(event: ExecutionEvent): string {
     agentflow_graph_id: event.graphId,
     duration_ms: event.duration,
     node_count: event.nodeCount,
+    operator_id: event.operatorId,
+    operator_session_id: event.operatorContext?.sessionId,
+    operator_team_id: event.operatorContext?.teamId,
+    operator_instance_id: event.operatorContext?.instanceId,
   };
 
   if (event.processContext) {
@@ -148,6 +152,10 @@ function patternEventToMarkdown(event: PatternEvent): string {
     alfred_tags: tags,
     variant_count: pattern.variantCount,
     total_graphs: pattern.totalGraphs,
+    operator_id: event.operatorId,
+    operator_session_id: event.operatorContext?.sessionId,
+    operator_team_id: event.operatorContext?.teamId,
+    operator_instance_id: event.operatorContext?.instanceId,
   };
 
   const body: string[] = [];
