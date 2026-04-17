@@ -94,6 +94,22 @@ export function createGraphBuilder(config?: AgentFlowConfig): GraphBuilder {
     (typeof process !== 'undefined' ? process.env?.AGENTFLOW_PARENT_SPAN_ID : undefined) ??
     null;
 
+  // Read Claude Code session context from environment variables if not provided in config
+  // Environment variables expected:
+  //   OPERATOR_ID - Unique identifier for the operator/user
+  //   CLAUDE_CODE_SESSION_ID - Session identifier for the Claude Code instance
+  //   TEAM_ID - Team identifier for organizational context
+  //   CLAUDE_CODE_INSTANCE_ID - Instance identifier (CLI, desktop, web, etc.)
+  //   CLAUDE_CODE_USER_AGENT - User agent string for the Claude Code instance
+  const operatorContext = config?.operatorContext ?? (typeof process !== 'undefined' ? {
+    operatorId: process.env?.OPERATOR_ID,
+    sessionId: process.env?.CLAUDE_CODE_SESSION_ID,
+    teamId: process.env?.TEAM_ID,
+    instanceId: process.env?.CLAUDE_CODE_INSTANCE_ID,
+    timestamp: Date.now(),
+    userAgent: process.env?.CLAUDE_CODE_USER_AGENT
+  } : undefined);
+
   // --- Mutable internal state (closure scope) ---
   const graphId = generateId();
   const startTime = Date.now();
@@ -103,6 +119,87 @@ export function createGraphBuilder(config?: AgentFlowConfig): GraphBuilder {
   const parentStack: string[] = [];
   let rootNodeId: string | null = null;
   let built = false;
+
+  // --- Session initialization hooks ---
+  const sessionHooks = config?.sessionHooks;
+  let sessionInitialized = false;
+
+  /**
+   * Execute session start hook with organizational context.
+   */
+  async function executeSessionStartHook(): Promise<{
+    shouldProceed: boolean;
+    briefing?: string;
+    warnings?: string[];
+  }> {
+    if (!sessionHooks?.onSessionStart) {
+      return { shouldProceed: true };
+    }
+
+    try {
+      const hookContext = {
+        operatorId: operatorContext?.operatorId,
+        teamId: operatorContext?.teamId,
+        sessionId: operatorContext?.sessionId,
+        agentId,
+        trigger,
+      };
+
+      const result = await sessionHooks.onSessionStart(hookContext);
+      return result;
+    } catch (error) {
+      console.warn('[AgentFlow] Session start hook failed:', error);
+      return { shouldProceed: true }; // Fail gracefully
+    }
+  }
+
+  /**
+   * Execute session initialized hook.
+   */
+  async function executeSessionInitializedHook(): Promise<void> {
+    if (!sessionHooks?.onSessionInitialized || sessionInitialized) {
+      return;
+    }
+
+    try {
+      const hookContext = {
+        operatorId: operatorContext?.operatorId,
+        teamId: operatorContext?.teamId,
+        sessionId: operatorContext?.sessionId,
+        graphId,
+        traceId,
+      };
+
+      await sessionHooks.onSessionInitialized(hookContext);
+      sessionInitialized = true;
+    } catch (error) {
+      console.warn('[AgentFlow] Session initialized hook failed:', error);
+    }
+  }
+
+  /**
+   * Execute session end hook when graph is built.
+   */
+  async function executeSessionEndHook(status: 'completed' | 'failed' | 'timeout'): Promise<void> {
+    if (!sessionHooks?.onSessionEnd) {
+      return;
+    }
+
+    try {
+      const hookContext = {
+        operatorId: operatorContext?.operatorId,
+        teamId: operatorContext?.teamId,
+        sessionId: operatorContext?.sessionId,
+        graphId,
+        status,
+        duration: Date.now() - startTime,
+      };
+
+      await sessionHooks.onSessionEnd(hookContext);
+    } catch (error) {
+      console.warn('[AgentFlow] Session end hook failed:', error);
+    }
+  }
 
   function assertNotBuilt(): void {
     if (built) {
@@ -186,6 +283,7 @@ export function createGraphBuilder(config?: AgentFlowConfig): GraphBuilder {
       traceId,
       spanId,
       parentSpanId,
+      operatorContext: operatorContext && operatorContext.operatorId && operatorContext.sessionId ? operatorContext : undefined,
     };
 
     return deepFreeze(graph);
@@ -205,6 +303,29 @@ export function createGraphBuilder(config?: AgentFlowConfig): GraphBuilder {
 
       const id = generateId();
       const parentId = opts.parentId ?? parentStack[parentStack.length - 1] ?? null;
+
+      // Execute session start hook for the first (root) node
+      if (rootNodeId === null && sessionHooks?.onSessionStart) {
+        // Note: This is a synchronous version of the hook for compatibility
+        // Async session control should be done at the framework level
+        try {
+          const hookContext = {
+            operatorId: operatorContext?.operatorId,
+            teamId: operatorContext?.teamId,
+            sessionId: operatorContext?.sessionId,
+            agentId,
+            trigger,
+          };
+
+          // For synchronous compatibility, we only call sync hooks here
+          // Async hooks should be called by the framework before createGraphBuilder
+          if (typeof sessionHooks.onSessionStart !== 'function' || sessionHooks.onSessionStart.constructor.name === 'AsyncFunction') {
+            console.warn('[AgentFlow] Async session hooks should be called before createGraphBuilder()');
+          }
+        } catch (error) {
+          console.warn('[AgentFlow] Session start hook validation failed:', error);
+        }
+      }
 
       // Validate parent exists if specified
       if (parentId !== null && !nodes.has(parentId)) {
@@ -238,6 +359,31 @@ export function createGraphBuilder(config?: AgentFlowConfig): GraphBuilder {
       // First node becomes root
       if (rootNodeId === null) {
         rootNodeId = id;
+
+        // Execute session initialized hook for the root node
+        if (sessionHooks?.onSessionInitialized && !sessionInitialized) {
+          try {
+            const hookContext = {
+              operatorId: operatorContext?.operatorId,
+              teamId: operatorContext?.teamId,
+              sessionId: operatorContext?.sessionId,
+              graphId,
+              traceId,
+            };
+
+            // Call sync version or queue async version
+            const result = sessionHooks.onSessionInitialized(hookContext);
+            if (result && typeof result.then === 'function') {
+              // Async hook - don't wait but log if it fails
+              result.catch(error => {
+                console.warn('[AgentFlow] Session initialized hook failed:', error);
+              });
+            }
+            sessionInitialized = true;
+          } catch (error) {
+            console.warn('[AgentFlow] Session initialized hook failed:', error);
+          }
+        }
       }
 
       recordEvent(id, 'agent_start', { type: opts.type, name: opts.name });
@@ -326,6 +472,31 @@ export function createGraphBuilder(config?: AgentFlowConfig): GraphBuilder {
       assertNotBuilt();
       const graph = buildGraph();
       built = true;
+
+      // Execute session end hook
+      if (sessionHooks?.onSessionEnd) {
+        try {
+          const hookContext = {
+            operatorId: operatorContext?.operatorId,
+            teamId: operatorContext?.teamId,
+            sessionId: operatorContext?.sessionId,
+            graphId,
+            status: graph.status as 'completed' | 'failed' | 'timeout',
+            duration: Date.now() - startTime,
+          };
+
+          const result = sessionHooks.onSessionEnd(hookContext);
+          if (result && typeof result.then === 'function') {
+            // Async hook - don't wait but log if it fails
+            result.catch(error => {
+              console.warn('[AgentFlow] Session end hook failed:', error);
+            });
+          }
+        } catch (error) {
+          console.warn('[AgentFlow] Session end hook failed:', error);
+        }
+      }
+
       return graph;
     },
   };
