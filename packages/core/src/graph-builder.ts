@@ -124,82 +124,6 @@ export function createGraphBuilder(config?: AgentFlowConfig): GraphBuilder {
   const sessionHooks = config?.sessionHooks;
   let sessionInitialized = false;
 
-  /**
-   * Execute session start hook with organizational context.
-   */
-  async function executeSessionStartHook(): Promise<{
-    shouldProceed: boolean;
-    briefing?: string;
-    warnings?: string[];
-  }> {
-    if (!sessionHooks?.onSessionStart) {
-      return { shouldProceed: true };
-    }
-
-    try {
-      const hookContext = {
-        operatorId: operatorContext?.operatorId,
-        teamId: operatorContext?.teamId,
-        sessionId: operatorContext?.sessionId,
-        agentId,
-        trigger,
-      };
-
-      const result = await sessionHooks.onSessionStart(hookContext);
-      return result;
-    } catch (error) {
-      console.warn('[AgentFlow] Session start hook failed:', error);
-      return { shouldProceed: true }; // Fail gracefully
-    }
-  }
-
-  /**
-   * Execute session initialized hook.
-   */
-  async function executeSessionInitializedHook(): Promise<void> {
-    if (!sessionHooks?.onSessionInitialized || sessionInitialized) {
-      return;
-    }
-
-    try {
-      const hookContext = {
-        operatorId: operatorContext?.operatorId,
-        teamId: operatorContext?.teamId,
-        sessionId: operatorContext?.sessionId,
-        graphId,
-        traceId,
-      };
-
-      await sessionHooks.onSessionInitialized(hookContext);
-      sessionInitialized = true;
-    } catch (error) {
-      console.warn('[AgentFlow] Session initialized hook failed:', error);
-    }
-  }
-
-  /**
-   * Execute session end hook when graph is built.
-   */
-  async function executeSessionEndHook(status: 'completed' | 'failed' | 'timeout'): Promise<void> {
-    if (!sessionHooks?.onSessionEnd) {
-      return;
-    }
-
-    try {
-      const hookContext = {
-        operatorId: operatorContext?.operatorId,
-        teamId: operatorContext?.teamId,
-        sessionId: operatorContext?.sessionId,
-        graphId,
-        status,
-        duration: Date.now() - startTime,
-      };
-
-      await sessionHooks.onSessionEnd(hookContext);
-    } catch (error) {
-      console.warn('[AgentFlow] Session end hook failed:', error);
-    }
-  }
 
   function assertNotBuilt(): void {
     if (built) {
@@ -283,7 +207,14 @@ export function createGraphBuilder(config?: AgentFlowConfig): GraphBuilder {
       traceId,
       spanId,
       parentSpanId,
-      operatorContext: operatorContext && operatorContext.operatorId && operatorContext.sessionId ? operatorContext : undefined,
+      operatorContext: operatorContext?.operatorId && operatorContext?.sessionId ? {
+        operatorId: operatorContext.operatorId,
+        sessionId: operatorContext.sessionId,
+        teamId: operatorContext.teamId,
+        instanceId: operatorContext.instanceId,
+        timestamp: operatorContext.timestamp,
+        userAgent: operatorContext.userAgent,
+      } : undefined,
     };
 
     return deepFreeze(graph);
@@ -309,14 +240,6 @@ export function createGraphBuilder(config?: AgentFlowConfig): GraphBuilder {
         // Note: This is a synchronous version of the hook for compatibility
         // Async session control should be done at the framework level
         try {
-          const hookContext = {
-            operatorId: operatorContext?.operatorId,
-            teamId: operatorContext?.teamId,
-            sessionId: operatorContext?.sessionId,
-            agentId,
-            trigger,
-          };
-
           // For synchronous compatibility, we only call sync hooks here
           // Async hooks should be called by the framework before createGraphBuilder
           if (typeof sessionHooks.onSessionStart !== 'function' || sessionHooks.onSessionStart.constructor.name === 'AsyncFunction') {
