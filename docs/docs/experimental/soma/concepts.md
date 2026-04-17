@@ -207,3 +207,70 @@ The bridge implements four `PolicySource` methods:
 | `getAgentProfile(agentId)` | Returns the `agent` entity's embedded `profile` object |
 
 When `createSoma()` is used, a `policySource` is included automatically as `soma.policySource`. Pass it to guard constructors to enable adaptive enforcement based on accumulated organizational knowledge.
+
+## Organizational Context
+
+Soma now supports organizational context continuity, enabling knowledge sharing across different operators, teams, and Claude Code instances. This system extends the traditional single-operator model to support enterprise-wide organizational intelligence.
+
+### Key Components
+
+#### Operator Identity Tracking
+Every AgentFlow execution includes operator context that flows through Soma:
+
+```yaml
+---
+type: execution
+operatorId: alice
+sessionId: session-123
+teamId: engineering
+instanceId: vscode
+---
+```
+
+#### Session Correlation
+Related work sessions are automatically linked using multiple strategies:
+- **Continuity markers** - Explicit handoffs between sessions
+- **Temporal correlation** - Sessions within configurable time windows
+- **Problem similarity** - Sessions working on related challenges  
+- **Multi-instance tracking** - Same operator across CLI, desktop, web, VS Code
+
+#### Team-Scoped Working Memory
+L2 working memory respects organizational structure:
+- Teams only access their own working memory
+- Cross-team patterns are elevated to L3 for broader sharing
+- Privacy boundaries enforced automatically
+
+#### Cross-Operator Pattern Validation
+Patterns gain confidence when observed by multiple operators:
+- Multi-operator validation workflows
+- Consensus-based pattern promotion
+- Governance system for critical organizational knowledge
+
+### AgentFlow Integration
+
+Soma organizational context integrates with AgentFlow through session hooks:
+
+```typescript
+const agentflow = createAgentFlow({
+  sessionHooks: {
+    onSessionStart: async (context) => {
+      // Initialize organizational context
+      await soma.startOperatorSession(context);
+    },
+    onSessionEnd: async (results) => {
+      // Capture insights for organizational learning
+      await soma.captureSessionInsights(results);
+    }
+  }
+});
+```
+
+### Privacy and Security
+
+The organizational context system maintains strict privacy boundaries:
+- Team membership validation for all L2 access
+- Automatic sensitive data filtering in pattern capture
+- Complete audit trails for all organizational knowledge changes
+- Configurable access controls and governance workflows
+
+See [Organizational Context Continuity](./organizational-context) for detailed implementation guidance.
