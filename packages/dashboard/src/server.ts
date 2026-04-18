@@ -30,12 +30,68 @@ import {
 import './adapters/index.js'; // Register all adapters
 import { parseOtlpPayload } from './adapters/otel.js';
 import { deduplicateAgents, groupAgents } from './agent-clustering.js';
+import type { OperatorContext, SessionCorrelation, PolicyStatus, SessionHookData } from './client/types/organizational.js';
 import { type CommandExecutor, createCommandExecutor } from './command-executor.js';
 import { AgentStats } from './stats.js';
 import { TraceWatcher, type WatchedTrace } from './watcher.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+/**
+ * Team boundary validation middleware and utilities
+ */
+interface TeamAccessContext {
+  operatorId?: string;
+  allowedTeams?: string[];
+  isSuperUser?: boolean;
+}
+
+/**
+ * Validate team access for organizational endpoints
+ * In production, this would integrate with proper authentication/authorization
+ */
+function validateTeamAccess(trace: WatchedTrace, accessContext: TeamAccessContext): boolean {
+  // If user is super user, allow all access
+  if (accessContext.isSuperUser) {
+    return true;
+  }
+
+  // If trace has no operator context, allow access (backward compatibility)
+  if (!('operatorContext' in trace) || !trace.operatorContext) {
+    return true;
+  }
+
+  const traceOperatorContext = trace.operatorContext;
+
+  // If same operator, always allow access
+  if (accessContext.operatorId === traceOperatorContext.operatorId) {
+    return true;
+  }
+
+  // Check team membership
+  if (traceOperatorContext.teamId && accessContext.allowedTeams) {
+    return accessContext.allowedTeams.includes(traceOperatorContext.teamId);
+  }
+
+  // If no team context, allow access (backward compatibility)
+  return !traceOperatorContext.teamId;
+}
+
+/**
+ * Extract team access context from request headers or authentication
+ * In production, this would validate JWT tokens or session data
+ */
+function getTeamAccessContext(req: express.Request): TeamAccessContext {
+  // TODO: In production, extract from proper authentication
+  // For now, use headers as a simple mechanism for testing
+  return {
+    operatorId: req.headers['x-operator-id'] as string,
+    allowedTeams: req.headers['x-allowed-teams'] ?
+      (req.headers['x-allowed-teams'] as string).split(',') : [],
+    isSuperUser: req.headers['x-super-user'] === 'true'
+  };
+}
 
 /**
  * Sanitize a user-supplied path segment to prevent path traversal.
@@ -150,6 +206,8 @@ function parseVaultFrontmatter(content: string): Record<string, unknown> | null 
 function serializeTrace(trace: WatchedTrace): Record<string, unknown> {
   if (!trace) return trace;
   const obj: Record<string, unknown> = { ...trace };
+
+  // Handle nodes Map conversion
   if (trace.nodes instanceof Map) {
     const nodesObj: Record<string, unknown> = {};
     for (const [key, value] of trace.nodes) {
@@ -157,6 +215,25 @@ function serializeTrace(trace: WatchedTrace): Record<string, unknown> {
     }
     obj.nodes = nodesObj;
   }
+
+  // Include organizational context fields if available
+  // These fields are added by organizational intelligence processing
+  if ('operatorContext' in trace && trace.operatorContext) {
+    obj.operatorContext = trace.operatorContext;
+  }
+
+  if ('sessionCorrelation' in trace && trace.sessionCorrelation) {
+    obj.sessionCorrelation = trace.sessionCorrelation;
+  }
+
+  if ('policyStatus' in trace && trace.policyStatus) {
+    obj.policyStatus = trace.policyStatus;
+  }
+
+  if ('sessionHooks' in trace && trace.sessionHooks) {
+    obj.sessionHooks = trace.sessionHooks;
+  }
+
   return obj;
 }
 
@@ -398,6 +475,307 @@ export class DashboardServer {
         res.json(globalStats);
       } catch (_error) {
         res.status(500).json({ error: 'Failed to load statistics' });
+      }
+    });
+
+    // Teams endpoint: organizational teams for filtering and context
+    this.app.get('/api/teams', (req, res) => {
+      try {
+        const accessContext = getTeamAccessContext(req);
+
+        // Extract teams from traces with organizational context
+        const allTraces = this.watcher.getAllTraces();
+        const teams = new Map<string, { teamId: string; teamName: string; memberCount: number; isAccessible: boolean }>();
+
+        for (const trace of allTraces) {
+          // Apply team boundary validation
+          if (!validateTeamAccess(trace, accessContext)) {
+            continue;
+          }
+
+          // Check if trace has operator context with team information
+          if ('operatorContext' in trace && trace.operatorContext && trace.operatorContext.teamId) {
+            const teamId = trace.operatorContext.teamId;
+            if (!teams.has(teamId)) {
+              teams.set(teamId, {
+                teamId,
+                teamName: teamId.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), // Convert kebab-case to Title Case
+                memberCount: 1,
+                isAccessible: !accessContext.allowedTeams || accessContext.allowedTeams.includes(teamId) || accessContext.isSuperUser
+              });
+            } else {
+              // Increment member count (approximate based on unique operators)
+              const team = teams.get(teamId)!;
+              team.memberCount += 1;
+            }
+          }
+        }
+
+        // Convert to array and add an "All Teams" option (only if user has multi-team access)
+        const teamList = [];
+        if (accessContext.isSuperUser || (accessContext.allowedTeams && accessContext.allowedTeams.length > 1)) {
+          teamList.push({
+            teamId: '',
+            teamName: 'All Teams',
+            memberCount: 0,
+            isAccessible: true
+          });
+        }
+        teamList.push(...Array.from(teams.values()));
+
+        res.json({ teams: teamList });
+      } catch (_error) {
+        res.status(500).json({ error: 'Failed to load teams' });
+      }
+    });
+
+    // Operator activity endpoint: timeline of operator actions across sessions
+    this.app.get('/api/operators/:operatorId/activity', (req, res) => {
+      try {
+        const operatorId = req.params.operatorId;
+        const limit = Math.min(parseInt(req.query.limit as string, 10) || 100, 500);
+        const timeframe = req.query.timeframe as string || '24h';
+        const accessContext = getTeamAccessContext(req);
+
+        // Validate access to this operator's data
+        if (!accessContext.isSuperUser &&
+            accessContext.operatorId !== operatorId &&
+            !accessContext.allowedTeams?.length) {
+          return res.status(403).json({ error: 'Access denied: insufficient team permissions' });
+        }
+
+        // Calculate time window based on timeframe
+        const now = Date.now();
+        let timeWindow: number;
+        switch (timeframe) {
+          case '1h': timeWindow = 60 * 60 * 1000; break;
+          case '24h': timeWindow = 24 * 60 * 60 * 1000; break;
+          case '7d': timeWindow = 7 * 24 * 60 * 60 * 1000; break;
+          case '30d': timeWindow = 30 * 24 * 60 * 60 * 1000; break;
+          default: timeWindow = 24 * 60 * 60 * 1000;
+        }
+        const startTime = now - timeWindow;
+
+        // Find traces with the specified operator context
+        const allTraces = this.watcher.getAllTraces();
+        const operatorTraces = allTraces.filter(trace => {
+          // Apply team boundary validation
+          if (!validateTeamAccess(trace, accessContext)) {
+            return false;
+          }
+
+          // Check if trace has operator context matching the requested operator
+          if ('operatorContext' in trace && trace.operatorContext) {
+            return trace.operatorContext.operatorId === operatorId &&
+                   trace.startTime >= startTime;
+          }
+          return false;
+        });
+
+        // Sort by timestamp descending and limit results
+        const sortedTraces = operatorTraces
+          .sort((a, b) => b.startTime - a.startTime)
+          .slice(0, limit);
+
+        // Transform traces into activity timeline format
+        const timeline = sortedTraces.map(trace => {
+          const operatorContext = 'operatorContext' in trace ? trace.operatorContext : null;
+          return {
+            timestamp: trace.startTime,
+            sessionId: operatorContext?.sessionId || trace.id,
+            activityType: 'session-start' as const,
+            description: `Started ${trace.agentId}: ${trace.name}`,
+            duration: trace.endTime - trace.startTime,
+            status: trace.status,
+            agentId: trace.agentId,
+            teamId: operatorContext?.teamId,
+            instanceId: operatorContext?.instanceId,
+          };
+        });
+
+        // Identify patterns (simplified pattern detection)
+        const patterns = [];
+        if (timeline.length > 2) {
+          const agentUsage = timeline.reduce((acc, item) => {
+            acc[item.agentId] = (acc[item.agentId] || 0) + 1;
+            return acc;
+          }, {} as Record<string, number>);
+
+          const mostUsedAgent = Object.entries(agentUsage)
+            .sort(([,a], [,b]) => b - a)[0];
+
+          if (mostUsedAgent && mostUsedAgent[1] > timeline.length * 0.3) {
+            patterns.push({
+              patternType: 'workflow' as const,
+              description: `Frequently uses ${mostUsedAgent[0]}`,
+              frequency: mostUsedAgent[1],
+              confidence: Math.min(0.95, (mostUsedAgent[1] / timeline.length) * 2),
+              recommendations: [`Consider automating common ${mostUsedAgent[0]} workflows`]
+            });
+          }
+        }
+
+        res.json({
+          operatorId,
+          timeframe,
+          timeline,
+          patterns,
+          summary: {
+            totalSessions: timeline.length,
+            uniqueAgents: new Set(timeline.map(t => t.agentId)).size,
+            successRate: timeline.filter(t => t.status === 'completed').length / Math.max(timeline.length, 1),
+            averageDuration: timeline.reduce((sum, t) => sum + (t.duration || 0), 0) / Math.max(timeline.length, 1)
+          }
+        });
+
+      } catch (_error) {
+        res.status(500).json({ error: 'Failed to load operator activity' });
+      }
+    });
+
+    // Session correlation endpoint: find related sessions with pagination
+    this.app.get('/api/sessions/:sessionId/correlations', (req, res) => {
+      try {
+        const sessionId = req.params.sessionId;
+        const limit = Math.min(parseInt(req.query.limit as string, 10) || 20, 100);
+        const cursor = req.query.cursor ? parseFloat(req.query.cursor as string) : undefined;
+        const accessContext = getTeamAccessContext(req);
+
+        // Find the target session with team boundary validation
+        const allTraces = this.watcher.getAllTraces();
+        const targetTrace = allTraces.find(trace => {
+          // Apply team boundary validation first
+          if (!validateTeamAccess(trace, accessContext)) {
+            return false;
+          }
+
+          if ('operatorContext' in trace && trace.operatorContext) {
+            return trace.operatorContext.sessionId === sessionId;
+          }
+          return trace.id === sessionId;
+        });
+
+        if (!targetTrace) {
+          return res.status(404).json({ error: 'Session not found or access denied' });
+        }
+
+        const targetOperatorContext = 'operatorContext' in targetTrace ? targetTrace.operatorContext : null;
+        const correlations: Array<{
+          sessionId: string;
+          confidence: number;
+          relationshipType: 'continuation' | 'similar-problem' | 'handoff' | 'collaboration';
+          timestamp: number;
+          agentId: string;
+          operatorId?: string;
+          teamId?: string;
+          similarity?: {
+            problemType: string;
+            solutionPattern: string;
+            confidence: number;
+          };
+        }> = [];
+
+        // Find correlations based on various criteria
+        for (const trace of allTraces) {
+          if (trace.id === targetTrace.id) continue; // Skip self
+
+          // Apply team boundary validation
+          if (!validateTeamAccess(trace, accessContext)) {
+            continue;
+          }
+
+          const traceOperatorContext = 'operatorContext' in trace ? trace.operatorContext : null;
+          let confidence = 0;
+          let relationshipType: 'continuation' | 'similar-problem' | 'handoff' | 'collaboration' = 'similar-problem';
+
+          // Same operator correlation (higher confidence)
+          if (targetOperatorContext && traceOperatorContext &&
+              targetOperatorContext.operatorId === traceOperatorContext.operatorId) {
+            confidence += 0.4;
+            relationshipType = 'continuation';
+          }
+
+          // Same team correlation
+          if (targetOperatorContext && traceOperatorContext &&
+              targetOperatorContext.teamId === traceOperatorContext.teamId) {
+            confidence += 0.3;
+            if (targetOperatorContext.operatorId !== traceOperatorContext.operatorId) {
+              relationshipType = 'collaboration';
+            }
+          }
+
+          // Similar agent usage
+          if (trace.agentId === targetTrace.agentId) {
+            confidence += 0.2;
+          }
+
+          // Temporal proximity (within 24 hours)
+          const timeDiff = Math.abs(trace.startTime - targetTrace.startTime);
+          const dayInMs = 24 * 60 * 60 * 1000;
+          if (timeDiff < dayInMs) {
+            confidence += 0.1 * (1 - timeDiff / dayInMs);
+          }
+
+          // Name similarity (simple keyword matching)
+          const targetWords = targetTrace.name.toLowerCase().split(/\s+/);
+          const traceWords = trace.name.toLowerCase().split(/\s+/);
+          const commonWords = targetWords.filter(word => traceWords.includes(word));
+          if (commonWords.length > 0) {
+            confidence += Math.min(0.2, commonWords.length * 0.05);
+          }
+
+          // Only include correlations with meaningful confidence
+          if (confidence > 0.1) {
+            correlations.push({
+              sessionId: traceOperatorContext?.sessionId || trace.id,
+              confidence: Math.min(confidence, 0.95),
+              relationshipType,
+              timestamp: trace.startTime,
+              agentId: trace.agentId,
+              operatorId: traceOperatorContext?.operatorId,
+              teamId: traceOperatorContext?.teamId,
+              similarity: {
+                problemType: trace.agentId,
+                solutionPattern: trace.status === 'completed' ? 'success' : 'pending',
+                confidence: Math.min(confidence, 0.95),
+              }
+            });
+          }
+        }
+
+        // Sort by confidence and timestamp
+        correlations.sort((a, b) => {
+          if (Math.abs(a.confidence - b.confidence) < 0.01) {
+            return b.timestamp - a.timestamp; // More recent first
+          }
+          return b.confidence - a.confidence; // Higher confidence first
+        });
+
+        // Apply cursor-based pagination
+        let filteredCorrelations = correlations;
+        if (cursor) {
+          filteredCorrelations = correlations.filter(c => c.timestamp < cursor);
+        }
+
+        const page = filteredCorrelations.slice(0, limit);
+        const nextCursor = page.length === limit && page[page.length - 1] ?
+          page[page.length - 1].timestamp : null;
+
+        res.json({
+          sessionId,
+          correlations: page,
+          summary: {
+            totalFound: correlations.length,
+            continuations: correlations.filter(c => c.relationshipType === 'continuation').length,
+            collaborations: correlations.filter(c => c.relationshipType === 'collaboration').length,
+            similarProblems: correlations.filter(c => c.relationshipType === 'similar-problem').length,
+            handoffs: correlations.filter(c => c.relationshipType === 'handoff').length,
+          },
+          nextCursor
+        });
+
+      } catch (_error) {
+        res.status(500).json({ error: 'Failed to load session correlations' });
       }
     });
 
@@ -2397,7 +2775,7 @@ export class DashboardServer {
 
   public async start(): Promise<void> {
     return new Promise((resolve) => {
-      const host = this.config.host || 'localhost';
+      const host = '0.0.0.0'; // Force bind to all interfaces for Tailscale access
       this.server.listen(this.config.port, host, () => {
         console.log(`AgentFlow Dashboard running at http://${host}:${this.config.port}`);
         console.log(`Watching traces in: ${this.config.tracesDir}`);

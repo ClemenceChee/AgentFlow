@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AgentProfile } from './components/AgentProfile';
 import { AicpPage } from './components/AicpPage';
+import { OrganizationalDashboard } from './components/OrganizationalDashboard';
 import { AlertBanner } from './components/AlertBanner';
 import { ExecSidebar } from './components/ExecSidebar';
-import { ExecutionDetail } from './components/ExecutionDetail';
+import { ExecutionDetailWithOrgContext } from './components/ExecutionDetailWithOrgContext';
 import { HealthBanner } from './components/HealthBanner';
 import { SettingsPanel } from './components/SettingsPanel';
 import { SomaPage } from './components/SomaPage';
 import { SummaryBar } from './components/SummaryBar';
 import { TopSection } from './components/TopSection';
+import { OrganizationalContextProvider } from './contexts/OrganizationalContext';
 import { useAgents } from './hooks/useAgents';
 import { useProcessHealth } from './hooks/useProcessHealth';
 import { useProcessModel } from './hooks/useProcessModel';
@@ -17,7 +19,7 @@ import { useSomaTier } from './hooks/useSomaTier';
 import { useTraces } from './hooks/useTraces';
 import { pickInitialAgent } from './state';
 
-type Page = 'agents' | 'soma' | 'aicp';
+type Page = 'agents' | 'soma' | 'aicp' | 'organization';
 type AgentView = 'profile' | 'execution';
 
 export function App() {
@@ -98,13 +100,20 @@ export function App() {
         >
           {'\u{1F4C8}'} AICP
         </button>
+        <button
+          type="button"
+          className={`page-tabs__tab ${page === 'organization' ? 'page-tabs__tab--active' : ''}`}
+          onClick={() => setPage('organization')}
+        >
+          {'\u{1F4E2}'} Organization
+        </button>
       </div>
 
       <AlertBanner processHealth={processHealth} />
 
       {/* Agents page */}
       {page === 'agents' && (
-        <>
+        <OrganizationalContextProvider>
           <TopSection
             processHealth={processHealth}
             grouped={grouped}
@@ -134,7 +143,7 @@ export function App() {
                 />
               )}
               {selectedAgent && agentView === 'execution' && trace && (
-                <ExecutionDetail trace={trace} loading={traceLoading} />
+                <ExecutionDetailWithOrgContext trace={trace} loading={traceLoading} />
               )}
               {selectedAgent && agentView === 'execution' && !trace && !traceLoading && (
                 <div className="workspace__empty">Select an execution from the sidebar</div>
@@ -144,7 +153,7 @@ export function App() {
               )}
             </div>
           </div>
-        </>
+        </OrganizationalContextProvider>
       )}
 
       {/* SOMA page */}
@@ -154,6 +163,15 @@ export function App() {
       {page === 'aicp' && (
         <div className="workspace__main">
           <AicpPage />
+        </div>
+      )}
+
+      {/* Organization page */}
+      {page === 'organization' && (
+        <div className="workspace__main">
+          <OrganizationalContextProvider>
+            <OrganizationalDashboard />
+          </OrganizationalContextProvider>
         </div>
       )}
 
