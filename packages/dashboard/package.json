@@ -1,7 +1,7 @@
 {
   "name": "agentflow-dashboard",
   "version": "0.9.1",
-  "description": "Real-time monitoring dashboard for AgentFlow - Visualize agent execution graphs and performance",
+  "description": "Real-time monitoring dashboard for AgentFlow with organizational intelligence - Visualize agent execution graphs, performance, team governance, security auditing, and session correlation",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

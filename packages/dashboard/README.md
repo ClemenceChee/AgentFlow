@@ -1,6 +1,6 @@
-# AgentFlow Dashboard v0.7.1
+# AgentFlow Dashboard v0.9.1
 
-Real-time monitoring dashboard for AI agent systems. Visualize execution graphs, session transcripts, and performance metrics from any agent framework.
+Real-time monitoring dashboard for AI agent systems with organizational intelligence. Visualize execution graphs, session transcripts, performance metrics, and organizational context from any agent framework with enterprise-grade team governance and security auditing.
 
 ## Features
 
@@ -55,6 +55,40 @@ Real-time monitoring dashboard for AI agent systems. Visualize execution graphs,
 - WebSocket live trace broadcasting with auto-reconnect
 - File watcher triggers instant sidebar updates on new/changed files
 
+## 🏢 Organizational Intelligence (NEW)
+
+Enterprise-grade team governance, security auditing, and organizational context for AI agent systems.
+
+### Team Governance & Context
+- **Team Filtering** - Filter traces and metrics by team with access control enforcement
+- **Operator Context** - Track operator sessions, team membership, and instance assignments
+- **Cross-Team Collaboration** - Monitor collaboration patterns and knowledge sharing
+- **Team Performance Metrics** - Success rates, execution times, and productivity insights per team
+
+### Security Auditing & Compliance
+- **Comprehensive Audit Logging** - All organizational operations tracked with security events
+- **Policy Enforcement** - Define and enforce organizational policies with violation detection
+- **Compliance Monitoring** - Real-time compliance rates and governance recommendations
+- **Security Alerting** - Anomaly detection with configurable security thresholds
+
+### Session Correlation & Intelligence
+- **Cross-Operator Intelligence** - Correlate sessions across operators and instances
+- **Session Continuity Tracking** - Monitor handoffs and collaboration quality
+- **Problem Pattern Analysis** - Identify recurring issues and workflow patterns
+- **Knowledge Transfer** - Track knowledge sharing and learning patterns
+
+### Policy Bridge & Governance
+- **Organizational Context Queries** - Enhanced agent queries with team and policy context
+- **Workflow Customization** - Team-specific validation and approval workflows
+- **Policy Compliance Bridge** - Integration between organizational policies and agent behavior
+- **Governance Workflows** - Multi-layer approval processes with audit trails
+
+### SOMA Intelligence Integration
+- **Organizational Vault** - Team-scoped knowledge management with governance layers
+- **Intelligence Analytics** - Organizational insights from agent execution patterns
+- **Guard Policies** - Behavioral enforcement based on organizational learning
+- **Knowledge Explorer** - Browse team insights, decisions, and constraints by confidence level
+
 ## Quick Start
 
 ```bash
@@ -87,8 +121,33 @@ Options:
   -t, --traces <path>     Primary traces directory (default: ./traces)
   -h, --host <address>    Host address (default: localhost)
   --data-dir <path>       Extra data directory (repeatable)
+  --soma-vault <path>     SOMA vault directory for organizational intelligence
   --cors                  Enable CORS headers
   --help                  Show help message
+
+Environment Variables:
+  SOMA_VAULT              SOMA vault path (alternative to --soma-vault)
+```
+
+### Organizational Intelligence Setup
+
+```bash
+# Basic setup with organizational intelligence
+agentflow-dashboard \
+  --traces ./traces \
+  --soma-vault ~/.soma/vault \
+  --host 0.0.0.0
+
+# Or use environment variable
+SOMA_VAULT=~/.soma/vault agentflow-dashboard --traces ./traces
+
+# Team-scoped monitoring for enterprise
+agentflow-dashboard \
+  --traces ./traces \
+  --soma-vault /org/soma/vault \
+  --data-dir ./team-sessions \
+  --host 0.0.0.0 \
+  --port 3000
 ```
 
 ## Supported File Formats
@@ -141,13 +200,35 @@ const dashboard = new DashboardServer({
   dataDirs: ['./sessions', './cron-runs'],
   host: 'localhost',
   enableCors: false,
+  somaVault: '~/.soma/vault', // Enable organizational intelligence
 });
 
 await dashboard.start();
 ```
 
+### With Organizational Intelligence
+
+```typescript
+import { DashboardServer } from 'agentflow-dashboard';
+
+const dashboard = new DashboardServer({
+  port: 3000,
+  tracesDir: './traces',
+  dataDirs: ['./team-sessions', './audit-logs'],
+  host: '0.0.0.0', // Bind to all interfaces for team access
+  enableCors: true,
+  somaVault: '/org/soma/vault', // Enterprise SOMA vault
+  // Organizational features automatically enabled when somaVault is configured
+});
+
+await dashboard.start();
+console.log('AgentFlow Dashboard with Organizational Intelligence running on http://localhost:3000');
+console.log('📊 Team governance, security auditing, and session correlation active');
+```
+
 ## API Endpoints
 
+### Core Monitoring
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/traces` | List all traces with metadata |
@@ -156,10 +237,31 @@ await dashboard.start();
 | GET | `/api/agents` | All discovered agents with metrics |
 | GET | `/api/agents/:agentId/timeline` | Gantt data: executions with nested activities |
 | GET | `/api/agents/:agentId/process-graph` | Process mining graph: activity transitions |
-| GET | `/api/stats` | Global performance statistics |
+| GET | `/api/stats` | Global performance statistics with organizational intelligence |
 | GET | `/api/stats/:agentId` | Per-agent statistics |
 | GET | `/api/process-health` | Running process audit |
 | WS | `/` | Real-time trace updates |
+
+### Organizational Intelligence
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/governance` | Team governance workflows and validation |
+| GET | `/api/policies` | Organizational policy bridge and team policies |
+| GET | `/api/audit` | Security audit logging and compliance metrics |
+| GET | `/api/correlation` | Session correlation and cross-operator intelligence |
+| GET | `/api/teams` | Available teams with access control information |
+| GET | `/api/operators/:operatorId/activity` | Operator activity patterns and metrics |
+| GET | `/api/sessions/:sessionId/correlations` | Session correlation data with similarity metrics |
+
+### SOMA Intelligence
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/soma/tier` | SOMA vault configuration and feature tier detection |
+| GET | `/api/soma/report` | Organizational intelligence analytics and insights |
+| GET | `/api/soma/governance` | SOMA governance data and pending reviews |
+| GET | `/api/soma/policies` | SOMA guard policies and enforcement rules |
+| GET | `/api/soma/vault/entities` | Browse SOMA vault entities by layer and confidence |
+| GET | `/api/soma/cross-agent` | Cross-agent knowledge flow and collaboration insights |
 
 ## Architecture
 
