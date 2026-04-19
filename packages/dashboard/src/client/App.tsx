@@ -1,11 +1,26 @@
+// packages/dashboard/src/client/App.tsx
+//
+// REBRAND: AgentFlow is the primary product. SOMA is a premium add-on that
+// gates behind useSomaTier(). Process Mining and Guards are promoted to
+// first-class top-level tabs (they are the core of the product, per README).
+//
+// Diff summary vs. current master:
+//   + import ProcessMiningPage
+//   + import GuardsPage
+//   ~ Page type adds 'mining' | 'guards'
+//   ~ Tab bar rebranded with AgentFlow wordmark + lock icon on gated tabs
+//   ~ SOMA tab is disabled (not hidden) when tier.tier === 'teaser'
+
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AgentProfile } from './components/AgentProfile';
 import { AicpPage } from './components/AicpPage';
-import { OrganizationalDashboard } from './components/OrganizationalDashboard';
 import { AlertBanner } from './components/AlertBanner';
 import { ExecSidebar } from './components/ExecSidebar';
 import { ExecutionDetailWithOrgContext } from './components/ExecutionDetailWithOrgContext';
+import { GuardsPage } from './components/GuardsPage';
 import { HealthBanner } from './components/HealthBanner';
+import { OrganizationalDashboard } from './components/OrganizationalDashboard';
+import { ProcessMiningPage } from './components/ProcessMiningPage';
 import { SettingsPanel } from './components/SettingsPanel';
 import { SomaPage } from './components/SomaPage';
 import { SummaryBar } from './components/SummaryBar';
@@ -19,8 +34,24 @@ import { useSomaTier } from './hooks/useSomaTier';
 import { useTraces } from './hooks/useTraces';
 import { pickInitialAgent } from './state';
 
-type Page = 'agents' | 'soma' | 'aicp' | 'organization';
+type Page = 'agents' | 'mining' | 'guards' | 'soma' | 'aicp' | 'organization';
 type AgentView = 'profile' | 'execution';
+
+interface TabDef {
+  id: Page;
+  icon: string;
+  label: string;
+  premium?: boolean;
+}
+
+const TABS: TabDef[] = [
+  { id: 'agents',       icon: '\u{1F50D}', label: 'Agents' },
+  { id: 'mining',       icon: '\u{1F4CA}', label: 'Process Mining' },
+  { id: 'guards',       icon: '\u{1F6E1}', label: 'Guards' },
+  { id: 'soma',         icon: '\u{1F9E0}', label: 'SOMA',         premium: true },
+  { id: 'aicp',         icon: '\u{1F4C8}', label: 'AICP',         premium: true },
+  { id: 'organization', icon: '\u{1F4E2}', label: 'Organization' },
+];
 
 export function App() {
   const processHealth = useProcessHealth();
@@ -34,6 +65,7 @@ export function App() {
     clearSelection,
   } = useSelectedTrace();
   const somaTier = useSomaTier();
+  const somaLocked = somaTier.tier === 'teaser';
 
   const [page, setPage] = useState<Page>('agents');
   const [agentView, setAgentView] = useState<AgentView>('profile');
@@ -41,7 +73,6 @@ export function App() {
   const [showSettings, setShowSettings] = useState(false);
   const autoInitDone = useRef(false);
 
-  // Auto-select first agent on load
   useEffect(() => {
     if (autoInitDone.current || agents.length === 0) return;
     const agent = pickInitialAgent(agents);
@@ -79,34 +110,25 @@ export function App() {
 
       {/* Top-level page tabs */}
       <div className="page-tabs">
-        <button
-          type="button"
-          className={`page-tabs__tab ${page === 'agents' ? 'page-tabs__tab--active' : ''}`}
-          onClick={() => setPage('agents')}
-        >
-          {'\u{1F50D}'} Agents
-        </button>
-        <button
-          type="button"
-          className={`page-tabs__tab ${page === 'soma' ? 'page-tabs__tab--active' : ''}`}
-          onClick={() => setPage('soma')}
-        >
-          {'\u{1F9E0}'} SOMA
-        </button>
-        <button
-          type="button"
-          className={`page-tabs__tab ${page === 'aicp' ? 'page-tabs__tab--active' : ''}`}
-          onClick={() => setPage('aicp')}
-        >
-          {'\u{1F4C8}'} AICP
-        </button>
-        <button
-          type="button"
-          className={`page-tabs__tab ${page === 'organization' ? 'page-tabs__tab--active' : ''}`}
-          onClick={() => setPage('organization')}
-        >
-          {'\u{1F4E2}'} Organization
-        </button>
+        <div className="page-tabs__brand">
+          <span className="page-tabs__brand-mark" aria-hidden />
+          <span className="page-tabs__brand-name">AgentFlow</span>
+        </div>
+        {TABS.map((t) => {
+          const locked = t.id === 'soma' && somaLocked;
+          return (
+            <button
+              type="button"
+              key={t.id}
+              className={`page-tabs__tab ${page === t.id ? 'page-tabs__tab--active' : ''} ${t.premium ? 'page-tabs__tab--premium' : ''} ${locked ? 'page-tabs__tab--locked' : ''}`}
+              onClick={() => setPage(t.id)}
+              title={locked ? 'Configure --soma-vault to unlock' : t.label}
+            >
+              {t.icon} {t.label}
+              {t.premium && <span className="page-tabs__badge">{locked ? '\u{1F512}' : '\u2726'}</span>}
+            </button>
+          );
+        })}
       </div>
 
       <AlertBanner processHealth={processHealth} />
@@ -156,7 +178,21 @@ export function App() {
         </OrganizationalContextProvider>
       )}
 
-      {/* SOMA page */}
+      {/* Process Mining page */}
+      {page === 'mining' && (
+        <div className="workspace__main">
+          <ProcessMiningPage />
+        </div>
+      )}
+
+      {/* Guards page */}
+      {page === 'guards' && (
+        <div className="workspace__main">
+          <GuardsPage />
+        </div>
+      )}
+
+      {/* SOMA page — still uses existing SomaPage, which already handles teaser state */}
       {page === 'soma' && <SomaPage tier={somaTier} />}
 
       {/* AICP page */}
