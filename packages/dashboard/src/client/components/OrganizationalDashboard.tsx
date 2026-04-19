@@ -1,4 +1,3 @@
-import React from 'react';
 import { useOrganizationalData } from '../hooks/organizational';
 
 /**
@@ -8,119 +7,194 @@ import { useOrganizationalData } from '../hooks/organizational';
  * security auditing, policy bridge, and session correlation data.
  */
 export function OrganizationalDashboard(): JSX.Element {
-  const { teamFilter, intelligence, context } = useOrganizationalData();
+  const { teamFilter, intelligence } = useOrganizationalData();
+
+  const complianceRate = intelligence.performanceInsights
+    ? intelligence.performanceInsights.policyComplianceRate * 100
+    : null;
+  const cacheHitRate = intelligence.performanceInsights
+    ? intelligence.performanceInsights.teamScopedCacheHitRate * 100
+    : null;
+  const sessionCorrelation = intelligence.performanceInsights
+    ? intelligence.performanceInsights.sessionCorrelationAccuracy * 100
+    : null;
 
   return (
-    <div className="organizational-dashboard">
-      <div className="organizational-header">
-        <h1>🏢 Organizational Intelligence</h1>
-        <p>Real-time team governance and security intelligence</p>
-      </div>
+    <div className="org-dashboard">
+      <header className="org-dashboard__header">
+        <div className="org-dashboard__eyebrow">
+          AGENTFLOW ENTERPRISE · ORGANIZATIONAL INTELLIGENCE
+        </div>
+        <div className="org-dashboard__title-row">
+          <h1 className="org-dashboard__title">Team governance</h1>
+          <div className="org-dashboard__actions">
+            <label className="aicp-page__select-label">
+              <span className="aicp-page__select-text">Team</span>
+              <select
+                className="aicp-page__select"
+                value={teamFilter.selectedTeamId || ''}
+                onChange={(e) => teamFilter.setTeam(e.target.value || null)}
+              >
+                <option value="">All Teams</option>
+                {teamFilter.accessibleTeams.map((team) => (
+                  <option key={team.teamId} value={team.teamId}>
+                    {team.teamName} ({team.memberCount})
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              type="button"
+              className="btn btn--secondary"
+              onClick={teamFilter.refresh}
+              title="Refresh"
+            >
+              {'\u21BB'}
+            </button>
+          </div>
+        </div>
+        <p className="org-dashboard__subtitle">
+          Team governance · security auditing · policy bridge · session correlation · zero LLM cost
+        </p>
+      </header>
 
-      {/* Team Filter Section */}
-      <div className="organizational-section">
-        <h2>👥 Team Context</h2>
-        <div className="team-filter-controls">
-          <select
-            value={teamFilter.selectedTeamId || ''}
-            onChange={(e) => teamFilter.setTeam(e.target.value || null)}
+      <div className="kpi-row">
+        <div className="kpi">
+          <div className="kpi__label">ACTIVE TEAMS</div>
+          <div className="kpi__value">{intelligence.teamInsights?.activeTeams ?? 0}</div>
+        </div>
+        <div className="kpi">
+          <div className="kpi__label">ACTIVE OPERATORS</div>
+          <div className="kpi__value">{intelligence.operatorInsights?.activeOperators ?? 0}</div>
+        </div>
+        <div className="kpi">
+          <div className="kpi__label">COMPLIANCE</div>
+          <div
+            className={`kpi__value ${complianceRate != null && complianceRate < 95 ? 'kpi__value--warn' : 'kpi__value--ok'}`}
           >
-            <option value="">All Teams</option>
-            {teamFilter.accessibleTeams.map(team => (
-              <option key={team.teamId} value={team.teamId}>
-                {team.teamName} ({team.memberCount} members)
-              </option>
-            ))}
-          </select>
-          <button onClick={teamFilter.refresh}>
-            {teamFilter.loading ? '⟳' : '🔄'} Refresh Teams
-          </button>
+            {complianceRate != null ? complianceRate.toFixed(1) : '—'}
+            {complianceRate != null && <span className="kpi__unit">%</span>}
+          </div>
         </div>
-
-        {teamFilter.currentTeam && (
-          <div className="current-team-info">
-            <h3>Active Team: {teamFilter.currentTeam.teamName}</h3>
-            <p>Access Level: {teamFilter.currentTeam.accessLevel}</p>
-            <p>Members: {teamFilter.currentTeam.memberCount}</p>
+        <div className="kpi">
+          <div className="kpi__label">CACHE HIT RATE</div>
+          <div className="kpi__value">
+            {cacheHitRate != null ? cacheHitRate.toFixed(1) : '—'}
+            {cacheHitRate != null && <span className="kpi__unit">%</span>}
           </div>
-        )}
-      </div>
-
-      {/* Intelligence Overview */}
-      <div className="organizational-section">
-        <h2>🧠 Intelligence Overview</h2>
-        <div className="intelligence-grid">
-          {intelligence.loading ? (
-            <div className="loading">Loading intelligence data...</div>
-          ) : intelligence.error ? (
-            <div className="error">Error: {intelligence.error}</div>
-          ) : intelligence.data ? (
-            <>
-              <div className="intelligence-card">
-                <h3>👤 Operator Insights</h3>
-                <p>Active Operators: {intelligence.operatorInsights?.activeOperators || 0}</p>
-                <p>Collaboration Events: {intelligence.operatorInsights?.collaborationEvents || 0}</p>
-              </div>
-
-              <div className="intelligence-card">
-                <h3>🏢 Team Insights</h3>
-                <p>Active Teams: {intelligence.teamInsights?.activeTeams || 0}</p>
-                <p>Cross-team Collaboration: {intelligence.teamInsights?.crossTeamCollaboration || 0}</p>
-              </div>
-
-              <div className="intelligence-card">
-                <h3>⚡ Performance Insights</h3>
-                <p>Query Latency: {intelligence.performanceInsights?.organizationalQueryLatency || 0}ms</p>
-                <p>Cache Hit Rate: {((intelligence.performanceInsights?.teamScopedCacheHitRate || 0) * 100).toFixed(1)}%</p>
-              </div>
-            </>
-          ) : (
-            <div className="no-data">No intelligence data available</div>
-          )}
         </div>
-      </div>
-
-      {/* Status Grid */}
-      <div className="organizational-section">
-        <h2>🔧 Service Status</h2>
-        <div className="status-grid">
-          <div className="status-card">
-            <h3>✅ Team Governance</h3>
-            <p>Workflow customization active</p>
-            <p>{teamFilter.accessibleTeams.length} teams accessible</p>
+        <div className="kpi">
+          <div className="kpi__label">QUERY LATENCY</div>
+          <div className="kpi__value">
+            {intelligence.performanceInsights?.organizationalQueryLatency ?? 0}
+            <span className="kpi__unit">ms</span>
           </div>
-
-          <div className="status-card">
-            <h3>✅ Security Auditing</h3>
-            <p>All operations tracked</p>
-            <p>Compliance rate: {intelligence.performanceInsights ? `${(intelligence.performanceInsights.policyComplianceRate * 100).toFixed(1)}%` : 'N/A'}</p>
-          </div>
-
-          <div className="status-card">
-            <h3>✅ Policy Bridge</h3>
-            <p>Organizational context enabled</p>
-            <p>Filter: {teamFilter.filterActive ? 'Active' : 'Inactive'}</p>
-          </div>
-
-          <div className="status-card">
-            <h3>✅ Session Correlation</h3>
-            <p>Cross-operator intelligence</p>
-            <p>Accuracy: {intelligence.performanceInsights ? `${(intelligence.performanceInsights.sessionCorrelationAccuracy * 100).toFixed(1)}%` : 'N/A'}</p>
+        </div>
+        <div className="kpi">
+          <div className="kpi__label">CORRELATION</div>
+          <div className="kpi__value">
+            {sessionCorrelation != null ? sessionCorrelation.toFixed(1) : '—'}
+            {sessionCorrelation != null && <span className="kpi__unit">%</span>}
           </div>
         </div>
       </div>
 
-      {/* API Status */}
-      <div className="organizational-section">
-        <h2>📡 Available APIs</h2>
-        <div className="api-status">
-          <ul>
-            <li><strong>/api/governance</strong> - Team governance workflows</li>
-            <li><strong>/api/policies</strong> - Organizational policy bridge</li>
-            <li><strong>/api/audit</strong> - Security audit logging</li>
-            <li><strong>/api/correlation</strong> - Session correlation</li>
-            <li><strong>/api/stats</strong> - Organizational intelligence metrics</li>
-          </ul>
+      {intelligence.loading && <div className="loading-state">Loading intelligence{'\u2026'}</div>}
+      {intelligence.error && (
+        <div className="card">
+          <div className="card__header">
+            <h3 className="card__title">ERROR</h3>
+          </div>
+          <div className="empty-state">
+            <p className="org-dashboard__error">{intelligence.error}</p>
+            <p>Check server logs or retry.</p>
+          </div>
+        </div>
+      )}
+
+      {teamFilter.currentTeam && (
+        <div className="card">
+          <div className="card__header">
+            <h3 className="card__title">ACTIVE TEAM</h3>
+          </div>
+          <div className="org-dashboard__team-info">
+            <div className="org-dashboard__team-row">
+              <span className="org-dashboard__team-label">Name</span>
+              <span className="org-dashboard__team-value">{teamFilter.currentTeam.teamName}</span>
+            </div>
+            <div className="org-dashboard__team-row">
+              <span className="org-dashboard__team-label">Access Level</span>
+              <span className="org-dashboard__team-value">
+                <span className="badge badge--info">{teamFilter.currentTeam.accessLevel}</span>
+              </span>
+            </div>
+            <div className="org-dashboard__team-row">
+              <span className="org-dashboard__team-label">Members</span>
+              <span className="org-dashboard__team-value">
+                {teamFilter.currentTeam.memberCount}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="card">
+        <div className="card__header">
+          <h3 className="card__title">SERVICE STATUS</h3>
+        </div>
+        <div className="org-dashboard__services">
+          <div className="org-dashboard__service">
+            <span className="dot dot--ok" />
+            <span className="org-dashboard__service-name">Team Governance</span>
+            <span className="org-dashboard__service-meta">
+              {teamFilter.accessibleTeams.length} teams
+            </span>
+          </div>
+          <div className="org-dashboard__service">
+            <span className="dot dot--ok" />
+            <span className="org-dashboard__service-name">Security Auditing</span>
+            <span className="org-dashboard__service-meta">All operations tracked</span>
+          </div>
+          <div className="org-dashboard__service">
+            <span className="dot dot--ok" />
+            <span className="org-dashboard__service-name">Policy Bridge</span>
+            <span className="org-dashboard__service-meta">
+              Filter {teamFilter.filterActive ? 'active' : 'inactive'}
+            </span>
+          </div>
+          <div className="org-dashboard__service">
+            <span className="dot dot--ok" />
+            <span className="org-dashboard__service-name">Session Correlation</span>
+            <span className="org-dashboard__service-meta">Cross-operator intelligence</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card__header">
+          <h3 className="card__title">AVAILABLE APIS</h3>
+        </div>
+        <div className="org-dashboard__api-list">
+          <div className="org-dashboard__api">
+            <code>/api/governance</code>
+            <span className="org-dashboard__api-desc">Team governance workflows</span>
+          </div>
+          <div className="org-dashboard__api">
+            <code>/api/policies</code>
+            <span className="org-dashboard__api-desc">Organizational policy bridge</span>
+          </div>
+          <div className="org-dashboard__api">
+            <code>/api/audit</code>
+            <span className="org-dashboard__api-desc">Security audit logging</span>
+          </div>
+          <div className="org-dashboard__api">
+            <code>/api/correlation</code>
+            <span className="org-dashboard__api-desc">Session correlation</span>
+          </div>
+          <div className="org-dashboard__api">
+            <code>/api/stats</code>
+            <span className="org-dashboard__api-desc">Organizational metrics</span>
+          </div>
         </div>
       </div>
     </div>

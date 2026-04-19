@@ -4184,3 +4184,140 @@ body {
   background: var(--accent, var(--warn));
   opacity: 0.9;
 }
+
+/* === ORGANIZATIONAL DASHBOARD (DATA EXPLORER — PATTERN A) === */
+.org-dashboard {
+  padding: var(--s-4, var(--s4));
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3, var(--s3));
+}
+
+.org-dashboard__header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2, var(--s2));
+}
+
+.org-dashboard__eyebrow {
+  font: var(--fs-10, 10px) var(--fm);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--t-3, var(--t3));
+}
+
+.org-dashboard__title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3, var(--s3));
+}
+
+.org-dashboard__title {
+  font: 600 var(--fs-20, 20px) var(--font-display, var(--f));
+  color: var(--t-1, var(--t1));
+  line-height: 1.2;
+}
+
+.org-dashboard__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3, var(--s3));
+}
+
+.org-dashboard__subtitle {
+  font: var(--fs-12, 12px) var(--font-body, var(--f));
+  color: var(--t-2, var(--t2));
+  line-height: 1.45;
+}
+
+.org-dashboard__error {
+  color: var(--fail, var(--fail));
+}
+
+.org-dashboard__team-info {
+  padding: var(--s-3, var(--s3));
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2, var(--s2));
+}
+
+.org-dashboard__team-row {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  align-items: center;
+  gap: var(--s-3, var(--s3));
+}
+
+.org-dashboard__team-label {
+  font: var(--fs-10, 10px) var(--fm);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--t-3, var(--t3));
+}
+
+.org-dashboard__team-value {
+  font: var(--fs-12, 12px) var(--fm);
+  color: var(--t-1, var(--t1));
+}
+
+.org-dashboard__services {
+  padding: var(--s-3, var(--s3));
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--s-2, var(--s2));
+}
+
+.org-dashboard__service {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2, var(--s2));
+  padding: var(--s-2, var(--s2)) var(--s-3, var(--s3));
+  background: var(--bg-3, var(--bg3));
+  border-radius: var(--radius, var(--r));
+}
+
+.org-dashboard__service-name {
+  flex: 1;
+  font: var(--fs-12, 12px) var(--font-body, var(--f));
+  color: var(--t-1, var(--t1));
+  font-weight: 600;
+}
+
+.org-dashboard__service-meta {
+  font: var(--fs-11, 11px) var(--fm);
+  color: var(--t-3, var(--t3));
+}
+
+.org-dashboard__api-list {
+  padding: var(--s-3, var(--s3));
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2, var(--s2));
+}
+
+.org-dashboard__api {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  align-items: center;
+  gap: var(--s-3, var(--s3));
+  padding: var(--s-2, var(--s2));
+  border-radius: var(--radius, var(--r));
+}
+
+.org-dashboard__api:hover {
+  background: var(--bg-3, var(--bg3));
+}
+
+.org-dashboard__api code {
+  font: var(--fs-11, 11px) var(--fm);
+  color: var(--accent, var(--warn));
+  background: var(--bg-3, var(--bg3));
+  padding: 2px 6px;
+  border-radius: 2px;
+}
+
+.org-dashboard__api-desc {
+  font: var(--fs-12, 12px) var(--font-body, var(--f));
+  color: var(--t-2, var(--t2));
+}
