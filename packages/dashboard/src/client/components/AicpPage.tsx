@@ -227,41 +227,101 @@ export function AicpPage() {
     );
   }
 
+  const successRate = briefing.data ? (1 - briefing.data.failureRate) * 100 : null;
+  const driftStatus = drift.data?.drift.status ?? '—';
+
   return (
     <div className="aicp-page">
-      {/* Agent Selector */}
-      <div className="aicp-header">
-        <label className="aicp-header__label">
-          Agent:
-          <select
-            className="aicp-header__select"
-            value={selectedAgent ?? ''}
-            onChange={(e) => {
-              setSelectedAgent(e.target.value || null);
-              setWarningsExpanded(false);
-              setExpandedWarningIdx(null);
-              setExpandedRecIdx(null);
-            }}
-          >
-            <option value="">Select an agent...</option>
-            {agents.map((a) => (
-              <option key={a.agentId} value={a.agentId}>
-                {a.displayName || a.agentId}
-              </option>
-            ))}
-          </select>
-        </label>
-        {selectedAgent && (
-          <button
-            type="button"
-            className="aicp-header__refresh"
-            onClick={() => preflight.refetch()}
-            disabled={preflight.loading}
-          >
-            {'\u27F3'} Refresh
-          </button>
-        )}
-      </div>
+      <header className="aicp-page__header">
+        <div className="aicp-page__eyebrow">AGENTFLOW · AICP CONTROL PLANE</div>
+        <div className="aicp-page__title-row">
+          <h1 className="aicp-page__title">Operational briefing</h1>
+          <div className="aicp-page__actions">
+            <label className="aicp-page__select-label">
+              <span className="aicp-page__select-text">Agent</span>
+              <select
+                className="aicp-page__select"
+                value={selectedAgent ?? ''}
+                onChange={(e) => {
+                  setSelectedAgent(e.target.value || null);
+                  setWarningsExpanded(false);
+                  setExpandedWarningIdx(null);
+                  setExpandedRecIdx(null);
+                }}
+              >
+                <option value="">Select an agent{'\u2026'}</option>
+                {agents.map((a) => (
+                  <option key={a.agentId} value={a.agentId}>
+                    {a.displayName || a.agentId}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {selectedAgent && (
+              <button
+                type="button"
+                className="btn btn--secondary"
+                onClick={() => preflight.refetch()}
+                disabled={preflight.loading}
+                title="Refresh"
+              >
+                {'\u21BB'}
+              </button>
+            )}
+          </div>
+        </div>
+        <p className="aicp-page__subtitle">
+          Preflight authorization · health monitoring · conformance drift · consultation history ·
+          zero LLM cost
+        </p>
+      </header>
+
+      {selectedAgent && preflight.data?.available && (
+        <div className="kpi-row">
+          <div className="kpi">
+            <div className="kpi__label">AUTHORIZATION</div>
+            <div
+              className={`kpi__value ${preflight.data.proceed ? 'kpi__value--ok' : 'kpi__value--fail'}`}
+            >
+              {preflight.data.proceed ? 'PROCEED' : 'BLOCKED'}
+            </div>
+          </div>
+          <div className="kpi">
+            <div className="kpi__label">LATENCY</div>
+            <div className="kpi__value">
+              {preflight.data._meta.durationMs}
+              <span className="kpi__unit">ms</span>
+            </div>
+          </div>
+          <div className="kpi">
+            <div className="kpi__label">WARNINGS</div>
+            <div className={`kpi__value ${warnings.length > 0 ? 'kpi__value--warn' : ''}`}>
+              {warnings.length}
+            </div>
+          </div>
+          <div className="kpi">
+            <div className="kpi__label">RECOMMENDATIONS</div>
+            <div className="kpi__value">{preflight.data.recommendations.length}</div>
+          </div>
+          <div className="kpi">
+            <div className="kpi__label">SUCCESS RATE</div>
+            <div
+              className={`kpi__value ${successRate != null && successRate < 95 ? 'kpi__value--warn' : ''}`}
+            >
+              {successRate != null ? successRate.toFixed(1) : '—'}
+              {successRate != null && <span className="kpi__unit">%</span>}
+            </div>
+          </div>
+          <div className="kpi">
+            <div className="kpi__label">DRIFT</div>
+            <div
+              className={`kpi__value ${driftStatus === 'degrading' ? 'kpi__value--warn' : driftStatus === 'improving' ? 'kpi__value--ok' : ''}`}
+            >
+              {driftStatus}
+            </div>
+          </div>
+        </div>
+      )}
 
       {!selectedAgent && (
         <div className="aicp-empty">Select an agent to see its operational briefing.</div>
