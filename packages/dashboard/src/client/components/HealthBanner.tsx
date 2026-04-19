@@ -8,7 +8,7 @@ declare const __APP_VERSION__: string;
 interface StatCell {
   label: string;
   value: string | number;
-  color?: string;
+  kind?: 'ok' | 'warn' | 'fail';
   sparkline?: boolean[];
 }
 
@@ -36,34 +36,32 @@ export function HealthBanner({
     totalExec > 0 ? (((totalExec - failedExec) / totalExec) * 100).toFixed(1) : '—';
   const orphans = processHealth?.orphans.length ?? 0;
 
-  // Sparkline: last 30 executions pass/fail
   const recentSparkline = traces.slice(0, 30).map((t) => t.status !== 'failed');
 
   const stats: StatCell[] = [
     {
-      label: 'Services',
+      label: 'SERVICES',
       value: `${activeServices}/${serviceCount}`,
-      color: failedServices > 0 ? 'var(--color-critical)' : 'var(--color-ok)',
+      kind: failedServices > 0 ? 'fail' : 'ok',
     },
-    { label: 'Agents', value: agents.length },
-    { label: 'Executions', value: totalExec, sparkline: recentSparkline },
+    { label: 'AGENTS', value: agents.length },
+    { label: 'EXECUTIONS', value: totalExec, sparkline: recentSparkline },
     {
-      label: 'Success',
+      label: 'SUCCESS',
       value: `${successRate}%`,
-      color: parseFloat(String(successRate)) < 95 ? 'var(--color-warn)' : 'var(--color-ok)',
+      kind: Number.parseFloat(String(successRate)) < 95 ? 'warn' : 'ok',
     },
     {
-      label: 'Failures',
+      label: 'FAILURES',
       value: failedExec,
-      color: failedExec > 0 ? 'var(--color-critical)' : 'var(--color-ok)',
+      kind: failedExec > 0 ? 'fail' : 'ok',
     },
-    { label: 'Orphans', value: orphans, color: orphans > 0 ? 'var(--color-warn)' : undefined },
+    { label: 'ORPHANS', value: orphans, kind: orphans > 0 ? 'warn' : undefined },
   ];
 
   const [connected, setConnected] = useState(true);
   const [lastUpdate, setLastUpdate] = useState(Date.now());
 
-  // Detect connection by checking if data is stale
   useEffect(() => {
     setLastUpdate(Date.now());
     setConnected(true);
@@ -71,7 +69,6 @@ export function HealthBanner({
 
   useEffect(() => {
     const check = setInterval(() => {
-      // If no update in 30s, show disconnected
       if (Date.now() - lastUpdate > 30000) setConnected(false);
     }, 5000);
     return () => clearInterval(check);
@@ -79,52 +76,48 @@ export function HealthBanner({
 
   return (
     <header className="health-banner">
-      <span className="health-banner__title">AgentFlow</span>
-      <span className="hb-version">v{__APP_VERSION__}</span>
-      <span
-        className={`hb-live ${connected ? 'hb-live--on' : 'hb-live--off'}`}
-        title={connected ? 'Connected — scanning live' : 'Disconnected'}
-      >
-        <span className={`hb-live__dot ${connected ? 'hb-live__dot--pulse' : ''}`} />
-        {connected ? 'LIVE' : 'OFFLINE'}
-      </span>
+      <div className="health-banner__brand">
+        <span className="health-banner__title">AgentFlow</span>
+        <span className="health-banner__version">v{__APP_VERSION__}</span>
+        <span
+          className={`badge ${connected ? 'badge--ok' : 'badge--fail'} health-banner__status`}
+          title={connected ? 'Connected — scanning live' : 'Disconnected'}
+        >
+          <span className={`dot dot--${connected ? 'ok' : 'fail'}`} />
+          {connected ? 'LIVE' : 'OFFLINE'}
+        </span>
+      </div>
+
       <div className="health-banner__stats">
         {stats.map((s) => (
-          <div key={s.label} className="stat-cell">
-            <span className="stat-cell__value" style={s.color ? { color: s.color } : undefined}>
+          <div key={s.label} className="health-banner__stat">
+            <span className="health-banner__stat-label">{s.label}</span>
+            <span
+              className={`health-banner__stat-value ${s.kind ? `health-banner__stat-value--${s.kind}` : ''}`}
+            >
               {s.value}
             </span>
-            <span className="stat-cell__label">{s.label}</span>
             {s.sparkline && (
-              <div className="stat-cell__sparkline">
-                {s.sparkline.map((ok, i, arr) => {
-                  const position = arr.indexOf(ok, i);
-                  return (
-                    <div
-                      key={`${s.label}-sparkline-${position}`}
-                      className={`spark ${ok ? 'spark--ok' : 'spark--fail'}`}
-                    />
-                  );
-                })}
+              <div className="health-banner__sparkline">
+                {s.sparkline.map((ok, i) => (
+                  <span
+                    key={`${s.label}-${i}-${ok ? 'o' : 'f'}`}
+                    className={`health-banner__spark health-banner__spark--${ok ? 'ok' : 'fail'}`}
+                  />
+                ))}
               </div>
             )}
           </div>
         ))}
       </div>
+
       {onOpenSettings && (
         <button
           type="button"
+          className="btn btn--secondary health-banner__settings"
           onClick={onOpenSettings}
-          style={{
-            marginLeft: 'auto',
-            background: 'transparent',
-            border: 'none',
-            color: 'var(--t3)',
-            cursor: 'pointer',
-            fontSize: 'var(--base)',
-            padding: '0 var(--s2)',
-          }}
           title="Settings"
+          aria-label="Open settings"
         >
           {'\u2699'}
         </button>
