@@ -67,7 +67,7 @@ function useOrganizationalTrace(trace: FullTrace | null): OrganizationalTrace | 
         teamId: determineTeamFromTrace(trace),
         instanceId: trace.agentId,
         timestamp: trace.startTime,
-        userAgent: 'AgentFlow Dashboard 1.0'
+        userAgent: 'AgentFlow Dashboard 1.0',
       },
 
       sessionCorrelation: {
@@ -78,13 +78,13 @@ function useOrganizationalTrace(trace: FullTrace | null): OrganizationalTrace | 
           workflowSimilarity: 0.73,
           contextOverlap: 0.82,
           problemDomainMatch: 0.91,
-          solutionPatternMatch: 0.67
+          solutionPatternMatch: 0.67,
         },
         crossInstanceTracking: {
           instanceTransitions: [],
           handoffQuality: 0.89,
-          continuityScore: 0.92
-        }
+          continuityScore: 0.92,
+        },
       },
 
       policyStatus: {
@@ -94,22 +94,25 @@ function useOrganizationalTrace(trace: FullTrace | null): OrganizationalTrace | 
           {
             policyId: 'execution-time-limit',
             policyName: 'Execution Time Limit',
-            status: (trace.endTime - trace.startTime) > 300000 ? 'violation' : 'compliant',
+            status: trace.endTime - trace.startTime > 300000 ? 'violation' : 'compliant',
             severity: 'medium',
-            details: `Execution time: ${Math.round((trace.endTime - trace.startTime) / 1000)}s`
+            details: `Execution time: ${Math.round((trace.endTime - trace.startTime) / 1000)}s`,
           },
           {
             policyId: 'error-rate-threshold',
             policyName: 'Error Rate Threshold',
-            status: Object.values(trace.nodes).filter(n => n.status === 'failed').length > 3 ? 'violation' : 'compliant',
+            status:
+              Object.values(trace.nodes).filter((n) => n.status === 'failed').length > 3
+                ? 'violation'
+                : 'compliant',
             severity: 'high',
-            details: `Failed nodes: ${Object.values(trace.nodes).filter(n => n.status === 'failed').length}`
-          }
+            details: `Failed nodes: ${Object.values(trace.nodes).filter((n) => n.status === 'failed').length}`,
+          },
         ],
         governanceRecommendations: generateGovernanceRecommendations(trace),
         approvalWorkflow: null,
-        exemptionStatus: null
-      }
+        exemptionStatus: null,
+      },
     };
 
     setOrgTrace(convertedTrace);
@@ -120,22 +123,27 @@ function useOrganizationalTrace(trace: FullTrace | null): OrganizationalTrace | 
 
 // Helper function to determine team from trace characteristics
 function determineTeamFromTrace(trace: FullTrace): string {
-  if (trace.agentId?.toLowerCase().includes('frontend') ||
-      trace.name?.toLowerCase().includes('ui') ||
-      trace.name?.toLowerCase().includes('react')) {
+  if (
+    trace.agentId?.toLowerCase().includes('frontend') ||
+    trace.name?.toLowerCase().includes('ui') ||
+    trace.name?.toLowerCase().includes('react')
+  ) {
     return 'team-frontend';
   }
-  if (trace.agentId?.toLowerCase().includes('backend') ||
-      trace.name?.toLowerCase().includes('api') ||
-      trace.name?.toLowerCase().includes('server')) {
+  if (
+    trace.agentId?.toLowerCase().includes('backend') ||
+    trace.name?.toLowerCase().includes('api') ||
+    trace.name?.toLowerCase().includes('server')
+  ) {
     return 'team-backend';
   }
-  if (trace.agentId?.toLowerCase().includes('soma') ||
-      trace.name?.toLowerCase().includes('soma')) {
+  if (trace.agentId?.toLowerCase().includes('soma') || trace.name?.toLowerCase().includes('soma')) {
     return 'team-soma';
   }
-  if (trace.agentId?.toLowerCase().includes('infra') ||
-      trace.name?.toLowerCase().includes('deploy')) {
+  if (
+    trace.agentId?.toLowerCase().includes('infra') ||
+    trace.name?.toLowerCase().includes('deploy')
+  ) {
     return 'team-infra';
   }
   return 'team-general';
@@ -149,15 +157,15 @@ function generateMockRelatedSessions(trace: FullTrace) {
       similarity: 0.89,
       relationshipType: 'workflow_similarity' as const,
       timestamp: trace.startTime - 3600000,
-      summary: 'Similar data processing workflow with comparable node patterns'
+      summary: 'Similar data processing workflow with comparable node patterns',
     },
     {
       sessionId: `session-${Math.random().toString(36).substr(2, 9)}`,
       similarity: 0.76,
       relationshipType: 'problem_pattern' as const,
       timestamp: trace.startTime - 7200000,
-      summary: 'Encountered similar error patterns in execution flow'
-    }
+      summary: 'Encountered similar error patterns in execution flow',
+    },
   ];
 }
 
@@ -166,18 +174,19 @@ function generateGovernanceRecommendations(trace: FullTrace) {
   const recommendations = [];
 
   const duration = trace.endTime - trace.startTime;
-  if (duration > 300000) { // 5 minutes
+  if (duration > 300000) {
+    // 5 minutes
     recommendations.push({
       type: 'optimization' as const,
       priority: 'medium' as const,
       title: 'Long Execution Time Detected',
       description: `Execution took ${Math.round(duration / 1000)}s. Consider optimizing for better performance.`,
       actionable: true,
-      estimatedImpact: 'medium' as const
+      estimatedImpact: 'medium' as const,
     });
   }
 
-  const failedNodes = Object.values(trace.nodes).filter(n => n.status === 'failed');
+  const failedNodes = Object.values(trace.nodes).filter((n) => n.status === 'failed');
   if (failedNodes.length > 0) {
     recommendations.push({
       type: 'reliability' as const,
@@ -185,7 +194,7 @@ function generateGovernanceRecommendations(trace: FullTrace) {
       title: 'Error Handling Review Needed',
       description: `${failedNodes.length} nodes failed. Review error handling and retry mechanisms.`,
       actionable: true,
-      estimatedImpact: 'high' as const
+      estimatedImpact: 'high' as const,
     });
   }
 
@@ -379,20 +388,29 @@ function SOMAStepsView({ enhancedTrace }: { enhancedTrace: EnhancedSOMATrace | n
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'completed': return '#3fb950';
-      case 'failed': return '#f85149';
-      case 'running': return '#d29922';
-      default: return '#8b949e';
+      case 'completed':
+        return '#3fb950';
+      case 'failed':
+        return '#f85149';
+      case 'running':
+        return '#d29922';
+      default:
+        return '#8b949e';
     }
   };
 
   const getWorkerIcon = (worker: string) => {
     switch (worker) {
-      case 'harvester': return '🌾';
-      case 'reconciler': return '🔧';
-      case 'synthesizer': return '🧪';
-      case 'cartographer': return '🗺️';
-      default: return '⚙️';
+      case 'harvester':
+        return '🌾';
+      case 'reconciler':
+        return '🔧';
+      case 'synthesizer':
+        return '🧪';
+      case 'cartographer':
+        return '🗺️';
+      default:
+        return '⚙️';
     }
   };
 
@@ -445,90 +463,146 @@ function SOMAStepsView({ enhancedTrace }: { enhancedTrace: EnhancedSOMATrace | n
 }
 
 // Enhanced ExecutionDetail component with organizational context integration
-export function ExecutionDetailWithOrgContext({ trace, loading }: { trace: FullTrace | null; loading: boolean }) {
+export function ExecutionDetailWithOrgContext({
+  trace,
+  loading,
+}: {
+  trace: FullTrace | null;
+  loading: boolean;
+}) {
   const [tab, setTab] = useState<Tab>('flame');
   const [orgPanelCollapsed, setOrgPanelCollapsed] = useState(false);
   const enhancedSOMATrace = useEnhancedSOMATrace(trace);
   const organizationalTrace = useOrganizationalTrace(trace);
 
-  if (loading) return <div className="workspace__empty">Loading...</div>;
-  if (!trace) return <div className="workspace__empty">Select an execution</div>;
+  if (loading) return <div className="loading-state">Loading trace{'\u2026'}</div>;
+  if (!trace)
+    return (
+      <div className="empty-state">
+        <p>Select an execution to inspect.</p>
+      </div>
+    );
 
   const nodes = Object.values(trace.nodes);
   const failCount = nodes.filter((n) => n.status === 'failed').length;
+  const completedCount = nodes.filter((n) => n.status === 'completed').length;
   const duration = trace.endTime - trace.startTime;
+  const successRate = nodes.length > 0 ? ((completedCount / nodes.length) * 100).toFixed(0) : '0';
 
-  const baseTabs: { id: Tab; label: string }[] = [
-    { id: 'flame', label: 'Flame Chart' },
-    { id: 'flow', label: 'Agent Flow' },
-    { id: 'metrics', label: 'Metrics' },
-    { id: 'deps', label: 'Dependencies' },
-    { id: 'state', label: 'State Machine' },
-    { id: 'summary', label: 'Summary' },
-    { id: 'transcript', label: 'Transcript' },
-    { id: 'receipt', label: 'Receipt' },
-    { id: 'decisions', label: 'Decisions' },
+  const baseTabs: { id: Tab; label: string; shortcut: string }[] = [
+    { id: 'flame', label: 'Flame Chart', shortcut: '1' },
+    { id: 'flow', label: 'Agent Flow', shortcut: '2' },
+    { id: 'metrics', label: 'Metrics', shortcut: '3' },
+    { id: 'deps', label: 'Dependencies', shortcut: '4' },
+    { id: 'state', label: 'State Machine', shortcut: '5' },
+    { id: 'summary', label: 'Summary', shortcut: '6' },
+    { id: 'transcript', label: 'Transcript', shortcut: '7' },
+    { id: 'receipt', label: 'Receipt', shortcut: '8' },
+    { id: 'decisions', label: 'Decisions', shortcut: '9' },
   ];
 
-  // Add SOMA Steps tab if this is a SOMA trace
   const tabs = enhancedSOMATrace?.isSOMA
-    ? [{ id: 'soma-steps' as Tab, label: '🧠 SOMA Steps' }, ...baseTabs]
+    ? [{ id: 'soma-steps' as Tab, label: 'SOMA Steps', shortcut: '0' }, ...baseTabs]
     : baseTabs;
 
-  // Auto-switch to SOMA steps tab for SOMA traces
   if (enhancedSOMATrace?.isSOMA && tab === 'flame') {
     setTab('soma-steps');
   }
 
+  const traceIdShort =
+    trace.filename.length > 14 ? `${trace.filename.slice(0, 12)}${'\u2026'}` : trace.filename;
+
   return (
     <div className="exec-detail-with-org-context">
-      {/* Main execution detail content */}
-      <div className={`exec-detail ${orgPanelCollapsed ? 'exec-detail--full-width' : 'exec-detail--with-org-panel'}`}>
-        <div className="ed-header">
-          <span className={`dot ${trace.status === 'failed' ? 'dot--fail' : 'dot--ok'}`} />
-          <span className="ed-header__agent">{trace.agentId}</span>
-          <span className="ed-header__meta">
-            {nodes.length}n &middot; {fmtDur(duration)} &middot; {trace.status}
-            {failCount > 0 && (
-              <span style={{ color: 'var(--color-critical)' }}> &middot; {failCount} failed</span>
-            )}
-          </span>
-          <span className="ed-header__ts">
-            {new Date(trace.startTime).toLocaleString([], {
-              month: 'short',
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit',
-              second: '2-digit',
-            })}
-          </span>
-          {trace.trigger && <span className="ed-tag">{trace.trigger}</span>}
+      <div
+        className={`exec-detail ${orgPanelCollapsed ? 'exec-detail--full-width' : 'exec-detail--with-org-panel'}`}
+      >
+        <header className="exec-detail__header">
+          <div className="exec-detail__eyebrow">
+            <span className="exec-detail__crumb">Execution</span>
+            <span className="exec-detail__crumb-sep">{'\u203A'}</span>
+            <span className="exec-detail__crumb exec-detail__crumb--current">{trace.agentId}</span>
+          </div>
+          <div className="exec-detail__title-row">
+            <h1 className="exec-detail__title">
+              <span className={`dot ${trace.status === 'failed' ? 'dot--fail' : 'dot--ok'}`} />
+              <span className="exec-detail__trace-id">{traceIdShort}</span>
+            </h1>
+            <div className="exec-detail__actions">
+              {trace.trigger && <span className="badge badge--info">{trace.trigger}</span>}
+              <button
+                type="button"
+                className="btn btn--secondary"
+                onClick={() => setOrgPanelCollapsed(!orgPanelCollapsed)}
+                title={
+                  orgPanelCollapsed ? 'Show organizational context' : 'Hide organizational context'
+                }
+              >
+                {orgPanelCollapsed ? 'Show context' : 'Hide context'}
+              </button>
+            </div>
+          </div>
+          <p className="exec-detail__subtitle">
+            {new Date(trace.startTime).toLocaleString()} · {nodes.length} nodes · {fmtDur(duration)}{' '}
+            · {trace.status}
+          </p>
+        </header>
 
-          {/* Toggle button for organizational context panel */}
-          <button
-            type="button"
-            className={`org-panel-toggle ${orgPanelCollapsed ? 'org-panel-toggle--collapsed' : ''}`}
-            onClick={() => setOrgPanelCollapsed(!orgPanelCollapsed)}
-            title={orgPanelCollapsed ? 'Show organizational context' : 'Hide organizational context'}
-          >
-            👥 {orgPanelCollapsed ? 'Show Context' : 'Hide Context'}
-          </button>
+        <div className="kpi-row">
+          <div className="kpi">
+            <div className="kpi__label">NODES</div>
+            <div className="kpi__value">{nodes.length}</div>
+          </div>
+          <div className="kpi">
+            <div className="kpi__label">COMPLETED</div>
+            <div className="kpi__value">{completedCount}</div>
+          </div>
+          <div className="kpi">
+            <div className="kpi__label">FAILED</div>
+            <div className={`kpi__value ${failCount > 0 ? 'kpi__value--fail' : ''}`}>
+              {failCount}
+            </div>
+          </div>
+          <div className="kpi">
+            <div className="kpi__label">SUCCESS</div>
+            <div
+              className={`kpi__value ${Number(successRate) < 95 ? 'kpi__value--warn' : 'kpi__value--ok'}`}
+            >
+              {successRate}
+              <span className="kpi__unit">%</span>
+            </div>
+          </div>
+          <div className="kpi">
+            <div className="kpi__label">DURATION</div>
+            <div className="kpi__value">{fmtDur(duration)}</div>
+          </div>
+          <div className="kpi">
+            <div className="kpi__label">STATUS</div>
+            <div
+              className={`kpi__value ${trace.status === 'failed' ? 'kpi__value--fail' : 'kpi__value--ok'}`}
+            >
+              {trace.status}
+            </div>
+          </div>
         </div>
 
-        <div className="ed-tabs">
+        <div className="tabs" role="tablist">
           {tabs.map((t) => (
             <button
               type="button"
               key={t.id}
-              className={`ed-tab ${tab === t.id ? 'ed-tab--active' : ''}`}
+              role="tab"
+              aria-selected={tab === t.id}
+              className={`tabs__item ${tab === t.id ? 'tabs__item--active' : ''}`}
               onClick={() => setTab(t.id)}
             >
-              {t.label}
+              <span className="tabs__label">{t.label}</span>
+              <kbd className="tabs__shortcut">{t.shortcut}</kbd>
             </button>
           ))}
         </div>
 
-        <div className="ed-content">
+        <div className="exec-detail__content">
           {tab === 'soma-steps' && <SOMAStepsView enhancedTrace={enhancedSOMATrace} />}
           {tab === 'flame' && <FlameChart trace={trace} />}
           {tab === 'flow' && <AgentFlow trace={trace} />}
@@ -542,7 +616,6 @@ export function ExecutionDetailWithOrgContext({ trace, loading }: { trace: FullT
         </div>
       </div>
 
-      {/* Organizational context panel */}
       {!orgPanelCollapsed && (
         <div className="org-context-sidebar">
           <OrganizationalContextPanel
