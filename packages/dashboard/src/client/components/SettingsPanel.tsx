@@ -60,11 +60,6 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
     setManualPath('');
   }, [manualPath, modifyDir]);
 
-  // Derive which dirs are from config (removable) vs CLI (not removable)
-  const _cliDirs = new Set<string>();
-  // CLI dirs are the first entries (tracesDir + original dataDirs), but we can't know exactly from the API
-  // So we consider "suggested" as definitely addable, and anything in watched that's also in discovered is removable
-
   return (
     // biome-ignore lint/a11y/useSemanticElements: interactive element with role+keyboard handlers
     <div
@@ -84,90 +79,126 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.stopPropagation()}
       >
-        <div className="sp-head">
-          <h3>Watched Directories</h3>
-          <button type="button" className="sp-close" onClick={onClose}>
-            {'\u00D7'}
-          </button>
-        </div>
+        <header className="settings-panel__header">
+          <div className="settings-panel__eyebrow">AGENTFLOW · SETTINGS</div>
+          <div className="settings-panel__title-row">
+            <h2 className="settings-panel__title">Watched directories</h2>
+            <button type="button" className="btn btn--secondary" onClick={onClose} title="Close">
+              {'\u00D7'}
+            </button>
+          </div>
+          <p className="settings-panel__subtitle">
+            Configure directories scanned for trace files. Discovered paths auto-populate.
+          </p>
+        </header>
 
-        {error && <div className="sp-error">{error}</div>}
+        {error && (
+          <div className="settings-panel__error">
+            <span className="dot dot--fail" />
+            <span>{error}</span>
+          </div>
+        )}
 
         {!dirs ? (
-          <div className="workspace__empty">Loading...</div>
+          <div className="loading-state">Loading directories{'\u2026'}</div>
         ) : (
-          <div className="sp-body">
-            {/* Watching */}
-            <h4 className="sp-section">Watching ({dirs.watched.length})</h4>
-            {dirs.watched.map((d) => (
-              <div key={d} className="sp-dir">
-                <span className="dot dot--ok" />
-                <span className="sp-dir__path">{d}</span>
-                <button
-                  type="button"
-                  className="sp-btn sp-btn--rm"
-                  disabled={busy}
-                  onClick={() => modifyDir('remove', d)}
-                  title="Remove"
-                >
-                  {'\u00D7'}
-                </button>
-              </div>
-            ))}
-
-            {/* Suggested */}
-            {dirs.suggested.length > 0 && (
-              <>
-                <h4 className="sp-section">Suggested ({dirs.suggested.length})</h4>
-                {dirs.suggested.map((d) => (
-                  <div key={d} className="sp-dir sp-dir--sug">
-                    <span className="dot dot--warn" />
-                    <span className="sp-dir__path">{d}</span>
+          <div className="settings-panel__body">
+            <section className="settings-section">
+              <header className="settings-section__header">
+                <h3 className="settings-section__title">WATCHING</h3>
+                <span className="settings-section__count">{dirs.watched.length}</span>
+              </header>
+              <div className="settings-section__rows">
+                {dirs.watched.map((d) => (
+                  <div key={d} className="settings-row">
+                    <span className="dot dot--ok" />
+                    <code className="settings-row__path">{d}</code>
                     <button
                       type="button"
-                      className="sp-btn sp-btn--add"
+                      className="btn btn--secondary"
                       disabled={busy}
-                      onClick={() => modifyDir('add', d)}
+                      onClick={() => modifyDir('remove', d)}
+                      title="Remove directory"
                     >
-                      + Add
+                      {'\u00D7'}
                     </button>
                   </div>
                 ))}
-              </>
+                {dirs.watched.length === 0 && (
+                  <div className="empty-state">
+                    <p>No directories watched yet.</p>
+                  </div>
+                )}
+              </div>
+            </section>
+
+            {dirs.suggested.length > 0 && (
+              <section className="settings-section">
+                <header className="settings-section__header">
+                  <h3 className="settings-section__title">SUGGESTED</h3>
+                  <span className="settings-section__count">{dirs.suggested.length}</span>
+                </header>
+                <div className="settings-section__rows">
+                  {dirs.suggested.map((d) => (
+                    <div key={d} className="settings-row">
+                      <span className="dot dot--warn" />
+                      <code className="settings-row__path">{d}</code>
+                      <button
+                        type="button"
+                        className="btn btn--secondary"
+                        disabled={busy}
+                        onClick={() => modifyDir('add', d)}
+                      >
+                        Add
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </section>
             )}
 
-            {/* Manual add */}
-            <h4 className="sp-section">Add Directory</h4>
-            <div className="sp-manual">
-              <input
-                className="sp-input"
-                type="text"
-                placeholder="/path/to/traces"
-                value={manualPath}
-                onChange={(e) => setManualPath(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleManualAdd()}
-              />
-              <button
-                type="button"
-                className="sp-btn sp-btn--add"
-                disabled={busy || !manualPath.trim()}
-                onClick={handleManualAdd}
-              >
-                Add
-              </button>
-            </div>
+            <section className="settings-section">
+              <header className="settings-section__header">
+                <h3 className="settings-section__title">ADD DIRECTORY</h3>
+              </header>
+              <div className="settings-form">
+                <div className="settings-form__row">
+                  <label className="settings-form__label" htmlFor="manual-path">
+                    Path
+                  </label>
+                  <div className="settings-form__control">
+                    <input
+                      id="manual-path"
+                      className="settings-form__input"
+                      type="text"
+                      placeholder="/path/to/traces"
+                      value={manualPath}
+                      onChange={(e) => setManualPath(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleManualAdd()}
+                    />
+                    <button
+                      type="button"
+                      className="btn btn--primary"
+                      disabled={busy || !manualPath.trim()}
+                      onClick={handleManualAdd}
+                    >
+                      Add
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </section>
 
-            {/* Rescan */}
-            <div style={{ marginTop: 'var(--s4)' }}>
+            <footer className="settings-panel__footer">
               <button
                 type="button"
-                className="sp-btn sp-btn--rescan"
+                className="btn btn--secondary"
                 disabled={busy}
                 onClick={fetchDirs}
               >
-                {busy ? 'Scanning...' : '\u21BB Rescan Directories'}
+                {busy ? 'Scanning\u2026' : `\u21BB Rescan directories`}
               </button>
-            </div>
+            </footer>
           </div>
         )}
       </div>
