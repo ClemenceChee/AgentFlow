@@ -28,7 +28,15 @@ export {
 } from './decision-extractor.js';
 // Entity utilities
 export { extractWikilinks, parseEntity, serializeEntity } from './entity.js';
-export type { AutoPromoteResult, GovernanceAPI } from './governance.js';
+export type {
+  AutoPromoteResult,
+  GovernanceAPI,
+  TeamGovernanceConfig,
+  TeamValidationWorkflow,
+  OrganizationGovernancePolicies,
+  ValidationRequest,
+  ValidationResponse,
+} from './governance.js';
 export { createGovernanceAPI, GovernanceError } from './governance.js';
 export type { InboxParseResult, InboxParser } from './harvester.js';
 export { createHarvester } from './harvester.js';
@@ -85,8 +93,23 @@ export type {
   PolicyBridgeIntent,
   PolicyBridgeResult,
   StratifiedResults,
+  OrganizationalContext,
+  OrganizationalPolicyResult,
 } from './policy-bridge.js';
 export { createPolicyBridge, createSomaPolicySource } from './policy-bridge.js';
+export type {
+  SecurityAuditEvent,
+  SecurityEventType,
+  SecurityEventSeverity,
+  SecurityAuditConfig,
+  SecurityAlert,
+} from './security-audit-logger.js';
+export {
+  SecurityAuditLogger,
+  createSecurityAuditLogger,
+  getGlobalAuditLogger,
+  initializeGlobalAuditLogger
+} from './security-audit-logger.js';
 export type { ProviderConfig, ProviderResult } from './providers.js';
 // LLM providers
 export { createProvider } from './providers.js';

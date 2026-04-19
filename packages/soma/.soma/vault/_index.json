@@ -1,0 +1,15 @@
+{
+  "team-governance-test-team": {
+    "id": "team-governance-test-team",
+    "type": "team_governance_config",
+    "name": "Team Governance Config: test-team",
+    "status": "active",
+    "tags": [
+      "governance",
+      "team-config"
+    ],
+    "related": [],
+    "path": ".soma/vault/team_governance_config/team-governance-test-team.md",
+    "layer": "canon"
+  }
+}
