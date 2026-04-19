@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSomaGovernance } from '../hooks/useSomaGovernance';
 import { useSomaReport } from '../hooks/useSomaReport';
 import type { SomaTier } from '../hooks/useSomaTier';
@@ -14,13 +14,19 @@ export type SomaView = 'intelligence' | 'review' | 'policies' | 'knowledge' | 'a
 
 const PAID_VIEWS: SomaView[] = ['review', 'policies', 'knowledge', 'activity'];
 
-const VIEW_LABELS: Record<SomaView, { icon: string; label: string }> = {
-  intelligence: { icon: '\u{1F9E0}', label: 'Intelligence' },
-  review: { icon: '\u{1F3DB}', label: 'Review' },
-  policies: { icon: '\u{1F6E1}', label: 'Policies' },
-  knowledge: { icon: '\u{1F4DA}', label: 'Knowledge' },
-  activity: { icon: '\u{1F4E1}', label: 'Activity' },
-};
+interface ViewDef {
+  id: SomaView;
+  label: string;
+  shortcut: string;
+}
+
+const VIEWS: ViewDef[] = [
+  { id: 'intelligence', label: 'Intelligence', shortcut: '1' },
+  { id: 'review', label: 'Review', shortcut: '2' },
+  { id: 'policies', label: 'Policies', shortcut: '3' },
+  { id: 'knowledge', label: 'Knowledge', shortcut: '4' },
+  { id: 'activity', label: 'Activity', shortcut: '5' },
+];
 
 interface Props {
   tier: SomaTier;
@@ -31,67 +37,166 @@ export function SomaPage({ tier }: Props) {
   const report = useSomaReport();
   const somaGov = useSomaGovernance();
 
-  // Teaser mode — no vault configured
+  const isPro = tier.tier === 'pro';
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      const num = Number.parseInt(e.key, 10);
+      if (num >= 1 && num <= VIEWS.length) {
+        const view = VIEWS[num - 1].id;
+        if (!PAID_VIEWS.includes(view) || isPro) {
+          setActiveView(view);
+        }
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [isPro]);
+
+  const somaKpis = useMemo(() => {
+    const r = report.report;
+    if (!r) return null;
+    return {
+      agents: r.agents?.length ?? 0,
+      insights: r.insights?.length ?? r.intelligence?.length ?? 0,
+      pendingProposals: somaGov.data?.proposals?.length ?? 0,
+      canonEntries: r.canon?.length ?? 0,
+    };
+  }, [report.report, somaGov.data]);
+
   if (tier.tier === 'teaser') {
     return (
       <div className="soma-page">
-        <div className="soma-page__teaser">
-          <div className="soma-page__teaser-icon">{'\u{1F9E0}'}</div>
-          <h2>SOMA Intelligence</h2>
-          <p>Turn your agent traces into organizational knowledge.</p>
-          <div className="soma-page__teaser-features">
-            <div className="soma-page__teaser-card">
-              <strong>Governance Layers</strong>
-              <p>
-                Four-layer knowledge architecture: Archive, Working, Emerging, Canon.
-                Machine-proposed insights flow through human review before becoming organizational
-                truth.
-              </p>
-            </div>
-            <div className="soma-page__teaser-card">
-              <strong>Guard Policies</strong>
-              <p>
-                Define enforcement rules that shape agent behavior. Warn, block, or abort based on
-                learned patterns.
-              </p>
-            </div>
-            <div className="soma-page__teaser-card">
-              <strong>Knowledge Explorer</strong>
-              <p>
-                Browse everything SOMA has learned — insights, decisions, constraints,
-                contradictions — organized by layer and confidence.
-              </p>
-            </div>
+        <header className="soma-page__header">
+          <div className="soma-page__eyebrow">AGENTFLOW ADD-ON · PREVIEW</div>
+          <div className="soma-page__title-row">
+            <h1 className="soma-page__title">SOMA Intelligence</h1>
           </div>
-          <p className="soma-page__teaser-cta">
-            Configure with <code>--soma-vault ~/.soma/vault</code> to get started.
+          <p className="soma-page__subtitle">
+            AgentFlow tells you what happened. SOMA tells you what it means.
           </p>
+        </header>
+
+        <div className="soma-page__hero">
+          <div className="soma-page__hero-content">
+            <h2 className="soma-page__hero-title">Turn traces into organizational knowledge</h2>
+            <p className="soma-page__hero-body">
+              Four-layer governance · adaptive guards · human-reviewed insights · zero LLM cost
+            </p>
+            <button type="button" className="btn btn--primary">
+              Unlock preview access
+            </button>
+          </div>
+        </div>
+
+        <div className="soma-page__features">
+          <div className="soma-page__feature-card">
+            <div className="soma-page__feature-icon">{'\u25A0'}</div>
+            <h3 className="soma-page__feature-title">Governance Layers</h3>
+            <p className="soma-page__feature-body">
+              Four-layer architecture: Archive, Working, Emerging, Canon. Machine proposals flow
+              through human review.
+            </p>
+          </div>
+          <div className="soma-page__feature-card">
+            <div className="soma-page__feature-icon">{'\u25B3'}</div>
+            <h3 className="soma-page__feature-title">Guard Policies</h3>
+            <p className="soma-page__feature-body">
+              Enforcement rules that shape agent behavior. Warn, block, or abort on learned
+              patterns.
+            </p>
+          </div>
+          <div className="soma-page__feature-card">
+            <div className="soma-page__feature-icon">{'\u25C7'}</div>
+            <h3 className="soma-page__feature-title">Knowledge Explorer</h3>
+            <p className="soma-page__feature-body">
+              Browse insights, decisions, constraints, contradictions — organized by layer and
+              confidence.
+            </p>
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="card__header">
+            <h3 className="card__title">GET STARTED</h3>
+          </div>
+          <div className="soma-page__cta">
+            <p>
+              Configure with <code>--soma-vault ~/.soma/vault</code> to activate SOMA.
+            </p>
+          </div>
         </div>
       </div>
     );
   }
 
-  const isPro = tier.tier === 'pro';
-
   return (
     <div className="soma-page">
-      <div className="soma-page__tabs">
-        {(Object.entries(VIEW_LABELS) as [SomaView, { icon: string; label: string }][]).map(
-          ([view, { icon, label }]) => {
-            const locked = PAID_VIEWS.includes(view) && !isPro;
-            return (
-              <button
-                type="button"
-                key={view}
-                className={`soma-page__tab ${activeView === view ? 'soma-page__tab--active' : ''} ${locked ? 'soma-page__tab--locked' : ''}`}
-                onClick={() => !locked && setActiveView(view)}
-                title={locked ? 'Configure SOMA governance to unlock' : label}
-              >
-                {icon} {label} {locked && '\u{1F512}'}
-              </button>
-            );
-          },
-        )}
+      <header className="soma-page__header">
+        <div className="soma-page__eyebrow">AGENTFLOW ADD-ON · SOMA {isPro ? '{\u2728}' : ''}</div>
+        <div className="soma-page__title-row">
+          <h1 className="soma-page__title">Organizational intelligence</h1>
+        </div>
+        <p className="soma-page__subtitle">
+          Four-layer governance · adaptive guards · human-reviewed insights · zero LLM cost
+        </p>
+      </header>
+
+      {somaKpis && (
+        <div className="kpi-row">
+          <div className="kpi">
+            <div className="kpi__label">AGENTS</div>
+            <div className="kpi__value">{somaKpis.agents}</div>
+          </div>
+          <div className="kpi">
+            <div className="kpi__label">INSIGHTS</div>
+            <div className="kpi__value">{somaKpis.insights}</div>
+          </div>
+          <div className="kpi">
+            <div className="kpi__label">PENDING REVIEW</div>
+            <div
+              className={`kpi__value ${somaKpis.pendingProposals > 0 ? 'kpi__value--warn' : ''}`}
+            >
+              {somaKpis.pendingProposals}
+            </div>
+          </div>
+          <div className="kpi">
+            <div className="kpi__label">CANON ENTRIES</div>
+            <div className="kpi__value">{somaKpis.canonEntries}</div>
+          </div>
+          <div className="kpi">
+            <div className="kpi__label">TIER</div>
+            <div className="kpi__value kpi__value--ok">PRO</div>
+          </div>
+          <div className="kpi">
+            <div className="kpi__label">VAULT</div>
+            <div className="kpi__value kpi__value--ok">READY</div>
+          </div>
+        </div>
+      )}
+
+      <div className="tabs" role="tablist">
+        {VIEWS.map((v) => {
+          const locked = PAID_VIEWS.includes(v.id) && !isPro;
+          return (
+            <button
+              type="button"
+              key={v.id}
+              role="tab"
+              aria-selected={activeView === v.id}
+              className={`tabs__item ${activeView === v.id ? 'tabs__item--active' : ''} ${locked ? 'tabs__item--locked' : ''}`}
+              onClick={() => !locked && setActiveView(v.id)}
+              disabled={locked}
+              title={locked ? 'Upgrade to SOMA Pro to unlock' : v.label}
+            >
+              <span className="tabs__label">
+                {v.label} {locked && '\u{1F512}'}
+              </span>
+              <kbd className="tabs__shortcut">{v.shortcut}</kbd>
+            </button>
+          );
+        })}
       </div>
 
       <div className="soma-page__content">
@@ -99,7 +204,7 @@ export function SomaPage({ tier }: Props) {
           <SomaIntelligence report={report.report} agentId="" />
         )}
         {activeView === 'intelligence' && !report.report && (
-          <div className="soma-page__loading">Loading intelligence data...</div>
+          <div className="loading-state">Loading intelligence{'\u2026'}</div>
         )}
         {activeView === 'review' && isPro && (
           <SomaGovernance
@@ -112,25 +217,21 @@ export function SomaPage({ tier }: Props) {
         {activeView === 'knowledge' && isPro && <SomaKnowledgeExplorer />}
         {activeView === 'activity' && isPro && <SomaActivityFeed />}
 
-        {/* Drift chart (pro tier, shown on intelligence view) */}
         {activeView === 'intelligence' && isPro && report.report?.agents && (
-          <div style={{ padding: '0 16px 16px' }}>
+          <div className="soma-page__drift-charts">
             {report.report.agents.slice(0, 3).map((agent: { name: string }) => (
               <DriftChart key={agent.name} apiBase="" agentId={agent.name} />
             ))}
           </div>
         )}
 
-        {/* Cross-agent knowledge flow (shown on intelligence view when data exists) */}
         {activeView === 'intelligence' && isPro && <CrossAgentView />}
 
         {PAID_VIEWS.includes(activeView) && !isPro && (
-          <div className="soma-page__locked">
-            <div className="soma-page__locked-icon">{'\u{1F512}'}</div>
-            <h3>{VIEW_LABELS[activeView].label}</h3>
+          <div className="empty-state">
+            <p>This feature requires SOMA Pro.</p>
             <p>
-              This feature requires SOMA governance data. Run <code>soma watch</code> to start
-              generating insights and policies.
+              Run <code>soma watch</code> to start generating insights and policies.
             </p>
           </div>
         )}

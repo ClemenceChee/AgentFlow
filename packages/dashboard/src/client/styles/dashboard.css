@@ -4032,3 +4032,155 @@ body {
   color: var(--t-2, var(--t2));
   line-height: 1.45;
 }
+
+/* === SOMA PAGE (DATA EXPLORER / TEASER — PATTERNS A & D) === */
+.soma-page {
+  padding: var(--s-4, var(--s4));
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3, var(--s3));
+}
+
+.soma-page__header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2, var(--s2));
+}
+
+.soma-page__eyebrow {
+  font: var(--fs-10, 10px) var(--fm);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--t-3, var(--t3));
+}
+
+.soma-page__title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3, var(--s3));
+}
+
+.soma-page__title {
+  font: 600 var(--fs-20, 20px) var(--font-display, var(--f));
+  color: var(--t-1, var(--t1));
+  line-height: 1.2;
+}
+
+.soma-page__subtitle {
+  font: var(--fs-12, 12px) var(--font-body, var(--f));
+  color: var(--t-2, var(--t2));
+  line-height: 1.45;
+}
+
+.soma-page__content {
+  min-height: 400px;
+}
+
+.soma-page__drift-charts {
+  padding: var(--s-3, var(--s3));
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3, var(--s3));
+}
+
+/* Teaser hero (Pattern D) */
+.soma-page__hero {
+  background: radial-gradient(
+    ellipse at top,
+    rgba(210, 153, 34, 0.1) 0%,
+    transparent 60%
+  );
+  border: 1px solid var(--bd, var(--bd));
+  border-radius: var(--radius, var(--r));
+  padding: var(--s-6, var(--s5));
+  text-align: center;
+}
+
+.soma-page__hero-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-3, var(--s3));
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.soma-page__hero-title {
+  font: 600 var(--fs-24, 24px) var(--font-display, var(--f));
+  color: var(--t-1, var(--t1));
+}
+
+.soma-page__hero-body {
+  font: var(--fs-13, 13px) var(--font-body, var(--f));
+  color: var(--t-2, var(--t2));
+}
+
+.soma-page__features {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--s-3, var(--s3));
+}
+
+.soma-page__feature-card {
+  background: var(--bg-2, var(--bg2));
+  border: 1px solid var(--bd, var(--bd));
+  border-radius: var(--radius, var(--r));
+  padding: var(--s-4, var(--s4));
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2, var(--s2));
+}
+
+.soma-page__feature-icon {
+  font: var(--fs-24, 24px) var(--fm);
+  color: var(--accent, var(--warn));
+}
+
+.soma-page__feature-title {
+  font: 600 var(--fs-14, 14px) var(--font-body, var(--f));
+  color: var(--t-1, var(--t1));
+}
+
+.soma-page__feature-body {
+  font: var(--fs-12, 12px) var(--font-body, var(--f));
+  color: var(--t-2, var(--t2));
+  line-height: 1.45;
+}
+
+.soma-page__cta {
+  padding: var(--s-3, var(--s3));
+  color: var(--t-2, var(--t2));
+  font: var(--fs-12, 12px) var(--font-body, var(--f));
+}
+
+.soma-page__cta code {
+  background: var(--bg-3, var(--bg3));
+  padding: 2px 6px;
+  border-radius: 2px;
+  font: var(--fs-11, 11px) var(--fm);
+  color: var(--accent, var(--warn));
+}
+
+/* Tab locked state */
+.tabs__item--locked {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tabs__item--locked:hover {
+  color: var(--t-2, var(--t2));
+}
+
+/* Primary button variant */
+.btn--primary {
+  background: var(--accent, var(--warn));
+  color: var(--bg-0, var(--bg));
+  border-color: var(--accent, var(--warn));
+  font-weight: 600;
+}
+
+.btn--primary:hover {
+  background: var(--accent, var(--warn));
+  opacity: 0.9;
+}
