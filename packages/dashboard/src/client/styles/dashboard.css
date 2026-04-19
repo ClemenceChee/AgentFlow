@@ -3958,3 +3958,77 @@ body {
   color: var(--info, var(--info));
   background: rgba(88, 166, 255, 0.1);
 }
+
+/* === AICP PAGE (DATA EXPLORER — PATTERN A) === */
+.aicp-page {
+  padding: var(--s-4, var(--s4));
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3, var(--s3));
+}
+
+.aicp-page__header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2, var(--s2));
+}
+
+.aicp-page__eyebrow {
+  font: var(--fs-10, 10px) var(--fm);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--t-3, var(--t3));
+}
+
+.aicp-page__title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3, var(--s3));
+}
+
+.aicp-page__title {
+  font: 600 var(--fs-20, 20px) var(--font-display, var(--f));
+  color: var(--t-1, var(--t1));
+  line-height: 1.2;
+}
+
+.aicp-page__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3, var(--s3));
+}
+
+.aicp-page__select-label {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2, var(--s2));
+}
+
+.aicp-page__select-text {
+  font: var(--fs-10, 10px) var(--fm);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--t-3, var(--t3));
+}
+
+.aicp-page__select {
+  background: var(--bg-2, var(--bg2));
+  border: 1px solid var(--bd, var(--bd));
+  border-radius: var(--radius, var(--r));
+  padding: var(--s-2, var(--s2)) var(--s-3, var(--s3));
+  color: var(--t-1, var(--t1));
+  font: var(--fs-12, 12px) var(--fm);
+  cursor: pointer;
+}
+
+.aicp-page__select:focus {
+  outline: 2px solid var(--accent, var(--warn));
+  outline-offset: 2px;
+}
+
+.aicp-page__subtitle {
+  font: var(--fs-12, 12px) var(--font-body, var(--f));
+  color: var(--t-2, var(--t2));
+  line-height: 1.45;
+}
