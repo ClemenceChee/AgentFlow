@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import type { OperatorContext, SessionCorrelation, PolicyStatus, SessionHookData } from '../types/organizational.js';
 
 export interface TraceNode {
   id: string;
@@ -44,6 +45,16 @@ export interface FullTrace {
   edges: TraceEdge[];
   metadata: Record<string, unknown>;
   sessionEvents: SessionEvent[];
+
+  // Organizational context extensions
+  /** Operator context for organizational tracking */
+  operatorContext?: OperatorContext;
+  /** Session correlation data */
+  sessionCorrelation?: SessionCorrelation;
+  /** Policy compliance status */
+  policyStatus?: PolicyStatus;
+  /** Session hook execution data */
+  sessionHooks?: SessionHookData;
 }
 
 export function useSelectedTrace() {
