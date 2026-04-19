@@ -3879,3 +3879,82 @@ body {
   color: var(--t-3, var(--t3));
   font: var(--fs-12, 12px) var(--fm);
 }
+
+/* === EXECUTION DETAIL (ENTITY DETAIL — PATTERN B) === */
+.exec-detail {
+  padding: var(--s-4, var(--s4));
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3, var(--s3));
+}
+
+.exec-detail__header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2, var(--s2));
+}
+
+.exec-detail__eyebrow {
+  font: var(--fs-10, 10px) var(--fm);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--t-3, var(--t3));
+  display: flex;
+  align-items: center;
+  gap: var(--s-1, var(--s1));
+}
+
+.exec-detail__crumb {
+  color: var(--t-3, var(--t3));
+}
+
+.exec-detail__crumb-sep {
+  color: var(--t-3, var(--t3));
+  opacity: 0.5;
+}
+
+.exec-detail__crumb--current {
+  color: var(--t-2, var(--t2));
+}
+
+.exec-detail__title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3, var(--s3));
+}
+
+.exec-detail__title {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2, var(--s2));
+  font: 600 var(--fs-20, 20px) var(--fm);
+  color: var(--t-1, var(--t1));
+  line-height: 1.2;
+}
+
+.exec-detail__trace-id {
+  font-family: var(--fm);
+}
+
+.exec-detail__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2, var(--s2));
+}
+
+.exec-detail__subtitle {
+  font: var(--fs-12, 12px) var(--font-body, var(--f));
+  color: var(--t-2, var(--t2));
+  line-height: 1.45;
+}
+
+.exec-detail__content {
+  min-height: 400px;
+}
+
+/* Info badge variant */
+.badge--info {
+  color: var(--info, var(--info));
+  background: rgba(88, 166, 255, 0.1);
+}

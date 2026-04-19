@@ -468,72 +468,119 @@ export function ExecutionDetail({ trace, loading }: { trace: FullTrace | null; l
   const [tab, setTab] = useState<Tab>('flame');
   const enhancedSOMATrace = useEnhancedSOMATrace(trace);
 
-  if (loading) return <div className="workspace__empty">Loading...</div>;
-  if (!trace) return <div className="workspace__empty">Select an execution</div>;
+  if (loading) return <div className="loading-state">Loading trace{'\u2026'}</div>;
+  if (!trace)
+    return (
+      <div className="empty-state">
+        <p>Select an execution to inspect.</p>
+      </div>
+    );
 
   const nodes = Object.values(trace.nodes);
   const failCount = nodes.filter((n) => n.status === 'failed').length;
+  const completedCount = nodes.filter((n) => n.status === 'completed').length;
   const duration = trace.endTime - trace.startTime;
+  const successRate = nodes.length > 0 ? ((completedCount / nodes.length) * 100).toFixed(0) : '0';
 
-  const baseTabs: { id: Tab; label: string }[] = [
-    { id: 'flame', label: 'Flame Chart' },
-    { id: 'flow', label: 'Agent Flow' },
-    { id: 'metrics', label: 'Metrics' },
-    { id: 'deps', label: 'Dependencies' },
-    { id: 'state', label: 'State Machine' },
-    { id: 'summary', label: 'Summary' },
-    { id: 'transcript', label: 'Transcript' },
-    { id: 'receipt', label: 'Receipt' },
-    { id: 'decisions', label: 'Decisions' },
+  const baseTabs: { id: Tab; label: string; shortcut: string }[] = [
+    { id: 'flame', label: 'Flame Chart', shortcut: '1' },
+    { id: 'flow', label: 'Agent Flow', shortcut: '2' },
+    { id: 'metrics', label: 'Metrics', shortcut: '3' },
+    { id: 'deps', label: 'Dependencies', shortcut: '4' },
+    { id: 'state', label: 'State Machine', shortcut: '5' },
+    { id: 'summary', label: 'Summary', shortcut: '6' },
+    { id: 'transcript', label: 'Transcript', shortcut: '7' },
+    { id: 'receipt', label: 'Receipt', shortcut: '8' },
+    { id: 'decisions', label: 'Decisions', shortcut: '9' },
   ];
 
-  // Add SOMA Steps tab if this is a SOMA trace
   const tabs = enhancedSOMATrace?.isSOMA
-    ? [{ id: 'soma-steps' as Tab, label: '🧠 SOMA Steps' }, ...baseTabs]
+    ? [{ id: 'soma-steps' as Tab, label: 'SOMA Steps', shortcut: '0' }, ...baseTabs]
     : baseTabs;
 
-  // Auto-switch to SOMA steps tab for SOMA traces
   if (enhancedSOMATrace?.isSOMA && tab === 'flame') {
     setTab('soma-steps');
   }
 
+  const traceIdShort =
+    trace.filename.length > 14 ? `${trace.filename.slice(0, 12)}${'\u2026'}` : trace.filename;
+
   return (
     <div className="exec-detail">
-      <div className="ed-header">
-        <span className={`dot ${trace.status === 'failed' ? 'dot--fail' : 'dot--ok'}`} />
-        <span className="ed-header__agent">{trace.agentId}</span>
-        <span className="ed-header__meta">
-          {nodes.length}n &middot; {fmtDur(duration)} &middot; {trace.status}
-          {failCount > 0 && (
-            <span style={{ color: 'var(--color-critical)' }}> &middot; {failCount} failed</span>
-          )}
-        </span>
-        <span className="ed-header__ts">
-          {new Date(trace.startTime).toLocaleString([], {
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-          })}
-        </span>
-        {trace.trigger && <span className="ed-tag">{trace.trigger}</span>}
+      <header className="exec-detail__header">
+        <div className="exec-detail__eyebrow">
+          <span className="exec-detail__crumb">Execution</span>
+          <span className="exec-detail__crumb-sep">{'\u203A'}</span>
+          <span className="exec-detail__crumb exec-detail__crumb--current">{trace.agentId}</span>
+        </div>
+        <div className="exec-detail__title-row">
+          <h1 className="exec-detail__title">
+            <span className={`dot ${trace.status === 'failed' ? 'dot--fail' : 'dot--ok'}`} />
+            <span className="exec-detail__trace-id">{traceIdShort}</span>
+          </h1>
+          <div className="exec-detail__actions">
+            {trace.trigger && <span className="badge badge--info">{trace.trigger}</span>}
+          </div>
+        </div>
+        <p className="exec-detail__subtitle">
+          {new Date(trace.startTime).toLocaleString()} · {nodes.length} nodes · {fmtDur(duration)} ·{' '}
+          {trace.status}
+        </p>
+      </header>
+
+      <div className="kpi-row">
+        <div className="kpi">
+          <div className="kpi__label">NODES</div>
+          <div className="kpi__value">{nodes.length}</div>
+        </div>
+        <div className="kpi">
+          <div className="kpi__label">COMPLETED</div>
+          <div className="kpi__value">{completedCount}</div>
+        </div>
+        <div className="kpi">
+          <div className="kpi__label">FAILED</div>
+          <div className={`kpi__value ${failCount > 0 ? 'kpi__value--fail' : ''}`}>{failCount}</div>
+        </div>
+        <div className="kpi">
+          <div className="kpi__label">SUCCESS</div>
+          <div
+            className={`kpi__value ${Number(successRate) < 95 ? 'kpi__value--warn' : 'kpi__value--ok'}`}
+          >
+            {successRate}
+            <span className="kpi__unit">%</span>
+          </div>
+        </div>
+        <div className="kpi">
+          <div className="kpi__label">DURATION</div>
+          <div className="kpi__value">{fmtDur(duration)}</div>
+        </div>
+        <div className="kpi">
+          <div className="kpi__label">STATUS</div>
+          <div
+            className={`kpi__value ${trace.status === 'failed' ? 'kpi__value--fail' : 'kpi__value--ok'}`}
+          >
+            {trace.status}
+          </div>
+        </div>
       </div>
 
-      <div className="ed-tabs">
+      <div className="tabs" role="tablist">
         {tabs.map((t) => (
           <button
             type="button"
             key={t.id}
-            className={`ed-tab ${tab === t.id ? 'ed-tab--active' : ''}`}
+            role="tab"
+            aria-selected={tab === t.id}
+            className={`tabs__item ${tab === t.id ? 'tabs__item--active' : ''}`}
             onClick={() => setTab(t.id)}
           >
-            {t.label}
+            <span className="tabs__label">{t.label}</span>
+            <kbd className="tabs__shortcut">{t.shortcut}</kbd>
           </button>
         ))}
       </div>
 
-      <div className="ed-content">
+      <div className="exec-detail__content">
         {tab === 'soma-steps' && <SOMAStepsView enhancedTrace={enhancedSOMATrace} />}
         {tab === 'flame' && <FlameChart trace={trace} />}
         {tab === 'flow' && <AgentFlow trace={trace} />}
