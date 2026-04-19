@@ -12,7 +12,6 @@ interface Alert {
 function deriveAlerts(data: ProcessHealthData): Alert[] {
   const alerts: Alert[] = [];
 
-  // Failed services
   for (const svc of data.services) {
     if (svc.systemd?.failed) {
       alerts.push({
@@ -28,7 +27,6 @@ function deriveAlerts(data: ProcessHealthData): Alert[] {
     }
   }
 
-  // Stale PID files
   for (const svc of data.services) {
     if (svc.pidFile?.stale) {
       alerts.push({
@@ -41,7 +39,6 @@ function deriveAlerts(data: ProcessHealthData): Alert[] {
     }
   }
 
-  // Stale workers
   for (const svc of data.services) {
     if (svc.workers) {
       for (const w of svc.workers.workers) {
@@ -57,7 +54,6 @@ function deriveAlerts(data: ProcessHealthData): Alert[] {
     }
   }
 
-  // Orphan processes
   if (data.orphans.length > 0) {
     const pids = data.orphans.map((o) => o.pid).join(', ');
     alerts.push({
@@ -75,17 +71,22 @@ function deriveAlerts(data: ProcessHealthData): Alert[] {
     });
   }
 
-  // Sort by severity
   const order = { critical: 0, warn: 1, info: 2 };
   alerts.sort((a, b) => order[a.severity] - order[b.severity]);
 
   return alerts;
 }
 
-const SEVERITY_ICONS: Record<string, string> = {
+const SEVERITY_GLYPHS: Record<string, string> = {
   critical: '\u2718',
   warn: '\u26A0',
   info: '\u2139',
+};
+
+const SEVERITY_KIND: Record<string, 'fail' | 'warn' | 'info'> = {
+  critical: 'fail',
+  warn: 'warn',
+  info: 'info',
 };
 
 export function AlertBanner({ processHealth }: { processHealth: ProcessHealthData | null }) {
@@ -113,20 +114,21 @@ export function AlertBanner({ processHealth }: { processHealth: ProcessHealthDat
   if (alerts.length === 0) return null;
 
   return (
-    <div className="alert-area" style={{ padding: 'var(--sp-3) var(--sp-5) 0' }}>
+    <div className="alert-strip">
       {alerts.map((alert) => (
-        <div key={alert.id} className={`alert-card alert-card--${alert.severity}`}>
-          <span className="alert-icon">{SEVERITY_ICONS[alert.severity]}</span>
-          <div className="alert-content">
-            <div className="alert-title">{alert.title}</div>
-            <div className="alert-description">{alert.description}</div>
+        <div key={alert.id} className={`alert-strip__item alert-strip__item--${alert.severity}`}>
+          <span className={`dot dot--${SEVERITY_KIND[alert.severity]}`} />
+          <span className="alert-strip__glyph">{SEVERITY_GLYPHS[alert.severity]}</span>
+          <div className="alert-strip__content">
+            <div className="alert-strip__title">{alert.title}</div>
+            <div className="alert-strip__description">{alert.description}</div>
             {alert.actions && (
-              <div className="alert-actions">
+              <div className="alert-strip__actions">
                 {alert.actions.map((action) => (
                   <button
                     type="button"
                     key={action.label}
-                    className="alert-action"
+                    className="btn btn--secondary"
                     title={`Copy: ${action.command}`}
                     onClick={() => navigator.clipboard.writeText(action.command)}
                   >
@@ -138,11 +140,12 @@ export function AlertBanner({ processHealth }: { processHealth: ProcessHealthDat
           </div>
           <button
             type="button"
-            className="alert-dismiss"
+            className="alert-strip__dismiss"
             onClick={() => dismiss(alert.id)}
             title="Dismiss"
+            aria-label="Dismiss alert"
           >
-            \u00D7
+            {'\u00D7'}
           </button>
         </div>
       ))}
