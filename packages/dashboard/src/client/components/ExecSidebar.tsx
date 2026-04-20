@@ -37,7 +37,7 @@ export function ExecSidebar({
     if (!agentId) return [];
     // Match by agentId directly, or by any of the source IDs (for merged agents)
     const matchIds = new Set([agentId, ...(sourceAgentIds ?? [])]);
-    return traces
+    const sorted = traces
       .filter((t) => matchIds.has(t.agentId))
       .sort((a, b) => {
         // Sort by last activity (end time = start + duration), most recent first
@@ -45,6 +45,23 @@ export function ExecSidebar({
         const bEnd = b.timestamp + b.duration;
         return bEnd - aEnd;
       });
+    // Collapse near-simultaneous duplicates from overlapping schedulers
+    // (e.g. long-running worker + one-shot timer firing the same agent within seconds).
+    // Prefer a successful trace over a failed one when both are present in the window.
+    const DEDUP_WINDOW_MS = 5000;
+    const deduped: typeof sorted = [];
+    for (const t of sorted) {
+      const nearIdx = deduped.findIndex(
+        (o) =>
+          Math.abs(o.timestamp - t.timestamp) < DEDUP_WINDOW_MS && o.nodeCount === t.nodeCount,
+      );
+      if (nearIdx === -1) {
+        deduped.push(t);
+      } else if (deduped[nearIdx].status === 'failed' && t.status !== 'failed') {
+        deduped[nearIdx] = t;
+      }
+    }
+    return deduped;
   }, [traces, agentId, sourceAgentIds]);
 
   const maxDur = useMemo(() => Math.max(...agentTraces.map((t) => t.duration), 1), [agentTraces]);

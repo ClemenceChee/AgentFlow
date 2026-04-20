@@ -24,7 +24,7 @@ const DEFAULTS: Tweaks = {
   density: 'comfortable',
   sidebar: 'expanded',
   accent: 'amber',
-  tier: 'pro',
+  tier: 'enterprise',
 };
 
 export const ACCENT_SWATCHES: Record<AccentKey, string> = {
@@ -40,8 +40,18 @@ function loadTweaks(): Tweaks {
   if (typeof window === 'undefined') return DEFAULTS;
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return DEFAULTS;
-    return { ...DEFAULTS, ...JSON.parse(raw) };
+    const merged = raw
+      ? ({ ...DEFAULTS, ...JSON.parse(raw) } as Tweaks)
+      : DEFAULTS;
+    const validTiers: Tweaks['tier'][] = ['free', 'pro', 'enterprise'];
+    if (!validTiers.includes(merged.tier)) merged.tier = DEFAULTS.tier;
+    // Personal/tailnet deploys: always land on the enterprise tier so the
+    // owner doesn't have to clear localStorage to see Org/SOMA.
+    const host = window.location.hostname;
+    if (host === 'localhost' || host === '127.0.0.1' || host.endsWith('.ts.net')) {
+      merged.tier = 'enterprise';
+    }
+    return merged;
   } catch {
     return DEFAULTS;
   }
@@ -78,5 +88,6 @@ export function isTweaksAvailable(): boolean {
   if (w.__AGENTFLOW_DEV) return true;
   const env = typeof process !== 'undefined' ? process.env?.NODE_ENV : undefined;
   if (env && env !== 'production') return true;
-  return window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  const host = window.location.hostname;
+  return host === 'localhost' || host === '127.0.0.1' || host.endsWith('.ts.net');
 }
