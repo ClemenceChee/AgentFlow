@@ -3,12 +3,11 @@ import './styles/shell.css';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ExecSidebar } from './components/ExecSidebar';
-import { ExecutionDetailWithOrgContext } from './components/ExecutionDetailWithOrgContext';
 import { OrganizationalDashboard } from './components/OrganizationalDashboard';
 import { SettingsPanel } from './components/SettingsPanel';
 import { SomaPage } from './components/SomaPage';
 import { Placeholder } from './components/v2/Placeholder';
-import { AgentProfilePage, OverviewPage } from './components/v2/pages';
+import { AgentProfilePage, ExecutionDetailPage, OverviewPage } from './components/v2/pages';
 import { type PageId, Shell, useTweaks } from './components/v2/shell';
 import { OrganizationalContextProvider } from './contexts/OrganizationalContext';
 import { useAgents } from './hooks/useAgents';
@@ -150,30 +149,15 @@ export function App() {
                     onSelectTrace={handleSelectExecution}
                   />
                 )}
-                {selectedAgent && agentView === 'execution' && trace && (
-                  <ExecutionDetailWithOrgContext trace={trace} loading={traceLoading} />
-                )}
-                {selectedAgent && agentView === 'execution' && !trace && !traceLoading && (
-                  <div
-                    style={{
-                      padding: 'var(--s-8)',
-                      color: 'var(--t-3)',
-                      fontFamily: 'var(--font-mono)',
+                {selectedAgent && agentView === 'execution' && (
+                  <ExecutionDetailPage
+                    trace={trace}
+                    loading={traceLoading}
+                    onBack={() => {
+                      setAgentView('profile');
+                      clearSelection();
                     }}
-                  >
-                    Select an execution from the sidebar.
-                  </div>
-                )}
-                {selectedAgent && agentView === 'execution' && traceLoading && (
-                  <div
-                    style={{
-                      padding: 'var(--s-8)',
-                      color: 'var(--t-3)',
-                      fontFamily: 'var(--font-mono)',
-                    }}
-                  >
-                    Loading execution{'\u2026'}
-                  </div>
+                  />
                 )}
               </div>
             </div>
