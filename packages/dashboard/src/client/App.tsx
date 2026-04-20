@@ -2,14 +2,13 @@ import './styles/tokens.css';
 import './styles/shell.css';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AgentProfile } from './components/AgentProfile';
 import { ExecSidebar } from './components/ExecSidebar';
 import { ExecutionDetailWithOrgContext } from './components/ExecutionDetailWithOrgContext';
 import { OrganizationalDashboard } from './components/OrganizationalDashboard';
 import { SettingsPanel } from './components/SettingsPanel';
 import { SomaPage } from './components/SomaPage';
 import { Placeholder } from './components/v2/Placeholder';
-import { OverviewPage } from './components/v2/pages';
+import { AgentProfilePage, OverviewPage } from './components/v2/pages';
 import { type PageId, Shell, useTweaks } from './components/v2/shell';
 import { OrganizationalContextProvider } from './contexts/OrganizationalContext';
 import { useAgents } from './hooks/useAgents';
@@ -143,12 +142,12 @@ export function App() {
               <div style={{ overflowY: 'auto', minHeight: 0 }}>
                 {!selectedAgent && <Placeholder page="agents" />}
                 {selectedAgent && agentView === 'profile' && (
-                  <AgentProfile
+                  <AgentProfilePage
                     agentId={selectedAgent}
                     agents={agents}
                     traces={traces}
                     processModel={processModel.data}
-                    processModelLoading={processModel.loading}
+                    onSelectTrace={handleSelectExecution}
                   />
                 )}
                 {selectedAgent && agentView === 'execution' && trace && (
