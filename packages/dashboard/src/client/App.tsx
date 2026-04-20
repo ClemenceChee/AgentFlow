@@ -9,6 +9,7 @@ import { OrganizationalDashboard } from './components/OrganizationalDashboard';
 import { SettingsPanel } from './components/SettingsPanel';
 import { SomaPage } from './components/SomaPage';
 import { Placeholder } from './components/v2/Placeholder';
+import { OverviewPage } from './components/v2/pages';
 import { type PageId, Shell, useTweaks } from './components/v2/shell';
 import { OrganizationalContextProvider } from './contexts/OrganizationalContext';
 import { useAgents } from './hooks/useAgents';
@@ -109,7 +110,17 @@ export function App() {
         version={typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : undefined}
         health={healthState}
       >
-        {page === 'overview' && <Placeholder page="overview" />}
+        {page === 'overview' && (
+          <OverviewPage
+            agents={agents}
+            grouped={grouped}
+            traces={traces}
+            processHealth={processHealth}
+            processModel={processModel.data}
+            onSelectAgent={handleSelectAgent}
+            onRefresh={() => window.location.reload()}
+          />
+        )}
 
         {page === 'agents' && (
           <OrganizationalContextProvider>
