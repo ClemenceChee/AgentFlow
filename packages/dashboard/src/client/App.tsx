@@ -2,7 +2,6 @@ import './styles/tokens.css';
 import './styles/shell.css';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ExecSidebar } from './components/ExecSidebar';
 import { SettingsPanel } from './components/SettingsPanel';
 import { Placeholder } from './components/v2/Placeholder';
 import {
@@ -36,13 +35,7 @@ export function App() {
   const processHealth = useProcessHealth();
   const traces = useTraces();
   const { grouped, flat: agents } = useAgents();
-  const {
-    trace,
-    loading: traceLoading,
-    selectedFilename,
-    selectTrace,
-    clearSelection,
-  } = useSelectedTrace();
+  const { trace, loading: traceLoading, selectTrace, clearSelection } = useSelectedTrace();
   const somaTier = useSomaTier();
   const [tweaks] = useTweaks();
 
@@ -132,44 +125,27 @@ export function App() {
 
         {page === 'agents' && (
           <OrganizationalContextProvider>
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '320px 1fr',
-                height: '100%',
-                minHeight: 0,
-              }}
-            >
-              <ExecSidebar
-                key={selectedAgent ?? '__none__'}
-                agentId={selectedAgent}
-                sourceAgentIds={agents.find((a) => a.agentId === selectedAgent)?.sources}
-                traces={traces}
-                selectedFilename={selectedFilename}
-                onSelect={handleSelectExecution}
-              />
-              <div style={{ overflowY: 'auto', minHeight: 0 }}>
-                {!selectedAgent && <Placeholder page="agents" />}
-                {selectedAgent && agentView === 'profile' && (
-                  <AgentProfilePage
-                    agentId={selectedAgent}
-                    agents={agents}
-                    traces={traces}
-                    processModel={processModel.data}
-                    onSelectTrace={handleSelectExecution}
-                  />
-                )}
-                {selectedAgent && agentView === 'execution' && (
-                  <ExecutionDetailPage
-                    trace={trace}
-                    loading={traceLoading}
-                    onBack={() => {
-                      setAgentView('profile');
-                      clearSelection();
-                    }}
-                  />
-                )}
-              </div>
+            <div style={{ overflowY: 'auto', minHeight: 0, height: '100%' }}>
+              {!selectedAgent && <Placeholder page="agents" />}
+              {selectedAgent && agentView === 'profile' && (
+                <AgentProfilePage
+                  agentId={selectedAgent}
+                  agents={agents}
+                  traces={traces}
+                  processModel={processModel.data}
+                  onSelectTrace={handleSelectExecution}
+                />
+              )}
+              {selectedAgent && agentView === 'execution' && (
+                <ExecutionDetailPage
+                  trace={trace}
+                  loading={traceLoading}
+                  onBack={() => {
+                    setAgentView('profile');
+                    clearSelection();
+                  }}
+                />
+              )}
             </div>
           </OrganizationalContextProvider>
         )}
