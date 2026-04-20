@@ -7,7 +7,13 @@ import { OrganizationalDashboard } from './components/OrganizationalDashboard';
 import { SettingsPanel } from './components/SettingsPanel';
 import { SomaPage } from './components/SomaPage';
 import { Placeholder } from './components/v2/Placeholder';
-import { AgentProfilePage, ExecutionDetailPage, OverviewPage } from './components/v2/pages';
+import {
+  AgentProfilePage,
+  ExecutionDetailPage,
+  GuardsPage,
+  MiningPage,
+  OverviewPage,
+} from './components/v2/pages';
 import { type PageId, Shell, useTweaks } from './components/v2/shell';
 import { OrganizationalContextProvider } from './contexts/OrganizationalContext';
 import { useAgents } from './hooks/useAgents';
@@ -164,8 +170,10 @@ export function App() {
           </OrganizationalContextProvider>
         )}
 
-        {page === 'mining' && <Placeholder page="mining" />}
-        {page === 'guards' && <Placeholder page="guards" />}
+        {page === 'mining' && (
+          <MiningPage agents={agents} traces={traces} processModel={processModel.data} />
+        )}
+        {page === 'guards' && <GuardsPage />}
 
         {page === 'soma' &&
           (somaLocked ? <Placeholder page="soma" /> : <SomaPage tier={somaTier} />)}
