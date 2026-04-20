@@ -1,15 +1,15 @@
+import './styles/tokens.css';
+import './styles/shell.css';
+
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AgentProfile } from './components/AgentProfile';
-import { AicpPage } from './components/AicpPage';
-import { OrganizationalDashboard } from './components/OrganizationalDashboard';
-import { AlertBanner } from './components/AlertBanner';
 import { ExecSidebar } from './components/ExecSidebar';
 import { ExecutionDetailWithOrgContext } from './components/ExecutionDetailWithOrgContext';
-import { HealthBanner } from './components/HealthBanner';
+import { OrganizationalDashboard } from './components/OrganizationalDashboard';
 import { SettingsPanel } from './components/SettingsPanel';
 import { SomaPage } from './components/SomaPage';
-import { SummaryBar } from './components/SummaryBar';
-import { TopSection } from './components/TopSection';
+import { Placeholder } from './components/v2/Placeholder';
+import { type PageId, Shell, useTweaks } from './components/v2/shell';
 import { OrganizationalContextProvider } from './contexts/OrganizationalContext';
 import { useAgents } from './hooks/useAgents';
 import { useProcessHealth } from './hooks/useProcessHealth';
@@ -19,7 +19,8 @@ import { useSomaTier } from './hooks/useSomaTier';
 import { useTraces } from './hooks/useTraces';
 import { pickInitialAgent } from './state';
 
-type Page = 'agents' | 'soma' | 'aicp' | 'organization';
+declare const __APP_VERSION__: string;
+
 type AgentView = 'profile' | 'execution';
 
 export function App() {
@@ -34,14 +35,14 @@ export function App() {
     clearSelection,
   } = useSelectedTrace();
   const somaTier = useSomaTier();
+  const [tweaks] = useTweaks();
 
-  const [page, setPage] = useState<Page>('agents');
+  const [page, setPage] = useState<PageId>('agents');
   const [agentView, setAgentView] = useState<AgentView>('profile');
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const autoInitDone = useRef(false);
 
-  // Auto-select first agent on load
   useEffect(() => {
     if (autoInitDone.current || agents.length === 0) return;
     const agent = pickInitialAgent(agents);
@@ -52,6 +53,7 @@ export function App() {
   const handleSelectAgent = useCallback(
     (agentId: string) => {
       setSelectedAgent(agentId);
+      setPage('agents');
       setAgentView('profile');
       clearSelection();
     },
@@ -66,117 +68,125 @@ export function App() {
     [selectTrace],
   );
 
+  const handlePage = useCallback(
+    (p: PageId) => {
+      setPage(p);
+      if (p !== 'agents') {
+        setAgentView('profile');
+        clearSelection();
+      }
+    },
+    [clearSelection],
+  );
+
   const processModel = useProcessModel(selectedAgent);
 
+  // Real tier from useSomaTier drives SOMA/Org gating.
+  // The Tweaks panel overrides this for demo purposes in dev only.
+  const effectiveTier = tweaks.tier;
+  const somaLocked = effectiveTier === 'free';
+  const orgLocked = effectiveTier !== 'enterprise';
+
+  const healthState: 'healthy' | 'degraded' | 'offline' = (() => {
+    if (!processHealth) return 'offline';
+    const hasFailedService = processHealth.services.some((s) => s.systemd?.failed);
+    const hasOrphans = (processHealth.orphans?.length ?? 0) > 0;
+    if (hasFailedService) return 'degraded';
+    if (hasOrphans) return 'degraded';
+    return 'healthy';
+  })();
+
   return (
-    <div className="dashboard">
-      <HealthBanner
-        processHealth={processHealth}
-        agents={agents}
-        traces={traces}
-        onOpenSettings={() => setShowSettings(true)}
-      />
+    <>
+      <Shell
+        page={page}
+        onPage={handlePage}
+        grouped={grouped}
+        selectedAgent={selectedAgent}
+        onSelectAgent={handleSelectAgent}
+        showSidebar={page === 'overview' || page === 'agents'}
+        tracesCount={traces.length}
+        version={typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : undefined}
+        health={healthState}
+      >
+        {page === 'overview' && <Placeholder page="overview" />}
 
-      {/* Top-level page tabs */}
-      <div className="page-tabs">
-        <button
-          type="button"
-          className={`page-tabs__tab ${page === 'agents' ? 'page-tabs__tab--active' : ''}`}
-          onClick={() => setPage('agents')}
-        >
-          {'\u{1F50D}'} Agents
-        </button>
-        <button
-          type="button"
-          className={`page-tabs__tab ${page === 'soma' ? 'page-tabs__tab--active' : ''}`}
-          onClick={() => setPage('soma')}
-        >
-          {'\u{1F9E0}'} SOMA
-        </button>
-        <button
-          type="button"
-          className={`page-tabs__tab ${page === 'aicp' ? 'page-tabs__tab--active' : ''}`}
-          onClick={() => setPage('aicp')}
-        >
-          {'\u{1F4C8}'} AICP
-        </button>
-        <button
-          type="button"
-          className={`page-tabs__tab ${page === 'organization' ? 'page-tabs__tab--active' : ''}`}
-          onClick={() => setPage('organization')}
-        >
-          {'\u{1F4E2}'} Organization
-        </button>
-      </div>
-
-      <AlertBanner processHealth={processHealth} />
-
-      {/* Agents page */}
-      {page === 'agents' && (
-        <OrganizationalContextProvider>
-          <TopSection
-            processHealth={processHealth}
-            grouped={grouped}
-            selectedAgent={selectedAgent}
-            onSelectAgent={handleSelectAgent}
-          />
-          <div className="workspace">
-            <ExecSidebar
-              key={selectedAgent ?? '__none__'}
-              agentId={selectedAgent}
-              sourceAgentIds={agents.find((a) => a.agentId === selectedAgent)?.sources}
-              traces={traces}
-              selectedFilename={selectedFilename}
-              onSelect={handleSelectExecution}
-            />
-            <div className="workspace__main">
-              {!selectedAgent && (
-                <div className="workspace__empty">Select an agent above to inspect</div>
-              )}
-              {selectedAgent && agentView === 'profile' && (
-                <AgentProfile
-                  agentId={selectedAgent}
-                  agents={agents}
-                  traces={traces}
-                  processModel={processModel.data}
-                  processModelLoading={processModel.loading}
-                />
-              )}
-              {selectedAgent && agentView === 'execution' && trace && (
-                <ExecutionDetailWithOrgContext trace={trace} loading={traceLoading} />
-              )}
-              {selectedAgent && agentView === 'execution' && !trace && !traceLoading && (
-                <div className="workspace__empty">Select an execution from the sidebar</div>
-              )}
-              {selectedAgent && agentView === 'execution' && traceLoading && (
-                <div className="workspace__empty">Loading execution...</div>
-              )}
-            </div>
-          </div>
-        </OrganizationalContextProvider>
-      )}
-
-      {/* SOMA page */}
-      {page === 'soma' && <SomaPage tier={somaTier} />}
-
-      {/* AICP page */}
-      {page === 'aicp' && (
-        <div className="workspace__main">
-          <AicpPage />
-        </div>
-      )}
-
-      {/* Organization page */}
-      {page === 'organization' && (
-        <div className="workspace__main">
+        {page === 'agents' && (
           <OrganizationalContextProvider>
-            <OrganizationalDashboard />
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '320px 1fr',
+                height: '100%',
+                minHeight: 0,
+              }}
+            >
+              <ExecSidebar
+                key={selectedAgent ?? '__none__'}
+                agentId={selectedAgent}
+                sourceAgentIds={agents.find((a) => a.agentId === selectedAgent)?.sources}
+                traces={traces}
+                selectedFilename={selectedFilename}
+                onSelect={handleSelectExecution}
+              />
+              <div style={{ overflowY: 'auto', minHeight: 0 }}>
+                {!selectedAgent && <Placeholder page="agents" />}
+                {selectedAgent && agentView === 'profile' && (
+                  <AgentProfile
+                    agentId={selectedAgent}
+                    agents={agents}
+                    traces={traces}
+                    processModel={processModel.data}
+                    processModelLoading={processModel.loading}
+                  />
+                )}
+                {selectedAgent && agentView === 'execution' && trace && (
+                  <ExecutionDetailWithOrgContext trace={trace} loading={traceLoading} />
+                )}
+                {selectedAgent && agentView === 'execution' && !trace && !traceLoading && (
+                  <div
+                    style={{
+                      padding: 'var(--s-8)',
+                      color: 'var(--t-3)',
+                      fontFamily: 'var(--font-mono)',
+                    }}
+                  >
+                    Select an execution from the sidebar.
+                  </div>
+                )}
+                {selectedAgent && agentView === 'execution' && traceLoading && (
+                  <div
+                    style={{
+                      padding: 'var(--s-8)',
+                      color: 'var(--t-3)',
+                      fontFamily: 'var(--font-mono)',
+                    }}
+                  >
+                    Loading execution{'\u2026'}
+                  </div>
+                )}
+              </div>
+            </div>
           </OrganizationalContextProvider>
-        </div>
-      )}
+        )}
 
-      <SummaryBar processHealth={processHealth} traces={traces} />
+        {page === 'mining' && <Placeholder page="mining" />}
+        {page === 'guards' && <Placeholder page="guards" />}
+
+        {page === 'soma' &&
+          (somaLocked ? <Placeholder page="soma" /> : <SomaPage tier={somaTier} />)}
+
+        {page === 'org' &&
+          (orgLocked ? (
+            <Placeholder page="org" />
+          ) : (
+            <OrganizationalContextProvider>
+              <OrganizationalDashboard />
+            </OrganizationalContextProvider>
+          ))}
+      </Shell>
+
       {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
-    </div>
+    </>
   );
 }

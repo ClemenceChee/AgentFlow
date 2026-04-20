@@ -1,0 +1,139 @@
+/* AgentFlow v2 — design tokens shared across variants
+ * Ported from soma-design prototype. OKLCH colors for perceptual
+ * consistency across light/dark themes and variants.
+ */
+
+:root {
+  /* Status colors — shared across both variants, tuned per theme */
+  --ok: oklch(0.72 0.17 145);
+  --warn: oklch(0.79 0.14 80);
+  --fail: oklch(0.66 0.21 27);
+  --info: oklch(0.72 0.13 235);
+  --magenta: oklch(0.7 0.22 330);
+  --purple: oklch(0.65 0.17 295);
+
+  /* Type scale */
+  --fs-10: 10px;
+  --fs-11: 11px;
+  --fs-12: 12px;
+  --fs-13: 13px;
+  --fs-14: 14px;
+  --fs-16: 16px;
+  --fs-20: 20px;
+  --fs-24: 24px;
+  --fs-32: 32px;
+  --fs-48: 48px;
+
+  /* Spacing */
+  --s-1: 2px;
+  --s-2: 4px;
+  --s-3: 6px;
+  --s-4: 8px;
+  --s-5: 12px;
+  --s-6: 16px;
+  --s-7: 20px;
+  --s-8: 24px;
+  --s-9: 32px;
+  --s-10: 48px;
+
+  /* Radii */
+  --r-1: 2px;
+  --r-2: 3px;
+  --r-3: 5px;
+  --r-4: 8px;
+  --r-5: 12px;
+
+  /* Fonts */
+  --font-mono: "JetBrains Mono", "IBM Plex Mono", "SF Mono", ui-monospace, Menlo, monospace;
+  --font-sans: "Inter", "Inter Tight", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-display: "Inter Tight", "Inter", -apple-system, sans-serif;
+}
+
+/* ============================================ */
+/* VARIANT A — CONSOLE (dense terminal)         */
+/* ============================================ */
+[data-variant="console"] {
+  --font-ui: var(--font-mono);
+  --font-body: var(--font-mono);
+  --accent: oklch(0.82 0.15 80);
+  --accent-weak: oklch(0.82 0.15 80 / 0.18);
+  --accent-ink: #1a1405;
+  --row-height: 26px;
+  --radius: var(--r-1);
+}
+
+[data-variant="console"][data-theme="dark"] {
+  --bg: oklch(0.17 0.006 260);
+  --bg-2: oklch(0.195 0.006 260);
+  --bg-3: oklch(0.22 0.006 260);
+  --bg-hover: oklch(0.235 0.008 260);
+  --bd: oklch(0.3 0.008 260);
+  --bd-weak: oklch(0.25 0.006 260);
+  --t-1: oklch(0.96 0.003 260);
+  --t-2: oklch(0.72 0.006 260);
+  --t-3: oklch(0.52 0.008 260);
+  --sel: oklch(0.3 0.08 80 / 0.35);
+}
+
+[data-variant="console"][data-theme="light"] {
+  --bg: oklch(0.985 0.002 90);
+  --bg-2: oklch(0.965 0.003 90);
+  --bg-3: oklch(0.945 0.004 90);
+  --bg-hover: oklch(0.92 0.004 90);
+  --bd: oklch(0.82 0.006 90);
+  --bd-weak: oklch(0.9 0.006 90);
+  --t-1: oklch(0.18 0.006 260);
+  --t-2: oklch(0.4 0.006 260);
+  --t-3: oklch(0.58 0.006 260);
+  --sel: oklch(0.85 0.1 80 / 0.5);
+  --accent: oklch(0.58 0.16 65);
+  --accent-weak: oklch(0.58 0.16 65 / 0.14);
+  --accent-ink: #fff;
+}
+
+/* ============================================ */
+/* VARIANT B — ATLAS (spatial, card-based)      */
+/* ============================================ */
+[data-variant="atlas"] {
+  --font-ui: var(--font-sans);
+  --font-body: var(--font-sans);
+  --accent: oklch(0.68 0.14 205);
+  --accent-weak: oklch(0.68 0.14 205 / 0.16);
+  --accent-ink: #04131a;
+  --row-height: 34px;
+  --radius: var(--r-3);
+}
+
+[data-variant="atlas"][data-theme="dark"] {
+  --bg: oklch(0.18 0.012 240);
+  --bg-2: oklch(0.215 0.013 240);
+  --bg-3: oklch(0.245 0.014 240);
+  --bg-hover: oklch(0.27 0.016 240);
+  --bd: oklch(0.32 0.014 240);
+  --bd-weak: oklch(0.27 0.012 240);
+  --t-1: oklch(0.96 0.005 240);
+  --t-2: oklch(0.72 0.01 240);
+  --t-3: oklch(0.55 0.012 240);
+  --sel: oklch(0.4 0.12 205 / 0.3);
+}
+
+[data-variant="atlas"][data-theme="light"] {
+  --bg: oklch(0.98 0.004 240);
+  --bg-2: oklch(0.955 0.005 240);
+  --bg-3: oklch(0.93 0.006 240);
+  --bg-hover: oklch(0.9 0.007 240);
+  --bd: oklch(0.84 0.008 240);
+  --bd-weak: oklch(0.9 0.006 240);
+  --t-1: oklch(0.2 0.012 240);
+  --t-2: oklch(0.42 0.012 240);
+  --t-3: oklch(0.58 0.012 240);
+  --sel: oklch(0.85 0.1 205 / 0.4);
+  --accent: oklch(0.55 0.14 220);
+  --accent-weak: oklch(0.55 0.14 220 / 0.12);
+  --accent-ink: #fff;
+}
+
+/* Density modifier */
+[data-density="compact"] {
+  --row-height: 24px;
+}
