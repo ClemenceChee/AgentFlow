@@ -3,19 +3,23 @@ import './styles/shell.css';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ExecSidebar } from './components/ExecSidebar';
-import { OrganizationalDashboard } from './components/OrganizationalDashboard';
 import { SettingsPanel } from './components/SettingsPanel';
-import { SomaPage } from './components/SomaPage';
 import { Placeholder } from './components/v2/Placeholder';
 import {
   AgentProfilePage,
   ExecutionDetailPage,
   GuardsPage,
   MiningPage,
+  OrgLockedTeaser,
+  OrgPage,
   OverviewPage,
+  SomaLockedTeaser,
+  SomaPage,
 } from './components/v2/pages';
 import { type PageId, Shell, useTweaks } from './components/v2/shell';
 import { OrganizationalContextProvider } from './contexts/OrganizationalContext';
+// Organizational-specific hooks/components intentionally kept out of the
+// v2 Org page for now — Phase 7 will wire richer data sources.
 import { useAgents } from './hooks/useAgents';
 import { useProcessHealth } from './hooks/useProcessHealth';
 import { useProcessModel } from './hooks/useProcessModel';
@@ -176,15 +180,17 @@ export function App() {
         {page === 'guards' && <GuardsPage />}
 
         {page === 'soma' &&
-          (somaLocked ? <Placeholder page="soma" /> : <SomaPage tier={somaTier} />)}
+          (somaLocked ? (
+            <SomaLockedTeaser onUpgrade={() => setPage('soma')} />
+          ) : (
+            <SomaPage tier={somaTier} />
+          ))}
 
         {page === 'org' &&
           (orgLocked ? (
-            <Placeholder page="org" />
+            <OrgLockedTeaser onUpgrade={() => setPage('org')} />
           ) : (
-            <OrganizationalContextProvider>
-              <OrganizationalDashboard />
-            </OrganizationalContextProvider>
+            <OrgPage agents={agents} grouped={grouped} />
           ))}
       </Shell>
 
