@@ -1,3 +1,4 @@
+export { FlameChart } from './FlameChart';
 export { Gantt, type GanttRow } from './Gantt';
 export { Heatmap } from './Heatmap';
 export { LineChart } from './LineChart';
