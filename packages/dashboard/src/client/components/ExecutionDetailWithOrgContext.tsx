@@ -566,7 +566,9 @@ export function ExecutionDetailWithOrgContext({
           {tab === 'summary' && <SummaryContent trace={trace} />}
           {tab === 'transcript' && <TranscriptView trace={trace} />}
           {tab === 'receipt' && <RunReceiptView trace={trace} />}
-          {tab === 'decisions' && <DecisionReplay filename={trace.filename} />}
+          {tab === 'decisions' && (
+            <DecisionReplay filename={trace.filename} agentId={trace.agentId} />
+          )}
         </div>
       </div>
 
