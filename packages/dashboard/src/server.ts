@@ -399,7 +399,8 @@ export class DashboardServer {
 
     this.app.get('/api/traces/:filename/events', (req, res) => {
       try {
-        const trace = this.watcher.getTrace(req.params.filename);
+        const agentId = typeof req.query.agent === 'string' ? req.query.agent : undefined;
+        const trace = this.watcher.getTrace(req.params.filename, agentId);
         if (!trace) {
           return res.status(404).json({ error: 'Trace not found' });
         }
@@ -416,7 +417,8 @@ export class DashboardServer {
     // Run receipt endpoint — builds receipt from trace graph
     this.app.get('/api/traces/:filename/receipt', (req, res) => {
       try {
-        const trace = this.watcher.getTrace(req.params.filename);
+        const agentId = typeof req.query.agent === 'string' ? req.query.agent : undefined;
+        const trace = this.watcher.getTrace(req.params.filename, agentId);
         if (!trace) {
           return res.status(404).json({ error: 'Trace not found' });
         }
@@ -1115,7 +1117,8 @@ export class DashboardServer {
     // Agent decisions endpoint — returns NormalizedDecision[] for a trace
     this.app.get('/api/traces/:filename/decisions', (req, res) => {
       try {
-        const trace = this.watcher.getTrace(req.params.filename);
+        const agentId = typeof req.query.agent === 'string' ? req.query.agent : undefined;
+        const trace = this.watcher.getTrace(req.params.filename, agentId);
         if (!trace) return res.status(404).json({ error: 'Trace not found' });
 
         const serialized = serializeTrace(trace);

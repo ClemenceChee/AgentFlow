@@ -51,12 +51,13 @@ export function TranscriptView({ trace }: { trace: FullTrace }) {
       return;
     }
     setLoading(true);
-    fetch(`/api/traces/${encodeURIComponent(trace.filename)}/events`)
+    const url = `/api/traces/${encodeURIComponent(trace.filename)}/events${trace.agentId ? `?agent=${encodeURIComponent(trace.agentId)}` : ''}`;
+    fetch(url)
       .then((r) => (r.ok ? r.json() : []))
       .then((d) => setEvents(Array.isArray(d) ? d : []))
       .catch(() => setEvents([]))
       .finally(() => setLoading(false));
-  }, [trace.filename, trace.sessionEvents]);
+  }, [trace.filename, trace.agentId, trace.sessionEvents]);
 
   if (loading) return <div className="workspace__empty">Loading transcript...</div>;
   if (events.length === 0)
