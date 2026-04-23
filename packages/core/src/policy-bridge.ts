@@ -8,7 +8,7 @@
  * @module
  */
 
-import type { OperatorContext, ExecutionGraph, TraceEvent } from './types.js';
+import type { OperatorContext } from './types.js';
 
 // ---------------------------------------------------------------------------
 // Policy Bridge Interfaces
@@ -224,23 +224,12 @@ export class PolicyBridge {
    * Initialize SOMA vault integration.
    */
   private async initializeSOMAIntegration(): Promise<void> {
-    try {
-      // Dynamic import to avoid hard dependency
-      const { createVault } = await import('../../soma/src/vault.js');
-      this.somaVault = createVault({
-        baseDir: this.config.somaIntegration.vaultPath || '.soma/vault'
-      });
-    } catch (error) {
-      // Try alternative import paths
-      try {
-        const { createVault } = await import('../../../soma/src/vault.js');
-        this.somaVault = createVault({
-          baseDir: this.config.somaIntegration.vaultPath || '.soma/vault'
-        });
-      } catch (altError) {
-        throw new Error(`SOMA integration failed: ${error instanceof Error ? error.message : String(error)}`);
-      }
-    }
+    // SOMA lives in a separate private repo. Per the AgentFlow↔SOMA
+    // contract, integration is filesystem-only via `.soma/`. Module
+    // imports from this package are intentionally absent. Callers of
+    // this method should treat `somaVault` remaining unset as "SOMA
+    // unavailable" and fall back to local evaluation.
+    this.somaVault = null;
   }
 
   /**
@@ -654,7 +643,7 @@ export class PolicyBridge {
           id: `rec_${result.policyId}`,
           type: 'workflow',
           title: `Policy Recommendation: ${result.policyId}`,
-          description: result.recommendations[0],
+          description: result.recommendations[0] ?? 'Policy recommendation',
           priority: result.confidence > 0.8 ? 'high' : 'medium',
           actionable: true,
           estimatedImpact: 'Improved compliance and workflow efficiency',
@@ -820,21 +809,5 @@ export function createPolicyBridge(config?: Partial<PolicyBridgeConfig>): Policy
   return new PolicyBridge(mergedConfig);
 }
 
-// ---------------------------------------------------------------------------
-// Export Types
-// ---------------------------------------------------------------------------
-
-export type {
-  PolicyBridgeConfig,
-  OrganizationalPolicy,
-  PolicyCondition,
-  PolicyAction,
-  PolicyEvaluationContext,
-  PolicyEvaluationResult,
-  OrganizationalGuidance,
-  Recommendation,
-  PolicyWarning,
-  ApprovalRequirement,
-  ContextInjection,
-  ComplianceStatus
-};
+// Types above (PolicyBridgeConfig, OrganizationalPolicy, PolicyCondition, etc.)
+// are already exported via their `export interface`/`export type` declarations.
