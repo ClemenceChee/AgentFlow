@@ -387,6 +387,8 @@ export function withGuards(builder: GraphBuilder, config?: GuardConfig): GraphBu
     updateState: (nodeId, state) => builder.updateState(nodeId, state),
     withParent: (parentId, fn) => builder.withParent(parentId, fn),
     getSnapshot: () => builder.getSnapshot(),
+    getOrganizationalBriefing: () => builder.getOrganizationalBriefing(),
+    getOrganizationalContext: () => builder.getOrganizationalContext(),
 
     build: () => {
       const snapshot = builder.getSnapshot();

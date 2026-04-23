@@ -186,6 +186,10 @@ async function runCommand(argv: string[]): Promise<void> {
   if (parsed.agentId) {
     config.agentId = parsed.agentId;
   }
+  // Read Claude Code session context from environment
+  if (process.env.OPERATOR_ID) {
+    config.operatorId = process.env.OPERATOR_ID;
+  }
 
   try {
     const result = await runTraced(config);

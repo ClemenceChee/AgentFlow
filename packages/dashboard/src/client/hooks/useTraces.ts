@@ -13,6 +13,12 @@ export interface TraceEntry {
   trigger: string;
 }
 
+function normalizeStatus(s: string | undefined): string {
+  if (!s) return 'unknown';
+  if (s === 'error' || s === 'hung' || s === 'timeout') return 'failed';
+  return s;
+}
+
 /** Map raw API trace (full ExecutionGraph) to our slim TraceEntry. */
 function mapTrace(raw: Record<string, unknown>): TraceEntry {
   const nodes = raw.nodes;
@@ -42,7 +48,7 @@ function mapTrace(raw: Record<string, unknown>): TraceEntry {
     traceKey,
     agentId: (raw.agentId as string) ?? 'unknown',
     graphId: id,
-    status: (raw.status as string) ?? 'unknown',
+    status: normalizeStatus(raw.status as string | undefined),
     nodeCount,
     duration: endTime - startTime,
     timestamp: startTime,
