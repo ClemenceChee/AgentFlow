@@ -35,16 +35,17 @@ const OUTCOME_STYLE: Record<string, { icon: string; className: string }> = {
   skipped: { icon: '\u25CB', className: 'dr-skip' },
 };
 
-export function DecisionReplay({ filename }: { filename: string }) {
+export function DecisionReplay({ filename, agentId }: { filename: string; agentId?: string }) {
   const [data, setData] = useState<DecisionData | null>(null);
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
 
   useEffect(() => {
-    fetch(`/api/traces/${encodeURIComponent(filename)}/decisions`)
+    const url = `/api/traces/${encodeURIComponent(filename)}/decisions${agentId ? `?agent=${encodeURIComponent(agentId)}` : ''}`;
+    fetch(url)
       .then((r) => (r.ok ? r.json() : null))
       .then(setData)
       .catch(() => {});
-  }, [filename]);
+  }, [filename, agentId]);
 
   if (!data) return null;
   if (data.decisions.length === 0) {
