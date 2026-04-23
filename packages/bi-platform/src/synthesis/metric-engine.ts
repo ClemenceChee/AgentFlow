@@ -4,8 +4,8 @@
  * Tasks: 2.2 (metric calculation), 2.9 (query optimization)
  */
 
-import type { DbPool } from '../db/pool.js';
 import type { CacheClient } from '../cache/cache.js';
+import type { DbPool } from '../db/pool.js';
 
 export interface BusinessMetric {
   name: string;
@@ -157,7 +157,12 @@ const METRIC_CALCULATORS: Record<string, MetricCalculator> = {
   },
 };
 
-function makeMetric(name: string, value: number, unit: string, previousValue: number): BusinessMetric {
+function makeMetric(
+  name: string,
+  value: number,
+  unit: string,
+  previousValue: number,
+): BusinessMetric {
   const trendPct = previousValue !== 0 ? ((value - previousValue) / previousValue) * 100 : 0;
   return {
     name,

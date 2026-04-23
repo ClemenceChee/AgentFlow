@@ -70,9 +70,11 @@ export class AnomalyDetector {
             description: `Agent ${agent.agentName} failure rate ${(agent.performance.failureRate * 100).toFixed(1)}% deviates significantly from baseline ${(failureBaseline.mean * 100).toFixed(1)}%`,
             baselineValue: failureBaseline.mean,
             observedValue: agent.performance.failureRate,
-            deviationPct: ((agent.performance.failureRate - failureBaseline.mean) / failureBaseline.mean) * 100,
+            deviationPct:
+              ((agent.performance.failureRate - failureBaseline.mean) / failureBaseline.mean) * 100,
             businessImpact: {
-              description: 'Elevated failure rate may impact service reliability and user experience',
+              description:
+                'Elevated failure rate may impact service reliability and user experience',
               estimatedSeverity: deviation > 3 ? 'critical' : 'moderate',
               affectedAgents: [agent.agentId],
             },
@@ -103,7 +105,9 @@ export class AnomalyDetector {
             description: `Agent ${agent.agentName} avg response time ${Math.round(agent.performance.avgDurationMs)}ms significantly above baseline ${Math.round(durationBaseline.mean)}ms`,
             baselineValue: durationBaseline.mean,
             observedValue: agent.performance.avgDurationMs,
-            deviationPct: ((agent.performance.avgDurationMs - durationBaseline.mean) / durationBaseline.mean) * 100,
+            deviationPct:
+              ((agent.performance.avgDurationMs - durationBaseline.mean) / durationBaseline.mean) *
+              100,
             businessImpact: {
               description: 'Increased response time may degrade user experience and throughput',
               estimatedSeverity: 'moderate',
@@ -166,9 +170,9 @@ export class AnomalyDetector {
     }>('SELECT source_system, last_sync_at, status FROM data_freshness');
 
     const thresholds: Record<string, number> = {
-      soma: 120,       // 2 minutes
-      agentflow: 60,   // 1 minute
-      opsintel: 120,   // 2 minutes
+      soma: 120, // 2 minutes
+      agentflow: 60, // 1 minute
+      opsintel: 120, // 2 minutes
     };
 
     return rows.map((row) => {
@@ -217,7 +221,16 @@ export class AnomalyDetector {
         await this.db.query(
           `INSERT INTO anomalies (source_system, metric_name, severity, description, baseline_value, observed_value, deviation_pct, business_impact)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-          [a.sourceSystem, a.metricName, a.severity, a.description, a.baselineValue, a.observedValue, a.deviationPct, JSON.stringify(a.businessImpact)],
+          [
+            a.sourceSystem,
+            a.metricName,
+            a.severity,
+            a.description,
+            a.baselineValue,
+            a.observedValue,
+            a.deviationPct,
+            JSON.stringify(a.businessImpact),
+          ],
         );
       } catch (err) {
         this.logger.error('Failed to persist anomaly', { error: String(err) });

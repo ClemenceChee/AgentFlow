@@ -5,8 +5,8 @@
  * and identifies successful patterns for knowledge sharing and optimization.
  */
 
-import { useState, useEffect } from 'react';
-import { Brain, Target, CheckCircle, XCircle, Clock, TrendingUp, Lightbulb, Search, BookOpen } from 'lucide-react';
+import { BookOpen, Brain, CheckCircle, Lightbulb, Search, Target, TrendingUp } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useOrganizationalContext } from '../../../../contexts/OrganizationalContext';
 import type { SessionCorrelation } from '../../../types/organizational.js';
 
@@ -25,7 +25,12 @@ export interface SolutionTechnique {
   readonly techniqueId: string;
   readonly name: string;
   readonly description: string;
-  readonly methodology: 'systematic' | 'experimental' | 'collaborative' | 'research-based' | 'iterative';
+  readonly methodology:
+    | 'systematic'
+    | 'experimental'
+    | 'collaborative'
+    | 'research-based'
+    | 'iterative';
   readonly effectiveness: number; // 0-1 score
   readonly applicableCategories: readonly string[];
   readonly prerequisites: readonly string[];
@@ -101,42 +106,63 @@ interface ProblemSolvingPatternAnalysisProps {
 
 const getDifficultyColor = (level: ProblemCategory['difficultyLevel']) => {
   switch (level) {
-    case 'beginner': return 'org-text-success';
-    case 'intermediate': return 'org-text-info';
-    case 'advanced': return 'org-text-warning';
-    case 'expert': return 'org-text-error';
-    default: return 'org-text-muted';
+    case 'beginner':
+      return 'org-text-success';
+    case 'intermediate':
+      return 'org-text-info';
+    case 'advanced':
+      return 'org-text-warning';
+    case 'expert':
+      return 'org-text-error';
+    default:
+      return 'org-text-muted';
   }
 };
 
 const getMethodologyColor = (methodology: SolutionTechnique['methodology']) => {
   switch (methodology) {
-    case 'systematic': return 'org-technique-systematic';
-    case 'experimental': return 'org-technique-experimental';
-    case 'collaborative': return 'org-technique-collaborative';
-    case 'research-based': return 'org-technique-research';
-    case 'iterative': return 'org-technique-iterative';
-    default: return 'org-technique-default';
+    case 'systematic':
+      return 'org-technique-systematic';
+    case 'experimental':
+      return 'org-technique-experimental';
+    case 'collaborative':
+      return 'org-technique-collaborative';
+    case 'research-based':
+      return 'org-technique-research';
+    case 'iterative':
+      return 'org-technique-iterative';
+    default:
+      return 'org-technique-default';
   }
 };
 
-const getOutcomeColor = (outcome: ProblemInstance['outcome']) => {
+const _getOutcomeColor = (outcome: ProblemInstance['outcome']) => {
   switch (outcome) {
-    case 'solved': return 'org-text-success';
-    case 'partially-solved': return 'org-text-info';
-    case 'unsolved': return 'org-text-warning';
-    case 'escalated': return 'org-text-error';
-    default: return 'org-text-muted';
+    case 'solved':
+      return 'org-text-success';
+    case 'partially-solved':
+      return 'org-text-info';
+    case 'unsolved':
+      return 'org-text-warning';
+    case 'escalated':
+      return 'org-text-error';
+    default:
+      return 'org-text-muted';
   }
 };
 
-const getComplexityColor = (complexity: ProblemInstance['complexity']) => {
+const _getComplexityColor = (complexity: ProblemInstance['complexity']) => {
   switch (complexity) {
-    case 'low': return 'org-text-success';
-    case 'medium': return 'org-text-info';
-    case 'high': return 'org-text-warning';
-    case 'critical': return 'org-text-error';
-    default: return 'org-text-muted';
+    case 'low':
+      return 'org-text-success';
+    case 'medium':
+      return 'org-text-info';
+    case 'high':
+      return 'org-text-warning';
+    case 'critical':
+      return 'org-text-error';
+    default:
+      return 'org-text-muted';
   }
 };
 
@@ -154,28 +180,36 @@ const CategoriesView: React.FC<{
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<'frequency' | 'success-rate' | 'difficulty'>('frequency');
 
-  const filteredCategories = categoryFilter ?
-    analysis.categories.filter(cat => categoryFilter.includes(cat.categoryId)) :
-    analysis.categories;
+  const filteredCategories = categoryFilter
+    ? analysis.categories.filter((cat) => categoryFilter.includes(cat.categoryId))
+    : analysis.categories;
 
-  const categoryInstances = filteredCategories.map(category => {
-    const instances = analysis.instances.filter(inst => inst.categoryId === category.categoryId);
+  const categoryInstances = filteredCategories.map((category) => {
+    const instances = analysis.instances.filter((inst) => inst.categoryId === category.categoryId);
     return {
       category,
       instanceCount: instances.length,
-      solvedCount: instances.filter(inst => inst.outcome === 'solved').length,
-      averageTime: instances.reduce((sum, inst) => sum + (inst.resolutionTime || 0), 0) / instances.length
+      solvedCount: instances.filter((inst) => inst.outcome === 'solved').length,
+      averageTime:
+        instances.reduce((sum, inst) => sum + (inst.resolutionTime || 0), 0) / instances.length,
     };
   });
 
   const sortedCategories = [...categoryInstances].sort((a, b) => {
     switch (sortBy) {
-      case 'frequency': return b.instanceCount - a.instanceCount;
-      case 'success-rate': return (b.solvedCount / b.instanceCount) - (a.solvedCount / a.instanceCount);
-      case 'difficulty':
+      case 'frequency':
+        return b.instanceCount - a.instanceCount;
+      case 'success-rate':
+        return b.solvedCount / b.instanceCount - a.solvedCount / a.instanceCount;
+      case 'difficulty': {
         const difficultyOrder = ['beginner', 'intermediate', 'advanced', 'expert'];
-        return difficultyOrder.indexOf(b.category.difficultyLevel) - difficultyOrder.indexOf(a.category.difficultyLevel);
-      default: return b.instanceCount - a.instanceCount;
+        return (
+          difficultyOrder.indexOf(b.category.difficultyLevel) -
+          difficultyOrder.indexOf(a.category.difficultyLevel)
+        );
+      }
+      default:
+        return b.instanceCount - a.instanceCount;
     }
   });
 
@@ -198,8 +232,8 @@ const CategoriesView: React.FC<{
         {sortedCategories.map(({ category, instanceCount, solvedCount }) => {
           const isSelected = selectedCategory === category.categoryId;
           const successRate = instanceCount > 0 ? solvedCount / instanceCount : 0;
-          const relatedTechniques = analysis.techniques.filter(tech =>
-            tech.applicableCategories.includes(category.categoryId)
+          const relatedTechniques = analysis.techniques.filter((tech) =>
+            tech.applicableCategories.includes(category.categoryId),
           );
 
           return (
@@ -216,7 +250,9 @@ const CategoriesView: React.FC<{
                     <div className="flex-1">
                       <div className="flex items-center space-x-2 mb-1">
                         <h5 className="org-font-semibold">{category.name}</h5>
-                        <span className={`org-badge org-badge-xs ${getDifficultyColor(category.difficultyLevel)}`}>
+                        <span
+                          className={`org-badge org-badge-xs ${getDifficultyColor(category.difficultyLevel)}`}
+                        >
                           {category.difficultyLevel}
                         </span>
                       </div>
@@ -231,11 +267,17 @@ const CategoriesView: React.FC<{
                   </div>
 
                   <div className="text-right">
-                    <div className={`org-text-lg org-font-semibold ${
-                      successRate >= 0.8 ? 'org-text-success' :
-                      successRate >= 0.6 ? 'org-text-info' :
-                      successRate >= 0.4 ? 'org-text-warning' : 'org-text-error'
-                    }`}>
+                    <div
+                      className={`org-text-lg org-font-semibold ${
+                        successRate >= 0.8
+                          ? 'org-text-success'
+                          : successRate >= 0.6
+                            ? 'org-text-info'
+                            : successRate >= 0.4
+                              ? 'org-text-warning'
+                              : 'org-text-error'
+                      }`}
+                    >
                       {Math.round(successRate * 100)}%
                     </div>
                     <div className="org-text-xs org-text-muted">success rate</div>
@@ -248,8 +290,11 @@ const CategoriesView: React.FC<{
                       <div>
                         <h6 className="org-font-semibold mb-2">Required Skills</h6>
                         <div className="flex flex-wrap gap-1">
-                          {category.requiredSkills.map(skill => (
-                            <span key={skill} className="org-badge org-badge-secondary org-badge-xs">
+                          {category.requiredSkills.map((skill) => (
+                            <span
+                              key={skill}
+                              className="org-badge org-badge-secondary org-badge-xs"
+                            >
                               {skill}
                             </span>
                           ))}
@@ -259,7 +304,7 @@ const CategoriesView: React.FC<{
                       <div>
                         <h6 className="org-font-semibold mb-2">Common Keywords</h6>
                         <div className="flex flex-wrap gap-1">
-                          {category.commonKeywords.map(keyword => (
+                          {category.commonKeywords.map((keyword) => (
                             <span key={keyword} className="org-badge org-badge-info org-badge-xs">
                               {keyword}
                             </span>
@@ -271,10 +316,15 @@ const CategoriesView: React.FC<{
                     <div>
                       <h6 className="org-font-semibold mb-2">Applicable Techniques</h6>
                       <div className="space-y-2">
-                        {relatedTechniques.slice(0, 4).map(technique => (
-                          <div key={technique.techniqueId} className="flex items-center justify-between">
+                        {relatedTechniques.slice(0, 4).map((technique) => (
+                          <div
+                            key={technique.techniqueId}
+                            className="flex items-center justify-between"
+                          >
                             <div className="flex items-center space-x-2">
-                              <div className={`w-3 h-3 rounded ${getMethodologyColor(technique.methodology)}`}></div>
+                              <div
+                                className={`w-3 h-3 rounded ${getMethodologyColor(technique.methodology)}`}
+                              ></div>
                               <span className="org-font-medium org-text-sm">{technique.name}</span>
                             </div>
                             <span className="org-text-sm org-text-muted">
@@ -313,27 +363,32 @@ const TechniquesView: React.FC<{
   const [selectedMethodology, setSelectedMethodology] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'effectiveness' | 'usage' | 'time'>('effectiveness');
 
-  const filteredTechniques = selectedMethodology === 'all' ?
-    analysis.techniques :
-    analysis.techniques.filter(tech => tech.methodology === selectedMethodology);
+  const filteredTechniques =
+    selectedMethodology === 'all'
+      ? analysis.techniques
+      : analysis.techniques.filter((tech) => tech.methodology === selectedMethodology);
 
-  const techniqueUsage = filteredTechniques.map(technique => {
-    const usageCount = analysis.instances.filter(inst =>
-      inst.techniquesUsed.includes(technique.techniqueId)
+  const techniqueUsage = filteredTechniques.map((technique) => {
+    const usageCount = analysis.instances.filter((inst) =>
+      inst.techniquesUsed.includes(technique.techniqueId),
     ).length;
     return { technique, usageCount };
   });
 
   const sortedTechniques = [...techniqueUsage].sort((a, b) => {
     switch (sortBy) {
-      case 'effectiveness': return b.technique.effectiveness - a.technique.effectiveness;
-      case 'usage': return b.usageCount - a.usageCount;
-      case 'time': return a.technique.timeToSolution - b.technique.timeToSolution;
-      default: return b.technique.effectiveness - a.technique.effectiveness;
+      case 'effectiveness':
+        return b.technique.effectiveness - a.technique.effectiveness;
+      case 'usage':
+        return b.usageCount - a.usageCount;
+      case 'time':
+        return a.technique.timeToSolution - b.technique.timeToSolution;
+      default:
+        return b.technique.effectiveness - a.technique.effectiveness;
     }
   });
 
-  const methodologies = [...new Set(analysis.techniques.map(t => t.methodology))];
+  const methodologies = [...new Set(analysis.techniques.map((t) => t.methodology))];
 
   return (
     <div className="org-problem-techniques">
@@ -346,7 +401,7 @@ const TechniquesView: React.FC<{
             className="org-select org-select-sm"
           >
             <option value="all">All Methodologies</option>
-            {methodologies.map(method => (
+            {methodologies.map((method) => (
               <option key={method} value={method} className="capitalize">
                 {method.replace('-', ' ')}
               </option>
@@ -369,7 +424,9 @@ const TechniquesView: React.FC<{
           <div key={technique.techniqueId} className="org-card-inner">
             <div className="flex items-start justify-between mb-3">
               <div className="flex items-start space-x-3">
-                <div className={`w-10 h-10 rounded-lg ${getMethodologyColor(technique.methodology)} flex items-center justify-center`}>
+                <div
+                  className={`w-10 h-10 rounded-lg ${getMethodologyColor(technique.methodology)} flex items-center justify-center`}
+                >
                   <Lightbulb className="h-5 w-5 text-white" />
                 </div>
                 <div className="flex-1">
@@ -384,11 +441,15 @@ const TechniquesView: React.FC<{
               </div>
 
               <div className="text-right">
-                <div className={`org-text-lg org-font-semibold ${
-                  technique.effectiveness >= 0.8 ? 'org-text-success' :
-                  technique.effectiveness >= 0.6 ? 'org-text-info' :
-                  'org-text-warning'
-                }`}>
+                <div
+                  className={`org-text-lg org-font-semibold ${
+                    technique.effectiveness >= 0.8
+                      ? 'org-text-success'
+                      : technique.effectiveness >= 0.6
+                        ? 'org-text-info'
+                        : 'org-text-warning'
+                  }`}
+                >
                   {Math.round(technique.effectiveness * 100)}%
                 </div>
                 <div className="org-text-xs org-text-muted">effectiveness</div>
@@ -425,11 +486,15 @@ const TechniquesView: React.FC<{
                     {technique.tools.length > 2 && ` +${technique.tools.length - 2}`}
                   </span>
                 </div>
-                <div className={`org-text-sm ${
-                  technique.confidenceLevel >= 0.8 ? 'org-text-success' :
-                  technique.confidenceLevel >= 0.6 ? 'org-text-info' :
-                  'org-text-warning'
-                }`}>
+                <div
+                  className={`org-text-sm ${
+                    technique.confidenceLevel >= 0.8
+                      ? 'org-text-success'
+                      : technique.confidenceLevel >= 0.6
+                        ? 'org-text-info'
+                        : 'org-text-warning'
+                  }`}
+                >
                   {Math.round(technique.confidenceLevel * 100)}% confidence
                 </div>
               </div>
@@ -456,11 +521,11 @@ const PatternsView: React.FC<{
   const [selectedPattern, setSelectedPattern] = useState<string | null>(null);
 
   const qualifiedPatterns = analysis.successPatterns.filter(
-    pattern => pattern.successRate >= minSuccessRate
+    (pattern) => pattern.successRate >= minSuccessRate,
   );
 
-  const sortedPatterns = [...qualifiedPatterns].sort((a, b) =>
-    b.applicabilityScore - a.applicabilityScore
+  const sortedPatterns = [...qualifiedPatterns].sort(
+    (a, b) => b.applicabilityScore - a.applicabilityScore,
   );
 
   return (
@@ -475,8 +540,8 @@ const PatternsView: React.FC<{
       <div className="space-y-4">
         {sortedPatterns.map((pattern) => {
           const isSelected = selectedPattern === pattern.patternId;
-          const relatedCategories = analysis.categories.filter(cat =>
-            pattern.categoryIds.includes(cat.categoryId)
+          const relatedCategories = analysis.categories.filter((cat) =>
+            pattern.categoryIds.includes(cat.categoryId),
           );
 
           return (
@@ -530,7 +595,9 @@ const PatternsView: React.FC<{
                         <h6 className="org-font-semibold mb-2">Technique Sequence</h6>
                         <div className="space-y-2">
                           {pattern.techniqueSequence.map((techniqueId, index) => {
-                            const technique = analysis.techniques.find(t => t.techniqueId === techniqueId);
+                            const technique = analysis.techniques.find(
+                              (t) => t.techniqueId === techniqueId,
+                            );
                             return (
                               <div key={techniqueId} className="flex items-center space-x-2">
                                 <div className="w-6 h-6 rounded-full org-bg-primary flex items-center justify-center">
@@ -564,7 +631,7 @@ const PatternsView: React.FC<{
                       <div>
                         <h6 className="org-font-semibold mb-2">Key Success Factors</h6>
                         <div className="flex flex-wrap gap-1">
-                          {pattern.keyFactors.map(factor => (
+                          {pattern.keyFactors.map((factor) => (
                             <span key={factor} className="org-badge org-badge-success org-badge-xs">
                               {factor}
                             </span>
@@ -575,8 +642,11 @@ const PatternsView: React.FC<{
                       <div>
                         <h6 className="org-font-semibold mb-2">Potential Pitfalls</h6>
                         <div className="flex flex-wrap gap-1">
-                          {pattern.potentialPitfalls.map(pitfall => (
-                            <span key={pitfall} className="org-badge org-badge-warning org-badge-xs">
+                          {pattern.potentialPitfalls.map((pitfall) => (
+                            <span
+                              key={pitfall}
+                              className="org-badge org-badge-warning org-badge-xs"
+                            >
                               {pitfall}
                             </span>
                           ))}
@@ -643,7 +713,7 @@ const InsightsView: React.FC<{
         <h4 className="org-font-semibold mb-4">Most Effective Techniques</h4>
         <div className="space-y-2">
           {analysis.mostEffectiveTechniques.slice(0, 6).map((techniqueId, index) => {
-            const technique = analysis.techniques.find(t => t.techniqueId === techniqueId);
+            const technique = analysis.techniques.find((t) => t.techniqueId === techniqueId);
             return (
               <div key={techniqueId} className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
@@ -697,9 +767,7 @@ const InsightsView: React.FC<{
           {analysis.skillDevelopmentAreas.map((area, index) => (
             <div key={index} className="flex items-center justify-between">
               <span className="org-text-sm org-font-medium">{area}</span>
-              <span className="org-badge org-badge-info org-badge-xs">
-                Priority
-              </span>
+              <span className="org-badge org-badge-info org-badge-xs">Priority</span>
             </div>
           ))}
         </div>
@@ -712,8 +780,9 @@ const InsightsView: React.FC<{
         <div className="flex items-start space-x-2">
           <CheckCircle className="h-4 w-4 org-text-success mt-0.5 flex-shrink-0" />
           <span>
-            <strong>Systematic approaches</strong> show {Math.round(analysis.overallSuccessRate * 100)}% higher success rates
-            than ad-hoc problem solving
+            <strong>Systematic approaches</strong> show{' '}
+            {Math.round(analysis.overallSuccessRate * 100)}% higher success rates than ad-hoc
+            problem solving
           </span>
         </div>
         <div className="flex items-start space-x-2">
@@ -734,7 +803,8 @@ const InsightsView: React.FC<{
           <Lightbulb className="h-4 w-4 org-text-warning mt-0.5 flex-shrink-0" />
           <span>
             <strong>Knowledge sharing</strong> of successful patterns could prevent{' '}
-            {Math.round(analysis.knowledgeGaps.length * 12)} hours of duplicate problem-solving effort per month
+            {Math.round(analysis.knowledgeGaps.length * 12)} hours of duplicate problem-solving
+            effort per month
           </span>
         </div>
       </div>
@@ -749,7 +819,7 @@ export const ProblemSolvingPatternAnalysis: React.FC<ProblemSolvingPatternAnalys
   categoryFilter,
   minSuccessRate = 0.7,
   onSelectPattern,
-  className = ''
+  className = '',
 }) => {
   const { teamFilter } = useOrganizationalContext();
   const [analysis, setAnalysis] = useState<ProblemSolvingAnalysis | null>(null);
@@ -766,7 +836,7 @@ export const ProblemSolvingPatternAnalysis: React.FC<ProblemSolvingPatternAnalys
           month: 2592000000,
           quarter: 7776000000,
           'half-year': 15552000000,
-          year: 31536000000
+          year: 31536000000,
         }[timeRange];
 
         const endTime = Date.now();
@@ -782,7 +852,7 @@ export const ProblemSolvingPatternAnalysis: React.FC<ProblemSolvingPatternAnalys
             difficultyLevel: 'intermediate',
             averageResolutionTime: 5400000, // 1.5 hours
             successRate: 0.85,
-            requiredSkills: ['debugging', 'code analysis', 'testing']
+            requiredSkills: ['debugging', 'code analysis', 'testing'],
           },
           {
             categoryId: 'performance-optimization',
@@ -792,7 +862,7 @@ export const ProblemSolvingPatternAnalysis: React.FC<ProblemSolvingPatternAnalys
             difficultyLevel: 'advanced',
             averageResolutionTime: 10800000, // 3 hours
             successRate: 0.72,
-            requiredSkills: ['profiling', 'optimization', 'system architecture']
+            requiredSkills: ['profiling', 'optimization', 'system architecture'],
           },
           {
             categoryId: 'integration-issues',
@@ -802,8 +872,8 @@ export const ProblemSolvingPatternAnalysis: React.FC<ProblemSolvingPatternAnalys
             difficultyLevel: 'intermediate',
             averageResolutionTime: 7200000, // 2 hours
             successRate: 0.78,
-            requiredSkills: ['api design', 'networking', 'troubleshooting']
-          }
+            requiredSkills: ['api design', 'networking', 'troubleshooting'],
+          },
         ];
 
         const mockTechniques: SolutionTechnique[] = [
@@ -820,11 +890,11 @@ export const ProblemSolvingPatternAnalysis: React.FC<ProblemSolvingPatternAnalys
               'Isolate the problematic component',
               'Analyze logs and error messages',
               'Test hypotheses systematically',
-              'Validate the fix'
+              'Validate the fix',
             ],
             tools: ['debugger', 'logging', 'profiler'],
             timeToSolution: 4800000, // 1.33 hours
-            confidenceLevel: 0.92
+            confidenceLevel: 0.92,
           },
           {
             techniqueId: 'collaborative-investigation',
@@ -839,11 +909,11 @@ export const ProblemSolvingPatternAnalysis: React.FC<ProblemSolvingPatternAnalys
               'Divide investigation areas',
               'Share findings in real-time',
               'Synthesize multiple perspectives',
-              'Validate solution collectively'
+              'Validate solution collectively',
             ],
             tools: ['collaboration platform', 'shared debugging', 'documentation'],
             timeToSolution: 6600000, // 1.83 hours
-            confidenceLevel: 0.85
+            confidenceLevel: 0.85,
           },
           {
             techniqueId: 'iterative-testing',
@@ -858,12 +928,12 @@ export const ProblemSolvingPatternAnalysis: React.FC<ProblemSolvingPatternAnalys
               'Design minimal test',
               'Execute and measure results',
               'Refine hypothesis based on results',
-              'Repeat until solution found'
+              'Repeat until solution found',
             ],
             tools: ['testing framework', 'monitoring', 'metrics'],
             timeToSolution: 5400000, // 1.5 hours
-            confidenceLevel: 0.78
-          }
+            confidenceLevel: 0.78,
+          },
         ];
 
         const mockInstances: ProblemInstance[] = Array.from({ length: 50 }, (_, i) => ({
@@ -871,24 +941,28 @@ export const ProblemSolvingPatternAnalysis: React.FC<ProblemSolvingPatternAnalys
           problemStatement: `Problem description ${i + 1}`,
           categoryId: mockCategories[i % mockCategories.length].categoryId,
           operatorId: sessionCorrelation.operatorId,
-          timestamp: startTime + (Math.random() * timeRangeMs),
+          timestamp: startTime + Math.random() * timeRangeMs,
           resolutionTime: Math.random() > 0.1 ? 1800000 + Math.random() * 7200000 : undefined,
           outcome: ['solved', 'partially-solved', 'unsolved', 'escalated'][
             Math.floor(Math.random() * 4)
           ] as ProblemInstance['outcome'],
-          techniquesUsed: mockTechniques.slice(0, 1 + Math.floor(Math.random() * 2)).map(t => t.techniqueId),
-          collaborators: Math.random() > 0.6 ? [`collaborator-${Math.floor(Math.random() * 5)}`] : undefined,
+          techniquesUsed: mockTechniques
+            .slice(0, 1 + Math.floor(Math.random() * 2))
+            .map((t) => t.techniqueId),
+          collaborators:
+            Math.random() > 0.6 ? [`collaborator-${Math.floor(Math.random() * 5)}`] : undefined,
           complexity: ['low', 'medium', 'high', 'critical'][
             Math.floor(Math.random() * 4)
           ] as ProblemInstance['complexity'],
-          context: {}
+          context: {},
         }));
 
         const mockSuccessPatterns: SuccessPattern[] = [
           {
             patternId: 'systematic-debug-pattern',
             name: 'Systematic Debug → Test → Validate',
-            description: 'Use systematic debugging followed by iterative testing for bug investigation',
+            description:
+              'Use systematic debugging followed by iterative testing for bug investigation',
             categoryIds: ['bug-investigation'],
             techniqueSequence: ['systematic-debugging', 'iterative-testing'],
             successRate: 0.91,
@@ -897,7 +971,7 @@ export const ProblemSolvingPatternAnalysis: React.FC<ProblemSolvingPatternAnalys
             whenToUse: ['Reproducible bugs', 'Complex codebases', 'Critical systems'],
             potentialPitfalls: ['over-analysis', 'scope creep', 'tool dependency'],
             exampleCases: ['Database deadlock resolution', 'Memory leak identification'],
-            applicabilityScore: 0.87
+            applicabilityScore: 0.87,
           },
           {
             patternId: 'collab-performance-pattern',
@@ -911,8 +985,8 @@ export const ProblemSolvingPatternAnalysis: React.FC<ProblemSolvingPatternAnalys
             whenToUse: ['System-wide performance issues', 'Multi-component problems'],
             potentialPitfalls: ['coordination overhead', 'conflicting approaches'],
             exampleCases: ['API response time optimization', 'Database query performance'],
-            applicabilityScore: 0.79
-          }
+            applicabilityScore: 0.79,
+          },
         ];
 
         setAnalysis({
@@ -922,26 +996,30 @@ export const ProblemSolvingPatternAnalysis: React.FC<ProblemSolvingPatternAnalys
           successPatterns: mockSuccessPatterns,
           overallSuccessRate: 0.81,
           averageResolutionTime: 6300000, // 1.75 hours
-          mostEffectiveTechniques: ['systematic-debugging', 'collaborative-investigation', 'iterative-testing'],
+          mostEffectiveTechniques: [
+            'systematic-debugging',
+            'collaborative-investigation',
+            'iterative-testing',
+          ],
           emergingPatterns: [
             'AI-assisted debugging showing 15% faster resolution',
             'Cross-team collaboration reducing escalation rates',
-            'Automated testing reducing regression issues'
+            'Automated testing reducing regression issues',
           ],
           knowledgeGaps: [
             'Limited expertise in distributed system debugging',
             'Insufficient performance monitoring coverage',
-            'Lack of standardized troubleshooting procedures'
+            'Lack of standardized troubleshooting procedures',
           ],
           collaborationImpact: 0.67,
           skillDevelopmentAreas: [
             'Advanced debugging techniques',
             'Performance profiling tools',
             'System architecture analysis',
-            'Collaborative problem solving'
+            'Collaborative problem solving',
           ],
           analyzedTimeRange: { start: startTime, end: endTime },
-          generatedAt: Date.now()
+          generatedAt: Date.now(),
         });
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to analyze problem-solving patterns');
@@ -991,7 +1069,8 @@ export const ProblemSolvingPatternAnalysis: React.FC<ProblemSolvingPatternAnalys
       <div className="flex items-center justify-between mb-6">
         <h3 className="org-text-xl org-font-semibold">Problem-Solving Pattern Analysis</h3>
         <div className="org-text-sm org-text-muted">
-          {analysis.instances.length} problems • {analysis.successPatterns.length} patterns • {timeRange}
+          {analysis.instances.length} problems • {analysis.successPatterns.length} patterns •{' '}
+          {timeRange}
         </div>
       </div>
 

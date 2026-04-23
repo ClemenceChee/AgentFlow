@@ -5,12 +5,12 @@
  * Tasks: 2.1 (aggregation), 2.6 (cross-system correlation), 2.7 (incremental processing)
  */
 
-import type { SomaAdapter } from '../integrations/soma-adapter.js';
-import type { AgentFlowAdapter } from '../integrations/agentflow-adapter.js';
-import type { OpsIntelAdapter } from '../integrations/opsintel-adapter.js';
-import type { OpenClawSessionAdapter } from '../integrations/openclaw-session-adapter.js';
-import type { CronAdapter } from '../integrations/cron-adapter.js';
 import type { DbPool } from '../db/pool.js';
+import type { AgentFlowAdapter } from '../integrations/agentflow-adapter.js';
+import type { CronAdapter } from '../integrations/cron-adapter.js';
+import type { OpenClawSessionAdapter } from '../integrations/openclaw-session-adapter.js';
+import type { OpsIntelAdapter } from '../integrations/opsintel-adapter.js';
+import type { SomaAdapter } from '../integrations/soma-adapter.js';
 import type { Logger } from '../monitoring/logger.js';
 
 export interface AggregatedMetrics {
@@ -78,7 +78,6 @@ export class DataAggregator {
   private lastAggregation: AggregatedMetrics | null = null;
 
   private openclaw: OpenClawSessionAdapter | null = null;
-  private cron: CronAdapter | null = null;
 
   constructor(
     private soma: SomaAdapter,
@@ -100,18 +99,27 @@ export class DataAggregator {
     const start = Date.now();
 
     // Pull data from all sources concurrently
-    const [somaAgents, somaInsights, somaPolicies, afPerformance, opsEfficiency, opsDrift, somaHealth, afHealth, opsHealth] =
-      await Promise.all([
-        this.soma.getAgents(),
-        this.soma.getInsights(),
-        this.soma.getPolicies(),
-        this.agentflow.getAgentPerformance(),
-        this.opsintel.getEfficiencyMetrics(),
-        this.opsintel.getDriftAlerts(),
-        this.soma.health(),
-        this.agentflow.health(),
-        this.opsintel.health(),
-      ]);
+    const [
+      somaAgents,
+      somaInsights,
+      somaPolicies,
+      afPerformance,
+      opsEfficiency,
+      opsDrift,
+      somaHealth,
+      afHealth,
+      opsHealth,
+    ] = await Promise.all([
+      this.soma.getAgents(),
+      this.soma.getInsights(),
+      this.soma.getPolicies(),
+      this.agentflow.getAgentPerformance(),
+      this.opsintel.getEfficiencyMetrics(),
+      this.opsintel.getDriftAlerts(),
+      this.soma.health(),
+      this.agentflow.health(),
+      this.opsintel.health(),
+    ]);
 
     // Cross-system correlation: merge agent data from multiple sources
     const agentMap = new Map<string, AgentAggregation>();
@@ -185,9 +193,10 @@ export class DataAggregator {
           if (existing) {
             // Enrich existing agent with token cost data
             if (oc.totalCost > 0) {
-              existing.efficiency.costPerExecution = existing.performance.totalExecutions > 0
-                ? oc.totalCost / existing.performance.totalExecutions
-                : oc.totalCost;
+              existing.efficiency.costPerExecution =
+                existing.performance.totalExecutions > 0
+                  ? oc.totalCost / existing.performance.totalExecutions
+                  : oc.totalCost;
               existing.efficiency.tokenUsage = oc.totalTokens;
             }
           } else {
@@ -298,7 +307,8 @@ export class DataAggregator {
         description: `${driftingWithFailures.length} agent(s) showing both behavioral drift and elevated failure rates`,
         systems: ['agentflow', 'opsintel'],
         confidence: 0.8,
-        businessRelevance: 'Drifting agents with failures may indicate systemic issues requiring intervention',
+        businessRelevance:
+          'Drifting agents with failures may indicate systemic issues requiring intervention',
       });
     }
 
@@ -315,7 +325,8 @@ export class DataAggregator {
         description: `${inefficient.length} agent(s) with high cost and low success rate`,
         systems: ['agentflow', 'opsintel'],
         confidence: 0.75,
-        businessRelevance: 'High-cost underperforming agents represent ROI optimization opportunities',
+        businessRelevance:
+          'High-cost underperforming agents represent ROI optimization opportunities',
       });
     }
 

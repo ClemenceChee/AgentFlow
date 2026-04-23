@@ -24,29 +24,129 @@ export interface ResolvedTerm {
 /** Core terminology mappings — extensible via configuration. */
 const TERM_MAPPINGS: TermMapping[] = [
   // Performance metrics
-  { businessTerm: 'success rate', technicalField: 'successful::float / NULLIF(total_executions, 0)', system: 'bi', table: 'agent_metrics', description: 'Ratio of successful to total executions', aliases: ['completion rate', 'pass rate'] },
-  { businessTerm: 'failure rate', technicalField: 'error_rate', system: 'bi', table: 'agent_metrics', description: 'Ratio of failed to total executions', aliases: ['error rate', 'failure ratio'] },
-  { businessTerm: 'response time', technicalField: 'avg_duration_ms', system: 'bi', table: 'agent_metrics', description: 'Average execution duration in milliseconds', aliases: ['latency', 'duration', 'processing time'] },
-  { businessTerm: 'executions', technicalField: 'total_executions', system: 'bi', table: 'agent_metrics', description: 'Total number of agent executions', aliases: ['runs', 'invocations', 'calls'] },
+  {
+    businessTerm: 'success rate',
+    technicalField: 'successful::float / NULLIF(total_executions, 0)',
+    system: 'bi',
+    table: 'agent_metrics',
+    description: 'Ratio of successful to total executions',
+    aliases: ['completion rate', 'pass rate'],
+  },
+  {
+    businessTerm: 'failure rate',
+    technicalField: 'error_rate',
+    system: 'bi',
+    table: 'agent_metrics',
+    description: 'Ratio of failed to total executions',
+    aliases: ['error rate', 'failure ratio'],
+  },
+  {
+    businessTerm: 'response time',
+    technicalField: 'avg_duration_ms',
+    system: 'bi',
+    table: 'agent_metrics',
+    description: 'Average execution duration in milliseconds',
+    aliases: ['latency', 'duration', 'processing time'],
+  },
+  {
+    businessTerm: 'executions',
+    technicalField: 'total_executions',
+    system: 'bi',
+    table: 'agent_metrics',
+    description: 'Total number of agent executions',
+    aliases: ['runs', 'invocations', 'calls'],
+  },
 
   // Financial
-  { businessTerm: 'cost', technicalField: 'amount', system: 'bi', table: 'financial_metrics', description: 'Monetary cost of agent operations', aliases: ['spend', 'expense', 'price'] },
-  { businessTerm: 'roi', technicalField: '(revenue - cost) / cost * 100', system: 'bi', table: 'financial_metrics', description: 'Return on investment percentage', aliases: ['return on investment', 'return'] },
-  { businessTerm: 'revenue impact', technicalField: 'amount', system: 'bi', table: 'financial_metrics', description: 'Revenue attributed to agent operations', aliases: ['revenue', 'income'] },
+  {
+    businessTerm: 'cost',
+    technicalField: 'amount',
+    system: 'bi',
+    table: 'financial_metrics',
+    description: 'Monetary cost of agent operations',
+    aliases: ['spend', 'expense', 'price'],
+  },
+  {
+    businessTerm: 'roi',
+    technicalField: '(revenue - cost) / cost * 100',
+    system: 'bi',
+    table: 'financial_metrics',
+    description: 'Return on investment percentage',
+    aliases: ['return on investment', 'return'],
+  },
+  {
+    businessTerm: 'revenue impact',
+    technicalField: 'amount',
+    system: 'bi',
+    table: 'financial_metrics',
+    description: 'Revenue attributed to agent operations',
+    aliases: ['revenue', 'income'],
+  },
 
   // Compliance
-  { businessTerm: 'compliance score', technicalField: 'compliance_pct', system: 'bi', table: 'compliance_records', description: 'Percentage of compliant records', aliases: ['compliance rate', 'compliance percentage'] },
-  { businessTerm: 'violations', technicalField: "status = 'violation'", system: 'bi', table: 'compliance_records', description: 'Active compliance violations', aliases: ['breaches', 'non-compliance', 'infractions'] },
+  {
+    businessTerm: 'compliance score',
+    technicalField: 'compliance_pct',
+    system: 'bi',
+    table: 'compliance_records',
+    description: 'Percentage of compliant records',
+    aliases: ['compliance rate', 'compliance percentage'],
+  },
+  {
+    businessTerm: 'violations',
+    technicalField: "status = 'violation'",
+    system: 'bi',
+    table: 'compliance_records',
+    description: 'Active compliance violations',
+    aliases: ['breaches', 'non-compliance', 'infractions'],
+  },
 
   // SOMA
-  { businessTerm: 'insights', technicalField: 'insights', system: 'soma', description: 'Knowledge insights from organizational intelligence', aliases: ['findings', 'observations', 'intelligence'] },
-  { businessTerm: 'policies', technicalField: 'policies', system: 'soma', description: 'Active policies governing agent behavior', aliases: ['rules', 'guidelines', 'controls'] },
-  { businessTerm: 'drift', technicalField: 'drifted', system: 'opsintel', description: 'Behavioral drift from established patterns', aliases: ['deviation', 'divergence'] },
+  {
+    businessTerm: 'insights',
+    technicalField: 'insights',
+    system: 'soma',
+    description: 'Knowledge insights from organizational intelligence',
+    aliases: ['findings', 'observations', 'intelligence'],
+  },
+  {
+    businessTerm: 'policies',
+    technicalField: 'policies',
+    system: 'soma',
+    description: 'Active policies governing agent behavior',
+    aliases: ['rules', 'guidelines', 'controls'],
+  },
+  {
+    businessTerm: 'drift',
+    technicalField: 'drifted',
+    system: 'opsintel',
+    description: 'Behavioral drift from established patterns',
+    aliases: ['deviation', 'divergence'],
+  },
 
   // Time periods
-  { businessTerm: 'this month', technicalField: "period_start >= DATE_TRUNC('month', NOW())", system: 'bi', description: 'Current calendar month', aliases: ['current month'] },
-  { businessTerm: 'last quarter', technicalField: "period_start >= DATE_TRUNC('quarter', NOW()) - INTERVAL '3 months' AND period_start < DATE_TRUNC('quarter', NOW())", system: 'bi', description: 'Previous calendar quarter', aliases: ['prior quarter', 'previous quarter'] },
-  { businessTerm: 'last 30 days', technicalField: "period_start > NOW() - INTERVAL '30 days'", system: 'bi', description: 'Rolling 30-day window', aliases: ['past month', 'recent'] },
+  {
+    businessTerm: 'this month',
+    technicalField: "period_start >= DATE_TRUNC('month', NOW())",
+    system: 'bi',
+    description: 'Current calendar month',
+    aliases: ['current month'],
+  },
+  {
+    businessTerm: 'last quarter',
+    technicalField:
+      "period_start >= DATE_TRUNC('quarter', NOW()) - INTERVAL '3 months' AND period_start < DATE_TRUNC('quarter', NOW())",
+    system: 'bi',
+    description: 'Previous calendar quarter',
+    aliases: ['prior quarter', 'previous quarter'],
+  },
+  {
+    businessTerm: 'last 30 days',
+    technicalField: "period_start > NOW() - INTERVAL '30 days'",
+    system: 'bi',
+    description: 'Rolling 30-day window',
+    aliases: ['past month', 'recent'],
+  },
 ];
 
 export class TerminologyMapper {

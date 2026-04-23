@@ -5,17 +5,17 @@
  *        3.7 (rate limiting), 3.8 (auth middleware), 3.9 (caching), 3.10 (monitoring)
  */
 
+import type { CacheClient } from '../../cache/cache.js';
+import type { DbPool } from '../../db/pool.js';
+import type { Logger } from '../../monitoring/logger.js';
+import type { DataAggregator } from '../../synthesis/aggregator.js';
+import type { AnomalyDetector } from '../../synthesis/anomaly-detector.js';
+import type { MetricEngine } from '../../synthesis/metric-engine.js';
 import type { Router } from '../router.js';
 import { sendJson } from '../router.js';
-import type { DataAggregator } from '../../synthesis/aggregator.js';
-import type { MetricEngine } from '../../synthesis/metric-engine.js';
-import type { AnomalyDetector } from '../../synthesis/anomaly-detector.js';
-import type { DbPool } from '../../db/pool.js';
-import type { CacheClient } from '../../cache/cache.js';
-import type { Logger } from '../../monitoring/logger.js';
-import { registerPerformanceRoutes } from './performance.js';
-import { registerFinancialRoutes } from './financial.js';
 import { registerComplianceRoutes } from './compliance.js';
+import { registerFinancialRoutes } from './financial.js';
+import { registerPerformanceRoutes } from './performance.js';
 
 export interface ApiDependencies {
   router: Router;
@@ -75,29 +75,102 @@ export function registerApiV1Routes(deps: ApiDependencies): void {
     let kpis = await metricEngine.getExecutiveKPIs();
 
     // Fall back to live aggregator data if DB returned all zeros
-    const allZero = kpis.every((k) => k.value === 0 || (k.name === 'Compliance Score' && k.value === 100));
+    const allZero = kpis.every(
+      (k) => k.value === 0 || (k.name === 'Compliance Score' && k.value === 100),
+    );
     if (allZero) {
       const latest = aggregator.getLatest();
       if (latest && latest.agents.length > 0) {
         const agents = latest.agents;
         const totalExec = agents.reduce((s, a) => s + a.performance.totalExecutions, 0);
-        const totalSuccess = agents.reduce((s, a) => s + Math.round(a.performance.totalExecutions * a.performance.successRate), 0);
-        const avgMs = agents.reduce((s, a) => s + a.performance.avgDurationMs, 0) / (agents.length || 1);
-        const totalCost = agents.reduce((s, a) => s + (a.efficiency.costPerExecution ?? 0) * a.performance.totalExecutions, 0);
+        const totalSuccess = agents.reduce(
+          (s, a) => s + Math.round(a.performance.totalExecutions * a.performance.successRate),
+          0,
+        );
+        const avgMs =
+          agents.reduce((s, a) => s + a.performance.avgDurationMs, 0) / (agents.length || 1);
+        const totalCost = agents.reduce(
+          (s, a) => s + (a.efficiency.costPerExecution ?? 0) * a.performance.totalExecutions,
+          0,
+        );
         const now = new Date().toISOString();
         // Compute utilization
         const ocAgents = agents.filter((a) => !a.agentId.startsWith('soma-'));
         const utilization = agents.length > 0 ? (ocAgents.length / agents.length) * 100 : 0;
 
         kpis = [
-          { name: 'total_executions', value: totalExec, unit: 'count', trend: 'stable', trendPct: 0, period: 'current', calculatedAt: now },
-          { name: 'overall_success_rate', value: totalExec > 0 ? (totalSuccess / totalExec) * 100 : 0, unit: '%', trend: 'stable', trendPct: 0, period: 'current', calculatedAt: now },
-          { name: 'avg_response_time', value: Math.round(avgMs), unit: 'ms', trend: 'stable', trendPct: 0, period: 'current', calculatedAt: now },
-          { name: 'active_agents', value: agents.length, unit: 'agents', trend: 'stable', trendPct: 0, period: 'current', calculatedAt: now },
-          { name: 'compliance_score', value: 100 - agents.filter((a) => a.compliance.drifted).length * 15, unit: '%', trend: 'stable', trendPct: 0, period: 'current', calculatedAt: now },
-          { name: 'total_cost', value: totalCost, unit: 'USD', trend: 'stable', trendPct: 0, period: 'current', calculatedAt: now },
-          { name: 'agent_utilization', value: Math.round(utilization), unit: '%', trend: 'stable', trendPct: 0, period: 'current', calculatedAt: now },
-          { name: 'token_spend', value: totalCost, unit: 'USD', trend: 'stable', trendPct: 0, period: 'current', calculatedAt: now },
+          {
+            name: 'total_executions',
+            value: totalExec,
+            unit: 'count',
+            trend: 'stable',
+            trendPct: 0,
+            period: 'current',
+            calculatedAt: now,
+          },
+          {
+            name: 'overall_success_rate',
+            value: totalExec > 0 ? (totalSuccess / totalExec) * 100 : 0,
+            unit: '%',
+            trend: 'stable',
+            trendPct: 0,
+            period: 'current',
+            calculatedAt: now,
+          },
+          {
+            name: 'avg_response_time',
+            value: Math.round(avgMs),
+            unit: 'ms',
+            trend: 'stable',
+            trendPct: 0,
+            period: 'current',
+            calculatedAt: now,
+          },
+          {
+            name: 'active_agents',
+            value: agents.length,
+            unit: 'agents',
+            trend: 'stable',
+            trendPct: 0,
+            period: 'current',
+            calculatedAt: now,
+          },
+          {
+            name: 'compliance_score',
+            value: 100 - agents.filter((a) => a.compliance.drifted).length * 15,
+            unit: '%',
+            trend: 'stable',
+            trendPct: 0,
+            period: 'current',
+            calculatedAt: now,
+          },
+          {
+            name: 'total_cost',
+            value: totalCost,
+            unit: 'USD',
+            trend: 'stable',
+            trendPct: 0,
+            period: 'current',
+            calculatedAt: now,
+          },
+          {
+            name: 'agent_utilization',
+            value: Math.round(utilization),
+            unit: '%',
+            trend: 'stable',
+            trendPct: 0,
+            period: 'current',
+            calculatedAt: now,
+          },
+          {
+            name: 'token_spend',
+            value: totalCost,
+            unit: 'USD',
+            trend: 'stable',
+            trendPct: 0,
+            period: 'current',
+            calculatedAt: now,
+          },
         ];
       }
     }
@@ -257,7 +330,11 @@ export function registerApiV1Routes(deps: ApiDependencies): void {
     // 8.4 — Materialized view query
     router.get('/api/v1/reporting/views/:viewName', async (ctx) => {
       const rows = await reporting.getBusinessMetricView(ctx.params.viewName, ctx.query);
-      sendJson(ctx.res, 200, { rows, count: (rows as unknown[]).length, timestamp: new Date().toISOString() });
+      sendJson(ctx.res, 200, {
+        rows,
+        count: (rows as unknown[]).length,
+        timestamp: new Date().toISOString(),
+      });
     });
 
     // 8.9 — SSE streaming endpoint
@@ -320,7 +397,9 @@ export function registerApiV1Routes(deps: ApiDependencies): void {
 
   // --- Operations (Section 12) ---
   router.get('/api/v1/ops/health', async (ctx) => {
-    const { getResourceUsage, getPerformanceRecommendations } = await import('../../ops/deployment.js');
+    const { getResourceUsage, getPerformanceRecommendations } = await import(
+      '../../ops/deployment.js'
+    );
     const resources = getResourceUsage();
     const recommendations = getPerformanceRecommendations(resources);
     sendJson(ctx.res, 200, {
@@ -334,7 +413,7 @@ export function registerApiV1Routes(deps: ApiDependencies): void {
   if (deps.alertManager) {
     router.get('/api/v1/ops/alerts', (ctx) => {
       sendJson(ctx.res, 200, {
-        alerts: deps.alertManager!.getAlerts(),
+        alerts: deps.alertManager?.getAlerts(),
         timestamp: new Date().toISOString(),
       });
     });
@@ -354,25 +433,97 @@ export function registerApiV1Routes(deps: ApiDependencies): void {
       },
       endpoints: [
         { method: 'GET', path: '/agents', description: 'List all agents with performance summary' },
-        { method: 'GET', path: '/agents/:agentId/performance', description: 'Detailed agent performance metrics and history' },
-        { method: 'GET', path: '/analytics/roi', description: 'ROI analysis with cost/revenue/savings breakdown', params: ['period'] },
-        { method: 'GET', path: '/analytics/costs', description: 'Cost breakdown by agent', params: ['period'] },
-        { method: 'GET', path: '/compliance', description: 'Overall compliance status across regulations' },
-        { method: 'GET', path: '/compliance/:regulation', description: 'Regulation-specific compliance records' },
-        { method: 'GET', path: '/compliance/violations', description: 'Active compliance violations sorted by severity' },
+        {
+          method: 'GET',
+          path: '/agents/:agentId/performance',
+          description: 'Detailed agent performance metrics and history',
+        },
+        {
+          method: 'GET',
+          path: '/analytics/roi',
+          description: 'ROI analysis with cost/revenue/savings breakdown',
+          params: ['period'],
+        },
+        {
+          method: 'GET',
+          path: '/analytics/costs',
+          description: 'Cost breakdown by agent',
+          params: ['period'],
+        },
+        {
+          method: 'GET',
+          path: '/compliance',
+          description: 'Overall compliance status across regulations',
+        },
+        {
+          method: 'GET',
+          path: '/compliance/:regulation',
+          description: 'Regulation-specific compliance records',
+        },
+        {
+          method: 'GET',
+          path: '/compliance/violations',
+          description: 'Active compliance violations sorted by severity',
+        },
         { method: 'GET', path: '/kpis', description: 'Executive KPI summary' },
-        { method: 'GET', path: '/anomalies', description: 'Detected anomalies', params: ['severity', 'acknowledged'] },
-        { method: 'GET', path: '/system/freshness', description: 'Data freshness status per source system' },
+        {
+          method: 'GET',
+          path: '/anomalies',
+          description: 'Detected anomalies',
+          params: ['severity', 'acknowledged'],
+        },
+        {
+          method: 'GET',
+          path: '/system/freshness',
+          description: 'Data freshness status per source system',
+        },
         { method: 'GET', path: '/system/usage', description: 'API usage statistics (last 24h)' },
-        { method: 'GET', path: '/reporting/soma', description: 'SOMA business intelligence report' },
-        { method: 'GET', path: '/reporting/access-metrics', description: 'BI access performance metrics' },
-        { method: 'GET', path: '/reporting/agents/:agentId/context', description: 'Business context enrichment for agent' },
-        { method: 'GET', path: '/reporting/views/:viewName', description: 'Query materialized business views' },
-        { method: 'GET', path: '/reporting/stream', description: 'SSE stream for real-time BI updates' },
-        { method: 'GET', path: '/decisions/patterns', description: 'Cross-agent pattern detection with business impact' },
-        { method: 'GET', path: '/decisions/recommendations', description: 'Business-context decision recommendations', params: ['role'] },
-        { method: 'GET', path: '/decisions/roi-analysis', description: 'Delegation effectiveness ROI analysis' },
-        { method: 'GET', path: '/decisions/compliance-risks', description: 'Compliance risk notifications' },
+        {
+          method: 'GET',
+          path: '/reporting/soma',
+          description: 'SOMA business intelligence report',
+        },
+        {
+          method: 'GET',
+          path: '/reporting/access-metrics',
+          description: 'BI access performance metrics',
+        },
+        {
+          method: 'GET',
+          path: '/reporting/agents/:agentId/context',
+          description: 'Business context enrichment for agent',
+        },
+        {
+          method: 'GET',
+          path: '/reporting/views/:viewName',
+          description: 'Query materialized business views',
+        },
+        {
+          method: 'GET',
+          path: '/reporting/stream',
+          description: 'SSE stream for real-time BI updates',
+        },
+        {
+          method: 'GET',
+          path: '/decisions/patterns',
+          description: 'Cross-agent pattern detection with business impact',
+        },
+        {
+          method: 'GET',
+          path: '/decisions/recommendations',
+          description: 'Business-context decision recommendations',
+          params: ['role'],
+        },
+        {
+          method: 'GET',
+          path: '/decisions/roi-analysis',
+          description: 'Delegation effectiveness ROI analysis',
+        },
+        {
+          method: 'GET',
+          path: '/decisions/compliance-risks',
+          description: 'Compliance risk notifications',
+        },
         { method: 'GET', path: '/decisions/alerts', description: 'Critical business alerts' },
         { method: 'GET', path: '/ops/health', description: 'Platform health and resource usage' },
         { method: 'GET', path: '/ops/alerts', description: 'Platform operational alerts' },

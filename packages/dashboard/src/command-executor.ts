@@ -516,7 +516,7 @@ export class CommandExecutor {
       };
 
       // Append to audit log file (JSONL format)
-      fs.appendFileSync(auditFile, JSON.stringify(auditEntry) + '\n', 'utf-8');
+      fs.appendFileSync(auditFile, `${JSON.stringify(auditEntry)}\n`, 'utf-8');
     } catch (error) {
       console.warn(`[CommandExecutor] Failed to write audit log: ${(error as Error).message}`);
     }

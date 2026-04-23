@@ -6,16 +6,16 @@
  * Provides fallback experiences while maintaining core functionality.
  */
 
-import React, { ReactNode, useMemo } from 'react';
-import type { OrganizationalTrace, OperatorContext } from '../../../types/organizational.js';
+import React, { type ReactNode, useMemo } from 'react';
+import type { OrganizationalTrace } from '../../../types/organizational.js';
 
 // Degradation level enum
 export type DegradationLevel =
-  | 'none'        // All organizational data available
-  | 'partial'     // Some data missing but core features work
-  | 'limited'     // Significant data missing, limited functionality
-  | 'minimal'     // Very limited data, basic fallbacks only
-  | 'unavailable';// No organizational data available
+  | 'none' // All organizational data available
+  | 'partial' // Some data missing but core features work
+  | 'limited' // Significant data missing, limited functionality
+  | 'minimal' // Very limited data, basic fallbacks only
+  | 'unavailable'; // No organizational data available
 
 // Data completeness assessment
 export interface OrganizationalDataCompleteness {
@@ -47,7 +47,10 @@ interface OrganizationalGracefulDegradationProps {
   className?: string;
 
   /** Callback when degradation level changes */
-  onDegradationChange?: (level: DegradationLevel, completeness: OrganizationalDataCompleteness) => void;
+  onDegradationChange?: (
+    level: DegradationLevel,
+    completeness: OrganizationalDataCompleteness,
+  ) => void;
 }
 
 // Props for individual degradation components
@@ -60,7 +63,7 @@ interface DegradationComponentProps {
  * Assess organizational data completeness
  */
 export function assessOrganizationalDataCompleteness(
-  trace?: OrganizationalTrace | null
+  trace?: OrganizationalTrace | null,
 ): OrganizationalDataCompleteness {
   if (!trace) {
     return {
@@ -68,7 +71,10 @@ export function assessOrganizationalDataCompleteness(
       score: 0,
       missing: ['trace', 'operatorContext', 'sessionCorrelation', 'policyStatus', 'teamMembership'],
       available: [],
-      recommendations: ['Enable organizational tracing features', 'Ensure Claude Code session hooks are configured']
+      recommendations: [
+        'Enable organizational tracing features',
+        'Ensure Claude Code session hooks are configured',
+      ],
     };
   }
 
@@ -117,8 +123,14 @@ export function assessOrganizationalDataCompleteness(
 
   // Calculate completeness score
   const totalFeatures = 5; // operatorContext, sessionCorrelation, policyStatus, sessionHooks, organizationalBriefing
-  const availableCount = available.filter(item =>
-    ['operatorContext', 'sessionCorrelation', 'policyStatus', 'sessionHooks', 'organizationalBriefing'].includes(item)
+  const availableCount = available.filter((item) =>
+    [
+      'operatorContext',
+      'sessionCorrelation',
+      'policyStatus',
+      'sessionHooks',
+      'organizationalBriefing',
+    ].includes(item),
   ).length;
   const score = availableCount / totalFeatures;
 
@@ -142,7 +154,10 @@ export function assessOrganizationalDataCompleteness(
 /**
  * Minimal organizational context display for degraded state
  */
-function MinimalOrganizationalContext({ completeness, compact = false }: DegradationComponentProps) {
+function MinimalOrganizationalContext({
+  completeness,
+  compact = false,
+}: DegradationComponentProps) {
   return (
     <div className={`org-card degraded minimal ${compact ? 'compact' : ''}`}>
       <div className="org-card__header">
@@ -158,8 +173,7 @@ function MinimalOrganizationalContext({ completeness, compact = false }: Degrada
           <div className="degraded-message__text">
             {compact
               ? 'Limited organizational features available'
-              : 'Some organizational context features are currently unavailable. Core tracing functionality remains active.'
-            }
+              : 'Some organizational context features are currently unavailable. Core tracing functionality remains active.'}
           </div>
         </div>
 
@@ -188,7 +202,10 @@ function MinimalOrganizationalContext({ completeness, compact = false }: Degrada
 /**
  * Partial organizational context display for degraded state
  */
-function PartialOrganizationalContext({ completeness, compact = false }: DegradationComponentProps) {
+function PartialOrganizationalContext({
+  completeness,
+  compact = false,
+}: DegradationComponentProps) {
   const hasOperatorContext = completeness.available.includes('operatorContext');
   const hasSessionCorrelation = completeness.available.includes('sessionCorrelation');
 
@@ -258,7 +275,10 @@ function PartialOrganizationalContext({ completeness, compact = false }: Degrada
 /**
  * Unavailable organizational context display
  */
-function UnavailableOrganizationalContext({ completeness, compact = false }: DegradationComponentProps) {
+function UnavailableOrganizationalContext({
+  completeness,
+  compact = false,
+}: DegradationComponentProps) {
   return (
     <div className={`org-card degraded unavailable ${compact ? 'compact' : ''}`}>
       <div className="org-card__header">
@@ -272,14 +292,11 @@ function UnavailableOrganizationalContext({ completeness, compact = false }: Deg
         <div className="degraded-unavailable">
           <div className="degraded-unavailable__icon">⚠️</div>
           <div className="degraded-unavailable__message">
-            <div className="degraded-unavailable__title">
-              Organizational features not available
-            </div>
+            <div className="degraded-unavailable__title">Organizational features not available</div>
             <div className="degraded-unavailable__description">
               {compact
                 ? 'Enable organizational tracing to see context features'
-                : 'This trace was created before organizational features were enabled, or organizational tracing is currently disabled.'
-              }
+                : 'This trace was created before organizational features were enabled, or organizational tracing is currently disabled.'}
             </div>
           </div>
         </div>
@@ -314,7 +331,7 @@ export function OrganizationalGracefulDegradation({
   fallback,
   showIndicators = true,
   className = '',
-  onDegradationChange
+  onDegradationChange,
 }: OrganizationalGracefulDegradationProps) {
   const completeness = useMemo(() => {
     return assessOrganizationalDataCompleteness(trace);
@@ -330,12 +347,18 @@ export function OrganizationalGracefulDegradation({
   // Get degradation level priority for comparison
   const getLevelPriority = (level: DegradationLevel): number => {
     switch (level) {
-      case 'none': return 5;
-      case 'partial': return 4;
-      case 'limited': return 3;
-      case 'minimal': return 2;
-      case 'unavailable': return 1;
-      default: return 0;
+      case 'none':
+        return 5;
+      case 'partial':
+        return 4;
+      case 'limited':
+        return 3;
+      case 'minimal':
+        return 2;
+      case 'unavailable':
+        return 1;
+      default:
+        return 0;
     }
   };
 
@@ -344,8 +367,10 @@ export function OrganizationalGracefulDegradation({
   const wrapperClasses = [
     'organizational-graceful-degradation',
     `degradation-${completeness.level}`,
-    className
-  ].filter(Boolean).join(' ');
+    className,
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   // Show children if data quality is sufficient
   if (shouldShowChildren) {
@@ -366,11 +391,7 @@ export function OrganizationalGracefulDegradation({
 
   // Show fallback component
   if (fallback) {
-    return (
-      <div className={wrapperClasses}>
-        {fallback}
-      </div>
-    );
+    return <div className={wrapperClasses}>{fallback}</div>;
   }
 
   // Show appropriate degraded component
@@ -381,8 +402,6 @@ export function OrganizationalGracefulDegradation({
     case 'partial':
     case 'limited':
       return <PartialOrganizationalContext completeness={completeness} />;
-
-    case 'unavailable':
     default:
       return <UnavailableOrganizationalContext completeness={completeness} />;
   }
@@ -399,12 +418,18 @@ export function useOrganizationalGracefulDegradation(trace?: OrganizationalTrace
   const canShowFeature = (minimumLevel: DegradationLevel): boolean => {
     const getLevelPriority = (level: DegradationLevel): number => {
       switch (level) {
-        case 'none': return 5;
-        case 'partial': return 4;
-        case 'limited': return 3;
-        case 'minimal': return 2;
-        case 'unavailable': return 1;
-        default: return 0;
+        case 'none':
+          return 5;
+        case 'partial':
+          return 4;
+        case 'limited':
+          return 3;
+        case 'minimal':
+          return 2;
+        case 'unavailable':
+          return 1;
+        default:
+          return 0;
       }
     };
 
@@ -422,7 +447,7 @@ export function useOrganizationalGracefulDegradation(trace?: OrganizationalTrace
     canShowFeature,
     getFeatureStatus,
     isDegraded: completeness.level !== 'none',
-    degradationLevel: completeness.level
+    degradationLevel: completeness.level,
   };
 }
 

@@ -90,7 +90,9 @@ export function createExecutionEvent(
     ...(failurePoint ? { failurePoint } : {}),
     ...(options?.processContext ? { processContext: options.processContext } : {}),
     ...(options?.semantic ? { semantic: options.semantic } : {}),
-    ...(graph.operatorContext ? { operatorId: graph.operatorContext.operatorId, operatorContext: graph.operatorContext } : {}),
+    ...(graph.operatorContext
+      ? { operatorId: graph.operatorContext.operatorId, operatorContext: graph.operatorContext }
+      : {}),
     violations: options?.violations ?? [],
   };
 }

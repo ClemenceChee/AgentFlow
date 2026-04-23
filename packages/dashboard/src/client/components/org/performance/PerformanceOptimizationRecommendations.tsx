@@ -1,11 +1,18 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import type React from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useOrganizationalContext } from '../../../contexts/OrganizationalContext';
 
 // Types for performance optimization recommendations
 interface OptimizationRecommendation {
   readonly id: string;
   readonly title: string;
-  readonly category: 'performance' | 'resource' | 'quality' | 'collaboration' | 'workflow' | 'infrastructure';
+  readonly category:
+    | 'performance'
+    | 'resource'
+    | 'quality'
+    | 'collaboration'
+    | 'workflow'
+    | 'infrastructure';
   readonly priority: 'low' | 'medium' | 'high' | 'critical';
   readonly confidence: number; // 0-1
   readonly description: string;
@@ -124,13 +131,13 @@ export const PerformanceOptimizationRecommendations: React.FC<Props> = ({
   teamId,
   autoGenerate = true,
   onRecommendationSelect,
-  onPlanCreate
+  onPlanCreate,
 }) => {
   const { selectedTeam, operatorContext } = useOrganizationalContext();
   const [viewMode, setViewMode] = useState<ViewMode>('recommendations');
   const [filterBy, setFilterBy] = useState<FilterBy>('all');
   const [sortBy, setSortBy] = useState<SortBy>('priority');
-  const [selectedRecommendations, setSelectedRecommendations] = useState<Set<string>>(new Set());
+  const [selectedRecommendations, _setSelectedRecommendations] = useState<Set<string>>(new Set());
   const [selectedRecommendation, setSelectedRecommendation] = useState<string | null>(null);
   const [showImplemented, setShowImplemented] = useState(false);
   const [generateInProgress, setGenerateInProgress] = useState(false);
@@ -138,408 +145,434 @@ export const PerformanceOptimizationRecommendations: React.FC<Props> = ({
   const effectiveTeamId = teamId || selectedTeam;
 
   // Mock recommendations data - replace with actual AI-generated recommendations
-  const mockRecommendations: OptimizationRecommendation[] = useMemo(() => [
-    {
-      id: 'rec-001',
-      title: 'Implement Semantic Query Caching',
-      category: 'performance',
-      priority: 'high',
-      confidence: 0.87,
-      description: 'Deploy semantic similarity-based caching to reduce redundant query processing and improve response times',
-      problem: {
-        summary: '35% of queries show high semantic similarity but bypass existing cache',
-        symptoms: [
-          'Cache hit rate below optimal (68% vs 85% target)',
-          'Redundant processing of similar queries',
-          'Increased token consumption for similar requests'
-        ],
-        affectedMetrics: ['cache_hit_rate', 'query_latency', 'token_usage'],
-        impactScore: 85
-      },
-      solution: {
-        approach: 'Implement vector-based semantic similarity matching for query caching',
-        implementation: [
-          'Deploy embedding service for query vectorization',
-          'Implement similarity threshold-based cache lookup',
-          'Add cache warming for high-frequency query patterns',
-          'Configure automatic cache invalidation policies'
-        ],
-        requirements: [
-          'Vector database (e.g., Pinecone, Weaviate)',
-          'Embedding model deployment',
-          'Cache infrastructure scaling',
-          'Monitoring and alerting setup'
-        ],
-        risks: [
-          'Initial performance overhead during index building',
-          'Similarity threshold tuning required',
-          'Increased infrastructure complexity'
-        ],
-        alternatives: [
-          'Traditional key-based caching with improved key normalization',
-          'Hybrid approach with both semantic and syntactic matching'
-        ]
-      },
-      impact: {
-        performanceGain: 40,
-        costReduction: 25,
-        qualityImprovement: 15,
-        userSatisfaction: 30,
-        timeToValue: '6-8 weeks'
-      },
-      effort: {
-        complexity: 'moderate',
-        estimatedHours: 120,
-        skillsRequired: ['Machine Learning', 'Vector Databases', 'Cache Architecture'],
-        teamInvolvement: ['Backend Team', 'ML Team', 'DevOps']
-      },
-      cost: {
-        implementation: 15000,
-        ongoing: 800,
-        roi: {
-          breakeven: '4 months',
-          yearOneValue: 45000,
-          confidenceInterval: [35000, 60000]
-        }
-      },
-      evidence: {
-        dataPoints: [
-          '35% query similarity overlap identified',
-          'Current cache miss penalty: 2.3s average',
-          'Token waste: $1,200/month on duplicate processing'
-        ],
-        benchmarks: [
-          'Industry standard: 85% cache hit rate',
-          'Similar implementation: 45% performance improvement',
-          'Vector caching ROI: 300% within 12 months'
-        ],
-        similarCases: [
-          'Company X: 60% latency reduction with semantic caching',
-          'Platform Y: 40% cost savings with vector-based cache'
-        ]
-      },
-      timeline: {
-        phases: [
-          {
-            name: 'Research & Design',
-            duration: '2 weeks',
-            deliverables: ['Architecture design', 'Technology selection', 'Performance modeling']
+  const mockRecommendations: OptimizationRecommendation[] = useMemo(
+    () => [
+      {
+        id: 'rec-001',
+        title: 'Implement Semantic Query Caching',
+        category: 'performance',
+        priority: 'high',
+        confidence: 0.87,
+        description:
+          'Deploy semantic similarity-based caching to reduce redundant query processing and improve response times',
+        problem: {
+          summary: '35% of queries show high semantic similarity but bypass existing cache',
+          symptoms: [
+            'Cache hit rate below optimal (68% vs 85% target)',
+            'Redundant processing of similar queries',
+            'Increased token consumption for similar requests',
+          ],
+          affectedMetrics: ['cache_hit_rate', 'query_latency', 'token_usage'],
+          impactScore: 85,
+        },
+        solution: {
+          approach: 'Implement vector-based semantic similarity matching for query caching',
+          implementation: [
+            'Deploy embedding service for query vectorization',
+            'Implement similarity threshold-based cache lookup',
+            'Add cache warming for high-frequency query patterns',
+            'Configure automatic cache invalidation policies',
+          ],
+          requirements: [
+            'Vector database (e.g., Pinecone, Weaviate)',
+            'Embedding model deployment',
+            'Cache infrastructure scaling',
+            'Monitoring and alerting setup',
+          ],
+          risks: [
+            'Initial performance overhead during index building',
+            'Similarity threshold tuning required',
+            'Increased infrastructure complexity',
+          ],
+          alternatives: [
+            'Traditional key-based caching with improved key normalization',
+            'Hybrid approach with both semantic and syntactic matching',
+          ],
+        },
+        impact: {
+          performanceGain: 40,
+          costReduction: 25,
+          qualityImprovement: 15,
+          userSatisfaction: 30,
+          timeToValue: '6-8 weeks',
+        },
+        effort: {
+          complexity: 'moderate',
+          estimatedHours: 120,
+          skillsRequired: ['Machine Learning', 'Vector Databases', 'Cache Architecture'],
+          teamInvolvement: ['Backend Team', 'ML Team', 'DevOps'],
+        },
+        cost: {
+          implementation: 15000,
+          ongoing: 800,
+          roi: {
+            breakeven: '4 months',
+            yearOneValue: 45000,
+            confidenceInterval: [35000, 60000],
           },
-          {
-            name: 'Implementation',
-            duration: '4 weeks',
-            deliverables: ['Vector service deployment', 'Cache integration', 'Testing framework']
+        },
+        evidence: {
+          dataPoints: [
+            '35% query similarity overlap identified',
+            'Current cache miss penalty: 2.3s average',
+            'Token waste: $1,200/month on duplicate processing',
+          ],
+          benchmarks: [
+            'Industry standard: 85% cache hit rate',
+            'Similar implementation: 45% performance improvement',
+            'Vector caching ROI: 300% within 12 months',
+          ],
+          similarCases: [
+            'Company X: 60% latency reduction with semantic caching',
+            'Platform Y: 40% cost savings with vector-based cache',
+          ],
+        },
+        timeline: {
+          phases: [
+            {
+              name: 'Research & Design',
+              duration: '2 weeks',
+              deliverables: ['Architecture design', 'Technology selection', 'Performance modeling'],
+            },
+            {
+              name: 'Implementation',
+              duration: '4 weeks',
+              deliverables: ['Vector service deployment', 'Cache integration', 'Testing framework'],
+            },
+            {
+              name: 'Optimization & Rollout',
+              duration: '2 weeks',
+              deliverables: ['Performance tuning', 'Production deployment', 'Monitoring setup'],
+            },
+          ],
+          milestones: [
+            {
+              name: 'Proof of Concept',
+              date: '2 weeks',
+              success_criteria: ['10% cache hit improvement', 'No performance degradation'],
+            },
+            {
+              name: 'Beta Deployment',
+              date: '6 weeks',
+              success_criteria: ['25% cache hit improvement', 'User acceptance testing passed'],
+            },
+          ],
+        },
+        monitoring: {
+          kpis: ['Cache hit rate', 'Query latency P95', 'Token consumption', 'User satisfaction'],
+          checkpoints: ['Weekly performance reviews', 'Monthly ROI assessment'],
+          rollbackPlan: 'Immediate fallback to existing cache with 5-minute switchover',
+        },
+      },
+      {
+        id: 'rec-002',
+        title: 'Operator Workflow Optimization',
+        category: 'workflow',
+        priority: 'medium',
+        confidence: 0.73,
+        description:
+          'Streamline repetitive operator workflows through intelligent automation and pattern recognition',
+        problem: {
+          summary: 'Analysis shows 25% of operator time spent on repetitive, automatable tasks',
+          symptoms: [
+            'High frequency of similar session patterns',
+            'Manual context switching overhead',
+            'Repetitive query formulation',
+          ],
+          affectedMetrics: ['operator_efficiency', 'task_completion_time', 'user_satisfaction'],
+          impactScore: 70,
+        },
+        solution: {
+          approach: 'Deploy workflow automation with smart suggestions and context preservation',
+          implementation: [
+            'Pattern recognition for common workflows',
+            'Automated context switching and state preservation',
+            'Intelligent query suggestions based on session history',
+            'Custom workflow templates for frequent patterns',
+          ],
+          requirements: [
+            'Workflow analysis engine',
+            'Pattern matching algorithms',
+            'User interface enhancements',
+            'Training data collection',
+          ],
+          risks: [
+            'User adoption resistance',
+            'Over-automation reducing flexibility',
+            'Pattern recognition accuracy concerns',
+          ],
+          alternatives: [
+            'Manual workflow documentation and training',
+            'Simple macro-based automation',
+          ],
+        },
+        impact: {
+          performanceGain: 25,
+          costReduction: 15,
+          qualityImprovement: 20,
+          userSatisfaction: 35,
+          timeToValue: '4-6 weeks',
+        },
+        effort: {
+          complexity: 'moderate',
+          estimatedHours: 80,
+          skillsRequired: ['UI/UX Design', 'Workflow Analysis', 'Pattern Recognition'],
+          teamInvolvement: ['Frontend Team', 'UX Team', 'Product Team'],
+        },
+        cost: {
+          implementation: 12000,
+          ongoing: 500,
+          roi: {
+            breakeven: '3 months',
+            yearOneValue: 32000,
+            confidenceInterval: [25000, 42000],
           },
-          {
-            name: 'Optimization & Rollout',
-            duration: '2 weeks',
-            deliverables: ['Performance tuning', 'Production deployment', 'Monitoring setup']
-          }
-        ],
-        milestones: [
-          {
-            name: 'Proof of Concept',
-            date: '2 weeks',
-            success_criteria: ['10% cache hit improvement', 'No performance degradation']
+        },
+        evidence: {
+          dataPoints: [
+            '25% time spent on repetitive tasks',
+            'Average 3.2 context switches per session',
+            '18 common workflow patterns identified',
+          ],
+          benchmarks: [
+            'Workflow automation: 30% efficiency gain typical',
+            'Context switching cost: 23 minutes lost per switch',
+          ],
+          similarCases: [
+            'Team A: 40% productivity increase with workflow automation',
+            'Organization B: 50% reduction in task completion time',
+          ],
+        },
+        timeline: {
+          phases: [
+            {
+              name: 'Analysis & Design',
+              duration: '1 week',
+              deliverables: ['Workflow analysis report', 'Automation opportunities', 'UI mockups'],
+            },
+            {
+              name: 'Development',
+              duration: '3 weeks',
+              deliverables: [
+                'Pattern recognition engine',
+                'UI enhancements',
+                'Automation framework',
+              ],
+            },
+            {
+              name: 'Testing & Rollout',
+              duration: '2 weeks',
+              deliverables: ['User testing', 'Feedback integration', 'Production deployment'],
+            },
+          ],
+          milestones: [
+            {
+              name: 'Pattern Analysis Complete',
+              date: '1 week',
+              success_criteria: ['18+ patterns identified', 'Automation opportunities prioritized'],
+            },
+            {
+              name: 'Beta Testing',
+              date: '4 weeks',
+              success_criteria: ['10+ users testing', '20% efficiency improvement measured'],
+            },
+          ],
+        },
+        monitoring: {
+          kpis: ['Task completion time', 'Context switch frequency', 'User satisfaction score'],
+          checkpoints: ['Bi-weekly user feedback sessions', 'Monthly efficiency metrics'],
+          rollbackPlan: 'Feature flags allow instant disable with no impact on core functionality',
+        },
+      },
+      {
+        id: 'rec-003',
+        title: 'Resource Allocation Optimization',
+        category: 'resource',
+        priority: 'critical',
+        confidence: 0.91,
+        description:
+          'Optimize resource allocation based on team workload patterns and performance analytics',
+        problem: {
+          summary: 'Resource utilization imbalance causing 40% efficiency loss in peak hours',
+          symptoms: [
+            'Peak hour bottlenecks with 200% over-capacity',
+            'Off-peak resource underutilization (30% capacity)',
+            'Team-specific resource contention patterns',
+          ],
+          affectedMetrics: ['resource_utilization', 'query_latency', 'cost_efficiency'],
+          impactScore: 92,
+        },
+        solution: {
+          approach: 'Implement dynamic resource allocation with predictive scaling',
+          implementation: [
+            'Workload pattern analysis and prediction',
+            'Auto-scaling policies based on team activity',
+            'Resource pool optimization for different query types',
+            'Load balancing improvements for peak distribution',
+          ],
+          requirements: [
+            'Predictive analytics platform',
+            'Auto-scaling infrastructure',
+            'Monitoring and alerting enhancements',
+            'Resource pool management system',
+          ],
+          risks: [
+            'Scaling latency during sudden spikes',
+            'Cost implications of over-provisioning',
+            'Complexity in multi-team resource sharing',
+          ],
+          alternatives: [
+            'Manual capacity planning with scheduled scaling',
+            'Fixed resource pools with overflow handling',
+          ],
+        },
+        impact: {
+          performanceGain: 60,
+          costReduction: 35,
+          qualityImprovement: 25,
+          userSatisfaction: 45,
+          timeToValue: '3-4 weeks',
+        },
+        effort: {
+          complexity: 'complex',
+          estimatedHours: 160,
+          skillsRequired: [
+            'Infrastructure Architecture',
+            'Predictive Analytics',
+            'Performance Optimization',
+          ],
+          teamInvolvement: ['Infrastructure Team', 'Data Science Team', 'All User Teams'],
+        },
+        cost: {
+          implementation: 25000,
+          ongoing: 1200,
+          roi: {
+            breakeven: '2 months',
+            yearOneValue: 85000,
+            confidenceInterval: [70000, 105000],
           },
-          {
-            name: 'Beta Deployment',
-            date: '6 weeks',
-            success_criteria: ['25% cache hit improvement', 'User acceptance testing passed']
-          }
-        ]
+        },
+        evidence: {
+          dataPoints: [
+            '200% over-capacity during peak hours (9-11 AM, 2-4 PM)',
+            '30% utilization during off-peak hours',
+            '$3,200/month waste due to poor allocation',
+          ],
+          benchmarks: [
+            'Industry optimal: 75-85% average utilization',
+            'Auto-scaling improvement: 50% efficiency gain typical',
+          ],
+          similarCases: [
+            'Enterprise C: 70% cost reduction with predictive scaling',
+            'Platform D: 80% performance improvement with dynamic allocation',
+          ],
+        },
+        timeline: {
+          phases: [
+            {
+              name: 'Analysis & Planning',
+              duration: '1 week',
+              deliverables: ['Workload analysis', 'Scaling strategy', 'Cost modeling'],
+            },
+            {
+              name: 'Infrastructure Setup',
+              duration: '2 weeks',
+              deliverables: ['Auto-scaling deployment', 'Monitoring setup', 'Resource pools'],
+            },
+            {
+              name: 'Optimization & Fine-tuning',
+              duration: '1 week',
+              deliverables: ['Performance tuning', 'Policy optimization', 'Validation testing'],
+            },
+          ],
+          milestones: [
+            {
+              name: 'Predictive Model Ready',
+              date: '1 week',
+              success_criteria: ['85%+ prediction accuracy', 'Real-time scaling decisions'],
+            },
+            {
+              name: 'Production Validation',
+              date: '3 weeks',
+              success_criteria: ['30% cost reduction achieved', 'No performance degradation'],
+            },
+          ],
+        },
+        monitoring: {
+          kpis: [
+            'Resource utilization %',
+            'Peak hour latency',
+            'Cost per query',
+            'Scaling accuracy',
+          ],
+          checkpoints: ['Daily scaling performance review', 'Weekly cost optimization assessment'],
+          rollbackPlan: 'Automated failover to fixed scaling with 2-minute transition',
+        },
       },
-      monitoring: {
-        kpis: ['Cache hit rate', 'Query latency P95', 'Token consumption', 'User satisfaction'],
-        checkpoints: ['Weekly performance reviews', 'Monthly ROI assessment'],
-        rollbackPlan: 'Immediate fallback to existing cache with 5-minute switchover'
-      }
-    },
-    {
-      id: 'rec-002',
-      title: 'Operator Workflow Optimization',
-      category: 'workflow',
-      priority: 'medium',
-      confidence: 0.73,
-      description: 'Streamline repetitive operator workflows through intelligent automation and pattern recognition',
-      problem: {
-        summary: 'Analysis shows 25% of operator time spent on repetitive, automatable tasks',
-        symptoms: [
-          'High frequency of similar session patterns',
-          'Manual context switching overhead',
-          'Repetitive query formulation'
-        ],
-        affectedMetrics: ['operator_efficiency', 'task_completion_time', 'user_satisfaction'],
-        impactScore: 70
-      },
-      solution: {
-        approach: 'Deploy workflow automation with smart suggestions and context preservation',
-        implementation: [
-          'Pattern recognition for common workflows',
-          'Automated context switching and state preservation',
-          'Intelligent query suggestions based on session history',
-          'Custom workflow templates for frequent patterns'
-        ],
-        requirements: [
-          'Workflow analysis engine',
-          'Pattern matching algorithms',
-          'User interface enhancements',
-          'Training data collection'
-        ],
-        risks: [
-          'User adoption resistance',
-          'Over-automation reducing flexibility',
-          'Pattern recognition accuracy concerns'
-        ],
-        alternatives: [
-          'Manual workflow documentation and training',
-          'Simple macro-based automation'
-        ]
-      },
-      impact: {
-        performanceGain: 25,
-        costReduction: 15,
-        qualityImprovement: 20,
-        userSatisfaction: 35,
-        timeToValue: '4-6 weeks'
-      },
-      effort: {
-        complexity: 'moderate',
-        estimatedHours: 80,
-        skillsRequired: ['UI/UX Design', 'Workflow Analysis', 'Pattern Recognition'],
-        teamInvolvement: ['Frontend Team', 'UX Team', 'Product Team']
-      },
-      cost: {
-        implementation: 12000,
-        ongoing: 500,
-        roi: {
-          breakeven: '3 months',
-          yearOneValue: 32000,
-          confidenceInterval: [25000, 42000]
-        }
-      },
-      evidence: {
-        dataPoints: [
-          '25% time spent on repetitive tasks',
-          'Average 3.2 context switches per session',
-          '18 common workflow patterns identified'
-        ],
-        benchmarks: [
-          'Workflow automation: 30% efficiency gain typical',
-          'Context switching cost: 23 minutes lost per switch'
-        ],
-        similarCases: [
-          'Team A: 40% productivity increase with workflow automation',
-          'Organization B: 50% reduction in task completion time'
-        ]
-      },
-      timeline: {
-        phases: [
-          {
-            name: 'Analysis & Design',
-            duration: '1 week',
-            deliverables: ['Workflow analysis report', 'Automation opportunities', 'UI mockups']
-          },
-          {
-            name: 'Development',
-            duration: '3 weeks',
-            deliverables: ['Pattern recognition engine', 'UI enhancements', 'Automation framework']
-          },
-          {
-            name: 'Testing & Rollout',
-            duration: '2 weeks',
-            deliverables: ['User testing', 'Feedback integration', 'Production deployment']
-          }
-        ],
-        milestones: [
-          {
-            name: 'Pattern Analysis Complete',
-            date: '1 week',
-            success_criteria: ['18+ patterns identified', 'Automation opportunities prioritized']
-          },
-          {
-            name: 'Beta Testing',
-            date: '4 weeks',
-            success_criteria: ['10+ users testing', '20% efficiency improvement measured']
-          }
-        ]
-      },
-      monitoring: {
-        kpis: ['Task completion time', 'Context switch frequency', 'User satisfaction score'],
-        checkpoints: ['Bi-weekly user feedback sessions', 'Monthly efficiency metrics'],
-        rollbackPlan: 'Feature flags allow instant disable with no impact on core functionality'
-      }
-    },
-    {
-      id: 'rec-003',
-      title: 'Resource Allocation Optimization',
-      category: 'resource',
-      priority: 'critical',
-      confidence: 0.91,
-      description: 'Optimize resource allocation based on team workload patterns and performance analytics',
-      problem: {
-        summary: 'Resource utilization imbalance causing 40% efficiency loss in peak hours',
-        symptoms: [
-          'Peak hour bottlenecks with 200% over-capacity',
-          'Off-peak resource underutilization (30% capacity)',
-          'Team-specific resource contention patterns'
-        ],
-        affectedMetrics: ['resource_utilization', 'query_latency', 'cost_efficiency'],
-        impactScore: 92
-      },
-      solution: {
-        approach: 'Implement dynamic resource allocation with predictive scaling',
-        implementation: [
-          'Workload pattern analysis and prediction',
-          'Auto-scaling policies based on team activity',
-          'Resource pool optimization for different query types',
-          'Load balancing improvements for peak distribution'
-        ],
-        requirements: [
-          'Predictive analytics platform',
-          'Auto-scaling infrastructure',
-          'Monitoring and alerting enhancements',
-          'Resource pool management system'
-        ],
-        risks: [
-          'Scaling latency during sudden spikes',
-          'Cost implications of over-provisioning',
-          'Complexity in multi-team resource sharing'
-        ],
-        alternatives: [
-          'Manual capacity planning with scheduled scaling',
-          'Fixed resource pools with overflow handling'
-        ]
-      },
-      impact: {
-        performanceGain: 60,
-        costReduction: 35,
-        qualityImprovement: 25,
-        userSatisfaction: 45,
-        timeToValue: '3-4 weeks'
-      },
-      effort: {
-        complexity: 'complex',
-        estimatedHours: 160,
-        skillsRequired: ['Infrastructure Architecture', 'Predictive Analytics', 'Performance Optimization'],
-        teamInvolvement: ['Infrastructure Team', 'Data Science Team', 'All User Teams']
-      },
-      cost: {
-        implementation: 25000,
-        ongoing: 1200,
-        roi: {
-          breakeven: '2 months',
-          yearOneValue: 85000,
-          confidenceInterval: [70000, 105000]
-        }
-      },
-      evidence: {
-        dataPoints: [
-          '200% over-capacity during peak hours (9-11 AM, 2-4 PM)',
-          '30% utilization during off-peak hours',
-          '$3,200/month waste due to poor allocation'
-        ],
-        benchmarks: [
-          'Industry optimal: 75-85% average utilization',
-          'Auto-scaling improvement: 50% efficiency gain typical'
-        ],
-        similarCases: [
-          'Enterprise C: 70% cost reduction with predictive scaling',
-          'Platform D: 80% performance improvement with dynamic allocation'
-        ]
-      },
-      timeline: {
-        phases: [
-          {
-            name: 'Analysis & Planning',
-            duration: '1 week',
-            deliverables: ['Workload analysis', 'Scaling strategy', 'Cost modeling']
-          },
-          {
-            name: 'Infrastructure Setup',
-            duration: '2 weeks',
-            deliverables: ['Auto-scaling deployment', 'Monitoring setup', 'Resource pools']
-          },
-          {
-            name: 'Optimization & Fine-tuning',
-            duration: '1 week',
-            deliverables: ['Performance tuning', 'Policy optimization', 'Validation testing']
-          }
-        ],
-        milestones: [
-          {
-            name: 'Predictive Model Ready',
-            date: '1 week',
-            success_criteria: ['85%+ prediction accuracy', 'Real-time scaling decisions']
-          },
-          {
-            name: 'Production Validation',
-            date: '3 weeks',
-            success_criteria: ['30% cost reduction achieved', 'No performance degradation']
-          }
-        ]
-      },
-      monitoring: {
-        kpis: ['Resource utilization %', 'Peak hour latency', 'Cost per query', 'Scaling accuracy'],
-        checkpoints: ['Daily scaling performance review', 'Weekly cost optimization assessment'],
-        rollbackPlan: 'Automated failover to fixed scaling with 2-minute transition'
-      }
-    }
-  ], []);
+    ],
+    [],
+  );
 
-  const mockGroups: RecommendationGroup[] = useMemo(() => [
-    {
-      groupId: 'group-performance',
-      name: 'Performance Enhancement Suite',
-      description: 'Comprehensive performance improvements targeting latency, throughput, and user experience',
-      recommendations: ['rec-001', 'rec-003'],
-      combinedImpact: {
-        totalGain: 75,
-        synergies: [
-          'Semantic caching reduces load on optimized resource pools',
-          'Resource allocation improvements enhance cache performance'
-        ],
-        conflicts: []
+  const mockGroups: RecommendationGroup[] = useMemo(
+    () => [
+      {
+        groupId: 'group-performance',
+        name: 'Performance Enhancement Suite',
+        description:
+          'Comprehensive performance improvements targeting latency, throughput, and user experience',
+        recommendations: ['rec-001', 'rec-003'],
+        combinedImpact: {
+          totalGain: 75,
+          synergies: [
+            'Semantic caching reduces load on optimized resource pools',
+            'Resource allocation improvements enhance cache performance',
+          ],
+          conflicts: [],
+        },
+        implementationOrder: ['rec-003', 'rec-001'],
       },
-      implementationOrder: ['rec-003', 'rec-001']
-    },
-    {
-      groupId: 'group-efficiency',
-      name: 'Operational Efficiency Package',
-      description: 'Workflow and resource optimizations for maximum operational efficiency',
-      recommendations: ['rec-002', 'rec-003'],
-      combinedImpact: {
-        totalGain: 65,
-        synergies: [
-          'Automated workflows reduce resource contention',
-          'Resource optimization enables better workflow performance'
-        ],
-        conflicts: []
+      {
+        groupId: 'group-efficiency',
+        name: 'Operational Efficiency Package',
+        description: 'Workflow and resource optimizations for maximum operational efficiency',
+        recommendations: ['rec-002', 'rec-003'],
+        combinedImpact: {
+          totalGain: 65,
+          synergies: [
+            'Automated workflows reduce resource contention',
+            'Resource optimization enables better workflow performance',
+          ],
+          conflicts: [],
+        },
+        implementationOrder: ['rec-002', 'rec-003'],
       },
-      implementationOrder: ['rec-002', 'rec-003']
-    }
-  ], []);
+    ],
+    [],
+  );
 
-  const mockAlerts: OptimizationAlert[] = useMemo(() => [
-    {
-      id: 'alert-opt-001',
-      type: 'cost_spike',
-      severity: 'high',
-      message: 'Resource costs increased 45% due to inefficient allocation patterns',
-      affectedAreas: ['Infrastructure', 'Query Processing'],
-      recommendationIds: ['rec-003'],
-      triggeredAt: Date.now() - 1800000
-    },
-    {
-      id: 'alert-opt-002',
-      type: 'performance_regression',
-      severity: 'medium',
-      message: 'Cache hit rate declined 12% over the past week',
-      affectedAreas: ['Caching', 'Query Performance'],
-      recommendationIds: ['rec-001'],
-      triggeredAt: Date.now() - 3600000
-    }
-  ], []);
+  const mockAlerts: OptimizationAlert[] = useMemo(
+    () => [
+      {
+        id: 'alert-opt-001',
+        type: 'cost_spike',
+        severity: 'high',
+        message: 'Resource costs increased 45% due to inefficient allocation patterns',
+        affectedAreas: ['Infrastructure', 'Query Processing'],
+        recommendationIds: ['rec-003'],
+        triggeredAt: Date.now() - 1800000,
+      },
+      {
+        id: 'alert-opt-002',
+        type: 'performance_regression',
+        severity: 'medium',
+        message: 'Cache hit rate declined 12% over the past week',
+        affectedAreas: ['Caching', 'Query Performance'],
+        recommendationIds: ['rec-001'],
+        triggeredAt: Date.now() - 3600000,
+      },
+    ],
+    [],
+  );
 
   // Generate recommendations effect
   useEffect(() => {
@@ -563,26 +596,30 @@ export const PerformanceOptimizationRecommendations: React.FC<Props> = ({
 
     // Apply filters
     if (filterBy === 'high_impact') {
-      filtered = filtered.filter(rec => rec.problem.impactScore >= 80);
+      filtered = filtered.filter((rec) => rec.problem.impactScore >= 80);
     } else if (filterBy === 'quick_wins') {
-      filtered = filtered.filter(rec => rec.effort.complexity === 'simple' && rec.impact.performanceGain >= 20);
+      filtered = filtered.filter(
+        (rec) => rec.effort.complexity === 'simple' && rec.impact.performanceGain >= 20,
+      );
     } else if (filterBy === 'strategic') {
-      filtered = filtered.filter(rec => rec.priority === 'high' || rec.priority === 'critical');
+      filtered = filtered.filter((rec) => rec.priority === 'high' || rec.priority === 'critical');
     } else if (filterBy === 'technical') {
-      filtered = filtered.filter(rec => ['performance', 'infrastructure'].includes(rec.category));
+      filtered = filtered.filter((rec) => ['performance', 'infrastructure'].includes(rec.category));
     }
 
     // Apply sorting
     return filtered.sort((a, b) => {
       switch (sortBy) {
-        case 'priority':
+        case 'priority': {
           const priorityOrder = { critical: 4, high: 3, medium: 2, low: 1 };
           return priorityOrder[b.priority] - priorityOrder[a.priority];
+        }
         case 'impact':
           return b.problem.impactScore - a.problem.impactScore;
-        case 'effort':
+        case 'effort': {
           const effortOrder = { simple: 1, moderate: 2, complex: 3, enterprise: 4 };
           return effortOrder[a.effort.complexity] - effortOrder[b.effort.complexity];
+        }
         case 'roi':
           return b.cost.roi.yearOneValue - a.cost.roi.yearOneValue;
         case 'confidence':
@@ -591,27 +628,39 @@ export const PerformanceOptimizationRecommendations: React.FC<Props> = ({
           return 0;
       }
     });
-  }, [filterBy, sortBy]);
+  }, [filterBy, sortBy, mockRecommendations]);
 
   const getPriorityColor = (priority: string): string => {
     switch (priority) {
-      case 'critical': return 'var(--org-alert-critical)';
-      case 'high': return 'var(--org-alert-high)';
-      case 'medium': return 'var(--org-alert-medium)';
-      case 'low': return 'var(--org-alert-low)';
-      default: return 'var(--org-text-muted)';
+      case 'critical':
+        return 'var(--org-alert-critical)';
+      case 'high':
+        return 'var(--org-alert-high)';
+      case 'medium':
+        return 'var(--org-alert-medium)';
+      case 'low':
+        return 'var(--org-alert-low)';
+      default:
+        return 'var(--org-text-muted)';
     }
   };
 
   const getCategoryIcon = (category: string): string => {
     switch (category) {
-      case 'performance': return '⚡';
-      case 'resource': return '💰';
-      case 'quality': return '✨';
-      case 'collaboration': return '👥';
-      case 'workflow': return '🔄';
-      case 'infrastructure': return '🏗️';
-      default: return '📊';
+      case 'performance':
+        return '⚡';
+      case 'resource':
+        return '💰';
+      case 'quality':
+        return '✨';
+      case 'collaboration':
+        return '👥';
+      case 'workflow':
+        return '🔄';
+      case 'infrastructure':
+        return '🏗️';
+      default:
+        return '📊';
     }
   };
 
@@ -650,13 +699,17 @@ export const PerformanceOptimizationRecommendations: React.FC<Props> = ({
           <div
             key={recommendation.id}
             className={`org-recommendation-card ${selectedRecommendation === recommendation.id ? 'org-selected' : ''}`}
-            onClick={() => setSelectedRecommendation(
-              selectedRecommendation === recommendation.id ? null : recommendation.id
-            )}
+            onClick={() =>
+              setSelectedRecommendation(
+                selectedRecommendation === recommendation.id ? null : recommendation.id,
+              )
+            }
           >
             <div className="org-recommendation-header">
               <div className="org-recommendation-title">
-                <span className="org-category-icon">{getCategoryIcon(recommendation.category)}</span>
+                <span className="org-category-icon">
+                  {getCategoryIcon(recommendation.category)}
+                </span>
                 <h4>{recommendation.title}</h4>
               </div>
               <div className="org-recommendation-badges">
@@ -699,11 +752,15 @@ export const PerformanceOptimizationRecommendations: React.FC<Props> = ({
                 </div>
               </div>
               <div className="org-effort-info">
-                <span className={`org-complexity-indicator org-complexity-${recommendation.effort.complexity}`}>
+                <span
+                  className={`org-complexity-indicator org-complexity-${recommendation.effort.complexity}`}
+                >
                   {recommendation.effort.complexity}
                 </span>
                 <span className="org-timeline">{recommendation.impact.timeToValue}</span>
-                <span className="org-roi">${recommendation.cost.roi.yearOneValue.toLocaleString()} ROI</span>
+                <span className="org-roi">
+                  ${recommendation.cost.roi.yearOneValue.toLocaleString()} ROI
+                </span>
               </div>
             </div>
 
@@ -778,12 +835,8 @@ export const PerformanceOptimizationRecommendations: React.FC<Props> = ({
                   >
                     Select for Implementation
                   </button>
-                  <button className="org-button org-button-secondary">
-                    Add to Plan
-                  </button>
-                  <button className="org-button org-button-tertiary">
-                    View Evidence
-                  </button>
+                  <button className="org-button org-button-secondary">Add to Plan</button>
+                  <button className="org-button org-button-tertiary">View Evidence</button>
                 </div>
               </div>
             )}
@@ -812,15 +865,13 @@ export const PerformanceOptimizationRecommendations: React.FC<Props> = ({
               </div>
             </div>
 
-            <div className="org-group-description">
-              {group.description}
-            </div>
+            <div className="org-group-description">{group.description}</div>
 
             <div className="org-group-recommendations">
               <h5>Included Recommendations:</h5>
               <div className="org-rec-list">
                 {group.recommendations.map((recId) => {
-                  const rec = mockRecommendations.find(r => r.id === recId);
+                  const rec = mockRecommendations.find((r) => r.id === recId);
                   return rec ? (
                     <div key={recId} className="org-rec-item">
                       <span className="org-rec-title">{rec.title}</span>
@@ -846,10 +897,8 @@ export const PerformanceOptimizationRecommendations: React.FC<Props> = ({
               <h6>Recommended Implementation Order:</h6>
               <ol>
                 {group.implementationOrder.map((recId, index) => {
-                  const rec = mockRecommendations.find(r => r.id === recId);
-                  return rec ? (
-                    <li key={index}>{rec.title}</li>
-                  ) : null;
+                  const rec = mockRecommendations.find((r) => r.id === recId);
+                  return rec ? <li key={index}>{rec.title}</li> : null;
                 })}
               </ol>
             </div>
@@ -875,13 +924,18 @@ export const PerformanceOptimizationRecommendations: React.FC<Props> = ({
           </div>
           <div className="org-impact-card">
             <div className="org-impact-value">
-              ${mockRecommendations.reduce((sum, rec) => sum + rec.cost.roi.yearOneValue, 0).toLocaleString()}
+              $
+              {mockRecommendations
+                .reduce((sum, rec) => sum + rec.cost.roi.yearOneValue, 0)
+                .toLocaleString()}
             </div>
             <div className="org-impact-label">Total Year One Value</div>
           </div>
           <div className="org-impact-card">
             <div className="org-impact-value">
-              {Math.round(mockRecommendations.reduce((sum, rec) => sum + rec.effort.estimatedHours, 0) / 40)}
+              {Math.round(
+                mockRecommendations.reduce((sum, rec) => sum + rec.effort.estimatedHours, 0) / 40,
+              )}
             </div>
             <div className="org-impact-label">Weeks to Implement All</div>
           </div>
@@ -895,22 +949,36 @@ export const PerformanceOptimizationRecommendations: React.FC<Props> = ({
             {/* Grid */}
             <defs>
               <pattern id="grid" width="40" height="30" patternUnits="userSpaceOnUse">
-                <path d="M 40 0 L 0 0 0 30" fill="none" stroke="var(--org-border)" strokeWidth="1" opacity="0.3"/>
+                <path
+                  d="M 40 0 L 0 0 0 30"
+                  fill="none"
+                  stroke="var(--org-border)"
+                  strokeWidth="1"
+                  opacity="0.3"
+                />
               </pattern>
             </defs>
             <rect width="400" height="300" fill="url(#grid)" />
 
             {/* Quadrant labels */}
-            <text x="100" y="50" textAnchor="middle" className="org-quadrant-label">High Impact, Low Effort</text>
-            <text x="300" y="50" textAnchor="middle" className="org-quadrant-label">High Impact, High Effort</text>
-            <text x="100" y="250" textAnchor="middle" className="org-quadrant-label">Low Impact, Low Effort</text>
-            <text x="300" y="250" textAnchor="middle" className="org-quadrant-label">Low Impact, High Effort</text>
+            <text x="100" y="50" textAnchor="middle" className="org-quadrant-label">
+              High Impact, Low Effort
+            </text>
+            <text x="300" y="50" textAnchor="middle" className="org-quadrant-label">
+              High Impact, High Effort
+            </text>
+            <text x="100" y="250" textAnchor="middle" className="org-quadrant-label">
+              Low Impact, Low Effort
+            </text>
+            <text x="300" y="250" textAnchor="middle" className="org-quadrant-label">
+              Low Impact, High Effort
+            </text>
 
             {/* Plot recommendations */}
-            {mockRecommendations.map((rec, index) => {
+            {mockRecommendations.map((rec, _index) => {
               const effortMap = { simple: 25, moderate: 75, complex: 125, enterprise: 175 };
               const x = 50 + effortMap[rec.effort.complexity];
-              const y = 250 - (rec.problem.impactScore * 2);
+              const y = 250 - rec.problem.impactScore * 2;
 
               return (
                 <circle
@@ -958,7 +1026,7 @@ export const PerformanceOptimizationRecommendations: React.FC<Props> = ({
           { key: 'groups', label: `Groups (${mockGroups.length})` },
           { key: 'implementation', label: 'Implementation' },
           { key: 'impact', label: 'Impact Analysis' },
-          { key: 'monitoring', label: 'Monitoring' }
+          { key: 'monitoring', label: 'Monitoring' },
         ].map((tab) => (
           <button
             key={tab.key}

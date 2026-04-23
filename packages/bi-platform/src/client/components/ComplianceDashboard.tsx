@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import type { ComplianceResponse, ViolationsResponse, Violation } from '../hooks/useCompliance';
+import { useState } from 'react';
 import type { AnomaliesResponse } from '../hooks/useAnomalies';
+import type { ComplianceResponse, Violation, ViolationsResponse } from '../hooks/useCompliance';
 import { ComplianceGauge } from './charts/ComplianceGauge';
 
 interface Props {
@@ -21,8 +21,10 @@ export function ComplianceDashboard({ compliance, anomalies }: Props) {
   }
 
   const filteredViolations = selectedReg
-    ? (violations?.violations ?? []).filter((v) => v.regulation.toLowerCase() === selectedReg.toLowerCase())
-    : violations?.violations ?? [];
+    ? (violations?.violations ?? []).filter(
+        (v) => v.regulation.toLowerCase() === selectedReg.toLowerCase(),
+      )
+    : (violations?.violations ?? []);
 
   return (
     <div>
@@ -46,14 +48,18 @@ export function ComplianceDashboard({ compliance, anomalies }: Props) {
               <SummaryRow
                 label="Critical / High"
                 value={String(
-                  (violations?.violations ?? []).filter((v) => v.severity === 'critical' || v.severity === 'high').length,
+                  (violations?.violations ?? []).filter(
+                    (v) => v.severity === 'critical' || v.severity === 'high',
+                  ).length,
                 )}
                 color="var(--fail)"
               />
               <SummaryRow
                 label="Compliance Anomalies"
                 value={String(
-                  (anomalies?.anomalies ?? []).filter((a) => a.source_system === 'opsintel' && !a.acknowledged).length,
+                  (anomalies?.anomalies ?? []).filter(
+                    (a) => a.source_system === 'opsintel' && !a.acknowledged,
+                  ).length,
                 )}
               />
             </div>
@@ -69,10 +75,16 @@ export function ComplianceDashboard({ compliance, anomalies }: Props) {
 
       {/* Tabs */}
       <div className="bi-tabs">
-        <button className={`bi-tab${tab === 'overview' ? ' bi-tab--active' : ''}`} onClick={() => setTab('overview')}>
+        <button
+          className={`bi-tab${tab === 'overview' ? ' bi-tab--active' : ''}`}
+          onClick={() => setTab('overview')}
+        >
           Regulations
         </button>
-        <button className={`bi-tab${tab === 'violations' ? ' bi-tab--active' : ''}`} onClick={() => setTab('violations')}>
+        <button
+          className={`bi-tab${tab === 'violations' ? ' bi-tab--active' : ''}`}
+          onClick={() => setTab('violations')}
+        >
           Violations ({violations?.activeViolations ?? 0})
         </button>
       </div>
@@ -92,7 +104,9 @@ export function ComplianceDashboard({ compliance, anomalies }: Props) {
             >
               <div className="bi-reg__header">
                 <span className="bi-reg__name">{reg.regulation}</span>
-                <span className={`badge badge--${reg.compliancePct >= 90 ? 'ok' : reg.compliancePct >= 70 ? 'warn' : 'fail'}`}>
+                <span
+                  className={`badge badge--${reg.compliancePct >= 90 ? 'ok' : reg.compliancePct >= 70 ? 'warn' : 'fail'}`}
+                >
                   {reg.compliancePct.toFixed(0)}%
                 </span>
               </div>
@@ -101,7 +115,12 @@ export function ComplianceDashboard({ compliance, anomalies }: Props) {
                   className="bi-reg__bar-fill"
                   style={{
                     width: `${reg.compliancePct}%`,
-                    background: reg.compliancePct >= 90 ? 'var(--ok)' : reg.compliancePct >= 70 ? 'var(--warn)' : 'var(--fail)',
+                    background:
+                      reg.compliancePct >= 90
+                        ? 'var(--ok)'
+                        : reg.compliancePct >= 70
+                          ? 'var(--warn)'
+                          : 'var(--fail)',
                   }}
                 />
               </div>
@@ -119,13 +138,27 @@ export function ComplianceDashboard({ compliance, anomalies }: Props) {
       {tab === 'violations' && (
         <div className="bi-card bi-card--flush">
           {selectedReg && (
-            <div style={{ padding: 'var(--s3)', borderBottom: '1px solid var(--bdm)', display: 'flex', alignItems: 'center', gap: 'var(--s2)' }}>
-              <span style={{ fontSize: 'var(--sm)', color: 'var(--t2)' }}>Filtered: {selectedReg}</span>
-              <button className="bi-btn bi-btn--sm" onClick={() => setSelectedReg(null)}>Clear</button>
+            <div
+              style={{
+                padding: 'var(--s3)',
+                borderBottom: '1px solid var(--bdm)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 'var(--s2)',
+              }}
+            >
+              <span style={{ fontSize: 'var(--sm)', color: 'var(--t2)' }}>
+                Filtered: {selectedReg}
+              </span>
+              <button className="bi-btn bi-btn--sm" onClick={() => setSelectedReg(null)}>
+                Clear
+              </button>
             </div>
           )}
           {filteredViolations.length === 0 ? (
-            <div className="bi-empty"><span>No violations{selectedReg ? ` for ${selectedReg}` : ''}</span></div>
+            <div className="bi-empty">
+              <span>No violations{selectedReg ? ` for ${selectedReg}` : ''}</span>
+            </div>
           ) : (
             <div>
               {filteredViolations.map((v) => (
@@ -153,7 +186,16 @@ function SummaryRow({ label, value, color }: { label: string; value: string; col
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
       <span style={{ fontSize: 'var(--sm)', color: 'var(--t2)' }}>{label}</span>
-      <span style={{ fontFamily: 'var(--fm)', fontSize: 'var(--sm)', fontWeight: 600, color: color || 'var(--t1)' }}>{value}</span>
+      <span
+        style={{
+          fontFamily: 'var(--fm)',
+          fontSize: 'var(--sm)',
+          fontWeight: 600,
+          color: color || 'var(--t1)',
+        }}
+      >
+        {value}
+      </span>
     </div>
   );
 }
@@ -175,13 +217,35 @@ function SeverityBreakdown({ violations }: { violations: Violation[] }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s2)' }}>
       {items.map(({ key, color }) => (
         <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 'var(--s2)' }}>
-          <span style={{ width: 60, fontSize: 'var(--xs)', color: 'var(--t3)', textTransform: 'capitalize' }}>{key}</span>
+          <span
+            style={{
+              width: 60,
+              fontSize: 'var(--xs)',
+              color: 'var(--t3)',
+              textTransform: 'capitalize',
+            }}
+          >
+            {key}
+          </span>
           <div style={{ flex: 1 }}>
             <div className="bi-cost-bar">
-              <div className="bi-cost-bar__fill" style={{ width: `${(counts[key as keyof typeof counts] / total) * 100}%`, background: color }} />
+              <div
+                className="bi-cost-bar__fill"
+                style={{
+                  width: `${(counts[key as keyof typeof counts] / total) * 100}%`,
+                  background: color,
+                }}
+              />
             </div>
           </div>
-          <span style={{ width: 24, textAlign: 'right', fontFamily: 'var(--fm)', fontSize: 'var(--xs)' }}>
+          <span
+            style={{
+              width: 24,
+              textAlign: 'right',
+              fontFamily: 'var(--fm)',
+              fontSize: 'var(--xs)',
+            }}
+          >
             {counts[key as keyof typeof counts]}
           </span>
         </div>

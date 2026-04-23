@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import type React from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useOrganizationalContext } from '../../../contexts/OrganizationalContext';
 
 // Types for organizational intelligence metrics
@@ -25,7 +26,11 @@ interface CorrelationMetrics {
   readonly targetSessionId: string;
   readonly teamIds: string[];
   readonly timestamp: number;
-  readonly correlationType: 'workflow_similarity' | 'problem_pattern' | 'knowledge_transfer' | 'solution_reuse';
+  readonly correlationType:
+    | 'workflow_similarity'
+    | 'problem_pattern'
+    | 'knowledge_transfer'
+    | 'solution_reuse';
   readonly confidenceScore: number; // 0-1
   readonly computationTime: number; // milliseconds
   readonly similarityScore: number; // 0-1
@@ -68,7 +73,12 @@ interface IntelligencePerformanceSummary {
 
 interface QualityAlert {
   readonly id: string;
-  readonly type: 'low_briefing_accuracy' | 'slow_generation' | 'poor_correlation' | 'high_token_usage' | 'low_user_satisfaction';
+  readonly type:
+    | 'low_briefing_accuracy'
+    | 'slow_generation'
+    | 'poor_correlation'
+    | 'high_token_usage'
+    | 'low_user_satisfaction';
   readonly severity: 'low' | 'medium' | 'high' | 'critical';
   readonly message: string;
   readonly threshold: number;
@@ -80,7 +90,11 @@ interface QualityAlert {
 
 interface OptimizerRecommendation {
   readonly id: string;
-  readonly category: 'model_tuning' | 'context_optimization' | 'caching_strategy' | 'workflow_improvement';
+  readonly category:
+    | 'model_tuning'
+    | 'context_optimization'
+    | 'caching_strategy'
+    | 'workflow_improvement';
   readonly title: string;
   readonly description: string;
   readonly impact: {
@@ -133,12 +147,12 @@ export const OrganizationalIntelligenceMetrics: React.FC<Props> = ({
   className = '',
   teamId,
   showRealTime = true,
-  onAlertTriggered
+  onAlertTriggered,
 }) => {
   const { selectedTeam, operatorContext } = useOrganizationalContext();
   const [metricView, setMetricView] = useState<MetricView>('overview');
   const [timeRange, setTimeRange] = useState<TimeRange>('24h');
-  const [selectedMetric, setSelectedMetric] = useState<string | null>(null);
+  const [_selectedMetric, _setSelectedMetric] = useState<string | null>(null);
   const [showAlerts, setShowAlerts] = useState(true);
   const [autoRefresh, setAutoRefresh] = useState(showRealTime);
   const [compareMode, setCompareMode] = useState(false);
@@ -155,7 +169,7 @@ export const OrganizationalIntelligenceMetrics: React.FC<Props> = ({
         briefingId: `briefing-${i}`,
         teamId: effectiveTeamId || 'team-frontend',
         operatorId: `op-${Math.floor(Math.random() * 10)}`,
-        timestamp: now - (i * 30 * 60 * 1000), // 30-minute intervals
+        timestamp: now - i * 30 * 60 * 1000, // 30-minute intervals
         generationTime: Math.random() * 5000 + 1000, // 1-6 seconds
         accuracy: Math.random() * 0.3 + 0.7, // 70-100%
         completeness: Math.random() * 0.2 + 0.8, // 80-100%
@@ -164,8 +178,11 @@ export const OrganizationalIntelligenceMetrics: React.FC<Props> = ({
         contextSources: Math.floor(Math.random() * 15) + 5, // 5-20 sources
         tokenUsage: Math.floor(Math.random() * 2000) + 500, // 500-2500 tokens
         confidenceScore: Math.random() * 0.2 + 0.8, // 80-100%
-        userFeedback: Math.random() > 0.7 ? ['positive', 'neutral', 'negative'][Math.floor(Math.random() * 3)] as any : undefined,
-        implementedRecommendations: Math.floor(Math.random() * 5) // 0-5 recommendations
+        userFeedback:
+          Math.random() > 0.7
+            ? (['positive', 'neutral', 'negative'][Math.floor(Math.random() * 3)] as any)
+            : undefined,
+        implementedRecommendations: Math.floor(Math.random() * 5), // 0-5 recommendations
       });
     }
 
@@ -182,15 +199,23 @@ export const OrganizationalIntelligenceMetrics: React.FC<Props> = ({
         sourceSessionId: `session-${Math.floor(Math.random() * 100)}`,
         targetSessionId: `session-${Math.floor(Math.random() * 100)}`,
         teamIds: [effectiveTeamId || 'team-frontend'],
-        timestamp: now - (i * 45 * 60 * 1000), // 45-minute intervals
-        correlationType: ['workflow_similarity', 'problem_pattern', 'knowledge_transfer', 'solution_reuse'][Math.floor(Math.random() * 4)] as any,
+        timestamp: now - i * 45 * 60 * 1000, // 45-minute intervals
+        correlationType: [
+          'workflow_similarity',
+          'problem_pattern',
+          'knowledge_transfer',
+          'solution_reuse',
+        ][Math.floor(Math.random() * 4)] as any,
         confidenceScore: Math.random() * 0.3 + 0.7, // 70-100%
         computationTime: Math.random() * 1000 + 200, // 200-1200ms
         similarityScore: Math.random() * 0.4 + 0.6, // 60-100%
         contextOverlap: Math.random() * 40 + 30, // 30-70%
         successful: Math.random() > 0.1, // 90% success rate
-        userValidation: Math.random() > 0.6 ? ['correct', 'partially_correct', 'incorrect'][Math.floor(Math.random() * 3)] as any : undefined,
-        subsequentCollaboration: Math.random() > 0.4 // 60% collaboration rate
+        userValidation:
+          Math.random() > 0.6
+            ? (['correct', 'partially_correct', 'incorrect'][Math.floor(Math.random() * 3)] as any)
+            : undefined,
+        subsequentCollaboration: Math.random() > 0.4, // 60% collaboration rate
       });
     }
 
@@ -198,169 +223,208 @@ export const OrganizationalIntelligenceMetrics: React.FC<Props> = ({
   }, [effectiveTeamId]);
 
   const mockSummary: IntelligencePerformanceSummary = useMemo(() => {
-    const briefings = mockBriefingMetrics.filter(b => b.userFeedback);
-    const correlations = mockCorrelationMetrics.filter(c => c.userValidation);
+    const briefings = mockBriefingMetrics.filter((b) => b.userFeedback);
+    const correlations = mockCorrelationMetrics.filter((c) => c.userValidation);
 
     return {
       timeWindow: timeRange,
       briefingMetrics: {
         totalGenerated: mockBriefingMetrics.length,
-        avgGenerationTime: mockBriefingMetrics.reduce((sum, b) => sum + b.generationTime, 0) / mockBriefingMetrics.length,
-        avgAccuracy: mockBriefingMetrics.reduce((sum, b) => sum + b.accuracy, 0) / mockBriefingMetrics.length,
-        avgRelevance: mockBriefingMetrics.reduce((sum, b) => sum + b.relevance, 0) / mockBriefingMetrics.length,
-        implementationRate: (mockBriefingMetrics.reduce((sum, b) => sum + b.implementedRecommendations, 0) /
-                            mockBriefingMetrics.reduce((sum, b) => sum + b.actionableInsights, 0)) * 100,
-        userSatisfaction: briefings.length > 0 ?
-          briefings.filter(b => b.userFeedback === 'positive').length / briefings.length : 0.8
+        avgGenerationTime:
+          mockBriefingMetrics.reduce((sum, b) => sum + b.generationTime, 0) /
+          mockBriefingMetrics.length,
+        avgAccuracy:
+          mockBriefingMetrics.reduce((sum, b) => sum + b.accuracy, 0) / mockBriefingMetrics.length,
+        avgRelevance:
+          mockBriefingMetrics.reduce((sum, b) => sum + b.relevance, 0) / mockBriefingMetrics.length,
+        implementationRate:
+          (mockBriefingMetrics.reduce((sum, b) => sum + b.implementedRecommendations, 0) /
+            mockBriefingMetrics.reduce((sum, b) => sum + b.actionableInsights, 0)) *
+          100,
+        userSatisfaction:
+          briefings.length > 0
+            ? briefings.filter((b) => b.userFeedback === 'positive').length / briefings.length
+            : 0.8,
       },
       correlationMetrics: {
         totalCorrelations: mockCorrelationMetrics.length,
-        avgComputationTime: mockCorrelationMetrics.reduce((sum, c) => sum + c.computationTime, 0) / mockCorrelationMetrics.length,
-        avgConfidenceScore: mockCorrelationMetrics.reduce((sum, c) => sum + c.confidenceScore, 0) / mockCorrelationMetrics.length,
-        validationAccuracy: correlations.length > 0 ?
-          (correlations.filter(c => c.userValidation === 'correct').length +
-           correlations.filter(c => c.userValidation === 'partially_correct').length * 0.5) / correlations.length : 0.85,
-        collaborationSuccess: mockCorrelationMetrics.filter(c => c.subsequentCollaboration).length / mockCorrelationMetrics.length * 100
+        avgComputationTime:
+          mockCorrelationMetrics.reduce((sum, c) => sum + c.computationTime, 0) /
+          mockCorrelationMetrics.length,
+        avgConfidenceScore:
+          mockCorrelationMetrics.reduce((sum, c) => sum + c.confidenceScore, 0) /
+          mockCorrelationMetrics.length,
+        validationAccuracy:
+          correlations.length > 0
+            ? (correlations.filter((c) => c.userValidation === 'correct').length +
+                correlations.filter((c) => c.userValidation === 'partially_correct').length * 0.5) /
+              correlations.length
+            : 0.85,
+        collaborationSuccess:
+          (mockCorrelationMetrics.filter((c) => c.subsequentCollaboration).length /
+            mockCorrelationMetrics.length) *
+          100,
       },
       resourceUtilization: {
-        avgTokensPerBriefing: mockBriefingMetrics.reduce((sum, b) => sum + b.tokenUsage, 0) / mockBriefingMetrics.length,
+        avgTokensPerBriefing:
+          mockBriefingMetrics.reduce((sum, b) => sum + b.tokenUsage, 0) /
+          mockBriefingMetrics.length,
         totalTokenUsage: mockBriefingMetrics.reduce((sum, b) => sum + b.tokenUsage, 0),
         computeHours: 12.5,
-        costEstimate: 89.50
+        costEstimate: 89.5,
       },
       trends: {
         briefingQuality: 'improving',
         correlationAccuracy: 'stable',
         responseTime: 'improving',
-        userAdoption: 'increasing'
-      }
+        userAdoption: 'increasing',
+      },
     };
   }, [mockBriefingMetrics, mockCorrelationMetrics, timeRange]);
 
-  const mockAlerts: QualityAlert[] = useMemo(() => [
-    {
-      id: 'alert-intel-001',
-      type: 'slow_generation',
-      severity: 'medium',
-      message: 'Briefing generation time increased by 25% over baseline',
-      threshold: 3000,
-      currentValue: 3750,
-      affectedTeams: [effectiveTeamId || 'team-frontend'],
-      recommendations: [
-        'Review context optimization strategies',
-        'Consider model performance tuning',
-        'Implement result caching for common patterns'
-      ],
-      triggeredAt: Date.now() - 900000 // 15 minutes ago
-    },
-    {
-      id: 'alert-intel-002',
-      type: 'low_user_satisfaction',
-      severity: 'high',
-      message: 'User satisfaction dropped below 70% threshold',
-      threshold: 0.7,
-      currentValue: 0.65,
-      affectedTeams: [effectiveTeamId || 'team-frontend'],
-      recommendations: [
-        'Analyze negative feedback patterns',
-        'Improve briefing relevance scoring',
-        'Enhance contextual understanding'
-      ],
-      triggeredAt: Date.now() - 1800000 // 30 minutes ago
-    }
-  ], [effectiveTeamId]);
+  const mockAlerts: QualityAlert[] = useMemo(
+    () => [
+      {
+        id: 'alert-intel-001',
+        type: 'slow_generation',
+        severity: 'medium',
+        message: 'Briefing generation time increased by 25% over baseline',
+        threshold: 3000,
+        currentValue: 3750,
+        affectedTeams: [effectiveTeamId || 'team-frontend'],
+        recommendations: [
+          'Review context optimization strategies',
+          'Consider model performance tuning',
+          'Implement result caching for common patterns',
+        ],
+        triggeredAt: Date.now() - 900000, // 15 minutes ago
+      },
+      {
+        id: 'alert-intel-002',
+        type: 'low_user_satisfaction',
+        severity: 'high',
+        message: 'User satisfaction dropped below 70% threshold',
+        threshold: 0.7,
+        currentValue: 0.65,
+        affectedTeams: [effectiveTeamId || 'team-frontend'],
+        recommendations: [
+          'Analyze negative feedback patterns',
+          'Improve briefing relevance scoring',
+          'Enhance contextual understanding',
+        ],
+        triggeredAt: Date.now() - 1800000, // 30 minutes ago
+      },
+    ],
+    [effectiveTeamId],
+  );
 
-  const mockOptimizations: OptimizerRecommendation[] = useMemo(() => [
-    {
-      id: 'opt-intel-001',
-      category: 'context_optimization',
-      title: 'Implement Smart Context Pruning',
-      description: 'Reduce context size by 30% while maintaining accuracy through intelligent source prioritization',
-      impact: {
-        qualityImprovement: 2,
-        speedImprovement: 35,
-        costReduction: 28,
-        userSatisfaction: 5
+  const mockOptimizations: OptimizerRecommendation[] = useMemo(
+    () => [
+      {
+        id: 'opt-intel-001',
+        category: 'context_optimization',
+        title: 'Implement Smart Context Pruning',
+        description:
+          'Reduce context size by 30% while maintaining accuracy through intelligent source prioritization',
+        impact: {
+          qualityImprovement: 2,
+          speedImprovement: 35,
+          costReduction: 28,
+          userSatisfaction: 5,
+        },
+        implementation: {
+          effort: 'medium',
+          timeline: '3-4 weeks',
+          requirements: [
+            'Context scoring algorithm',
+            'A/B testing framework',
+            'Performance monitoring',
+          ],
+        },
+        evidence: [
+          'Context size shows 40% redundancy across sessions',
+          'Speed improvements correlate strongly with user satisfaction',
+          'Similar optimization showed 30% cost reduction in pilot',
+        ],
+        confidence: 0.85,
       },
-      implementation: {
-        effort: 'medium',
-        timeline: '3-4 weeks',
-        requirements: ['Context scoring algorithm', 'A/B testing framework', 'Performance monitoring']
+      {
+        id: 'opt-intel-002',
+        category: 'caching_strategy',
+        title: 'Semantic Caching for Briefing Patterns',
+        description:
+          'Cache semantically similar briefing requests to reduce generation time and improve consistency',
+        impact: {
+          qualityImprovement: 8,
+          speedImprovement: 60,
+          costReduction: 45,
+          userSatisfaction: 12,
+        },
+        implementation: {
+          effort: 'high',
+          timeline: '6-8 weeks',
+          requirements: [
+            'Semantic similarity service',
+            'Cache invalidation strategy',
+            'Quality assurance framework',
+          ],
+        },
+        evidence: [
+          '65% of briefings show high semantic similarity to previous requests',
+          'Cached responses maintain 95% quality score',
+          'Speed improvements directly correlate with user adoption',
+        ],
+        confidence: 0.78,
       },
-      evidence: [
-        'Context size shows 40% redundancy across sessions',
-        'Speed improvements correlate strongly with user satisfaction',
-        'Similar optimization showed 30% cost reduction in pilot'
-      ],
-      confidence: 0.85
-    },
-    {
-      id: 'opt-intel-002',
-      category: 'caching_strategy',
-      title: 'Semantic Caching for Briefing Patterns',
-      description: 'Cache semantically similar briefing requests to reduce generation time and improve consistency',
-      impact: {
-        qualityImprovement: 8,
-        speedImprovement: 60,
-        costReduction: 45,
-        userSatisfaction: 12
-      },
-      implementation: {
-        effort: 'high',
-        timeline: '6-8 weeks',
-        requirements: ['Semantic similarity service', 'Cache invalidation strategy', 'Quality assurance framework']
-      },
-      evidence: [
-        '65% of briefings show high semantic similarity to previous requests',
-        'Cached responses maintain 95% quality score',
-        'Speed improvements directly correlate with user adoption'
-      ],
-      confidence: 0.78
-    }
-  ], []);
+    ],
+    [],
+  );
 
-  const mockModelMetrics: ModelPerformanceMetric[] = useMemo(() => [
-    {
-      modelName: 'Claude Sonnet 3.5',
-      modelVersion: '20241022',
-      usage: {
-        briefingRequests: 1247,
-        correlationRequests: 856,
-        avgTokensPerRequest: 1250,
-        totalTokens: 2628750
+  const mockModelMetrics: ModelPerformanceMetric[] = useMemo(
+    () => [
+      {
+        modelName: 'Claude Sonnet 3.5',
+        modelVersion: '20241022',
+        usage: {
+          briefingRequests: 1247,
+          correlationRequests: 856,
+          avgTokensPerRequest: 1250,
+          totalTokens: 2628750,
+        },
+        performance: {
+          avgResponseTime: 2800,
+          accuracyScore: 0.89,
+          relevanceScore: 0.92,
+          costPerRequest: 0.045,
+        },
+        comparison: {
+          vsBaseline: 12,
+          rank: 1,
+        },
       },
-      performance: {
-        avgResponseTime: 2800,
-        accuracyScore: 0.89,
-        relevanceScore: 0.92,
-        costPerRequest: 0.045
+      {
+        modelName: 'GPT-4 Turbo',
+        modelVersion: '2024-04-09',
+        usage: {
+          briefingRequests: 734,
+          correlationRequests: 512,
+          avgTokensPerRequest: 1180,
+          totalTokens: 1470280,
+        },
+        performance: {
+          avgResponseTime: 3200,
+          accuracyScore: 0.85,
+          relevanceScore: 0.88,
+          costPerRequest: 0.052,
+        },
+        comparison: {
+          vsBaseline: -5,
+          rank: 2,
+        },
       },
-      comparison: {
-        vsBaseline: 12,
-        rank: 1
-      }
-    },
-    {
-      modelName: 'GPT-4 Turbo',
-      modelVersion: '2024-04-09',
-      usage: {
-        briefingRequests: 734,
-        correlationRequests: 512,
-        avgTokensPerRequest: 1180,
-        totalTokens: 1470280
-      },
-      performance: {
-        avgResponseTime: 3200,
-        accuracyScore: 0.85,
-        relevanceScore: 0.88,
-        costPerRequest: 0.052
-      },
-      comparison: {
-        vsBaseline: -5,
-        rank: 2
-      }
-    }
-  ], []);
+    ],
+    [],
+  );
 
   // Auto-refresh effect
   useEffect(() => {
@@ -402,30 +466,26 @@ export const OrganizationalIntelligenceMetrics: React.FC<Props> = ({
         <div className="org-stat-card">
           <div className="org-stat-value">{mockSummary.briefingMetrics.totalGenerated}</div>
           <div className="org-stat-label">Briefings Generated</div>
-          <div className="org-stat-trend org-trend-positive">
-            +12% vs last period
-          </div>
+          <div className="org-stat-trend org-trend-positive">+12% vs last period</div>
         </div>
         <div className="org-stat-card">
-          <div className="org-stat-value">{formatPercentage(mockSummary.briefingMetrics.avgAccuracy)}</div>
-          <div className="org-stat-label">Average Accuracy</div>
-          <div className="org-stat-trend org-trend-positive">
-            +3.2% vs baseline
+          <div className="org-stat-value">
+            {formatPercentage(mockSummary.briefingMetrics.avgAccuracy)}
           </div>
+          <div className="org-stat-label">Average Accuracy</div>
+          <div className="org-stat-trend org-trend-positive">+3.2% vs baseline</div>
         </div>
         <div className="org-stat-card">
           <div className="org-stat-value">{mockSummary.correlationMetrics.totalCorrelations}</div>
           <div className="org-stat-label">Correlations Found</div>
-          <div className="org-stat-trend org-trend-positive">
-            +8% vs last period
-          </div>
+          <div className="org-stat-trend org-trend-positive">+8% vs last period</div>
         </div>
         <div className="org-stat-card">
-          <div className="org-stat-value">${mockSummary.resourceUtilization.costEstimate.toFixed(0)}</div>
-          <div className="org-stat-label">Monthly Cost</div>
-          <div className="org-stat-trend org-trend-negative">
-            +15% vs last month
+          <div className="org-stat-value">
+            ${mockSummary.resourceUtilization.costEstimate.toFixed(0)}
           </div>
+          <div className="org-stat-label">Monthly Cost</div>
+          <div className="org-stat-trend org-trend-negative">+15% vs last month</div>
         </div>
       </div>
 
@@ -445,7 +505,9 @@ export const OrganizationalIntelligenceMetrics: React.FC<Props> = ({
             </div>
             <div className="org-metric-item">
               <span>User Satisfaction</span>
-              <span style={{ color: getQualityColor(mockSummary.briefingMetrics.userSatisfaction) }}>
+              <span
+                style={{ color: getQualityColor(mockSummary.briefingMetrics.userSatisfaction) }}
+              >
                 {formatPercentage(mockSummary.briefingMetrics.userSatisfaction)}
               </span>
               <div
@@ -471,7 +533,11 @@ export const OrganizationalIntelligenceMetrics: React.FC<Props> = ({
             </div>
             <div className="org-metric-item">
               <span>Validation Accuracy</span>
-              <span style={{ color: getQualityColor(mockSummary.correlationMetrics.validationAccuracy) }}>
+              <span
+                style={{
+                  color: getQualityColor(mockSummary.correlationMetrics.validationAccuracy),
+                }}
+              >
                 {formatPercentage(mockSummary.correlationMetrics.validationAccuracy)}
               </span>
               <div
@@ -501,7 +567,13 @@ export const OrganizationalIntelligenceMetrics: React.FC<Props> = ({
             </div>
             <div className="org-metric-item">
               <span>Cost Efficiency</span>
-              <span>${(mockSummary.resourceUtilization.costEstimate / mockSummary.briefingMetrics.totalGenerated).toFixed(3)}</span>
+              <span>
+                $
+                {(
+                  mockSummary.resourceUtilization.costEstimate /
+                  mockSummary.briefingMetrics.totalGenerated
+                ).toFixed(3)}
+              </span>
             </div>
           </div>
         </div>
@@ -519,18 +591,15 @@ export const OrganizationalIntelligenceMetrics: React.FC<Props> = ({
         <div className="org-chart-container">
           <h4>Generation Time Distribution</h4>
           <div className="org-histogram">
-            {[1000, 2000, 3000, 4000, 5000, 6000].map((threshold, index) => {
-              const count = mockBriefingMetrics.filter(b =>
-                b.generationTime >= threshold && b.generationTime < threshold + 1000
+            {[1000, 2000, 3000, 4000, 5000, 6000].map((threshold, _index) => {
+              const count = mockBriefingMetrics.filter(
+                (b) => b.generationTime >= threshold && b.generationTime < threshold + 1000,
               ).length;
               const percentage = (count / mockBriefingMetrics.length) * 100;
 
               return (
                 <div key={threshold} className="org-histogram-bar">
-                  <div
-                    className="org-histogram-fill"
-                    style={{ height: `${percentage * 2}px` }}
-                  />
+                  <div className="org-histogram-fill" style={{ height: `${percentage * 2}px` }} />
                   <span className="org-histogram-label">{threshold / 1000}s</span>
                 </div>
               );
@@ -548,7 +617,7 @@ export const OrganizationalIntelligenceMetrics: React.FC<Props> = ({
                   className="org-progress-fill"
                   style={{
                     width: `${mockSummary.briefingMetrics.avgAccuracy * 100}%`,
-                    backgroundColor: getQualityColor(mockSummary.briefingMetrics.avgAccuracy)
+                    backgroundColor: getQualityColor(mockSummary.briefingMetrics.avgAccuracy),
                   }}
                 />
               </div>
@@ -561,7 +630,7 @@ export const OrganizationalIntelligenceMetrics: React.FC<Props> = ({
                   className="org-progress-fill"
                   style={{
                     width: `${mockSummary.briefingMetrics.avgRelevance * 100}%`,
-                    backgroundColor: getQualityColor(mockSummary.briefingMetrics.avgRelevance)
+                    backgroundColor: getQualityColor(mockSummary.briefingMetrics.avgRelevance),
                   }}
                 />
               </div>
@@ -593,33 +662,37 @@ export const OrganizationalIntelligenceMetrics: React.FC<Props> = ({
 
       <div className="org-correlation-breakdown">
         <div className="org-correlation-types">
-          {['workflow_similarity', 'problem_pattern', 'knowledge_transfer', 'solution_reuse'].map((type) => {
-            const correlations = mockCorrelationMetrics.filter(c => c.correlationType === type);
-            const avgConfidence = correlations.reduce((sum, c) => sum + c.confidenceScore, 0) / correlations.length;
-            const successRate = correlations.filter(c => c.successful).length / correlations.length;
+          {['workflow_similarity', 'problem_pattern', 'knowledge_transfer', 'solution_reuse'].map(
+            (type) => {
+              const correlations = mockCorrelationMetrics.filter((c) => c.correlationType === type);
+              const avgConfidence =
+                correlations.reduce((sum, c) => sum + c.confidenceScore, 0) / correlations.length;
+              const successRate =
+                correlations.filter((c) => c.successful).length / correlations.length;
 
-            return (
-              <div key={type} className="org-correlation-type-card">
-                <h5>{type.replace('_', ' ')}</h5>
-                <div className="org-correlation-stats">
-                  <div className="org-stat-row">
-                    <span>Count</span>
-                    <span>{correlations.length}</span>
-                  </div>
-                  <div className="org-stat-row">
-                    <span>Confidence</span>
-                    <span style={{ color: getQualityColor(avgConfidence) }}>
-                      {formatPercentage(avgConfidence)}
-                    </span>
-                  </div>
-                  <div className="org-stat-row">
-                    <span>Success Rate</span>
-                    <span>{formatPercentage(successRate)}</span>
+              return (
+                <div key={type} className="org-correlation-type-card">
+                  <h5>{type.replace('_', ' ')}</h5>
+                  <div className="org-correlation-stats">
+                    <div className="org-stat-row">
+                      <span>Count</span>
+                      <span>{correlations.length}</span>
+                    </div>
+                    <div className="org-stat-row">
+                      <span>Confidence</span>
+                      <span style={{ color: getQualityColor(avgConfidence) }}>
+                        {formatPercentage(avgConfidence)}
+                      </span>
+                    </div>
+                    <div className="org-stat-row">
+                      <span>Success Rate</span>
+                      <span>{formatPercentage(successRate)}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            },
+          )}
         </div>
       </div>
 
@@ -630,7 +703,7 @@ export const OrganizationalIntelligenceMetrics: React.FC<Props> = ({
             {/* Simple line chart - replace with actual charting library */}
             {mockCorrelationMetrics.slice(-20).map((correlation, index) => {
               const x = 50 + (index / 19) * 500;
-              const y = 150 - (correlation.confidenceScore * 100);
+              const y = 150 - correlation.confidenceScore * 100;
               const color = correlation.successful ? 'var(--org-success)' : 'var(--org-alert-high)';
 
               return (
@@ -665,7 +738,9 @@ export const OrganizationalIntelligenceMetrics: React.FC<Props> = ({
             <div className="org-optimization-header">
               <h4>{optimization.title}</h4>
               <div className="org-optimization-badges">
-                <span className={`org-category-badge org-category-${optimization.category.replace('_', '-')}`}>
+                <span
+                  className={`org-category-badge org-category-${optimization.category.replace('_', '-')}`}
+                >
                   {optimization.category.replace('_', ' ')}
                 </span>
                 <span className="org-confidence-badge">
@@ -674,9 +749,7 @@ export const OrganizationalIntelligenceMetrics: React.FC<Props> = ({
               </div>
             </div>
 
-            <div className="org-optimization-description">
-              {optimization.description}
-            </div>
+            <div className="org-optimization-description">{optimization.description}</div>
 
             <div className="org-impact-preview">
               <h5>Expected Impact</h5>
@@ -703,7 +776,9 @@ export const OrganizationalIntelligenceMetrics: React.FC<Props> = ({
             <div className="org-implementation-preview">
               <div className="org-implementation-item">
                 <span>Effort:</span>
-                <span className={`org-effort-indicator org-effort-${optimization.implementation.effort}`}>
+                <span
+                  className={`org-effort-indicator org-effort-${optimization.implementation.effort}`}
+                >
                   {optimization.implementation.effort}
                 </span>
               </div>
@@ -738,9 +813,7 @@ export const OrganizationalIntelligenceMetrics: React.FC<Props> = ({
           <div key={model.modelName} className="org-model-card">
             <div className="org-model-header">
               <h4>{model.modelName}</h4>
-              <div className="org-model-rank">
-                Rank #{model.comparison.rank}
-              </div>
+              <div className="org-model-rank">Rank #{model.comparison.rank}</div>
             </div>
 
             <div className="org-model-usage">
@@ -791,7 +864,8 @@ export const OrganizationalIntelligenceMetrics: React.FC<Props> = ({
               <div className="org-comparison-item">
                 <span>vs Baseline</span>
                 <span className={model.comparison.vsBaseline > 0 ? 'org-positive' : 'org-negative'}>
-                  {model.comparison.vsBaseline > 0 ? '+' : ''}{model.comparison.vsBaseline}%
+                  {model.comparison.vsBaseline > 0 ? '+' : ''}
+                  {model.comparison.vsBaseline}%
                 </span>
               </div>
             </div>
@@ -807,10 +881,7 @@ export const OrganizationalIntelligenceMetrics: React.FC<Props> = ({
         <h2>Organizational Intelligence Metrics</h2>
         <div className="org-header-controls">
           <div className="org-time-range-selector">
-            <select
-              value={timeRange}
-              onChange={(e) => setTimeRange(e.target.value as TimeRange)}
-            >
+            <select value={timeRange} onChange={(e) => setTimeRange(e.target.value as TimeRange)}>
               <option value="1h">Last Hour</option>
               <option value="24h">Last 24 Hours</option>
               <option value="7d">Last 7 Days</option>
@@ -853,7 +924,7 @@ export const OrganizationalIntelligenceMetrics: React.FC<Props> = ({
           { key: 'correlations', label: 'Correlations' },
           { key: 'quality', label: 'Quality Analysis' },
           { key: 'optimization', label: `Optimizations (${mockOptimizations.length})` },
-          { key: 'models', label: 'Model Comparison' }
+          { key: 'models', label: 'Model Comparison' },
         ].map((tab) => (
           <button
             key={tab.key}
@@ -909,9 +980,7 @@ export const OrganizationalIntelligenceMetrics: React.FC<Props> = ({
 
       {effectiveTeamId && (
         <div className="org-context-info">
-          <div className="org-context-badge">
-            Intelligence metrics for: {effectiveTeamId}
-          </div>
+          <div className="org-context-badge">Intelligence metrics for: {effectiveTeamId}</div>
         </div>
       )}
     </div>

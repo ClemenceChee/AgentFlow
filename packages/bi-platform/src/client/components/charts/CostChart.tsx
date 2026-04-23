@@ -1,6 +1,5 @@
-import React from 'react';
-import type { CostsResponse } from '../../hooks/useCosts';
 import type { AgentsResponse } from '../../hooks/useAgents';
+import type { CostsResponse } from '../../hooks/useCosts';
 
 interface Props {
   costs: CostsResponse | null;
@@ -9,7 +8,11 @@ interface Props {
 
 export function CostChart({ costs, agents }: Props) {
   if (!costs || costs.costs.length === 0) {
-    return <div className="bi-empty"><span>No cost data available</span></div>;
+    return (
+      <div className="bi-empty">
+        <span>No cost data available</span>
+      </div>
+    );
   }
 
   const sorted = [...costs.costs].sort((a, b) => b.totalCost - a.totalCost);
@@ -30,19 +33,47 @@ export function CostChart({ costs, agents }: Props) {
         {sorted.map((c) => {
           const pct = (c.totalCost / maxCost) * 100;
           const agent = agentMap.get(c.agentId);
-          const color = !agent ? 'var(--info)' : agent.status === 'healthy' ? 'var(--ok)' : agent.status === 'warning' ? 'var(--warn)' : 'var(--fail)';
+          const color = !agent
+            ? 'var(--info)'
+            : agent.status === 'healthy'
+              ? 'var(--ok)'
+              : agent.status === 'warning'
+                ? 'var(--warn)'
+                : 'var(--fail)';
 
           return (
-            <div key={c.agentId} style={{ display: 'flex', alignItems: 'center', gap: 'var(--s3)' }}>
-              <span style={{ width: 140, fontSize: 'var(--sm)', color: 'var(--t2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <div
+              key={c.agentId}
+              style={{ display: 'flex', alignItems: 'center', gap: 'var(--s3)' }}
+            >
+              <span
+                style={{
+                  width: 140,
+                  fontSize: 'var(--sm)',
+                  color: 'var(--t2)',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
                 {c.agentId}
               </span>
               <div style={{ flex: 1 }}>
                 <div className="bi-cost-bar">
-                  <div className="bi-cost-bar__fill" style={{ width: `${pct}%`, background: color }} />
+                  <div
+                    className="bi-cost-bar__fill"
+                    style={{ width: `${pct}%`, background: color }}
+                  />
                 </div>
               </div>
-              <span style={{ width: 80, textAlign: 'right', fontFamily: 'var(--fm)', fontSize: 'var(--sm)' }}>
+              <span
+                style={{
+                  width: 80,
+                  textAlign: 'right',
+                  fontFamily: 'var(--fm)',
+                  fontSize: 'var(--sm)',
+                }}
+              >
                 {fmtCurrency(c.totalCost, c.currency)}
               </span>
             </div>

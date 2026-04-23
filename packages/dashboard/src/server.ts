@@ -30,7 +30,6 @@ import {
 import './adapters/index.js'; // Register all adapters
 import { parseOtlpPayload } from './adapters/otel.js';
 import { deduplicateAgents, groupAgents } from './agent-clustering.js';
-import type { OperatorContext, SessionCorrelation, PolicyStatus, SessionHookData } from './client/types/organizational.js';
 import { type CommandExecutor, createCommandExecutor } from './command-executor.js';
 import { AgentStats } from './stats.js';
 import { TraceWatcher, type WatchedTrace } from './watcher.js';
@@ -87,9 +86,10 @@ function getTeamAccessContext(req: express.Request): TeamAccessContext {
   // For now, use headers as a simple mechanism for testing
   return {
     operatorId: req.headers['x-operator-id'] as string,
-    allowedTeams: req.headers['x-allowed-teams'] ?
-      (req.headers['x-allowed-teams'] as string).split(',') : [],
-    isSuperUser: req.headers['x-super-user'] === 'true'
+    allowedTeams: req.headers['x-allowed-teams']
+      ? (req.headers['x-allowed-teams'] as string).split(',')
+      : [],
+    isSuperUser: req.headers['x-super-user'] === 'true',
   };
 }
 
@@ -125,7 +125,7 @@ function parseVaultFrontmatter(content: string): Record<string, unknown> | null 
   const fmMatch = content.match(/^---\n([\s\S]*?)\n---/);
   if (!fmMatch) return null;
   const fm: Record<string, unknown> = {};
-  const lines = fmMatch[1]!.split('\n');
+  const lines = fmMatch[1]?.split('\n');
   let currentKey = '';
   let collectingList: string[] | null = null;
 
@@ -485,7 +485,10 @@ export class DashboardServer {
 
         // Extract teams from traces with organizational context
         const allTraces = this.watcher.getAllTraces();
-        const teams = new Map<string, { teamId: string; teamName: string; memberCount: number; isAccessible: boolean }>();
+        const teams = new Map<
+          string,
+          { teamId: string; teamName: string; memberCount: number; isAccessible: boolean }
+        >();
 
         for (const trace of allTraces) {
           // Apply team boundary validation
@@ -499,9 +502,12 @@ export class DashboardServer {
             if (!teams.has(teamId)) {
               teams.set(teamId, {
                 teamId,
-                teamName: teamId.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), // Convert kebab-case to Title Case
+                teamName: teamId.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()), // Convert kebab-case to Title Case
                 memberCount: 1,
-                isAccessible: !accessContext.allowedTeams || accessContext.allowedTeams.includes(teamId) || accessContext.isSuperUser
+                isAccessible:
+                  !accessContext.allowedTeams ||
+                  accessContext.allowedTeams.includes(teamId) ||
+                  accessContext.isSuperUser,
               });
             } else {
               // Increment member count (approximate based on unique operators)
@@ -513,12 +519,15 @@ export class DashboardServer {
 
         // Convert to array and add an "All Teams" option (only if user has multi-team access)
         const teamList = [];
-        if (accessContext.isSuperUser || (accessContext.allowedTeams && accessContext.allowedTeams.length > 1)) {
+        if (
+          accessContext.isSuperUser ||
+          (accessContext.allowedTeams && accessContext.allowedTeams.length > 1)
+        ) {
           teamList.push({
             teamId: '',
             teamName: 'All Teams',
             memberCount: 0,
-            isAccessible: true
+            isAccessible: true,
           });
         }
         teamList.push(...Array.from(teams.values()));
@@ -534,13 +543,15 @@ export class DashboardServer {
       try {
         const operatorId = req.params.operatorId;
         const limit = Math.min(parseInt(req.query.limit as string, 10) || 100, 500);
-        const timeframe = req.query.timeframe as string || '24h';
+        const timeframe = (req.query.timeframe as string) || '24h';
         const accessContext = getTeamAccessContext(req);
 
         // Validate access to this operator's data
-        if (!accessContext.isSuperUser &&
-            accessContext.operatorId !== operatorId &&
-            !accessContext.allowedTeams?.length) {
+        if (
+          !accessContext.isSuperUser &&
+          accessContext.operatorId !== operatorId &&
+          !accessContext.allowedTeams?.length
+        ) {
           return res.status(403).json({ error: 'Access denied: insufficient team permissions' });
         }
 
@@ -548,17 +559,26 @@ export class DashboardServer {
         const now = Date.now();
         let timeWindow: number;
         switch (timeframe) {
-          case '1h': timeWindow = 60 * 60 * 1000; break;
-          case '24h': timeWindow = 24 * 60 * 60 * 1000; break;
-          case '7d': timeWindow = 7 * 24 * 60 * 60 * 1000; break;
-          case '30d': timeWindow = 30 * 24 * 60 * 60 * 1000; break;
-          default: timeWindow = 24 * 60 * 60 * 1000;
+          case '1h':
+            timeWindow = 60 * 60 * 1000;
+            break;
+          case '24h':
+            timeWindow = 24 * 60 * 60 * 1000;
+            break;
+          case '7d':
+            timeWindow = 7 * 24 * 60 * 60 * 1000;
+            break;
+          case '30d':
+            timeWindow = 30 * 24 * 60 * 60 * 1000;
+            break;
+          default:
+            timeWindow = 24 * 60 * 60 * 1000;
         }
         const startTime = now - timeWindow;
 
         // Find traces with the specified operator context
         const allTraces = this.watcher.getAllTraces();
-        const operatorTraces = allTraces.filter(trace => {
+        const operatorTraces = allTraces.filter((trace) => {
           // Apply team boundary validation
           if (!validateTeamAccess(trace, accessContext)) {
             return false;
@@ -566,8 +586,7 @@ export class DashboardServer {
 
           // Check if trace has operator context matching the requested operator
           if ('operatorContext' in trace && trace.operatorContext) {
-            return trace.operatorContext.operatorId === operatorId &&
-                   trace.startTime >= startTime;
+            return trace.operatorContext.operatorId === operatorId && trace.startTime >= startTime;
           }
           return false;
         });
@@ -578,7 +597,7 @@ export class DashboardServer {
           .slice(0, limit);
 
         // Transform traces into activity timeline format
-        const timeline = sortedTraces.map(trace => {
+        const timeline = sortedTraces.map((trace) => {
           const operatorContext = 'operatorContext' in trace ? trace.operatorContext : null;
           return {
             timestamp: trace.startTime,
@@ -596,13 +615,15 @@ export class DashboardServer {
         // Identify patterns (simplified pattern detection)
         const patterns = [];
         if (timeline.length > 2) {
-          const agentUsage = timeline.reduce((acc, item) => {
-            acc[item.agentId] = (acc[item.agentId] || 0) + 1;
-            return acc;
-          }, {} as Record<string, number>);
+          const agentUsage = timeline.reduce(
+            (acc, item) => {
+              acc[item.agentId] = (acc[item.agentId] || 0) + 1;
+              return acc;
+            },
+            {} as Record<string, number>,
+          );
 
-          const mostUsedAgent = Object.entries(agentUsage)
-            .sort(([,a], [,b]) => b - a)[0];
+          const mostUsedAgent = Object.entries(agentUsage).sort(([, a], [, b]) => b - a)[0];
 
           if (mostUsedAgent && mostUsedAgent[1] > timeline.length * 0.3) {
             patterns.push({
@@ -610,7 +631,7 @@ export class DashboardServer {
               description: `Frequently uses ${mostUsedAgent[0]}`,
               frequency: mostUsedAgent[1],
               confidence: Math.min(0.95, (mostUsedAgent[1] / timeline.length) * 2),
-              recommendations: [`Consider automating common ${mostUsedAgent[0]} workflows`]
+              recommendations: [`Consider automating common ${mostUsedAgent[0]} workflows`],
             });
           }
         }
@@ -622,12 +643,15 @@ export class DashboardServer {
           patterns,
           summary: {
             totalSessions: timeline.length,
-            uniqueAgents: new Set(timeline.map(t => t.agentId)).size,
-            successRate: timeline.filter(t => t.status === 'completed').length / Math.max(timeline.length, 1),
-            averageDuration: timeline.reduce((sum, t) => sum + (t.duration || 0), 0) / Math.max(timeline.length, 1)
-          }
+            uniqueAgents: new Set(timeline.map((t) => t.agentId)).size,
+            successRate:
+              timeline.filter((t) => t.status === 'completed').length /
+              Math.max(timeline.length, 1),
+            averageDuration:
+              timeline.reduce((sum, t) => sum + (t.duration || 0), 0) /
+              Math.max(timeline.length, 1),
+          },
         });
-
       } catch (_error) {
         res.status(500).json({ error: 'Failed to load operator activity' });
       }
@@ -643,7 +667,7 @@ export class DashboardServer {
 
         // Find the target session with team boundary validation
         const allTraces = this.watcher.getAllTraces();
-        const targetTrace = allTraces.find(trace => {
+        const targetTrace = allTraces.find((trace) => {
           // Apply team boundary validation first
           if (!validateTeamAccess(trace, accessContext)) {
             return false;
@@ -659,7 +683,8 @@ export class DashboardServer {
           return res.status(404).json({ error: 'Session not found or access denied' });
         }
 
-        const targetOperatorContext = 'operatorContext' in targetTrace ? targetTrace.operatorContext : null;
+        const targetOperatorContext =
+          'operatorContext' in targetTrace ? targetTrace.operatorContext : null;
         const correlations: Array<{
           sessionId: string;
           confidence: number;
@@ -686,18 +711,25 @@ export class DashboardServer {
 
           const traceOperatorContext = 'operatorContext' in trace ? trace.operatorContext : null;
           let confidence = 0;
-          let relationshipType: 'continuation' | 'similar-problem' | 'handoff' | 'collaboration' = 'similar-problem';
+          let relationshipType: 'continuation' | 'similar-problem' | 'handoff' | 'collaboration' =
+            'similar-problem';
 
           // Same operator correlation (higher confidence)
-          if (targetOperatorContext && traceOperatorContext &&
-              targetOperatorContext.operatorId === traceOperatorContext.operatorId) {
+          if (
+            targetOperatorContext &&
+            traceOperatorContext &&
+            targetOperatorContext.operatorId === traceOperatorContext.operatorId
+          ) {
             confidence += 0.4;
             relationshipType = 'continuation';
           }
 
           // Same team correlation
-          if (targetOperatorContext && traceOperatorContext &&
-              targetOperatorContext.teamId === traceOperatorContext.teamId) {
+          if (
+            targetOperatorContext &&
+            traceOperatorContext &&
+            targetOperatorContext.teamId === traceOperatorContext.teamId
+          ) {
             confidence += 0.3;
             if (targetOperatorContext.operatorId !== traceOperatorContext.operatorId) {
               relationshipType = 'collaboration';
@@ -719,7 +751,7 @@ export class DashboardServer {
           // Name similarity (simple keyword matching)
           const targetWords = targetTrace.name.toLowerCase().split(/\s+/);
           const traceWords = trace.name.toLowerCase().split(/\s+/);
-          const commonWords = targetWords.filter(word => traceWords.includes(word));
+          const commonWords = targetWords.filter((word) => traceWords.includes(word));
           if (commonWords.length > 0) {
             confidence += Math.min(0.2, commonWords.length * 0.05);
           }
@@ -738,7 +770,7 @@ export class DashboardServer {
                 problemType: trace.agentId,
                 solutionPattern: trace.status === 'completed' ? 'success' : 'pending',
                 confidence: Math.min(confidence, 0.95),
-              }
+              },
             });
           }
         }
@@ -754,26 +786,27 @@ export class DashboardServer {
         // Apply cursor-based pagination
         let filteredCorrelations = correlations;
         if (cursor) {
-          filteredCorrelations = correlations.filter(c => c.timestamp < cursor);
+          filteredCorrelations = correlations.filter((c) => c.timestamp < cursor);
         }
 
         const page = filteredCorrelations.slice(0, limit);
-        const nextCursor = page.length === limit && page[page.length - 1] ?
-          page[page.length - 1].timestamp : null;
+        const nextCursor =
+          page.length === limit && page[page.length - 1] ? page[page.length - 1].timestamp : null;
 
         res.json({
           sessionId,
           correlations: page,
           summary: {
             totalFound: correlations.length,
-            continuations: correlations.filter(c => c.relationshipType === 'continuation').length,
-            collaborations: correlations.filter(c => c.relationshipType === 'collaboration').length,
-            similarProblems: correlations.filter(c => c.relationshipType === 'similar-problem').length,
-            handoffs: correlations.filter(c => c.relationshipType === 'handoff').length,
+            continuations: correlations.filter((c) => c.relationshipType === 'continuation').length,
+            collaborations: correlations.filter((c) => c.relationshipType === 'collaboration')
+              .length,
+            similarProblems: correlations.filter((c) => c.relationshipType === 'similar-problem')
+              .length,
+            handoffs: correlations.filter((c) => c.relationshipType === 'handoff').length,
           },
-          nextCursor
+          nextCursor,
         });
-
       } catch (_error) {
         res.status(500).json({ error: 'Failed to load session correlations' });
       }
@@ -1783,7 +1816,7 @@ export class DashboardServer {
           sumXY = 0,
           sumX2 = 0;
         for (let i = 0; i < n; i++) {
-          const y = agentHistory[i]!.score;
+          const y = agentHistory[i]?.score;
           sumX += i;
           sumY += y;
           sumXY += i * y;
@@ -1796,7 +1829,7 @@ export class DashboardServer {
         let ssRes = 0,
           ssTot = 0;
         for (let i = 0; i < n; i++) {
-          const y = agentHistory[i]!.score;
+          const y = agentHistory[i]?.score;
           ssRes += (y - (intercept + slope * i)) ** 2;
           ssTot += (y - meanY) ** 2;
         }
@@ -1851,7 +1884,7 @@ export class DashboardServer {
         for (const insight of crossAgent) {
           const key = [...insight.sourceAgents].sort().join(' \u2194 ');
           if (!pairMap.has(key)) pairMap.set(key, []);
-          pairMap.get(key)!.push(insight);
+          pairMap.get(key)?.push(insight);
         }
 
         const pairs = [...pairMap.entries()].map(([agents, insights]) => ({
@@ -1998,7 +2031,7 @@ export class DashboardServer {
     // Get all executions (recent first)
     this.app.get('/api/external/executions', (req, res) => {
       try {
-        const limit = Math.min(parseInt(String(req.query.limit)) || 50, 100);
+        const limit = Math.min(parseInt(String(req.query.limit), 10) || 50, 100);
         const status = req.query.status as string;
 
         let executions = this.commandExecutor.getAllExecutions(limit);
@@ -2062,7 +2095,7 @@ export class DashboardServer {
     // Get audit statistics
     this.app.get('/api/external/audit/stats', (req, res) => {
       try {
-        const days = Math.min(parseInt(String(req.query.days)) || 7, 30);
+        const days = Math.min(parseInt(String(req.query.days), 10) || 7, 30);
         const stats = this.commandExecutor.getAuditStats(days);
 
         res.json({

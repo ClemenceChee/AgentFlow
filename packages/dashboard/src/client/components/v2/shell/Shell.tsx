@@ -95,15 +95,12 @@ export function Shell({
         />
       </div>
 
-      {tweaksAvailable && (
-        <>
-          {tweaksOpen ? (
-            <TweaksPanel state={tweaks} setState={setTweaks} onClose={() => setTweaksOpen(false)} />
-          ) : (
-            <TweaksToggle onOpen={() => setTweaksOpen(true)} />
-          )}
-        </>
-      )}
+      {tweaksAvailable &&
+        (tweaksOpen ? (
+          <TweaksPanel state={tweaks} setState={setTweaks} onClose={() => setTweaksOpen(false)} />
+        ) : (
+          <TweaksToggle onOpen={() => setTweaksOpen(true)} />
+        ))}
     </div>
   );
 }

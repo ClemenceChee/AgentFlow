@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import type React from 'react';
+import { useMemo, useState } from 'react';
 import { useOrganizationalContext } from '../../../contexts/OrganizationalContext';
 
 // Types for operator performance comparison
@@ -98,7 +99,13 @@ interface PerformanceCorrelation {
 
 type ComparisonView = 'overview' | 'detailed' | 'rankings' | 'trends' | 'correlations' | 'teams';
 type TimeRange = '1d' | '7d' | '30d' | '90d';
-type MetricCategory = 'all' | 'productivity' | 'efficiency' | 'resource' | 'quality' | 'collaboration';
+type MetricCategory =
+  | 'all'
+  | 'productivity'
+  | 'efficiency'
+  | 'resource'
+  | 'quality'
+  | 'collaboration';
 
 interface Props {
   readonly className?: string;
@@ -113,174 +120,177 @@ export const MultiOperatorPerformanceComparison: React.FC<Props> = ({
   selectedOperators = [],
   teamId,
   showBenchmarks = true,
-  onOperatorSelect
+  onOperatorSelect,
 }) => {
   const { selectedTeam, operatorContext } = useOrganizationalContext();
   const [comparisonView, setComparisonView] = useState<ComparisonView>('overview');
   const [timeRange, setTimeRange] = useState<TimeRange>('7d');
   const [metricCategory, setMetricCategory] = useState<MetricCategory>('all');
-  const [selectedMetric, setSelectedMetric] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState<string>('overall_performance');
+  const [_selectedMetric, _setSelectedMetric] = useState<string | null>(null);
+  const [_sortBy, _setSortBy] = useState<string>('overall_performance');
   const [showOutliers, setShowOutliers] = useState(true);
   const [normalizeScores, setNormalizeScores] = useState(true);
 
   const effectiveTeamId = teamId || selectedTeam;
 
   // Mock data - replace with actual API calls
-  const mockOperatorSnapshots: OperatorPerformanceSnapshot[] = useMemo(() => [
-    {
-      operatorId: 'op-001',
-      operatorName: 'Alice Frontend',
-      teamId: effectiveTeamId || 'team-frontend',
-      timestamp: Date.now(),
-      sessionCount: 42,
-      activeHours: 35.5,
-      productivity: {
-        tasksCompleted: 28,
-        avgTaskDuration: 45,
-        codeChanges: 156,
-        problemsSolved: 12,
-        collaborationEvents: 18
+  const mockOperatorSnapshots: OperatorPerformanceSnapshot[] = useMemo(
+    () => [
+      {
+        operatorId: 'op-001',
+        operatorName: 'Alice Frontend',
+        teamId: effectiveTeamId || 'team-frontend',
+        timestamp: Date.now(),
+        sessionCount: 42,
+        activeHours: 35.5,
+        productivity: {
+          tasksCompleted: 28,
+          avgTaskDuration: 45,
+          codeChanges: 156,
+          problemsSolved: 12,
+          collaborationEvents: 18,
+        },
+        efficiency: {
+          querySuccessRate: 94.2,
+          avgQueryTime: 850,
+          cacheHitRate: 89.3,
+          errorRate: 2.1,
+          retryRate: 4.5,
+        },
+        resourceUsage: {
+          cpuTime: 1240,
+          memoryPeak: 2048,
+          networkRequests: 3847,
+          tokenConsumption: 45678,
+          costEstimate: 23.45,
+        },
+        qualityMetrics: {
+          codeQualityScore: 87,
+          reviewScore: 92,
+          testCoverage: 78,
+          bugIntroduction: 2,
+          knowledgeSharing: 85,
+        },
+        collaborationScore: 88,
+        learningVelocity: 2.3,
       },
-      efficiency: {
-        querySuccessRate: 94.2,
-        avgQueryTime: 850,
-        cacheHitRate: 89.3,
-        errorRate: 2.1,
-        retryRate: 4.5
+      {
+        operatorId: 'op-002',
+        operatorName: 'Bob Backend',
+        teamId: effectiveTeamId || 'team-backend',
+        timestamp: Date.now(),
+        sessionCount: 38,
+        activeHours: 32.0,
+        productivity: {
+          tasksCompleted: 31,
+          avgTaskDuration: 52,
+          codeChanges: 203,
+          problemsSolved: 15,
+          collaborationEvents: 22,
+        },
+        efficiency: {
+          querySuccessRate: 96.8,
+          avgQueryTime: 720,
+          cacheHitRate: 91.7,
+          errorRate: 1.4,
+          retryRate: 2.8,
+        },
+        resourceUsage: {
+          cpuTime: 1180,
+          memoryPeak: 3072,
+          networkRequests: 4235,
+          tokenConsumption: 52341,
+          costEstimate: 28.9,
+        },
+        qualityMetrics: {
+          codeQualityScore: 92,
+          reviewScore: 89,
+          testCoverage: 85,
+          bugIntroduction: 1,
+          knowledgeSharing: 79,
+        },
+        collaborationScore: 82,
+        learningVelocity: 1.8,
       },
-      resourceUsage: {
-        cpuTime: 1240,
-        memoryPeak: 2048,
-        networkRequests: 3847,
-        tokenConsumption: 45678,
-        costEstimate: 23.45
+      {
+        operatorId: 'op-003',
+        operatorName: 'Carol Design',
+        teamId: 'team-design',
+        timestamp: Date.now(),
+        sessionCount: 25,
+        activeHours: 28.5,
+        productivity: {
+          tasksCompleted: 18,
+          avgTaskDuration: 65,
+          codeChanges: 89,
+          problemsSolved: 8,
+          collaborationEvents: 25,
+        },
+        efficiency: {
+          querySuccessRate: 91.5,
+          avgQueryTime: 950,
+          cacheHitRate: 82.1,
+          errorRate: 3.2,
+          retryRate: 6.1,
+        },
+        resourceUsage: {
+          cpuTime: 890,
+          memoryPeak: 1536,
+          networkRequests: 2156,
+          tokenConsumption: 32567,
+          costEstimate: 18.75,
+        },
+        qualityMetrics: {
+          codeQualityScore: 78,
+          reviewScore: 94,
+          testCoverage: 65,
+          bugIntroduction: 0,
+          knowledgeSharing: 92,
+        },
+        collaborationScore: 95,
+        learningVelocity: 2.7,
       },
-      qualityMetrics: {
-        codeQualityScore: 87,
-        reviewScore: 92,
-        testCoverage: 78,
-        bugIntroduction: 2,
-        knowledgeSharing: 85
+      {
+        operatorId: 'op-004',
+        operatorName: 'David Infra',
+        teamId: 'team-infra',
+        timestamp: Date.now(),
+        sessionCount: 33,
+        activeHours: 39.0,
+        productivity: {
+          tasksCompleted: 24,
+          avgTaskDuration: 78,
+          codeChanges: 134,
+          problemsSolved: 18,
+          collaborationEvents: 15,
+        },
+        efficiency: {
+          querySuccessRate: 93.7,
+          avgQueryTime: 1120,
+          cacheHitRate: 86.4,
+          errorRate: 2.8,
+          retryRate: 5.2,
+        },
+        resourceUsage: {
+          cpuTime: 1560,
+          memoryPeak: 4096,
+          networkRequests: 3245,
+          tokenConsumption: 38924,
+          costEstimate: 25.6,
+        },
+        qualityMetrics: {
+          codeQualityScore: 89,
+          reviewScore: 86,
+          testCoverage: 92,
+          bugIntroduction: 1,
+          knowledgeSharing: 73,
+        },
+        collaborationScore: 76,
+        learningVelocity: 1.5,
       },
-      collaborationScore: 88,
-      learningVelocity: 2.3
-    },
-    {
-      operatorId: 'op-002',
-      operatorName: 'Bob Backend',
-      teamId: effectiveTeamId || 'team-backend',
-      timestamp: Date.now(),
-      sessionCount: 38,
-      activeHours: 32.0,
-      productivity: {
-        tasksCompleted: 31,
-        avgTaskDuration: 52,
-        codeChanges: 203,
-        problemsSolved: 15,
-        collaborationEvents: 22
-      },
-      efficiency: {
-        querySuccessRate: 96.8,
-        avgQueryTime: 720,
-        cacheHitRate: 91.7,
-        errorRate: 1.4,
-        retryRate: 2.8
-      },
-      resourceUsage: {
-        cpuTime: 1180,
-        memoryPeak: 3072,
-        networkRequests: 4235,
-        tokenConsumption: 52341,
-        costEstimate: 28.90
-      },
-      qualityMetrics: {
-        codeQualityScore: 92,
-        reviewScore: 89,
-        testCoverage: 85,
-        bugIntroduction: 1,
-        knowledgeSharing: 79
-      },
-      collaborationScore: 82,
-      learningVelocity: 1.8
-    },
-    {
-      operatorId: 'op-003',
-      operatorName: 'Carol Design',
-      teamId: 'team-design',
-      timestamp: Date.now(),
-      sessionCount: 25,
-      activeHours: 28.5,
-      productivity: {
-        tasksCompleted: 18,
-        avgTaskDuration: 65,
-        codeChanges: 89,
-        problemsSolved: 8,
-        collaborationEvents: 25
-      },
-      efficiency: {
-        querySuccessRate: 91.5,
-        avgQueryTime: 950,
-        cacheHitRate: 82.1,
-        errorRate: 3.2,
-        retryRate: 6.1
-      },
-      resourceUsage: {
-        cpuTime: 890,
-        memoryPeak: 1536,
-        networkRequests: 2156,
-        tokenConsumption: 32567,
-        costEstimate: 18.75
-      },
-      qualityMetrics: {
-        codeQualityScore: 78,
-        reviewScore: 94,
-        testCoverage: 65,
-        bugIntroduction: 0,
-        knowledgeSharing: 92
-      },
-      collaborationScore: 95,
-      learningVelocity: 2.7
-    },
-    {
-      operatorId: 'op-004',
-      operatorName: 'David Infra',
-      teamId: 'team-infra',
-      timestamp: Date.now(),
-      sessionCount: 33,
-      activeHours: 39.0,
-      productivity: {
-        tasksCompleted: 24,
-        avgTaskDuration: 78,
-        codeChanges: 134,
-        problemsSolved: 18,
-        collaborationEvents: 15
-      },
-      efficiency: {
-        querySuccessRate: 93.7,
-        avgQueryTime: 1120,
-        cacheHitRate: 86.4,
-        errorRate: 2.8,
-        retryRate: 5.2
-      },
-      resourceUsage: {
-        cpuTime: 1560,
-        memoryPeak: 4096,
-        networkRequests: 3245,
-        tokenConsumption: 38924,
-        costEstimate: 25.60
-      },
-      qualityMetrics: {
-        codeQualityScore: 89,
-        reviewScore: 86,
-        testCoverage: 92,
-        bugIntroduction: 1,
-        knowledgeSharing: 73
-      },
-      collaborationScore: 76,
-      learningVelocity: 1.5
-    }
-  ], [effectiveTeamId]);
+    ],
+    [effectiveTeamId],
+  );
 
   const mockComparisonMetrics: ComparisonMetric[] = useMemo(() => {
     const calculateStats = (values: number[]) => {
@@ -289,7 +299,7 @@ export const MultiOperatorPerformanceComparison: React.FC<Props> = ({
         median: sorted[Math.floor(sorted.length / 2)],
         p75: sorted[Math.floor(sorted.length * 0.75)],
         p90: sorted[Math.floor(sorted.length * 0.9)],
-        target: Math.max(...sorted) * 1.1
+        target: Math.max(...sorted) * 1.1,
       };
     };
 
@@ -304,9 +314,11 @@ export const MultiOperatorPerformanceComparison: React.FC<Props> = ({
           value: op.productivity.tasksCompleted,
           rank: index + 1,
           percentile: 90 - index * 15,
-          trend: ['improving', 'stable', 'declining'][index % 3] as any
+          trend: ['improving', 'stable', 'declining'][index % 3] as any,
         })),
-        benchmark: calculateStats(mockOperatorSnapshots.map(op => op.productivity.tasksCompleted))
+        benchmark: calculateStats(
+          mockOperatorSnapshots.map((op) => op.productivity.tasksCompleted),
+        ),
       },
       {
         metricName: 'Query Success Rate',
@@ -318,9 +330,11 @@ export const MultiOperatorPerformanceComparison: React.FC<Props> = ({
           value: op.efficiency.querySuccessRate,
           rank: index + 1,
           percentile: 95 - index * 5,
-          trend: ['stable', 'improving', 'stable', 'declining'][index] as any
+          trend: ['stable', 'improving', 'stable', 'declining'][index] as any,
         })),
-        benchmark: calculateStats(mockOperatorSnapshots.map(op => op.efficiency.querySuccessRate))
+        benchmark: calculateStats(
+          mockOperatorSnapshots.map((op) => op.efficiency.querySuccessRate),
+        ),
       },
       {
         metricName: 'Resource Efficiency',
@@ -334,12 +348,14 @@ export const MultiOperatorPerformanceComparison: React.FC<Props> = ({
             value: efficiency,
             rank: index + 1,
             percentile: 85 - index * 10,
-            trend: ['improving', 'stable', 'improving', 'declining'][index] as any
+            trend: ['improving', 'stable', 'improving', 'declining'][index] as any,
           };
         }),
-        benchmark: calculateStats(mockOperatorSnapshots.map(op =>
-          (op.productivity.tasksCompleted / op.resourceUsage.costEstimate) * 10
-        ))
+        benchmark: calculateStats(
+          mockOperatorSnapshots.map(
+            (op) => (op.productivity.tasksCompleted / op.resourceUsage.costEstimate) * 10,
+          ),
+        ),
       },
       {
         metricName: 'Code Quality Score',
@@ -351,9 +367,11 @@ export const MultiOperatorPerformanceComparison: React.FC<Props> = ({
           value: op.qualityMetrics.codeQualityScore,
           rank: index + 1,
           percentile: 90 - index * 8,
-          trend: ['stable', 'improving', 'declining', 'stable'][index] as any
+          trend: ['stable', 'improving', 'declining', 'stable'][index] as any,
         })),
-        benchmark: calculateStats(mockOperatorSnapshots.map(op => op.qualityMetrics.codeQualityScore))
+        benchmark: calculateStats(
+          mockOperatorSnapshots.map((op) => op.qualityMetrics.codeQualityScore),
+        ),
       },
       {
         metricName: 'Collaboration Score',
@@ -365,114 +383,131 @@ export const MultiOperatorPerformanceComparison: React.FC<Props> = ({
           value: op.collaborationScore,
           rank: index + 1,
           percentile: 95 - index * 12,
-          trend: ['improving', 'stable', 'improving', 'declining'][index] as any
+          trend: ['improving', 'stable', 'improving', 'declining'][index] as any,
         })),
-        benchmark: calculateStats(mockOperatorSnapshots.map(op => op.collaborationScore))
-      }
+        benchmark: calculateStats(mockOperatorSnapshots.map((op) => op.collaborationScore)),
+      },
     ];
   }, [mockOperatorSnapshots]);
 
-  const mockAlerts: PerformanceAlert[] = useMemo(() => [
-    {
-      id: 'alert-perf-001',
-      operatorId: 'op-004',
-      type: 'efficiency_decline',
-      severity: 'medium',
-      message: 'Query efficiency dropped 15% below personal average',
-      currentValue: 93.7,
-      threshold: 95.0,
-      recommendations: [
-        'Review recent query patterns for optimization opportunities',
-        'Consider cache warming for frequently accessed data',
-        'Analyze error patterns for systematic issues'
-      ],
-      triggeredAt: Date.now() - 1200000
-    },
-    {
-      id: 'alert-perf-002',
-      operatorId: 'op-003',
-      type: 'resource_spike',
-      severity: 'low',
-      message: 'Token consumption increased significantly',
-      currentValue: 32567,
-      threshold: 30000,
-      recommendations: [
-        'Review query complexity and context size',
-        'Consider implementing result caching',
-        'Optimize prompt engineering for efficiency'
-      ],
-      triggeredAt: Date.now() - 900000
-    }
-  ], []);
-
-  const mockTeamComparisons: TeamPerformanceComparison[] = useMemo(() => [
-    {
-      teamId: 'team-frontend',
-      teamName: 'Frontend Team',
-      operatorCount: 1,
-      avgMetrics: {
-        productivity: 85,
-        efficiency: 89,
-        resourceOptimization: 78,
-        quality: 87,
-        collaboration: 88
+  const mockAlerts: PerformanceAlert[] = useMemo(
+    () => [
+      {
+        id: 'alert-perf-001',
+        operatorId: 'op-004',
+        type: 'efficiency_decline',
+        severity: 'medium',
+        message: 'Query efficiency dropped 15% below personal average',
+        currentValue: 93.7,
+        threshold: 95.0,
+        recommendations: [
+          'Review recent query patterns for optimization opportunities',
+          'Consider cache warming for frequently accessed data',
+          'Analyze error patterns for systematic issues',
+        ],
+        triggeredAt: Date.now() - 1200000,
       },
-      topPerformers: ['op-001'],
-      improvementOpportunities: []
-    },
-    {
-      teamId: 'team-backend',
-      teamName: 'Backend Team',
-      operatorCount: 1,
-      avgMetrics: {
-        productivity: 92,
-        efficiency: 95,
-        resourceOptimization: 82,
-        quality: 89,
-        collaboration: 82
+      {
+        id: 'alert-perf-002',
+        operatorId: 'op-003',
+        type: 'resource_spike',
+        severity: 'low',
+        message: 'Token consumption increased significantly',
+        currentValue: 32567,
+        threshold: 30000,
+        recommendations: [
+          'Review query complexity and context size',
+          'Consider implementing result caching',
+          'Optimize prompt engineering for efficiency',
+        ],
+        triggeredAt: Date.now() - 900000,
       },
-      topPerformers: ['op-002'],
-      improvementOpportunities: []
-    }
-  ], []);
+    ],
+    [],
+  );
 
-  const mockCorrelations: PerformanceCorrelation[] = useMemo(() => [
-    {
-      metric1: 'collaboration_score',
-      metric2: 'knowledge_sharing',
-      correlation: 0.87,
-      significance: 0.002,
-      insight: 'Higher collaboration strongly correlates with knowledge sharing activities'
-    },
-    {
-      metric1: 'query_success_rate',
-      metric2: 'resource_efficiency',
-      correlation: 0.73,
-      significance: 0.012,
-      insight: 'Efficient queries reduce overall resource consumption'
-    },
-    {
-      metric1: 'code_quality_score',
-      metric2: 'bug_introduction',
-      correlation: -0.65,
-      significance: 0.025,
-      insight: 'Higher code quality significantly reduces bug introduction rates'
-    }
-  ], []);
+  const mockTeamComparisons: TeamPerformanceComparison[] = useMemo(
+    () => [
+      {
+        teamId: 'team-frontend',
+        teamName: 'Frontend Team',
+        operatorCount: 1,
+        avgMetrics: {
+          productivity: 85,
+          efficiency: 89,
+          resourceOptimization: 78,
+          quality: 87,
+          collaboration: 88,
+        },
+        topPerformers: ['op-001'],
+        improvementOpportunities: [],
+      },
+      {
+        teamId: 'team-backend',
+        teamName: 'Backend Team',
+        operatorCount: 1,
+        avgMetrics: {
+          productivity: 92,
+          efficiency: 95,
+          resourceOptimization: 82,
+          quality: 89,
+          collaboration: 82,
+        },
+        topPerformers: ['op-002'],
+        improvementOpportunities: [],
+      },
+    ],
+    [],
+  );
+
+  const mockCorrelations: PerformanceCorrelation[] = useMemo(
+    () => [
+      {
+        metric1: 'collaboration_score',
+        metric2: 'knowledge_sharing',
+        correlation: 0.87,
+        significance: 0.002,
+        insight: 'Higher collaboration strongly correlates with knowledge sharing activities',
+      },
+      {
+        metric1: 'query_success_rate',
+        metric2: 'resource_efficiency',
+        correlation: 0.73,
+        significance: 0.012,
+        insight: 'Efficient queries reduce overall resource consumption',
+      },
+      {
+        metric1: 'code_quality_score',
+        metric2: 'bug_introduction',
+        correlation: -0.65,
+        significance: 0.025,
+        insight: 'Higher code quality significantly reduces bug introduction rates',
+      },
+    ],
+    [],
+  );
 
   const getOperatorName = (operatorId: string): string => {
-    return mockOperatorSnapshots.find(op => op.operatorId === operatorId)?.operatorName || operatorId;
+    return (
+      mockOperatorSnapshots.find((op) => op.operatorId === operatorId)?.operatorName || operatorId
+    );
   };
 
   const getTrendColor = (trend: string): string => {
     switch (trend) {
-      case 'improving': return 'var(--org-success)';
-      case 'declining': return 'var(--org-alert-high)';
-      default: return 'var(--org-info)';
+      case 'improving':
+        return 'var(--org-success)';
+      case 'declining':
+        return 'var(--org-alert-high)';
+      default:
+        return 'var(--org-info)';
     }
   };
 
-  const getPerformanceColor = (value: number, benchmark: { median: number; p75: number; p90: number }): string => {
+  const getPerformanceColor = (
+    value: number,
+    benchmark: { median: number; p75: number; p90: number },
+  ): string => {
     if (value >= benchmark.p90) return 'var(--org-success)';
     if (value >= benchmark.p75) return 'var(--org-info)';
     if (value >= benchmark.median) return 'var(--org-warning)';
@@ -488,21 +523,29 @@ export const MultiOperatorPerformanceComparison: React.FC<Props> = ({
         </div>
         <div className="org-stat-card">
           <div className="org-stat-value">
-            {(mockOperatorSnapshots.reduce((sum, op) => sum + op.productivity.tasksCompleted, 0) /
-              mockOperatorSnapshots.length).toFixed(1)}
+            {(
+              mockOperatorSnapshots.reduce((sum, op) => sum + op.productivity.tasksCompleted, 0) /
+              mockOperatorSnapshots.length
+            ).toFixed(1)}
           </div>
           <div className="org-stat-label">Avg Tasks/Week</div>
         </div>
         <div className="org-stat-card">
           <div className="org-stat-value">
-            {(mockOperatorSnapshots.reduce((sum, op) => sum + op.efficiency.querySuccessRate, 0) /
-              mockOperatorSnapshots.length).toFixed(1)}%
+            {(
+              mockOperatorSnapshots.reduce((sum, op) => sum + op.efficiency.querySuccessRate, 0) /
+              mockOperatorSnapshots.length
+            ).toFixed(1)}
+            %
           </div>
           <div className="org-stat-label">Avg Success Rate</div>
         </div>
         <div className="org-stat-card">
           <div className="org-stat-value">
-            ${mockOperatorSnapshots.reduce((sum, op) => sum + op.resourceUsage.costEstimate, 0).toFixed(0)}
+            $
+            {mockOperatorSnapshots
+              .reduce((sum, op) => sum + op.resourceUsage.costEstimate, 0)
+              .toFixed(0)}
           </div>
           <div className="org-stat-label">Total Weekly Cost</div>
         </div>
@@ -531,8 +574,10 @@ export const MultiOperatorPerformanceComparison: React.FC<Props> = ({
                       style={{
                         width: `${(operator.productivity.tasksCompleted / 35) * 100}%`,
                         backgroundColor: getPerformanceColor(operator.productivity.tasksCompleted, {
-                          median: 25, p75: 30, p90: 32
-                        })
+                          median: 25,
+                          p75: 30,
+                          p90: 32,
+                        }),
                       }}
                     />
                   </div>
@@ -547,8 +592,10 @@ export const MultiOperatorPerformanceComparison: React.FC<Props> = ({
                       style={{
                         width: `${operator.efficiency.querySuccessRate}%`,
                         backgroundColor: getPerformanceColor(operator.efficiency.querySuccessRate, {
-                          median: 92, p75: 95, p90: 97
-                        })
+                          median: 92,
+                          p75: 95,
+                          p90: 97,
+                        }),
                       }}
                     />
                   </div>
@@ -562,9 +609,14 @@ export const MultiOperatorPerformanceComparison: React.FC<Props> = ({
                       className="org-score-fill"
                       style={{
                         width: `${operator.qualityMetrics.codeQualityScore}%`,
-                        backgroundColor: getPerformanceColor(operator.qualityMetrics.codeQualityScore, {
-                          median: 85, p75: 90, p90: 95
-                        })
+                        backgroundColor: getPerformanceColor(
+                          operator.qualityMetrics.codeQualityScore,
+                          {
+                            median: 85,
+                            p75: 90,
+                            p90: 95,
+                          },
+                        ),
                       }}
                     />
                   </div>
@@ -579,8 +631,10 @@ export const MultiOperatorPerformanceComparison: React.FC<Props> = ({
                       style={{
                         width: `${operator.collaborationScore}%`,
                         backgroundColor: getPerformanceColor(operator.collaborationScore, {
-                          median: 80, p75: 85, p90: 90
-                        })
+                          median: 80,
+                          p75: 85,
+                          p90: 90,
+                        }),
                       }}
                     />
                   </div>
@@ -606,9 +660,10 @@ export const MultiOperatorPerformanceComparison: React.FC<Props> = ({
   );
 
   const renderRankings = () => {
-    const filteredMetrics = metricCategory === 'all' ?
-      mockComparisonMetrics :
-      mockComparisonMetrics.filter(m => m.category === metricCategory);
+    const filteredMetrics =
+      metricCategory === 'all'
+        ? mockComparisonMetrics
+        : mockComparisonMetrics.filter((m) => m.category === metricCategory);
 
     return (
       <div className="org-performance-rankings">
@@ -644,7 +699,7 @@ export const MultiOperatorPerformanceComparison: React.FC<Props> = ({
 
               <div className="org-ranking-list">
                 {metric.operators
-                  .sort((a, b) => metric.higherIsBetter ? b.value - a.value : a.value - b.value)
+                  .sort((a, b) => (metric.higherIsBetter ? b.value - a.value : a.value - b.value))
                   .map((operator, index) => (
                     <div key={operator.operatorId} className="org-ranking-item">
                       <div className="org-rank-position">#{index + 1}</div>
@@ -653,7 +708,10 @@ export const MultiOperatorPerformanceComparison: React.FC<Props> = ({
                           {getOperatorName(operator.operatorId)}
                         </span>
                         <span className="org-operator-value">
-                          {typeof operator.value === 'number' ? operator.value.toFixed(1) : operator.value}{metric.unit}
+                          {typeof operator.value === 'number'
+                            ? operator.value.toFixed(1)
+                            : operator.value}
+                          {metric.unit}
                         </span>
                       </div>
                       <div className="org-percentile-info">
@@ -673,15 +731,24 @@ export const MultiOperatorPerformanceComparison: React.FC<Props> = ({
                 <div className="org-benchmark-info">
                   <div className="org-benchmark-item">
                     <span>Median:</span>
-                    <span>{metric.benchmark.median.toFixed(1)}{metric.unit}</span>
+                    <span>
+                      {metric.benchmark.median.toFixed(1)}
+                      {metric.unit}
+                    </span>
                   </div>
                   <div className="org-benchmark-item">
                     <span>75th percentile:</span>
-                    <span>{metric.benchmark.p75.toFixed(1)}{metric.unit}</span>
+                    <span>
+                      {metric.benchmark.p75.toFixed(1)}
+                      {metric.unit}
+                    </span>
                   </div>
                   <div className="org-benchmark-item">
                     <span>90th percentile:</span>
-                    <span>{metric.benchmark.p90.toFixed(1)}{metric.unit}</span>
+                    <span>
+                      {metric.benchmark.p90.toFixed(1)}
+                      {metric.unit}
+                    </span>
                   </div>
                 </div>
               )}
@@ -715,7 +782,8 @@ export const MultiOperatorPerformanceComparison: React.FC<Props> = ({
                   className="org-correlation-bar"
                   style={{
                     width: `${Math.abs(correlation.correlation) * 100}%`,
-                    backgroundColor: correlation.correlation > 0 ? 'var(--org-success)' : 'var(--org-alert-high)'
+                    backgroundColor:
+                      correlation.correlation > 0 ? 'var(--org-success)' : 'var(--org-alert-high)',
                   }}
                 />
                 <span className="org-correlation-value">
@@ -727,13 +795,15 @@ export const MultiOperatorPerformanceComparison: React.FC<Props> = ({
             <div className="org-correlation-details">
               <div className="org-significance">
                 <span>Significance: p = {correlation.significance.toFixed(3)}</span>
-                <span className={correlation.significance < 0.05 ? 'org-significant' : 'org-not-significant'}>
+                <span
+                  className={
+                    correlation.significance < 0.05 ? 'org-significant' : 'org-not-significant'
+                  }
+                >
                   {correlation.significance < 0.05 ? 'Significant' : 'Not Significant'}
                 </span>
               </div>
-              <div className="org-correlation-insight">
-                {correlation.insight}
-              </div>
+              <div className="org-correlation-insight">{correlation.insight}</div>
             </div>
           </div>
         ))}
@@ -745,15 +815,24 @@ export const MultiOperatorPerformanceComparison: React.FC<Props> = ({
           <p>Interactive correlation heatmap would be rendered here with actual charting library</p>
           <div className="org-heatmap-legend">
             <div className="org-legend-item">
-              <div className="org-legend-color" style={{ backgroundColor: 'var(--org-success)' }}></div>
+              <div
+                className="org-legend-color"
+                style={{ backgroundColor: 'var(--org-success)' }}
+              ></div>
               <span>Positive Correlation</span>
             </div>
             <div className="org-legend-item">
-              <div className="org-legend-color" style={{ backgroundColor: 'var(--org-alert-high)' }}></div>
+              <div
+                className="org-legend-color"
+                style={{ backgroundColor: 'var(--org-alert-high)' }}
+              ></div>
               <span>Negative Correlation</span>
             </div>
             <div className="org-legend-item">
-              <div className="org-legend-color" style={{ backgroundColor: 'var(--org-text-muted)' }}></div>
+              <div
+                className="org-legend-color"
+                style={{ backgroundColor: 'var(--org-text-muted)' }}
+              ></div>
               <span>No Correlation</span>
             </div>
           </div>
@@ -787,7 +866,11 @@ export const MultiOperatorPerformanceComparison: React.FC<Props> = ({
                       className="org-metric-fill"
                       style={{
                         width: `${value}%`,
-                        backgroundColor: getPerformanceColor(value, { median: 75, p75: 85, p90: 90 })
+                        backgroundColor: getPerformanceColor(value, {
+                          median: 75,
+                          p75: 85,
+                          p90: 90,
+                        }),
                       }}
                     />
                   </div>
@@ -833,10 +916,7 @@ export const MultiOperatorPerformanceComparison: React.FC<Props> = ({
         <h2>Multi-Operator Performance Comparison</h2>
         <div className="org-header-controls">
           <div className="org-time-range-selector">
-            <select
-              value={timeRange}
-              onChange={(e) => setTimeRange(e.target.value as TimeRange)}
-            >
+            <select value={timeRange} onChange={(e) => setTimeRange(e.target.value as TimeRange)}>
               <option value="1d">Last Day</option>
               <option value="7d">Last Week</option>
               <option value="30d">Last Month</option>
@@ -879,7 +959,7 @@ export const MultiOperatorPerformanceComparison: React.FC<Props> = ({
           { key: 'rankings', label: 'Rankings' },
           { key: 'trends', label: 'Trends' },
           { key: 'correlations', label: 'Correlations' },
-          { key: 'teams', label: 'Team Comparison' }
+          { key: 'teams', label: 'Team Comparison' },
         ].map((tab) => (
           <button
             key={tab.key}
@@ -930,9 +1010,7 @@ export const MultiOperatorPerformanceComparison: React.FC<Props> = ({
 
       {effectiveTeamId && (
         <div className="org-context-info">
-          <div className="org-context-badge">
-            Performance comparison for: {effectiveTeamId}
-          </div>
+          <div className="org-context-badge">Performance comparison for: {effectiveTeamId}</div>
         </div>
       )}
     </div>

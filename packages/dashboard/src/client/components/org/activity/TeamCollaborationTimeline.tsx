@@ -5,15 +5,31 @@
  * task handoffs, and collaborative problem-solving sessions.
  */
 
-import { useState, useEffect } from 'react';
-import { Users, ArrowRight, MessageCircle, Share, GitBranch, Clock, TrendingUp, Zap } from 'lucide-react';
+import {
+  ArrowRight,
+  Clock,
+  GitBranch,
+  MessageCircle,
+  Share,
+  TrendingUp,
+  Users,
+  Zap,
+} from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useOrganizationalContext } from '../../../../contexts/OrganizationalContext';
 import type { SessionCorrelation } from '../../../types/organizational.js';
 
 export interface CollaborationEvent {
   readonly eventId: string;
   readonly timestamp: number;
-  readonly eventType: 'knowledge-sharing' | 'task-handoff' | 'pair-programming' | 'code-review' | 'mentoring' | 'brainstorming' | 'decision-making';
+  readonly eventType:
+    | 'knowledge-sharing'
+    | 'task-handoff'
+    | 'pair-programming'
+    | 'code-review'
+    | 'mentoring'
+    | 'brainstorming'
+    | 'decision-making';
   readonly title: string;
   readonly description: string;
   readonly participants: readonly string[];
@@ -48,7 +64,12 @@ export interface TaskHandoff {
   readonly fromOperatorId: string;
   readonly toOperatorId: string;
   readonly timestamp: number;
-  readonly reason: 'workload-balance' | 'expertise-required' | 'availability' | 'planned-rotation' | 'escalation';
+  readonly reason:
+    | 'workload-balance'
+    | 'expertise-required'
+    | 'availability'
+    | 'planned-rotation'
+    | 'escalation';
   readonly contextTransferred: readonly string[];
   readonly completionStatus: boolean;
   readonly handoffQuality: number; // 0-1 score based on context completeness
@@ -63,13 +84,16 @@ export interface TeamCollaborationData {
   readonly events: readonly CollaborationEvent[];
   readonly knowledgeFlows: readonly KnowledgeFlow[];
   readonly taskHandoffs: readonly TaskHandoff[];
-  readonly participantMetrics: Record<string, {
-    collaborationScore: number;
-    knowledgeShared: number;
-    knowledgeReceived: number;
-    handoffsGiven: number;
-    handoffsReceived: number;
-  }>;
+  readonly participantMetrics: Record<
+    string,
+    {
+      collaborationScore: number;
+      knowledgeShared: number;
+      knowledgeReceived: number;
+      handoffsGiven: number;
+      handoffsReceived: number;
+    }
+  >;
   readonly collaborationPatterns: readonly {
     pattern: string;
     frequency: number;
@@ -109,58 +133,90 @@ interface TeamCollaborationTimelineProps {
 
 const getEventTypeIcon = (type: CollaborationEvent['eventType']) => {
   switch (type) {
-    case 'knowledge-sharing': return <Share className="h-4 w-4" />;
-    case 'task-handoff': return <ArrowRight className="h-4 w-4" />;
-    case 'pair-programming': return <Users className="h-4 w-4" />;
-    case 'code-review': return <MessageCircle className="h-4 w-4" />;
-    case 'mentoring': return <TrendingUp className="h-4 w-4" />;
-    case 'brainstorming': return <Zap className="h-4 w-4" />;
-    case 'decision-making': return <GitBranch className="h-4 w-4" />;
-    default: return <Users className="h-4 w-4" />;
+    case 'knowledge-sharing':
+      return <Share className="h-4 w-4" />;
+    case 'task-handoff':
+      return <ArrowRight className="h-4 w-4" />;
+    case 'pair-programming':
+      return <Users className="h-4 w-4" />;
+    case 'code-review':
+      return <MessageCircle className="h-4 w-4" />;
+    case 'mentoring':
+      return <TrendingUp className="h-4 w-4" />;
+    case 'brainstorming':
+      return <Zap className="h-4 w-4" />;
+    case 'decision-making':
+      return <GitBranch className="h-4 w-4" />;
+    default:
+      return <Users className="h-4 w-4" />;
   }
 };
 
 const getEventTypeColor = (type: CollaborationEvent['eventType']) => {
   switch (type) {
-    case 'knowledge-sharing': return 'org-event-knowledge';
-    case 'task-handoff': return 'org-event-handoff';
-    case 'pair-programming': return 'org-event-pairing';
-    case 'code-review': return 'org-event-review';
-    case 'mentoring': return 'org-event-mentoring';
-    case 'brainstorming': return 'org-event-brainstorming';
-    case 'decision-making': return 'org-event-decision';
-    default: return 'org-event-default';
+    case 'knowledge-sharing':
+      return 'org-event-knowledge';
+    case 'task-handoff':
+      return 'org-event-handoff';
+    case 'pair-programming':
+      return 'org-event-pairing';
+    case 'code-review':
+      return 'org-event-review';
+    case 'mentoring':
+      return 'org-event-mentoring';
+    case 'brainstorming':
+      return 'org-event-brainstorming';
+    case 'decision-making':
+      return 'org-event-decision';
+    default:
+      return 'org-event-default';
   }
 };
 
 const getContextColor = (context: CollaborationEvent['context']) => {
   switch (context) {
-    case 'planned': return 'org-context-planned';
-    case 'spontaneous': return 'org-context-spontaneous';
-    case 'emergency': return 'org-context-emergency';
-    case 'scheduled': return 'org-context-scheduled';
-    default: return 'org-context-default';
+    case 'planned':
+      return 'org-context-planned';
+    case 'spontaneous':
+      return 'org-context-spontaneous';
+    case 'emergency':
+      return 'org-context-emergency';
+    case 'scheduled':
+      return 'org-context-scheduled';
+    default:
+      return 'org-context-default';
   }
 };
 
 const getImpactColor = (impact: CollaborationEvent['impact']) => {
   switch (impact) {
-    case 'critical': return 'org-text-error';
-    case 'high': return 'org-text-warning';
-    case 'medium': return 'org-text-info';
-    case 'low': return 'org-text-success';
-    default: return 'org-text-muted';
+    case 'critical':
+      return 'org-text-error';
+    case 'high':
+      return 'org-text-warning';
+    case 'medium':
+      return 'org-text-info';
+    case 'low':
+      return 'org-text-success';
+    default:
+      return 'org-text-muted';
   }
 };
 
 const getTransferMethodColor = (method: KnowledgeFlow['transferMethod']) => {
   switch (method) {
-    case 'documentation': return 'org-transfer-documentation';
-    case 'verbal': return 'org-transfer-verbal';
-    case 'demonstration': return 'org-transfer-demonstration';
-    case 'pair-work': return 'org-transfer-pair';
-    case 'review': return 'org-transfer-review';
-    default: return 'org-transfer-default';
+    case 'documentation':
+      return 'org-transfer-documentation';
+    case 'verbal':
+      return 'org-transfer-verbal';
+    case 'demonstration':
+      return 'org-transfer-demonstration';
+    case 'pair-work':
+      return 'org-transfer-pair';
+    case 'review':
+      return 'org-transfer-review';
+    default:
+      return 'org-transfer-default';
   }
 };
 
@@ -181,19 +237,22 @@ const TimelineView: React.FC<{
   const [selectedEvent, setSelectedEvent] = useState<string | null>(null);
   const [timeScale, setTimeScale] = useState<'hour' | 'day' | 'week'>('day');
 
-  const filteredEvents = eventFilter ?
-    data.events.filter(event => eventFilter.includes(event.eventType)) :
-    data.events;
+  const filteredEvents = eventFilter
+    ? data.events.filter((event) => eventFilter.includes(event.eventType))
+    : data.events;
 
   const sortedEvents = [...filteredEvents].sort((a, b) => b.timestamp - a.timestamp);
 
-  const groupedEvents = groupByType ?
-    sortedEvents.reduce((acc, event) => {
-      if (!acc[event.eventType]) acc[event.eventType] = [];
-      acc[event.eventType].push(event);
-      return acc;
-    }, {} as Record<string, CollaborationEvent[]>) :
-    { all: sortedEvents };
+  const groupedEvents = groupByType
+    ? sortedEvents.reduce(
+        (acc, event) => {
+          if (!acc[event.eventType]) acc[event.eventType] = [];
+          acc[event.eventType].push(event);
+          return acc;
+        },
+        {} as Record<string, CollaborationEvent[]>,
+      )
+    : { all: sortedEvents };
 
   return (
     <div className="org-collaboration-timeline">
@@ -209,9 +268,7 @@ const TimelineView: React.FC<{
             <option value="day">Daily View</option>
             <option value="week">Weekly View</option>
           </select>
-          <span className="org-text-sm org-text-muted">
-            {sortedEvents.length} events
-          </span>
+          <span className="org-text-sm org-text-muted">{sortedEvents.length} events</span>
         </div>
       </div>
 
@@ -238,7 +295,9 @@ const TimelineView: React.FC<{
 
                   return (
                     <div key={event.eventId} className="relative flex items-start">
-                      <div className={`flex-shrink-0 w-16 h-8 ${getEventTypeColor(event.eventType)} rounded-lg flex items-center justify-center z-10`}>
+                      <div
+                        className={`flex-shrink-0 w-16 h-8 ${getEventTypeColor(event.eventType)} rounded-lg flex items-center justify-center z-10`}
+                      >
                         {getEventTypeIcon(event.eventType)}
                       </div>
 
@@ -259,10 +318,14 @@ const TimelineView: React.FC<{
                             <div className="flex-1">
                               <div className="flex items-center space-x-2 mb-1">
                                 <h5 className="org-font-semibold">{event.title}</h5>
-                                <span className={`org-badge org-badge-xs ${getImpactColor(event.impact)}`}>
+                                <span
+                                  className={`org-badge org-badge-xs ${getImpactColor(event.impact)}`}
+                                >
                                   {event.impact}
                                 </span>
-                                <span className={`org-badge org-badge-xs ${getContextColor(event.context)}`}>
+                                <span
+                                  className={`org-badge org-badge-xs ${getContextColor(event.context)}`}
+                                >
                                   {event.context}
                                 </span>
                               </div>
@@ -270,7 +333,9 @@ const TimelineView: React.FC<{
                               <div className="flex items-center space-x-4 org-text-sm org-text-muted">
                                 <span>Participants: {event.participants.length}</span>
                                 <span>Initiated by: {event.initiator.slice(-6)}</span>
-                                {event.duration && <span>Duration: {formatDuration(event.duration)}</span>}
+                                {event.duration && (
+                                  <span>Duration: {formatDuration(event.duration)}</span>
+                                )}
                               </div>
                             </div>
                             <div className="text-right org-text-sm org-text-muted">
@@ -285,41 +350,60 @@ const TimelineView: React.FC<{
                                   <h6 className="org-font-semibold mb-2">Participants</h6>
                                   <div className="space-y-1">
                                     <div className="flex items-center space-x-2">
-                                      <span className="org-badge org-badge-primary org-badge-xs">Initiator</span>
-                                      <span className="org-text-sm">{event.initiator.slice(-8)}</span>
+                                      <span className="org-badge org-badge-primary org-badge-xs">
+                                        Initiator
+                                      </span>
+                                      <span className="org-text-sm">
+                                        {event.initiator.slice(-8)}
+                                      </span>
                                     </div>
                                     {event.participants
-                                      .filter(p => p !== event.initiator)
-                                      .map(participant => (
-                                        <div key={participant} className="flex items-center space-x-2">
-                                          <span className="org-badge org-badge-secondary org-badge-xs">Participant</span>
-                                          <span className="org-text-sm">{participant.slice(-8)}</span>
+                                      .filter((p) => p !== event.initiator)
+                                      .map((participant) => (
+                                        <div
+                                          key={participant}
+                                          className="flex items-center space-x-2"
+                                        >
+                                          <span className="org-badge org-badge-secondary org-badge-xs">
+                                            Participant
+                                          </span>
+                                          <span className="org-text-sm">
+                                            {participant.slice(-8)}
+                                          </span>
                                         </div>
-                                      ))
-                                    }
+                                      ))}
                                   </div>
                                 </div>
 
-                                {event.knowledgeTransferred && event.knowledgeTransferred.length > 0 && (
-                                  <div>
-                                    <h6 className="org-font-semibold mb-2">Knowledge Transferred</h6>
-                                    <div className="flex flex-wrap gap-1">
-                                      {event.knowledgeTransferred.map(knowledge => (
-                                        <span key={knowledge} className="org-badge org-badge-info org-badge-xs">
-                                          {knowledge}
-                                        </span>
-                                      ))}
+                                {event.knowledgeTransferred &&
+                                  event.knowledgeTransferred.length > 0 && (
+                                    <div>
+                                      <h6 className="org-font-semibold mb-2">
+                                        Knowledge Transferred
+                                      </h6>
+                                      <div className="flex flex-wrap gap-1">
+                                        {event.knowledgeTransferred.map((knowledge) => (
+                                          <span
+                                            key={knowledge}
+                                            className="org-badge org-badge-info org-badge-xs"
+                                          >
+                                            {knowledge}
+                                          </span>
+                                        ))}
+                                      </div>
                                     </div>
-                                  </div>
-                                )}
+                                  )}
                               </div>
 
                               {event.artifacts && event.artifacts.length > 0 && (
                                 <div className="mb-4">
                                   <h6 className="org-font-semibold mb-2">Artifacts Created</h6>
                                   <div className="flex flex-wrap gap-1">
-                                    {event.artifacts.map(artifact => (
-                                      <span key={artifact} className="org-badge org-badge-success org-badge-xs">
+                                    {event.artifacts.map((artifact) => (
+                                      <span
+                                        key={artifact}
+                                        className="org-badge org-badge-success org-badge-xs"
+                                      >
                                         {artifact}
                                       </span>
                                     ))}
@@ -368,19 +452,27 @@ const FlowsView: React.FC<{
   const [selectedFlow, setSelectedFlow] = useState<string | null>(null);
 
   // Group flows by knowledge topic
-  const flowsByTopic = data.knowledgeFlows.reduce((acc, flow) => {
-    if (!acc[flow.knowledgeTopic]) acc[flow.knowledgeTopic] = [];
-    acc[flow.knowledgeTopic].push(flow);
-    return acc;
-  }, {} as Record<string, KnowledgeFlow[]>);
+  const flowsByTopic = data.knowledgeFlows.reduce(
+    (acc, flow) => {
+      if (!acc[flow.knowledgeTopic]) acc[flow.knowledgeTopic] = [];
+      acc[flow.knowledgeTopic].push(flow);
+      return acc;
+    },
+    {} as Record<string, KnowledgeFlow[]>,
+  );
 
-  const topicStats = Object.entries(flowsByTopic).map(([topic, flows]) => ({
-    topic,
-    flows,
-    totalTransfers: flows.length,
-    avgEffectiveness: flows.reduce((sum, f) => sum + f.effectiveness, 0) / flows.length,
-    uniqueParticipants: new Set([...flows.map(f => f.sourceOperatorId), ...flows.map(f => f.targetOperatorId)]).size
-  })).sort((a, b) => b.totalTransfers - a.totalTransfers);
+  const topicStats = Object.entries(flowsByTopic)
+    .map(([topic, flows]) => ({
+      topic,
+      flows,
+      totalTransfers: flows.length,
+      avgEffectiveness: flows.reduce((sum, f) => sum + f.effectiveness, 0) / flows.length,
+      uniqueParticipants: new Set([
+        ...flows.map((f) => f.sourceOperatorId),
+        ...flows.map((f) => f.targetOperatorId),
+      ]).size,
+    }))
+    .sort((a, b) => b.totalTransfers - a.totalTransfers);
 
   return (
     <div className="org-knowledge-flows">
@@ -392,77 +484,89 @@ const FlowsView: React.FC<{
       </div>
 
       <div className="space-y-6">
-        {topicStats.map(({ topic, flows, totalTransfers, avgEffectiveness, uniqueParticipants }) => (
-          <div key={topic} className="org-card-inner">
-            <div
-              className="cursor-pointer"
-              onClick={() => setSelectedFlow(selectedFlow === topic ? null : topic)}
-            >
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 rounded-lg org-bg-info-light flex items-center justify-center">
-                    <Share className="h-5 w-5 org-text-info" />
-                  </div>
-                  <div>
-                    <h5 className="org-font-semibold">{topic}</h5>
-                    <div className="org-text-sm org-text-muted">
-                      {totalTransfers} transfers • {uniqueParticipants} participants
+        {topicStats.map(
+          ({ topic, flows, totalTransfers, avgEffectiveness, uniqueParticipants }) => (
+            <div key={topic} className="org-card-inner">
+              <div
+                className="cursor-pointer"
+                onClick={() => setSelectedFlow(selectedFlow === topic ? null : topic)}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 rounded-lg org-bg-info-light flex items-center justify-center">
+                      <Share className="h-5 w-5 org-text-info" />
+                    </div>
+                    <div>
+                      <h5 className="org-font-semibold">{topic}</h5>
+                      <div className="org-text-sm org-text-muted">
+                        {totalTransfers} transfers • {uniqueParticipants} participants
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="text-right">
-                  <div className={`org-text-lg org-font-semibold ${
-                    avgEffectiveness >= 0.8 ? 'org-text-success' :
-                    avgEffectiveness >= 0.6 ? 'org-text-info' :
-                    'org-text-warning'
-                  }`}>
-                    {Math.round(avgEffectiveness * 100)}%
+                  <div className="text-right">
+                    <div
+                      className={`org-text-lg org-font-semibold ${
+                        avgEffectiveness >= 0.8
+                          ? 'org-text-success'
+                          : avgEffectiveness >= 0.6
+                            ? 'org-text-info'
+                            : 'org-text-warning'
+                      }`}
+                    >
+                      {Math.round(avgEffectiveness * 100)}%
+                    </div>
+                    <div className="org-text-xs org-text-muted">avg effectiveness</div>
                   </div>
-                  <div className="org-text-xs org-text-muted">avg effectiveness</div>
                 </div>
-              </div>
 
-              {selectedFlow === topic && (
-                <div className="pt-4 org-border-t">
-                  <div className="space-y-3">
-                    {flows.map((flow) => (
-                      <div key={flow.flowId} className="org-card-inner org-card-sm">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-3">
-                            <div className="flex items-center space-x-2">
-                              <span className="org-font-mono org-text-sm">
-                                {flow.sourceOperatorId.slice(-6)}
-                              </span>
-                              <ArrowRight className="h-3 w-3 org-text-muted" />
-                              <span className="org-font-mono org-text-sm">
-                                {flow.targetOperatorId.slice(-6)}
+                {selectedFlow === topic && (
+                  <div className="pt-4 org-border-t">
+                    <div className="space-y-3">
+                      {flows.map((flow) => (
+                        <div key={flow.flowId} className="org-card-inner org-card-sm">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-3">
+                              <div className="flex items-center space-x-2">
+                                <span className="org-font-mono org-text-sm">
+                                  {flow.sourceOperatorId.slice(-6)}
+                                </span>
+                                <ArrowRight className="h-3 w-3 org-text-muted" />
+                                <span className="org-font-mono org-text-sm">
+                                  {flow.targetOperatorId.slice(-6)}
+                                </span>
+                              </div>
+                              <span
+                                className={`org-badge org-badge-xs ${getTransferMethodColor(flow.transferMethod)}`}
+                              >
+                                {flow.transferMethod}
                               </span>
                             </div>
-                            <span className={`org-badge org-badge-xs ${getTransferMethodColor(flow.transferMethod)}`}>
-                              {flow.transferMethod}
-                            </span>
-                          </div>
-                          <div className="text-right">
-                            <div className={`org-text-sm org-font-semibold ${
-                              flow.effectiveness >= 0.8 ? 'org-text-success' :
-                              flow.effectiveness >= 0.6 ? 'org-text-info' :
-                              'org-text-warning'
-                            }`}>
-                              {Math.round(flow.effectiveness * 100)}%
-                            </div>
-                            <div className="org-text-xs org-text-muted">
-                              {new Date(flow.timestamp).toLocaleDateString()}
+                            <div className="text-right">
+                              <div
+                                className={`org-text-sm org-font-semibold ${
+                                  flow.effectiveness >= 0.8
+                                    ? 'org-text-success'
+                                    : flow.effectiveness >= 0.6
+                                      ? 'org-text-info'
+                                      : 'org-text-warning'
+                                }`}
+                              >
+                                {Math.round(flow.effectiveness * 100)}%
+                              </div>
+                              <div className="org-text-xs org-text-muted">
+                                {new Date(flow.timestamp).toLocaleDateString()}
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          ),
+        )}
       </div>
     </div>
   );
@@ -475,17 +579,24 @@ const HandoffsView: React.FC<{
 
   const sortedHandoffs = [...data.taskHandoffs].sort((a, b) => {
     switch (sortBy) {
-      case 'recent': return b.timestamp - a.timestamp;
-      case 'quality': return b.handoffQuality - a.handoffQuality;
-      case 'complexity': return b.timeToProductivity - a.timeToProductivity;
-      default: return b.timestamp - a.timestamp;
+      case 'recent':
+        return b.timestamp - a.timestamp;
+      case 'quality':
+        return b.handoffQuality - a.handoffQuality;
+      case 'complexity':
+        return b.timeToProductivity - a.timeToProductivity;
+      default:
+        return b.timestamp - a.timestamp;
     }
   });
 
-  const handoffReasons = data.taskHandoffs.reduce((acc, handoff) => {
-    acc[handoff.reason] = (acc[handoff.reason] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
+  const handoffReasons = data.taskHandoffs.reduce(
+    (acc, handoff) => {
+      acc[handoff.reason] = (acc[handoff.reason] || 0) + 1;
+      return acc;
+    },
+    {} as Record<string, number>,
+  );
 
   return (
     <div className="org-task-handoffs">
@@ -509,13 +620,23 @@ const HandoffsView: React.FC<{
         </div>
         <div className="org-stat-card">
           <div className="org-stat-value">
-            {Math.round(data.taskHandoffs.reduce((sum, h) => sum + h.handoffQuality, 0) / data.taskHandoffs.length * 100)}%
+            {Math.round(
+              (data.taskHandoffs.reduce((sum, h) => sum + h.handoffQuality, 0) /
+                data.taskHandoffs.length) *
+                100,
+            )}
+            %
           </div>
           <div className="org-stat-label">Avg Quality</div>
         </div>
         <div className="org-stat-card">
           <div className="org-stat-value">
-            {Math.round(data.taskHandoffs.reduce((sum, h) => sum + h.timeToProductivity, 0) / data.taskHandoffs.length / 3600000)}h
+            {Math.round(
+              data.taskHandoffs.reduce((sum, h) => sum + h.timeToProductivity, 0) /
+                data.taskHandoffs.length /
+                3600000,
+            )}
+            h
           </div>
           <div className="org-stat-label">Avg Ramp-up Time</div>
         </div>
@@ -539,9 +660,11 @@ const HandoffsView: React.FC<{
               <div className="flex-1">
                 <div className="flex items-center space-x-2 mb-1">
                   <h5 className="org-font-semibold truncate">{handoff.taskDescription}</h5>
-                  <span className={`org-badge org-badge-xs ${
-                    handoff.completionStatus ? 'org-badge-success' : 'org-badge-warning'
-                  }`}>
+                  <span
+                    className={`org-badge org-badge-xs ${
+                      handoff.completionStatus ? 'org-badge-success' : 'org-badge-warning'
+                    }`}
+                  >
                     {handoff.completionStatus ? 'Completed' : 'In Progress'}
                   </span>
                 </div>
@@ -553,11 +676,15 @@ const HandoffsView: React.FC<{
                   <span>{new Date(handoff.timestamp).toLocaleDateString()}</span>
                 </div>
                 <div className="flex items-center space-x-4 org-text-sm">
-                  <span className={`${
-                    handoff.handoffQuality >= 0.8 ? 'org-text-success' :
-                    handoff.handoffQuality >= 0.6 ? 'org-text-info' :
-                    'org-text-warning'
-                  }`}>
+                  <span
+                    className={`${
+                      handoff.handoffQuality >= 0.8
+                        ? 'org-text-success'
+                        : handoff.handoffQuality >= 0.6
+                          ? 'org-text-info'
+                          : 'org-text-warning'
+                    }`}
+                  >
                     Quality: {Math.round(handoff.handoffQuality * 100)}%
                   </span>
                   <span className="org-text-muted">
@@ -575,7 +702,7 @@ const HandoffsView: React.FC<{
                 <div>
                   <h6 className="org-font-medium mb-1 org-text-sm">Success Factors</h6>
                   <div className="flex flex-wrap gap-1">
-                    {handoff.successFactors.map(factor => (
+                    {handoff.successFactors.map((factor) => (
                       <span key={factor} className="org-badge org-badge-success org-badge-xs">
                         {factor}
                       </span>
@@ -588,7 +715,7 @@ const HandoffsView: React.FC<{
                 <div>
                   <h6 className="org-font-medium mb-1 org-text-sm">Complications</h6>
                   <div className="flex flex-wrap gap-1">
-                    {handoff.complications.map(complication => (
+                    {handoff.complications.map((complication) => (
                       <span key={complication} className="org-badge org-badge-warning org-badge-xs">
                         {complication}
                       </span>
@@ -620,19 +747,27 @@ const MetricsView: React.FC<{
     <div className="org-collaboration-metrics">
       <div className="grid grid-cols-4 gap-4 mb-6">
         <div className="org-stat-card">
-          <div className="org-stat-value">{Math.round(data.teamHealth.collaborationFrequency * 100)}%</div>
+          <div className="org-stat-value">
+            {Math.round(data.teamHealth.collaborationFrequency * 100)}%
+          </div>
           <div className="org-stat-label">Collaboration Frequency</div>
         </div>
         <div className="org-stat-card">
-          <div className="org-stat-value">{Math.round(data.teamHealth.knowledgeDistribution * 100)}%</div>
+          <div className="org-stat-value">
+            {Math.round(data.teamHealth.knowledgeDistribution * 100)}%
+          </div>
           <div className="org-stat-label">Knowledge Distribution</div>
         </div>
         <div className="org-stat-card">
-          <div className="org-stat-value">{Math.round(data.teamHealth.handoffEfficiency * 100)}%</div>
+          <div className="org-stat-value">
+            {Math.round(data.teamHealth.handoffEfficiency * 100)}%
+          </div>
           <div className="org-stat-label">Handoff Efficiency</div>
         </div>
         <div className="org-stat-card">
-          <div className="org-stat-value">{Math.round(data.teamHealth.communicationQuality * 100)}%</div>
+          <div className="org-stat-value">
+            {Math.round(data.teamHealth.communicationQuality * 100)}%
+          </div>
           <div className="org-stat-label">Communication Quality</div>
         </div>
       </div>
@@ -650,11 +785,15 @@ const MetricsView: React.FC<{
                   </div>
                   <div className="flex items-center space-x-4 org-text-sm">
                     <div className="text-right">
-                      <div className={`org-font-semibold ${
-                        metrics.collaborationScore >= 0.8 ? 'org-text-success' :
-                        metrics.collaborationScore >= 0.6 ? 'org-text-info' :
-                        'org-text-warning'
-                      }`}>
+                      <div
+                        className={`org-font-semibold ${
+                          metrics.collaborationScore >= 0.8
+                            ? 'org-text-success'
+                            : metrics.collaborationScore >= 0.6
+                              ? 'org-text-info'
+                              : 'org-text-warning'
+                        }`}
+                      >
                         {Math.round(metrics.collaborationScore * 100)}%
                       </div>
                       <div className="org-text-xs org-text-muted">collab score</div>
@@ -686,11 +825,15 @@ const MetricsView: React.FC<{
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className={`org-font-semibold ${
-                    area.retentionRate >= 0.8 ? 'org-text-success' :
-                    area.retentionRate >= 0.6 ? 'org-text-info' :
-                    'org-text-warning'
-                  }`}>
+                  <div
+                    className={`org-font-semibold ${
+                      area.retentionRate >= 0.8
+                        ? 'org-text-success'
+                        : area.retentionRate >= 0.6
+                          ? 'org-text-info'
+                          : 'org-text-warning'
+                    }`}
+                  >
                     {Math.round(area.retentionRate * 100)}%
                   </div>
                   <div className="org-text-xs org-text-muted">retention</div>
@@ -713,11 +856,15 @@ const MetricsView: React.FC<{
                 </div>
               </div>
               <div className="text-right">
-                <div className={`org-font-semibold ${
-                  pattern.successRate >= 0.8 ? 'org-text-success' :
-                  pattern.successRate >= 0.6 ? 'org-text-info' :
-                  'org-text-warning'
-                }`}>
+                <div
+                  className={`org-font-semibold ${
+                    pattern.successRate >= 0.8
+                      ? 'org-text-success'
+                      : pattern.successRate >= 0.6
+                        ? 'org-text-info'
+                        : 'org-text-warning'
+                  }`}
+                >
                   {Math.round(pattern.successRate * 100)}%
                 </div>
                 <div className="org-text-xs org-text-muted">success rate</div>
@@ -737,7 +884,7 @@ export const TeamCollaborationTimeline: React.FC<TeamCollaborationTimelineProps>
   eventFilter,
   groupByType = false,
   onSelectEvent,
-  className = ''
+  className = '',
 }) => {
   const { teamFilter } = useOrganizationalContext();
   const [data, setData] = useState<TeamCollaborationData | null>(null);
@@ -754,7 +901,7 @@ export const TeamCollaborationTimeline: React.FC<TeamCollaborationTimelineProps>
           week: 604800000,
           month: 2592000000,
           quarter: 7776000000,
-          'half-year': 15552000000
+          'half-year': 15552000000,
         }[timeRange];
 
         const endTime = Date.now();
@@ -763,43 +910,72 @@ export const TeamCollaborationTimeline: React.FC<TeamCollaborationTimelineProps>
         // Generate mock collaboration data
         const mockEvents: CollaborationEvent[] = Array.from({ length: 30 }, (_, i) => {
           const eventTypes: CollaborationEvent['eventType'][] = [
-            'knowledge-sharing', 'task-handoff', 'pair-programming', 'code-review', 'mentoring', 'brainstorming', 'decision-making'
+            'knowledge-sharing',
+            'task-handoff',
+            'pair-programming',
+            'code-review',
+            'mentoring',
+            'brainstorming',
+            'decision-making',
           ];
-          const contexts: CollaborationEvent['context'][] = ['planned', 'spontaneous', 'emergency', 'scheduled'];
+          const contexts: CollaborationEvent['context'][] = [
+            'planned',
+            'spontaneous',
+            'emergency',
+            'scheduled',
+          ];
           const impacts: CollaborationEvent['impact'][] = ['low', 'medium', 'high', 'critical'];
 
           const eventType = eventTypes[i % eventTypes.length];
-          const participants = Array.from({ length: Math.floor(Math.random() * 4) + 2 }, (_, j) =>
-            `op-${Math.random().toString(36).slice(2, 8)}`
+          const participants = Array.from(
+            { length: Math.floor(Math.random() * 4) + 2 },
+            (_, _j) => `op-${Math.random().toString(36).slice(2, 8)}`,
           );
 
           return {
             eventId: `event-${i}`,
-            timestamp: startTime + (Math.random() * timeRangeMs),
+            timestamp: startTime + Math.random() * timeRangeMs,
             eventType,
             title: `${eventType.replace('-', ' ')} session ${i + 1}`,
             description: `Collaborative session focusing on ${eventType.replace('-', ' ')} activities`,
             participants,
             initiator: participants[0],
             duration: Math.random() > 0.3 ? 1800000 + Math.random() * 5400000 : undefined, // 30min - 2h
-            outcome: Math.random() > 0.2 ? `Successfully completed ${eventType} objectives` : undefined,
-            artifacts: Math.random() > 0.6 ? ['Documentation', 'Code changes', 'Decision record'] : undefined,
-            knowledgeTransferred: Math.random() > 0.4 ?
-              ['Technical patterns', 'Best practices', 'Domain knowledge'].slice(0, Math.floor(Math.random() * 3) + 1) : undefined,
+            outcome:
+              Math.random() > 0.2 ? `Successfully completed ${eventType} objectives` : undefined,
+            artifacts:
+              Math.random() > 0.6
+                ? ['Documentation', 'Code changes', 'Decision record']
+                : undefined,
+            knowledgeTransferred:
+              Math.random() > 0.4
+                ? ['Technical patterns', 'Best practices', 'Domain knowledge'].slice(
+                    0,
+                    Math.floor(Math.random() * 3) + 1,
+                  )
+                : undefined,
             context: contexts[Math.floor(Math.random() * contexts.length)],
             impact: impacts[Math.floor(Math.random() * impacts.length)],
             followUpRequired: Math.random() > 0.7,
             relatedSessions: Math.random() > 0.5 ? [sessionCorrelation.sessionId] : undefined,
-            tags: ['collaboration', 'team-work'].slice(0, Math.floor(Math.random() * 2) + 1)
+            tags: ['collaboration', 'team-work'].slice(0, Math.floor(Math.random() * 2) + 1),
           };
         });
 
         const mockKnowledgeFlows: KnowledgeFlow[] = Array.from({ length: 20 }, (_, i) => {
           const transferMethods: KnowledgeFlow['transferMethod'][] = [
-            'documentation', 'verbal', 'demonstration', 'pair-work', 'review'
+            'documentation',
+            'verbal',
+            'demonstration',
+            'pair-work',
+            'review',
           ];
           const knowledgeTopics = [
-            'React patterns', 'API design', 'Testing strategies', 'Deployment processes', 'Performance optimization'
+            'React patterns',
+            'API design',
+            'Testing strategies',
+            'Deployment processes',
+            'Performance optimization',
           ];
 
           return {
@@ -809,15 +985,22 @@ export const TeamCollaborationTimeline: React.FC<TeamCollaborationTimelineProps>
             knowledgeTopic: knowledgeTopics[i % knowledgeTopics.length],
             transferMethod: transferMethods[Math.floor(Math.random() * transferMethods.length)],
             effectiveness: 0.4 + Math.random() * 0.6,
-            timestamp: startTime + (Math.random() * timeRangeMs),
-            relatedEventId: Math.random() > 0.5 ? mockEvents[Math.floor(Math.random() * mockEvents.length)].eventId : undefined,
-            retentionScore: Math.random() > 0.3 ? 0.5 + Math.random() * 0.5 : undefined
+            timestamp: startTime + Math.random() * timeRangeMs,
+            relatedEventId:
+              Math.random() > 0.5
+                ? mockEvents[Math.floor(Math.random() * mockEvents.length)].eventId
+                : undefined,
+            retentionScore: Math.random() > 0.3 ? 0.5 + Math.random() * 0.5 : undefined,
           };
         });
 
         const mockTaskHandoffs: TaskHandoff[] = Array.from({ length: 15 }, (_, i) => {
           const reasons: TaskHandoff['reason'][] = [
-            'workload-balance', 'expertise-required', 'availability', 'planned-rotation', 'escalation'
+            'workload-balance',
+            'expertise-required',
+            'availability',
+            'planned-rotation',
+            'escalation',
           ];
 
           return {
@@ -825,34 +1008,41 @@ export const TeamCollaborationTimeline: React.FC<TeamCollaborationTimelineProps>
             taskDescription: `Task ${i + 1} - Development and implementation`,
             fromOperatorId: `op-${Math.random().toString(36).slice(2, 8)}`,
             toOperatorId: `op-${Math.random().toString(36).slice(2, 8)}`,
-            timestamp: startTime + (Math.random() * timeRangeMs),
+            timestamp: startTime + Math.random() * timeRangeMs,
             reason: reasons[Math.floor(Math.random() * reasons.length)],
-            contextTransferred: ['Requirements', 'Technical specs', 'Previous attempts', 'Dependencies'].slice(0, Math.floor(Math.random() * 4) + 1),
+            contextTransferred: [
+              'Requirements',
+              'Technical specs',
+              'Previous attempts',
+              'Dependencies',
+            ].slice(0, Math.floor(Math.random() * 4) + 1),
             completionStatus: Math.random() > 0.2,
             handoffQuality: 0.4 + Math.random() * 0.6,
             timeToProductivity: 1800000 + Math.random() * 7200000, // 30min - 2h
-            complications: Math.random() > 0.7 ? ['Missing context', 'Tool access issues'] : undefined,
-            successFactors: Math.random() > 0.6 ? ['Clear documentation', 'Direct communication'] : undefined
+            complications:
+              Math.random() > 0.7 ? ['Missing context', 'Tool access issues'] : undefined,
+            successFactors:
+              Math.random() > 0.6 ? ['Clear documentation', 'Direct communication'] : undefined,
           };
         });
 
         // Generate participant metrics
         const allParticipants = new Set([
-          ...mockEvents.flatMap(e => e.participants),
-          ...mockKnowledgeFlows.map(f => f.sourceOperatorId),
-          ...mockKnowledgeFlows.map(f => f.targetOperatorId),
-          ...mockTaskHandoffs.map(h => h.fromOperatorId),
-          ...mockTaskHandoffs.map(h => h.toOperatorId)
+          ...mockEvents.flatMap((e) => e.participants),
+          ...mockKnowledgeFlows.map((f) => f.sourceOperatorId),
+          ...mockKnowledgeFlows.map((f) => f.targetOperatorId),
+          ...mockTaskHandoffs.map((h) => h.fromOperatorId),
+          ...mockTaskHandoffs.map((h) => h.toOperatorId),
         ]);
 
         const participantMetrics: Record<string, any> = {};
-        allParticipants.forEach(participantId => {
+        allParticipants.forEach((participantId) => {
           participantMetrics[participantId] = {
             collaborationScore: 0.4 + Math.random() * 0.6,
             knowledgeShared: Math.floor(Math.random() * 15),
             knowledgeReceived: Math.floor(Math.random() * 12),
             handoffsGiven: Math.floor(Math.random() * 8),
-            handoffsReceived: Math.floor(Math.random() * 6)
+            handoffsReceived: Math.floor(Math.random() * 6),
           };
         });
 
@@ -868,47 +1058,47 @@ export const TeamCollaborationTimeline: React.FC<TeamCollaborationTimelineProps>
               pattern: 'Daily standup knowledge sharing',
               frequency: 20,
               participants: Array.from(allParticipants).slice(0, 6),
-              successRate: 0.89
+              successRate: 0.89,
             },
             {
               pattern: 'Peer code review sessions',
               frequency: 35,
               participants: Array.from(allParticipants).slice(2, 8),
-              successRate: 0.92
+              successRate: 0.92,
             },
             {
               pattern: 'Problem-solving collaboration',
               frequency: 12,
               participants: Array.from(allParticipants).slice(1, 5),
-              successRate: 0.84
-            }
+              successRate: 0.84,
+            },
           ],
           knowledgeAreas: [
             {
               area: 'Frontend Development',
               transferCount: 25,
               retentionRate: 0.87,
-              experts: Array.from(allParticipants).slice(0, 4)
+              experts: Array.from(allParticipants).slice(0, 4),
             },
             {
               area: 'Backend APIs',
               transferCount: 18,
               retentionRate: 0.82,
-              experts: Array.from(allParticipants).slice(3, 6)
+              experts: Array.from(allParticipants).slice(3, 6),
             },
             {
               area: 'DevOps & Deployment',
               transferCount: 12,
               retentionRate: 0.78,
-              experts: Array.from(allParticipants).slice(2, 4)
-            }
+              experts: Array.from(allParticipants).slice(2, 4),
+            },
           ],
           teamHealth: {
             collaborationFrequency: 0.76,
             knowledgeDistribution: 0.68,
             handoffEfficiency: 0.82,
-            communicationQuality: 0.85
-          }
+            communicationQuality: 0.85,
+          },
         });
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load collaboration data');

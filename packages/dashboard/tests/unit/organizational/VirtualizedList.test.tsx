@@ -2,10 +2,13 @@
  * Unit Tests for VirtualizedList Component
  */
 
-import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { VirtualizedList, useVirtualizedList } from '../../../src/client/components/common/VirtualizedList';
+import type React from 'react';
+import {
+  useVirtualizedList,
+  VirtualizedList,
+} from '../../../src/client/components/common/VirtualizedList';
 
 interface TestItem {
   id: string;
@@ -17,7 +20,7 @@ const generateTestItems = (count: number): TestItem[] => {
   return Array.from({ length: count }, (_, i) => ({
     id: `item-${i}`,
     name: `Test Item ${i + 1}`,
-    value: Math.floor(Math.random() * 100)
+    value: Math.floor(Math.random() * 100),
   }));
 };
 
@@ -31,21 +34,27 @@ describe('VirtualizedList', () => {
         <span>{item.name}</span>
         <span>Value: {item.value}</span>
       </div>
-    )
+    ),
   };
 
   beforeEach(() => {
     // Mock scrollTop property
     Object.defineProperty(HTMLElement.prototype, 'scrollTop', {
       configurable: true,
-      get: function() { return this._scrollTop || 0; },
-      set: function(val) { this._scrollTop = val; }
+      get: function () {
+        return this._scrollTop || 0;
+      },
+      set: function (val) {
+        this._scrollTop = val;
+      },
     });
 
     // Mock clientHeight property
     Object.defineProperty(HTMLElement.prototype, 'clientHeight', {
       configurable: true,
-      get: function() { return this._clientHeight || 400; }
+      get: function () {
+        return this._clientHeight || 400;
+      },
     });
   });
 
@@ -59,11 +68,7 @@ describe('VirtualizedList', () => {
 
   it('renders with custom width and className', () => {
     const { container } = render(
-      <VirtualizedList
-        {...defaultProps}
-        width={600}
-        className="custom-list"
-      />
+      <VirtualizedList {...defaultProps} width={600} className="custom-list" />,
     );
 
     const listElement = container.firstChild as HTMLElement;
@@ -82,24 +87,14 @@ describe('VirtualizedList', () => {
     const renderLoadingItem = () => <div data-testid="loading-item">Custom Loading...</div>;
 
     render(
-      <VirtualizedList
-        {...defaultProps}
-        loading={true}
-        renderLoadingItem={renderLoadingItem}
-      />
+      <VirtualizedList {...defaultProps} loading={true} renderLoadingItem={renderLoadingItem} />,
     );
 
     expect(screen.getAllByTestId('loading-item')).toHaveLength(Math.ceil(400 / 50)); // height / itemHeight
   });
 
   it('displays empty state when items array is empty', () => {
-    render(
-      <VirtualizedList
-        {...defaultProps}
-        items={[]}
-        emptyMessage="No data available"
-      />
-    );
+    render(<VirtualizedList {...defaultProps} items={[]} emptyMessage="No data available" />);
 
     expect(screen.getByText('No data available')).toBeInTheDocument();
     expect(document.querySelector('.virtualized-list--empty')).toBeInTheDocument();
@@ -109,13 +104,7 @@ describe('VirtualizedList', () => {
     const header = <div data-testid="list-header">Header Content</div>;
     const footer = <div data-testid="list-footer">Footer Content</div>;
 
-    render(
-      <VirtualizedList
-        {...defaultProps}
-        header={header}
-        footer={footer}
-      />
-    );
+    render(<VirtualizedList {...defaultProps} header={header} footer={footer} />);
 
     expect(screen.getByTestId('list-header')).toBeInTheDocument();
     expect(screen.getByTestId('list-footer')).toBeInTheDocument();
@@ -132,7 +121,7 @@ describe('VirtualizedList', () => {
         {...defaultProps}
         enableKeyboardNavigation={true}
         onItemSelect={onItemSelect}
-      />
+      />,
     );
 
     const listElement = container.querySelector('.virtualized-list') as HTMLElement;
@@ -148,16 +137,11 @@ describe('VirtualizedList', () => {
   });
 
   it('supports variable item heights when getItemHeight is provided', () => {
-    const getItemHeight = (item: TestItem, index: number) => {
+    const getItemHeight = (_item: TestItem, index: number) => {
       return index % 2 === 0 ? 60 : 40; // Alternate heights
     };
 
-    render(
-      <VirtualizedList
-        {...defaultProps}
-        getItemHeight={getItemHeight}
-      />
-    );
+    render(<VirtualizedList {...defaultProps} getItemHeight={getItemHeight} />);
 
     // The component should render with variable heights
     // This is more of an integration test - the specific implementation would need to be tested
@@ -165,9 +149,7 @@ describe('VirtualizedList', () => {
   });
 
   it('handles scroll events and updates visible items', () => {
-    const { container } = render(
-      <VirtualizedList {...defaultProps} />
-    );
+    const { container } = render(<VirtualizedList {...defaultProps} />);
 
     const scrollContainer = container.querySelector('[style*="overflow: auto"]') as HTMLElement;
 
@@ -182,12 +164,7 @@ describe('VirtualizedList', () => {
     const user = userEvent.setup();
     const onItemSelect = jest.fn();
 
-    render(
-      <VirtualizedList
-        {...defaultProps}
-        onItemSelect={onItemSelect}
-      />
-    );
+    render(<VirtualizedList {...defaultProps} onItemSelect={onItemSelect} />);
 
     const firstItem = screen.getByTestId('item-0');
     await user.click(firstItem);
@@ -198,12 +175,7 @@ describe('VirtualizedList', () => {
   it('calls onScroll callback when provided', () => {
     const onScroll = jest.fn();
 
-    const { container } = render(
-      <VirtualizedList
-        {...defaultProps}
-        onScroll={onScroll}
-      />
-    );
+    const { container } = render(<VirtualizedList {...defaultProps} onScroll={onScroll} />);
 
     const scrollContainer = container.querySelector('[style*="overflow: auto"]') as HTMLElement;
     fireEvent.scroll(scrollContainer, { target: { scrollTop: 50 } });
@@ -212,17 +184,10 @@ describe('VirtualizedList', () => {
   });
 
   it('scrolls to specific index when scrollToIndex is provided', () => {
-    const { rerender } = render(
-      <VirtualizedList {...defaultProps} />
-    );
+    const { rerender } = render(<VirtualizedList {...defaultProps} />);
 
     // Re-render with scrollToIndex
-    rerender(
-      <VirtualizedList
-        {...defaultProps}
-        scrollToIndex={5}
-      />
-    );
+    rerender(<VirtualizedList {...defaultProps} scrollToIndex={5} />);
 
     // Should trigger scrolling (implementation specific)
     expect(screen.getByTestId('item-0')).toBeInTheDocument();
@@ -232,11 +197,7 @@ describe('VirtualizedList', () => {
     const largeDataset = generateTestItems(10000);
 
     const { container } = render(
-      <VirtualizedList
-        {...defaultProps}
-        items={largeDataset}
-        overscan={3}
-      />
+      <VirtualizedList {...defaultProps} items={largeDataset} overscan={3} />,
     );
 
     // Should only render visible items + overscan, not all 10,000
@@ -246,10 +207,7 @@ describe('VirtualizedList', () => {
 
   it('applies correct ARIA attributes when keyboard navigation is enabled', () => {
     const { container } = render(
-      <VirtualizedList
-        {...defaultProps}
-        enableKeyboardNavigation={true}
-      />
+      <VirtualizedList {...defaultProps} enableKeyboardNavigation={true} />,
     );
 
     const listElement = container.querySelector('.virtualized-list') as HTMLElement;
@@ -260,10 +218,7 @@ describe('VirtualizedList', () => {
 
   it('does not apply ARIA attributes when keyboard navigation is disabled', () => {
     const { container } = render(
-      <VirtualizedList
-        {...defaultProps}
-        enableKeyboardNavigation={false}
-      />
+      <VirtualizedList {...defaultProps} enableKeyboardNavigation={false} />,
     );
 
     const listElement = container.querySelector('.virtualized-list') as HTMLElement;
@@ -289,7 +244,7 @@ describe('useVirtualizedList hook', () => {
         </div>
         <button
           onClick={() => {
-            const index = findItemIndex(item => item.id === 'item-2');
+            const index = findItemIndex((item) => item.id === 'item-2');
             document.body.setAttribute('data-found-index', index.toString());
           }}
           data-testid="find-button"

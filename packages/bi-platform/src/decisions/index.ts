@@ -1,6 +1,23 @@
-export { RecommendationEngine } from './recommendation-engine.js';
-export type { Recommendation, Evidence, ImpactProjection, DecisionOutcome } from './recommendation-engine.js';
+export type {
+  DecisionWorkflow,
+  NotificationPayload,
+  Stakeholder,
+  TaskAssignment,
+  Vote,
+} from './collaboration.js';
 export { CollaborationService } from './collaboration.js';
-export type { DecisionWorkflow, Stakeholder, Vote, TaskAssignment, NotificationPayload } from './collaboration.js';
+export type {
+  BusinessPattern,
+  CategorizedRecommendation,
+  ComplianceRisk,
+  CriticalAlert,
+  DelegationRoiAnalysis,
+} from './decision-synthesis.js';
 export { DecisionSynthesisService } from './decision-synthesis.js';
-export type { BusinessPattern, DelegationRoiAnalysis, ComplianceRisk, CriticalAlert, CategorizedRecommendation } from './decision-synthesis.js';
+export type {
+  DecisionOutcome,
+  Evidence,
+  ImpactProjection,
+  Recommendation,
+} from './recommendation-engine.js';
+export { RecommendationEngine } from './recommendation-engine.js';

@@ -5,16 +5,14 @@
  * and team collaboration visualization.
  */
 
-// Team filtering components
-export { TeamFilterDropdown } from './TeamFilterDropdown.js';
-export { TeamFilterButton } from './TeamFilterButton.js';
+export { CollaborationOpportunityIdentifier } from './CollaborationOpportunityIdentifier.js';
 export { DashboardTeamFilterIntegration } from './DashboardTeamFilterIntegration.js';
-
-// Team performance and metrics
-export { TeamPerformanceMetrics } from './TeamPerformanceMetrics.js';
 export { TeamActivityOverview } from './TeamActivityOverview.js';
-export { TeamComparisonView } from './TeamComparisonView.js';
-
 // Team collaboration components
 export { TeamCollaborationTimeline } from './TeamCollaborationTimeline.js';
-export { CollaborationOpportunityIdentifier } from './CollaborationOpportunityIdentifier.js';
+export { TeamComparisonView } from './TeamComparisonView.js';
+export { TeamFilterButton } from './TeamFilterButton.js';
+// Team filtering components
+export { TeamFilterDropdown } from './TeamFilterDropdown.js';
+// Team performance and metrics
+export { TeamPerformanceMetrics } from './TeamPerformanceMetrics.js';

@@ -1,5 +1,3 @@
-import React from 'react';
-
 interface Props {
   score: number; // 0-100
   label?: string;
@@ -27,7 +25,9 @@ export function ComplianceGauge({ score, label, size = 120 }: Props) {
             strokeDashoffset={offset}
           />
         </svg>
-        <div className="bi-gauge__value" style={{ color }}>{score.toFixed(0)}%</div>
+        <div className="bi-gauge__value" style={{ color }}>
+          {score.toFixed(0)}%
+        </div>
       </div>
       {label && <div className="bi-gauge__label">{label}</div>}
     </div>

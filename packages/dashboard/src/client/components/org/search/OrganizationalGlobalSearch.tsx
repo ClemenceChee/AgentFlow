@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useOrganizationalSearch } from '../../../context/OrganizationalSearchProvider';
 
 interface Props {
@@ -12,16 +12,9 @@ export function OrganizationalGlobalSearch({
   onResultSelect,
   placeholder = 'Search teams, operators, sessions...',
   className = '',
-  compact = false
+  compact = false,
 }: Props) {
-  const {
-    query,
-    results,
-    filters,
-    setQuery,
-    setFilters,
-    clearSearch
-  } = useOrganizationalSearch();
+  const { query, results, filters, setQuery, setFilters, clearSearch } = useOrganizationalSearch();
 
   const [isOpen, setIsOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
@@ -49,11 +42,11 @@ export function OrganizationalGlobalSearch({
       switch (event.key) {
         case 'ArrowDown':
           event.preventDefault();
-          setSelectedIndex(prev => Math.min(results.length - 1, prev + 1));
+          setSelectedIndex((prev) => Math.min(results.length - 1, prev + 1));
           break;
         case 'ArrowUp':
           event.preventDefault();
-          setSelectedIndex(prev => Math.max(-1, prev - 1));
+          setSelectedIndex((prev) => Math.max(-1, prev - 1));
           break;
         case 'Enter':
           event.preventDefault();
@@ -75,7 +68,7 @@ export function OrganizationalGlobalSearch({
     }
 
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, results, selectedIndex]);
+  }, [isOpen, results, selectedIndex, handleSelectResult]);
 
   const handleInputChange = (value: string) => {
     setQuery(value);
@@ -101,32 +94,51 @@ export function OrganizationalGlobalSearch({
 
   const getResultIcon = (type: string) => {
     switch (type) {
-      case 'team': return '🏢';
-      case 'operator': return '👤';
-      case 'session': return '🔗';
-      case 'policy': return '⚖️';
-      case 'performance': return '⚡';
-      case 'activity': return '📊';
-      default: return '📋';
+      case 'team':
+        return '🏢';
+      case 'operator':
+        return '👤';
+      case 'session':
+        return '🔗';
+      case 'policy':
+        return '⚖️';
+      case 'performance':
+        return '⚡';
+      case 'activity':
+        return '📊';
+      default:
+        return '📋';
     }
   };
 
   const getResultTypeLabel = (type: string) => {
     switch (type) {
-      case 'team': return 'Team';
-      case 'operator': return 'Operator';
-      case 'session': return 'Session';
-      case 'policy': return 'Policy';
-      case 'performance': return 'Performance';
-      case 'activity': return 'Activity';
-      default: return 'Item';
+      case 'team':
+        return 'Team';
+      case 'operator':
+        return 'Operator';
+      case 'session':
+        return 'Session';
+      case 'policy':
+        return 'Policy';
+      case 'performance':
+        return 'Performance';
+      case 'activity':
+        return 'Activity';
+      default:
+        return 'Item';
     }
   };
 
   return (
-    <div ref={searchRef} className={`org-global-search ${compact ? 'org-global-search--compact' : ''} ${className}`}>
+    <div
+      ref={searchRef}
+      className={`org-global-search ${compact ? 'org-global-search--compact' : ''} ${className}`}
+    >
       <div className="org-global-search-input-container">
-        <span className="org-global-search-icon" aria-hidden="true">🔍</span>
+        <span className="org-global-search-icon" aria-hidden="true">
+          🔍
+        </span>
         <input
           ref={inputRef}
           type="text"
@@ -169,7 +181,9 @@ export function OrganizationalGlobalSearch({
           ) : (
             <>
               <div className="org-global-search-results-header">
-                <span>{results.length} result{results.length !== 1 ? 's' : ''}</span>
+                <span>
+                  {results.length} result{results.length !== 1 ? 's' : ''}
+                </span>
                 {Object.keys(filters).length > 0 && (
                   <button
                     type="button"

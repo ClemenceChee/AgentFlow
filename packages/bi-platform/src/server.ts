@@ -2,32 +2,43 @@
  * BI Platform HTTP server — wires up all middleware, routes, and infrastructure.
  */
 
-import { createServer } from 'node:http';
 import { existsSync, readFileSync, statSync } from 'node:fs';
-import { join, extname } from 'node:path';
+import { createServer } from 'node:http';
+import { extname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Router } from './api/router.js';
-import { loadDbConfig, createDbPool } from './db/index.js';
-import { loadCacheConfig, createCacheClient, createMemoryCache } from './cache/index.js';
-import { loadOAuthConfig, verifyToken } from './auth/index.js';
-import { requireAuth } from './auth/rbac.js';
-import { createRateLimiter, loadRateLimitConfig } from './middleware/rate-limiter.js';
-import { createSecurityHeaders, createCorsMiddleware, loadCorsConfig } from './middleware/security.js';
-import { createRequestLogger } from './middleware/request-logger.js';
-import { createHealthHandler, createReadinessHandler, createLivenessHandler, createMetricsHandler } from './monitoring/health.js';
-import { createLogger } from './monitoring/logger.js';
-import { SomaAdapter, loadSomaAdapterConfig } from './integrations/soma-adapter.js';
-import { AgentFlowAdapter, loadAgentFlowAdapterConfig } from './integrations/agentflow-adapter.js';
-import { OpsIntelAdapter, loadOpsIntelAdapterConfig } from './integrations/opsintel-adapter.js';
-import { OpenClawSessionAdapter, loadOpenClawSessionConfig } from './integrations/openclaw-session-adapter.js';
-import { CronAdapter, loadCronAdapterConfig } from './integrations/cron-adapter.js';
-import { runMigrations } from './db/migrate.js';
 import { registerApiV1Routes } from './api/v1/index.js';
-import { DataAggregator, loadAggregatorConfig } from './synthesis/aggregator.js';
-import { MetricEngine } from './synthesis/metric-engine.js';
-import { AnomalyDetector } from './synthesis/anomaly-detector.js';
-import { RecommendationEngine } from './decisions/recommendation-engine.js';
+import { loadOAuthConfig, verifyToken } from './auth/index.js';
+import { createCacheClient, createMemoryCache, loadCacheConfig } from './cache/index.js';
+import { createDbPool, loadDbConfig } from './db/index.js';
+import { runMigrations } from './db/migrate.js';
 import { DecisionSynthesisService } from './decisions/decision-synthesis.js';
+import { RecommendationEngine } from './decisions/recommendation-engine.js';
+import { AgentFlowAdapter, loadAgentFlowAdapterConfig } from './integrations/agentflow-adapter.js';
+import { CronAdapter, loadCronAdapterConfig } from './integrations/cron-adapter.js';
+import {
+  loadOpenClawSessionConfig,
+  OpenClawSessionAdapter,
+} from './integrations/openclaw-session-adapter.js';
+import { loadOpsIntelAdapterConfig, OpsIntelAdapter } from './integrations/opsintel-adapter.js';
+import { loadSomaAdapterConfig, SomaAdapter } from './integrations/soma-adapter.js';
+import { createRateLimiter, loadRateLimitConfig } from './middleware/rate-limiter.js';
+import { createRequestLogger } from './middleware/request-logger.js';
+import {
+  createCorsMiddleware,
+  createSecurityHeaders,
+  loadCorsConfig,
+} from './middleware/security.js';
+import {
+  createHealthHandler,
+  createLivenessHandler,
+  createMetricsHandler,
+  createReadinessHandler,
+} from './monitoring/health.js';
+import { createLogger } from './monitoring/logger.js';
+import { DataAggregator, loadAggregatorConfig } from './synthesis/aggregator.js';
+import { AnomalyDetector } from './synthesis/anomaly-detector.js';
+import { MetricEngine } from './synthesis/metric-engine.js';
 
 const logger = createLogger({ context: { service: 'bi-platform' } });
 
@@ -74,7 +85,7 @@ async function main() {
 
   // Auth config
   const oauthConfig = loadOAuthConfig();
-  const verifyFn = (token: string) => verifyToken(token, oauthConfig);
+  const _verifyFn = (token: string) => verifyToken(token, oauthConfig);
 
   // Build router
   const router = new Router();
@@ -93,7 +104,14 @@ async function main() {
   router.get('/metrics', createMetricsHandler(healthDeps));
 
   // Initialize synthesis services
-  const aggregator = new DataAggregator(somaAdapter, agentFlowAdapter, opsIntelAdapter, dbPool, logger, loadAggregatorConfig());
+  const aggregator = new DataAggregator(
+    somaAdapter,
+    agentFlowAdapter,
+    opsIntelAdapter,
+    dbPool,
+    logger,
+    loadAggregatorConfig(),
+  );
   const metricEngine = new MetricEngine(dbPool, cache);
   const anomalyDetector = new AnomalyDetector(dbPool, logger);
 
@@ -105,10 +123,29 @@ async function main() {
 
   // Initialize decision intelligence
   const recommendationEngine = new RecommendationEngine(dbPool, aggregator);
-  const decisionSynthesis = new DecisionSynthesisService(aggregator, recommendationEngine, anomalyDetector, dbPool, cache, logger);
+  const decisionSynthesis = new DecisionSynthesisService(
+    aggregator,
+    recommendationEngine,
+    anomalyDetector,
+    dbPool,
+    cache,
+    logger,
+  );
 
   // Register API v1 routes
-  registerApiV1Routes({ router, aggregator, metricEngine, anomalyDetector, db: dbPool, cache, logger, openclawAdapter, cronAdapter, somaAdapter, decisionSynthesis });
+  registerApiV1Routes({
+    router,
+    aggregator,
+    metricEngine,
+    anomalyDetector,
+    db: dbPool,
+    cache,
+    logger,
+    openclawAdapter,
+    cronAdapter,
+    somaAdapter,
+    decisionSynthesis,
+  });
 
   // Serve frontend static files (built by Vite into dist/client/)
   const __dirname = fileURLToPath(new URL('.', import.meta.url));
@@ -125,7 +162,13 @@ async function main() {
     const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
 
     // API and health routes go through the router
-    if (url.pathname.startsWith('/api/') || url.pathname === '/health' || url.pathname === '/ready' || url.pathname === '/alive' || url.pathname === '/metrics') {
+    if (
+      url.pathname.startsWith('/api/') ||
+      url.pathname === '/health' ||
+      url.pathname === '/ready' ||
+      url.pathname === '/alive' ||
+      url.pathname === '/metrics'
+    ) {
       router.handle(req, res);
       return;
     }
@@ -139,9 +182,15 @@ async function main() {
         const content = readFileSync(filePath);
         const ext = extname(filePath).toLowerCase();
         const mime: Record<string, string> = {
-          '.html': 'text/html', '.js': 'application/javascript', '.css': 'text/css',
-          '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml',
-          '.ico': 'image/x-icon', '.woff2': 'font/woff2', '.woff': 'font/woff',
+          '.html': 'text/html',
+          '.js': 'application/javascript',
+          '.css': 'text/css',
+          '.json': 'application/json',
+          '.png': 'image/png',
+          '.svg': 'image/svg+xml',
+          '.ico': 'image/x-icon',
+          '.woff2': 'font/woff2',
+          '.woff': 'font/woff',
         };
         res.writeHead(200, {
           'Content-Type': mime[ext] || 'application/octet-stream',

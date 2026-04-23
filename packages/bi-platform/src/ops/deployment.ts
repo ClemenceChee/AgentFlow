@@ -76,7 +76,9 @@ export function getResourceUsage(): ResourceUsage {
     const os = require('node:os');
     osMem.total = os.totalmem();
     osMem.free = os.freemem();
-  } catch { /* node:os not available */ }
+  } catch {
+    /* node:os not available */
+  }
 
   return {
     memoryUsedMb: Math.round(mem.rss / 1_048_576),
@@ -134,18 +136,42 @@ export class AlertManager {
 
     // Memory alert
     if (resources.heapUsedMb > resources.heapTotalMb * 0.9) {
-      this.addAlert('critical', 'memory', 'Heap memory usage exceeding 90%', resources.heapTotalMb * 0.9, resources.heapUsedMb);
+      this.addAlert(
+        'critical',
+        'memory',
+        'Heap memory usage exceeding 90%',
+        resources.heapTotalMb * 0.9,
+        resources.heapUsedMb,
+      );
     } else if (resources.heapUsedMb > resources.heapTotalMb * 0.75) {
-      this.addAlert('warning', 'memory', 'Heap memory usage above 75%', resources.heapTotalMb * 0.75, resources.heapUsedMb);
+      this.addAlert(
+        'warning',
+        'memory',
+        'Heap memory usage above 75%',
+        resources.heapTotalMb * 0.75,
+        resources.heapUsedMb,
+      );
     }
 
     // Event loop alert
     if (resources.eventLoopDelayMs > 100) {
-      this.addAlert('warning', 'latency', `Event loop delay: ${resources.eventLoopDelayMs}ms`, 100, resources.eventLoopDelayMs);
+      this.addAlert(
+        'warning',
+        'latency',
+        `Event loop delay: ${resources.eventLoopDelayMs}ms`,
+        100,
+        resources.eventLoopDelayMs,
+      );
     }
   }
 
-  private addAlert(severity: PlatformAlert['severity'], type: PlatformAlert['type'], message: string, threshold: number, actual: number): void {
+  private addAlert(
+    severity: PlatformAlert['severity'],
+    type: PlatformAlert['type'],
+    message: string,
+    threshold: number,
+    actual: number,
+  ): void {
     const alert: PlatformAlert = {
       id: `plat-${++this.idCounter}`,
       severity,
@@ -207,7 +233,8 @@ export function getPerformanceRecommendations(resources: ResourceUsage): PerfRec
     recs.push({
       area: 'Heap',
       current: `${resources.heapUsedMb}MB heap used`,
-      recommendation: 'Review data structures for memory optimization; consider streaming for large datasets',
+      recommendation:
+        'Review data structures for memory optimization; consider streaming for large datasets',
       expectedImprovement: '20-40% heap reduction',
     });
   }

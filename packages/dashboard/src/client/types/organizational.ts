@@ -160,7 +160,11 @@ export interface EnhancedSessionCorrelation {
   readonly relatedSessions: Array<{
     readonly sessionId: string;
     readonly similarity: number;
-    readonly relationshipType: 'workflow_similarity' | 'problem_pattern' | 'knowledge_transfer' | 'solution_reuse';
+    readonly relationshipType:
+      | 'workflow_similarity'
+      | 'problem_pattern'
+      | 'knowledge_transfer'
+      | 'solution_reuse';
     readonly timestamp: number;
     readonly summary: string;
   }>;

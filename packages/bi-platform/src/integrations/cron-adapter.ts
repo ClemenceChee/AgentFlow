@@ -5,7 +5,7 @@
  * Tasks: 2.1-2.6
  */
 
-import { readFile, readdir, stat } from 'node:fs/promises';
+import { readdir, readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { SourceAdapter, SystemHealth } from './types.js';
 
@@ -140,13 +140,15 @@ export class CronAdapter implements SourceAdapter {
       const successful = sorted.filter((e) => e.status === 'ok').length;
       const failed = sorted.filter((e) => e.status === 'error').length;
       const durations = sorted.filter((e) => e.durationMs > 0).map((e) => e.durationMs);
-      const avgDuration = durations.length > 0 ? durations.reduce((s, d) => s + d, 0) / durations.length : 0;
+      const avgDuration =
+        durations.length > 0 ? durations.reduce((s, d) => s + d, 0) / durations.length : 0;
       const tokens = sorted.reduce((s, e) => s + (e.usage?.total_tokens ?? 0), 0);
       const last = sorted[sorted.length - 1];
 
       // Duration anomaly: recent 3 runs avg vs overall avg
       const recent3 = durations.slice(-3);
-      const recent3Avg = recent3.length > 0 ? recent3.reduce((s, d) => s + d, 0) / recent3.length : 0;
+      const recent3Avg =
+        recent3.length > 0 ? recent3.reduce((s, d) => s + d, 0) / recent3.length : 0;
       const durationAnomaly = durations.length >= 5 && recent3Avg > avgDuration * 2;
 
       jobMetrics.push({

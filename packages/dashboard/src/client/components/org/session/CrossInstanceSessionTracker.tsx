@@ -5,8 +5,16 @@
  * (CLI, web app, IDE extensions) with handoff analysis and continuity metrics.
  */
 
-import { useState, useEffect } from 'react';
-import { Monitor, Smartphone, Laptop, Terminal, ArrowRight, Clock, Users, Activity, AlertCircle } from 'lucide-react';
+import {
+  Activity,
+  AlertCircle,
+  ArrowRight,
+  Laptop,
+  Monitor,
+  Smartphone,
+  Terminal,
+} from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useOrganizationalContext } from '../../../../contexts/OrganizationalContext';
 import type { SessionCorrelation } from '../../../types/organizational.js';
 
@@ -70,35 +78,54 @@ interface CrossInstanceSessionTrackerProps {
 
 const getInstanceIcon = (type: InstanceType['type']) => {
   switch (type) {
-    case 'cli': return <Terminal className="h-4 w-4" />;
-    case 'web': return <Monitor className="h-4 w-4" />;
-    case 'vscode': return <Laptop className="h-4 w-4" />;
-    case 'jetbrains': return <Laptop className="h-4 w-4" />;
-    case 'desktop': return <Monitor className="h-4 w-4" />;
-    case 'mobile': return <Smartphone className="h-4 w-4" />;
-    default: return <Activity className="h-4 w-4" />;
+    case 'cli':
+      return <Terminal className="h-4 w-4" />;
+    case 'web':
+      return <Monitor className="h-4 w-4" />;
+    case 'vscode':
+      return <Laptop className="h-4 w-4" />;
+    case 'jetbrains':
+      return <Laptop className="h-4 w-4" />;
+    case 'desktop':
+      return <Monitor className="h-4 w-4" />;
+    case 'mobile':
+      return <Smartphone className="h-4 w-4" />;
+    default:
+      return <Activity className="h-4 w-4" />;
   }
 };
 
 const getInstanceColor = (type: InstanceType['type']) => {
   switch (type) {
-    case 'cli': return 'org-instance-cli';
-    case 'web': return 'org-instance-web';
-    case 'vscode': return 'org-instance-vscode';
-    case 'jetbrains': return 'org-instance-jetbrains';
-    case 'desktop': return 'org-instance-desktop';
-    case 'mobile': return 'org-instance-mobile';
-    default: return 'org-instance-unknown';
+    case 'cli':
+      return 'org-instance-cli';
+    case 'web':
+      return 'org-instance-web';
+    case 'vscode':
+      return 'org-instance-vscode';
+    case 'jetbrains':
+      return 'org-instance-jetbrains';
+    case 'desktop':
+      return 'org-instance-desktop';
+    case 'mobile':
+      return 'org-instance-mobile';
+    default:
+      return 'org-instance-unknown';
   }
 };
 
 const getHandoffMethodLabel = (method: SessionHandoff['method']) => {
   switch (method) {
-    case 'explicit': return 'Explicit Transfer';
-    case 'context-resume': return 'Context Resume';
-    case 'state-sync': return 'State Sync';
-    case 'manual-recreation': return 'Manual Recreation';
-    default: return 'Unknown';
+    case 'explicit':
+      return 'Explicit Transfer';
+    case 'context-resume':
+      return 'Context Resume';
+    case 'state-sync':
+      return 'State Sync';
+    case 'manual-recreation':
+      return 'Manual Recreation';
+    default:
+      return 'Unknown';
   }
 };
 
@@ -115,8 +142,8 @@ const TimelineView: React.FC<{
   showHandoffDetails: boolean;
 }> = ({ data, onSelectInstance, showHandoffDetails }) => {
   const sortedInstances = [...data.instances].sort((a, b) => a.startTime - b.startTime);
-  const startTime = Math.min(...sortedInstances.map(i => i.startTime));
-  const endTime = Math.max(...sortedInstances.map(i => i.endTime || i.startTime));
+  const startTime = Math.min(...sortedInstances.map((i) => i.startTime));
+  const endTime = Math.max(...sortedInstances.map((i) => i.endTime || i.startTime));
   const timeSpan = endTime - startTime;
 
   return (
@@ -126,17 +153,22 @@ const TimelineView: React.FC<{
 
         <div className="space-y-6">
           {sortedInstances.map((instance) => {
-            const relativeStart = timeSpan > 0 ? ((instance.startTime - startTime) / timeSpan) * 100 : 0;
+            const _relativeStart =
+              timeSpan > 0 ? ((instance.startTime - startTime) / timeSpan) * 100 : 0;
             const duration = instance.duration || 0;
             const relativeWidth = timeSpan > 0 ? (duration / timeSpan) * 100 : 0;
 
-            const relevantHandoffs = data.handoffs.filter(h =>
-              h.sourceInstanceId === instance.sessionId || h.targetInstanceId === instance.sessionId
+            const relevantHandoffs = data.handoffs.filter(
+              (h) =>
+                h.sourceInstanceId === instance.sessionId ||
+                h.targetInstanceId === instance.sessionId,
             );
 
             return (
               <div key={instance.sessionId} className="relative flex items-start">
-                <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${getInstanceColor(instance.instanceType.type)} z-10`}>
+                <div
+                  className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${getInstanceColor(instance.instanceType.type)} z-10`}
+                >
                   {getInstanceIcon(instance.instanceType.type)}
                 </div>
 
@@ -167,9 +199,7 @@ const TimelineView: React.FC<{
                         <div className="org-text-muted">Tasks Continued</div>
                         <div className="flex items-center space-x-1">
                           <span>{instance.tasksContinued}</span>
-                          {instance.contextPreserved && (
-                            <span className="org-text-success">✓</span>
-                          )}
+                          {instance.contextPreserved && <span className="org-text-success">✓</span>}
                         </div>
                       </div>
                       <div>
@@ -192,7 +222,10 @@ const TimelineView: React.FC<{
                         <div className="org-text-sm org-font-medium mb-2">Handoffs</div>
                         <div className="space-y-2">
                           {relevantHandoffs.map((handoff) => (
-                            <div key={handoff.id} className="flex items-center space-x-2 org-text-xs">
+                            <div
+                              key={handoff.id}
+                              className="flex items-center space-x-2 org-text-xs"
+                            >
                               <ArrowRight className="h-3 w-3 org-text-muted" />
                               <span className={getContinuityColor(handoff.continuityScore)}>
                                 {getHandoffMethodLabel(handoff.method)}
@@ -231,7 +264,7 @@ const NetworkView: React.FC<{
     const radius = 120;
     return {
       x: 200 + Math.cos(angle) * radius,
-      y: 150 + Math.sin(angle) * radius
+      y: 150 + Math.sin(angle) * radius,
     };
   };
 
@@ -240,8 +273,12 @@ const NetworkView: React.FC<{
       <svg viewBox="0 0 400 300" className="w-full h-64 org-bg-surface rounded-lg">
         {/* Render handoffs as edges */}
         {data.handoffs.map((handoff) => {
-          const sourceIndex = data.instances.findIndex(i => i.sessionId === handoff.sourceInstanceId);
-          const targetIndex = data.instances.findIndex(i => i.sessionId === handoff.targetInstanceId);
+          const sourceIndex = data.instances.findIndex(
+            (i) => i.sessionId === handoff.sourceInstanceId,
+          );
+          const targetIndex = data.instances.findIndex(
+            (i) => i.sessionId === handoff.targetInstanceId,
+          );
 
           if (sourceIndex === -1 || targetIndex === -1) return null;
 
@@ -291,12 +328,7 @@ const NetworkView: React.FC<{
                 }}
                 style={{ cursor: onSelectInstance ? 'pointer' : 'default' }}
               />
-              <text
-                x={pos.x}
-                y={pos.y + 35}
-                className="org-instance-label"
-                textAnchor="middle"
-              >
+              <text x={pos.x} y={pos.y + 35} className="org-instance-label" textAnchor="middle">
                 {instance.instanceType.type.toUpperCase()}
               </text>
             </g>
@@ -322,7 +354,7 @@ const NetworkView: React.FC<{
         <div className="mt-4 org-card-inner">
           <h5 className="org-font-semibold mb-2">Instance Details</h5>
           {(() => {
-            const instance = data.instances.find(i => i.sessionId === selectedInstance);
+            const instance = data.instances.find((i) => i.sessionId === selectedInstance);
             if (!instance) return null;
 
             return (
@@ -345,7 +377,9 @@ const NetworkView: React.FC<{
                 </div>
                 <div>
                   <div className="org-text-muted">Context Preserved</div>
-                  <div className={instance.contextPreserved ? 'org-text-success' : 'org-text-error'}>
+                  <div
+                    className={instance.contextPreserved ? 'org-text-success' : 'org-text-error'}
+                  >
                     {instance.contextPreserved ? 'Yes' : 'No'}
                   </div>
                 </div>
@@ -380,9 +414,7 @@ const SummaryView: React.FC<{ data: CrossInstanceData }> = ({ data }) => (
         <div className="org-stat-label">Continuity Score</div>
       </div>
       <div className="org-stat-card">
-        <div className="org-stat-value">
-          {Math.round(data.totalSessionTime / 60000)}m
-        </div>
+        <div className="org-stat-value">{Math.round(data.totalSessionTime / 60000)}m</div>
         <div className="org-stat-label">Total Time</div>
       </div>
     </div>
@@ -392,11 +424,14 @@ const SummaryView: React.FC<{ data: CrossInstanceData }> = ({ data }) => (
         <h4 className="org-font-semibold mb-3">Instance Usage Breakdown</h4>
         <div className="space-y-2">
           {Object.entries(
-            data.instances.reduce((acc, instance) => {
-              const type = instance.instanceType.type;
-              acc[type] = (acc[type] || 0) + (instance.duration || 0);
-              return acc;
-            }, {} as Record<string, number>)
+            data.instances.reduce(
+              (acc, instance) => {
+                const type = instance.instanceType.type;
+                acc[type] = (acc[type] || 0) + (instance.duration || 0);
+                return acc;
+              },
+              {} as Record<string, number>,
+            ),
           )
             .sort(([, a], [, b]) => b - a)
             .map(([type, duration]) => (
@@ -408,11 +443,11 @@ const SummaryView: React.FC<{ data: CrossInstanceData }> = ({ data }) => (
                   <span className="org-font-medium">{type.toUpperCase()}</span>
                 </div>
                 <span className="org-text-muted">
-                  {Math.round(duration / 60000)}m ({Math.round((duration / data.totalSessionTime) * 100)}%)
+                  {Math.round(duration / 60000)}m (
+                  {Math.round((duration / data.totalSessionTime) * 100)}%)
                 </span>
               </div>
-            ))
-          }
+            ))}
         </div>
       </div>
 
@@ -422,21 +457,30 @@ const SummaryView: React.FC<{ data: CrossInstanceData }> = ({ data }) => (
           <div className="flex justify-between">
             <span>Successful Handoffs</span>
             <span className="org-text-success">
-              {data.handoffs.filter(h => h.success).length}/{data.handoffs.length}
+              {data.handoffs.filter((h) => h.success).length}/{data.handoffs.length}
             </span>
           </div>
           <div className="flex justify-between">
             <span>Average Latency</span>
             <span>
-              {Math.round(data.handoffs.reduce((sum, h) => sum + h.latency, 0) / data.handoffs.length)}ms
+              {Math.round(
+                data.handoffs.reduce((sum, h) => sum + h.latency, 0) / data.handoffs.length,
+              )}
+              ms
             </span>
           </div>
           <div className="flex justify-between">
             <span>Context Preservation Rate</span>
-            <span className={getContinuityColor(
-              data.instances.filter(i => i.contextPreserved).length / data.instances.length
-            )}>
-              {Math.round((data.instances.filter(i => i.contextPreserved).length / data.instances.length) * 100)}%
+            <span
+              className={getContinuityColor(
+                data.instances.filter((i) => i.contextPreserved).length / data.instances.length,
+              )}
+            >
+              {Math.round(
+                (data.instances.filter((i) => i.contextPreserved).length / data.instances.length) *
+                  100,
+              )}
+              %
             </span>
           </div>
         </div>
@@ -453,16 +497,24 @@ const HandoffsView: React.FC<{ data: CrossInstanceData }> = ({ data }) => (
       {data.handoffs
         .sort((a, b) => b.handoffTime - a.handoffTime)
         .map((handoff) => {
-          const source = data.instances.find(i => i.sessionId === handoff.sourceInstanceId);
-          const target = data.instances.find(i => i.sessionId === handoff.targetInstanceId);
+          const source = data.instances.find((i) => i.sessionId === handoff.sourceInstanceId);
+          const target = data.instances.find((i) => i.sessionId === handoff.targetInstanceId);
 
           return (
             <div key={handoff.id} className="org-card-inner">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center space-x-3">
                   <div className="flex items-center space-x-2">
-                    <div className={source ? getInstanceColor(source.instanceType.type) : 'org-text-muted'}>
-                      {source ? getInstanceIcon(source.instanceType.type) : <Activity className="h-4 w-4" />}
+                    <div
+                      className={
+                        source ? getInstanceColor(source.instanceType.type) : 'org-text-muted'
+                      }
+                    >
+                      {source ? (
+                        getInstanceIcon(source.instanceType.type)
+                      ) : (
+                        <Activity className="h-4 w-4" />
+                      )}
                     </div>
                     <span className="org-font-mono org-text-sm">
                       {source?.sessionId.slice(-8) || 'Unknown'}
@@ -472,8 +524,16 @@ const HandoffsView: React.FC<{ data: CrossInstanceData }> = ({ data }) => (
                   <ArrowRight className="h-4 w-4 org-text-muted" />
 
                   <div className="flex items-center space-x-2">
-                    <div className={target ? getInstanceColor(target.instanceType.type) : 'org-text-muted'}>
-                      {target ? getInstanceIcon(target.instanceType.type) : <Activity className="h-4 w-4" />}
+                    <div
+                      className={
+                        target ? getInstanceColor(target.instanceType.type) : 'org-text-muted'
+                      }
+                    >
+                      {target ? (
+                        getInstanceIcon(target.instanceType.type)
+                      ) : (
+                        <Activity className="h-4 w-4" />
+                      )}
                     </div>
                     <span className="org-font-mono org-text-sm">
                       {target?.sessionId.slice(-8) || 'Unknown'}
@@ -482,7 +542,9 @@ const HandoffsView: React.FC<{ data: CrossInstanceData }> = ({ data }) => (
                 </div>
 
                 <div className="flex items-center space-x-2">
-                  <span className={`org-badge org-badge-xs ${handoff.success ? 'org-badge-success' : 'org-badge-error'}`}>
+                  <span
+                    className={`org-badge org-badge-xs ${handoff.success ? 'org-badge-success' : 'org-badge-error'}`}
+                  >
                     {handoff.success ? 'Success' : 'Failed'}
                   </span>
                   <span className="org-text-xs org-text-muted">
@@ -551,7 +613,7 @@ export const CrossInstanceSessionTracker: React.FC<CrossInstanceSessionTrackerPr
   mode = 'timeline',
   showHandoffDetails = true,
   onSelectInstance,
-  className = ''
+  className = '',
 }) => {
   const { teamFilter } = useOrganizationalContext();
   const [data, setData] = useState<CrossInstanceData | null>(null);
@@ -575,7 +637,7 @@ export const CrossInstanceSessionTracker: React.FC<CrossInstanceSessionTrackerPr
             contextPreserved: true,
             tasksContinued: 0,
             tasksInitiated: 3,
-            tasksFailed: 0
+            tasksFailed: 0,
           },
           ...sessionCorrelation.relatedSessions.slice(0, 3).map((relatedId, index) => ({
             sessionId: relatedId,
@@ -583,7 +645,7 @@ export const CrossInstanceSessionTracker: React.FC<CrossInstanceSessionTrackerPr
             instanceType: {
               type: ['cli', 'vscode', 'desktop'][index] as InstanceType['type'],
               version: '1.0.0',
-              platform: ['linux', 'windows', 'macos'][index]
+              platform: ['linux', 'windows', 'macos'][index],
             },
             startTime: sessionCorrelation.timestamp - (index + 1) * 7200000,
             endTime: sessionCorrelation.timestamp - (index + 1) * 7200000 + 3600000,
@@ -592,27 +654,30 @@ export const CrossInstanceSessionTracker: React.FC<CrossInstanceSessionTrackerPr
             contextPreserved: index < 2,
             tasksContinued: index === 0 ? 2 : 1,
             tasksInitiated: index + 1,
-            tasksFailed: index === 2 ? 1 : 0
-          }))
+            tasksFailed: index === 2 ? 1 : 0,
+          })),
         ];
 
-        const handoffs: SessionHandoff[] = instances.slice(1).map((instance, index) => ({
+        const handoffs: SessionHandoff[] = instances.slice(1).map((_instance, index) => ({
           id: `handoff-${index}`,
           sourceInstanceId: instances[index + 1].sessionId,
           targetInstanceId: instances[index].sessionId,
           handoffTime: instances[index].startTime - 300000, // 5 minutes before
-          method: ['context-resume', 'explicit', 'state-sync'][index % 3] as SessionHandoff['method'],
+          method: ['context-resume', 'explicit', 'state-sync'][
+            index % 3
+          ] as SessionHandoff['method'],
           continuityScore: 0.7 + Math.random() * 0.3,
           dataPreserved: ['context', 'session-state', 'task-progress'],
           dataLost: index === 2 ? ['local-preferences'] : [],
           latency: 100 + Math.random() * 500,
           success: index < 2,
-          failureReason: index === 2 ? 'Version compatibility issue' : undefined
+          failureReason: index === 2 ? 'Version compatibility issue' : undefined,
         }));
 
         const totalDuration = instances.reduce((sum, i) => sum + (i.duration || 0), 0);
-        const successfulHandoffs = handoffs.filter(h => h.success).length;
-        const continuityScore = handoffs.reduce((sum, h) => sum + h.continuityScore, 0) / handoffs.length;
+        const _successfulHandoffs = handoffs.filter((h) => h.success).length;
+        const continuityScore =
+          handoffs.reduce((sum, h) => sum + h.continuityScore, 0) / handoffs.length;
 
         setData({
           instances,
@@ -621,7 +686,7 @@ export const CrossInstanceSessionTracker: React.FC<CrossInstanceSessionTrackerPr
           totalSessionTime: totalDuration,
           overallContinuityScore: continuityScore,
           contextSwitches: handoffs.length,
-          mostUsedInstance: 'web'
+          mostUsedInstance: 'web',
         });
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load cross-instance data');
@@ -684,12 +749,7 @@ export const CrossInstanceSessionTracker: React.FC<CrossInstanceSessionTrackerPr
           showHandoffDetails={showHandoffDetails}
         />
       )}
-      {mode === 'network' && (
-        <NetworkView
-          data={data}
-          onSelectInstance={onSelectInstance}
-        />
-      )}
+      {mode === 'network' && <NetworkView data={data} onSelectInstance={onSelectInstance} />}
       {mode === 'summary' && <SummaryView data={data} />}
       {mode === 'handoffs' && <HandoffsView data={data} />}
     </div>

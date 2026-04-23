@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 export interface AgentCost {
   agentId: string;
@@ -21,7 +21,9 @@ export function useCosts(period = '30d'): CostsResponse | null {
     try {
       const res = await fetch(`/api/v1/analytics/costs?period=${period}`);
       if (res.ok) setData(await res.json());
-    } catch { /* retry */ }
+    } catch {
+      /* retry */
+    }
   }, [period]);
 
   useEffect(() => {

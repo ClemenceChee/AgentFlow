@@ -87,7 +87,7 @@ export class Router {
       });
 
       // Parse body for non-GET requests
-      let body: unknown = undefined;
+      let body: unknown;
       if (method !== 'GET' && method !== 'OPTIONS') {
         body = await parseBody(req);
       }

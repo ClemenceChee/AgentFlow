@@ -6,7 +6,7 @@
  * debugging and organizational context.
  */
 
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 
 // Component props
 interface InstanceInfoDisplayProps {
@@ -39,36 +39,36 @@ const CLIENT_TYPE_CONFIG = {
     icon: '💻',
     description: 'Command-line interface',
     color: 'var(--org-cli)',
-    priority: 4
+    priority: 4,
   },
   Desktop: {
     name: 'Claude Code Desktop',
     icon: '🖥️',
     description: 'Desktop application',
     color: 'var(--org-desktop)',
-    priority: 3
+    priority: 3,
   },
   'VS Code': {
     name: 'Claude Code VS Code',
     icon: '📝',
     description: 'VS Code extension',
     color: 'var(--org-vscode)',
-    priority: 2
+    priority: 2,
   },
   Web: {
     name: 'Claude Code Web',
     icon: '🌐',
     description: 'Web browser interface',
     color: 'var(--org-web)',
-    priority: 1
+    priority: 1,
   },
   Unknown: {
     name: 'Unknown Client',
     icon: '🔧',
     description: 'Unidentified client type',
     color: 'var(--t3)',
-    priority: 0
-  }
+    priority: 0,
+  },
 };
 
 // Platform configuration
@@ -76,7 +76,7 @@ const PLATFORM_CONFIG = {
   win32: { name: 'Windows', icon: '🪟' },
   darwin: { name: 'macOS', icon: '🍎' },
   linux: { name: 'Linux', icon: '🐧' },
-  unknown: { name: 'Unknown', icon: '❓' }
+  unknown: { name: 'Unknown', icon: '❓' },
 };
 
 // Parsed user agent interface
@@ -101,7 +101,7 @@ export function InstanceInfoDisplay({
   className = '',
   showTechnicalDetails = false,
   showPlatformDetails = true,
-  onInstanceClick
+  onInstanceClick,
 }: InstanceInfoDisplayProps) {
   // Parse user agent string
   const parsedUserAgent = useMemo((): ParsedUserAgent => {
@@ -110,7 +110,7 @@ export function InstanceInfoDisplay({
     }
 
     const ua = userAgent.toLowerCase();
-    let parsed: ParsedUserAgent = { clientType: 'Unknown' };
+    const parsed: ParsedUserAgent = { clientType: 'Unknown' };
 
     // Detect client type
     if (ua.includes('claude-code-cli')) {
@@ -119,12 +119,19 @@ export function InstanceInfoDisplay({
       parsed.clientType = 'Desktop';
     } else if (ua.includes('claude-code-vscode') || ua.includes('vscode')) {
       parsed.clientType = 'VS Code';
-    } else if (ua.includes('claude-code-web') || ua.includes('mozilla') || ua.includes('chrome') || ua.includes('safari')) {
+    } else if (
+      ua.includes('claude-code-web') ||
+      ua.includes('mozilla') ||
+      ua.includes('chrome') ||
+      ua.includes('safari')
+    ) {
       parsed.clientType = 'Web';
     }
 
     // Extract version numbers
-    const versionMatch = userAgent.match(/claude-code[/-]?(?:cli|desktop|web|vscode)?[/-]?v?([0-9]+\.[0-9]+\.[0-9]+)/i);
+    const versionMatch = userAgent.match(
+      /claude-code[/-]?(?:cli|desktop|web|vscode)?[/-]?v?([0-9]+\.[0-9]+\.[0-9]+)/i,
+    );
     if (versionMatch) {
       parsed.version = versionMatch[1];
     }
@@ -182,22 +189,17 @@ export function InstanceInfoDisplay({
 
   // Format instance ID for display
   const formatInstanceId = (id: string): string => {
-    return id.length > (compact ? 6 : 12) ?
-      `${id.substring(0, compact ? 6 : 12)}...` :
-      id;
+    return id.length > (compact ? 6 : 12) ? `${id.substring(0, compact ? 6 : 12)}...` : id;
   };
 
   const clientConfig = CLIENT_TYPE_CONFIG[parsedUserAgent.clientType];
-  const platformConfig = parsedUserAgent.platform ?
-    PLATFORM_CONFIG[parsedUserAgent.platform] :
-    PLATFORM_CONFIG.unknown;
+  const platformConfig = parsedUserAgent.platform
+    ? PLATFORM_CONFIG[parsedUserAgent.platform]
+    : PLATFORM_CONFIG.unknown;
 
-  const cardClasses = [
-    'org-card',
-    'instance-info-display',
-    compact ? 'compact' : '',
-    className
-  ].filter(Boolean).join(' ');
+  const cardClasses = ['org-card', 'instance-info-display', compact ? 'compact' : '', className]
+    .filter(Boolean)
+    .join(' ');
 
   // No instance information available
   if (!instanceId && !userAgent) {
@@ -212,9 +214,7 @@ export function InstanceInfoDisplay({
         <div className="org-card__content">
           <div className="instance-info-empty">
             <div className="instance-info-empty__icon">❓</div>
-            <div className="instance-info-empty__message">
-              No instance information available
-            </div>
+            <div className="instance-info-empty__message">No instance information available</div>
           </div>
         </div>
       </div>
@@ -229,9 +229,7 @@ export function InstanceInfoDisplay({
           Instance Info
         </div>
         {parsedUserAgent.version && !compact && (
-          <div className="instance-info-version">
-            v{parsedUserAgent.version}
-          </div>
+          <div className="instance-info-version">v{parsedUserAgent.version}</div>
         )}
       </div>
 
@@ -242,10 +240,7 @@ export function InstanceInfoDisplay({
             <div className="instance-info-section__label">Client</div>
           </div>
           <div className="instance-info-section__content">
-            <div
-              className="instance-info-client-badge"
-              style={{ borderColor: clientConfig.color }}
-            >
+            <div className="instance-info-client-badge" style={{ borderColor: clientConfig.color }}>
               <span
                 className="instance-info-client-badge__icon"
                 style={{ color: clientConfig.color }}
@@ -264,9 +259,7 @@ export function InstanceInfoDisplay({
               </div>
             </div>
             {!compact && (
-              <div className="instance-info-client-description">
-                {clientConfig.description}
-              </div>
+              <div className="instance-info-client-description">{clientConfig.description}</div>
             )}
           </div>
         </div>
@@ -300,12 +293,8 @@ export function InstanceInfoDisplay({
             </div>
             <div className="instance-info-section__content">
               <div className="instance-info-platform">
-                <span className="instance-info-platform__icon">
-                  {platformConfig.icon}
-                </span>
-                <span className="instance-info-platform__name">
-                  {platformConfig.name}
-                </span>
+                <span className="instance-info-platform__icon">{platformConfig.icon}</span>
+                <span className="instance-info-platform__name">{platformConfig.name}</span>
                 {parsedUserAgent.architecture && (
                   <span className="instance-info-platform__arch">
                     {parsedUserAgent.architecture}
@@ -317,48 +306,51 @@ export function InstanceInfoDisplay({
         )}
 
         {/* Runtime/Browser Details */}
-        {!compact && (parsedUserAgent.nodeVersion || parsedUserAgent.electronVersion || parsedUserAgent.browserName) && (
-          <div className="instance-info-section">
-            <div className="instance-info-section__header">
-              <div className="instance-info-section__label">Runtime</div>
-            </div>
-            <div className="instance-info-section__content">
-              <div className="instance-info-runtime">
-                {parsedUserAgent.nodeVersion && (
-                  <div className="instance-info-runtime-item">
-                    <span className="instance-info-runtime-item__icon">⚡</span>
-                    <span className="instance-info-runtime-item__name">Node.js</span>
-                    <span className="instance-info-runtime-item__version">
-                      v{parsedUserAgent.nodeVersion}
-                    </span>
-                  </div>
-                )}
+        {!compact &&
+          (parsedUserAgent.nodeVersion ||
+            parsedUserAgent.electronVersion ||
+            parsedUserAgent.browserName) && (
+            <div className="instance-info-section">
+              <div className="instance-info-section__header">
+                <div className="instance-info-section__label">Runtime</div>
+              </div>
+              <div className="instance-info-section__content">
+                <div className="instance-info-runtime">
+                  {parsedUserAgent.nodeVersion && (
+                    <div className="instance-info-runtime-item">
+                      <span className="instance-info-runtime-item__icon">⚡</span>
+                      <span className="instance-info-runtime-item__name">Node.js</span>
+                      <span className="instance-info-runtime-item__version">
+                        v{parsedUserAgent.nodeVersion}
+                      </span>
+                    </div>
+                  )}
 
-                {parsedUserAgent.electronVersion && (
-                  <div className="instance-info-runtime-item">
-                    <span className="instance-info-runtime-item__icon">🔬</span>
-                    <span className="instance-info-runtime-item__name">Electron</span>
-                    <span className="instance-info-runtime-item__version">
-                      v{parsedUserAgent.electronVersion}
-                    </span>
-                  </div>
-                )}
+                  {parsedUserAgent.electronVersion && (
+                    <div className="instance-info-runtime-item">
+                      <span className="instance-info-runtime-item__icon">🔬</span>
+                      <span className="instance-info-runtime-item__name">Electron</span>
+                      <span className="instance-info-runtime-item__version">
+                        v{parsedUserAgent.electronVersion}
+                      </span>
+                    </div>
+                  )}
 
-                {parsedUserAgent.browserName && parsedUserAgent.browserVersion && (
-                  <div className="instance-info-runtime-item">
-                    <span className="instance-info-runtime-item__icon">🌐</span>
-                    <span className="instance-info-runtime-item__name">
-                      {parsedUserAgent.browserName}
-                    </span>
-                    <span className="instance-info-runtime-item__version">
-                      v{parsedUserAgent.browserVersion}
-                    </span>
-                  </div>
-                )}
+                  {parsedUserAgent.browserName && parsedUserAgent.browserVersion && (
+                    <div className="instance-info-runtime-item">
+                      <span className="instance-info-runtime-item__icon">🌐</span>
+                      <span className="instance-info-runtime-item__name">
+                        {parsedUserAgent.browserName}
+                      </span>
+                      <span className="instance-info-runtime-item__version">
+                        v{parsedUserAgent.browserVersion}
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
         {/* Technical Details (Development Mode) */}
         {showTechnicalDetails && userAgent && process.env.NODE_ENV === 'development' && (
@@ -368,12 +360,8 @@ export function InstanceInfoDisplay({
             </div>
             <div className="instance-info-section__content">
               <details className="instance-info-user-agent">
-                <summary className="instance-info-user-agent__summary">
-                  Raw User Agent
-                </summary>
-                <pre className="instance-info-user-agent__content">
-                  {userAgent}
-                </pre>
+                <summary className="instance-info-user-agent__summary">Raw User Agent</summary>
+                <pre className="instance-info-user-agent__content">{userAgent}</pre>
               </details>
             </div>
           </div>
@@ -383,34 +371,23 @@ export function InstanceInfoDisplay({
         {compact && (
           <div className="instance-info-compact-summary">
             <div className="instance-info-compact-item">
-              <span
-                className="instance-info-compact-icon"
-                style={{ color: clientConfig.color }}
-              >
+              <span className="instance-info-compact-icon" style={{ color: clientConfig.color }}>
                 {clientConfig.icon}
               </span>
-              <span className="instance-info-compact-text">
-                {parsedUserAgent.clientType}
-              </span>
+              <span className="instance-info-compact-text">{parsedUserAgent.clientType}</span>
             </div>
 
             {parsedUserAgent.platform && (
               <div className="instance-info-compact-item">
-                <span className="instance-info-compact-icon">
-                  {platformConfig.icon}
-                </span>
-                <span className="instance-info-compact-text">
-                  {platformConfig.name}
-                </span>
+                <span className="instance-info-compact-icon">{platformConfig.icon}</span>
+                <span className="instance-info-compact-text">{platformConfig.name}</span>
               </div>
             )}
 
             {parsedUserAgent.version && (
               <div className="instance-info-compact-item">
                 <span className="instance-info-compact-icon">🏷️</span>
-                <span className="instance-info-compact-text">
-                  v{parsedUserAgent.version}
-                </span>
+                <span className="instance-info-compact-text">v{parsedUserAgent.version}</span>
               </div>
             )}
           </div>

@@ -6,8 +6,12 @@
  * patterns with prioritized suggestions and implementation guidance.
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
-import type { PolicyStatus, OrganizationalTrace, TeamMembership } from '../../../types/organizational.js';
+import { useEffect, useMemo, useState } from 'react';
+import type {
+  OrganizationalTrace,
+  PolicyStatus,
+  TeamMembership,
+} from '../../../types/organizational.js';
 
 // Component props
 interface GovernanceRecommendationsProps {
@@ -39,7 +43,10 @@ interface GovernanceRecommendationsProps {
   compact?: boolean;
 
   /** Callback when recommendation is accepted/implemented */
-  onRecommendationAction?: (recommendation: GovernanceRecommendation, action: RecommendationAction) => void;
+  onRecommendationAction?: (
+    recommendation: GovernanceRecommendation,
+    action: RecommendationAction,
+  ) => void;
 
   /** Callback when recommendation details are requested */
   onViewDetails?: (recommendation: GovernanceRecommendation) => void;
@@ -88,72 +95,78 @@ type RecommendationEffort = 'high' | 'medium' | 'low';
 type RecommendationAction = 'accept' | 'dismiss' | 'schedule' | 'view_details';
 
 // Configuration for categories
-const CATEGORY_CONFIG: Record<GovernanceCategory, {
-  label: string;
-  icon: string;
-  color: string;
-  description: string;
-}> = {
+const CATEGORY_CONFIG: Record<
+  GovernanceCategory,
+  {
+    label: string;
+    icon: string;
+    color: string;
+    description: string;
+  }
+> = {
   access_control: {
     label: 'Access Control',
     icon: '🔐',
     color: 'var(--org-security)',
-    description: 'User permissions and access management improvements'
+    description: 'User permissions and access management improvements',
   },
   data_governance: {
     label: 'Data Governance',
     icon: '🗂️',
     color: 'var(--org-data)',
-    description: 'Data management and governance enhancements'
+    description: 'Data management and governance enhancements',
   },
   policy_enforcement: {
     label: 'Policy Enforcement',
     icon: '🛡️',
     color: 'var(--org-policy)',
-    description: 'Policy compliance and enforcement improvements'
+    description: 'Policy compliance and enforcement improvements',
   },
   operational_efficiency: {
     label: 'Operational Efficiency',
     icon: '⚡',
     color: 'var(--org-efficiency)',
-    description: 'Operational process and efficiency optimizations'
+    description: 'Operational process and efficiency optimizations',
   },
   security_enhancement: {
     label: 'Security Enhancement',
     icon: '🔒',
     color: 'var(--org-security)',
-    description: 'Security posture and protection improvements'
+    description: 'Security posture and protection improvements',
   },
   compliance_improvement: {
     label: 'Compliance',
     icon: '📋',
     color: 'var(--org-compliance)',
-    description: 'Regulatory and compliance adherence enhancements'
+    description: 'Regulatory and compliance adherence enhancements',
   },
   team_collaboration: {
     label: 'Team Collaboration',
     icon: '🤝',
     color: 'var(--org-collaboration)',
-    description: 'Team coordination and collaboration improvements'
+    description: 'Team coordination and collaboration improvements',
   },
   process_optimization: {
     label: 'Process Optimization',
     icon: '🔧',
     color: 'var(--org-process)',
-    description: 'Workflow and process optimization recommendations'
-  }
+    description: 'Workflow and process optimization recommendations',
+  },
 };
 
 // Priority configuration
-const PRIORITY_CONFIG: Record<RecommendationPriority, {
-  label: string;
-  color: string;
-  weight: number;
-}> = {
+const PRIORITY_CONFIG: Record<
+  RecommendationPriority,
+  {
+    label: string;
+    color: string;
+    weight: number;
+  }
+> = {
   critical: { label: 'Critical', color: 'var(--fail)', weight: 4 },
   high: { label: 'High', color: 'var(--warn)', weight: 3 },
   medium: { label: 'Medium', color: 'var(--org-primary)', weight: 2 },
-  low: { label: 'Low', color: 'var(--t3)', weight: 1 }
+  low: { label: 'Low', color: 'var(--t3)', weight: 1 },
 };
 
 /**
@@ -170,7 +183,7 @@ export function GovernanceRecommendations({
   className = '',
   compact = false,
   onRecommendationAction,
-  onViewDetails
+  onViewDetails,
 }: GovernanceRecommendationsProps) {
   const [recommendations, setRecommendations] = useState<GovernanceRecommendation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -189,26 +202,33 @@ export function GovernanceRecommendations({
         const generatedRecommendations: GovernanceRecommendation[] = [];
 
         // Analyze policy violations for recommendations
-        policyStatuses.forEach(policyStatus => {
+        policyStatuses.forEach((policyStatus) => {
           if (policyStatus.violations && policyStatus.violations.length > 0) {
             // Group violations by category
-            const violationsByCategory = policyStatus.violations.reduce((acc, violation) => {
-              const category = violation.category || 'operational';
-              if (!acc[category]) acc[category] = [];
-              acc[category].push(violation);
-              return acc;
-            }, {} as Record<string, typeof policyStatus.violations>);
+            const violationsByCategory = policyStatus.violations.reduce(
+              (acc, violation) => {
+                const category = violation.category || 'operational';
+                if (!acc[category]) acc[category] = [];
+                acc[category].push(violation);
+                return acc;
+              },
+              {} as Record<string, typeof policyStatus.violations>,
+            );
 
             // Generate recommendations for each category
             Object.entries(violationsByCategory).forEach(([category, violations]) => {
-              if (violations.length >= 2) { // Only recommend if there are multiple violations
+              if (violations.length >= 2) {
+                // Only recommend if there are multiple violations
                 generatedRecommendations.push({
                   id: `policy-${category}-${Date.now()}`,
                   title: `Address ${category.replace(/_/g, ' ')} Policy Violations`,
                   description: `Multiple ${category.replace(/_/g, ' ')} violations detected. Implementing systematic controls could prevent future issues.`,
                   category: category as GovernanceCategory,
-                  priority: violations.some(v => v.severity === 'critical') ? 'critical' :
-                           violations.some(v => v.severity === 'high') ? 'high' : 'medium',
+                  priority: violations.some((v) => v.severity === 'critical')
+                    ? 'critical'
+                    : violations.some((v) => v.severity === 'high')
+                      ? 'high'
+                      : 'medium',
                   impact: violations.length > 5 ? 'high' : violations.length > 2 ? 'medium' : 'low',
                   effort: 'medium',
                   confidence: 0.8,
@@ -217,33 +237,35 @@ export function GovernanceRecommendations({
                     'Identify root cause patterns',
                     'Implement preventive controls',
                     'Update policy documentation',
-                    'Train relevant team members'
+                    'Train relevant team members',
                   ],
                   benefits: [
                     'Reduced policy violations',
                     'Improved compliance posture',
                     'Better risk management',
-                    'Enhanced operational consistency'
+                    'Enhanced operational consistency',
                   ],
                   risks: [
                     'Implementation complexity',
                     'Potential workflow disruption',
-                    'Training overhead'
+                    'Training overhead',
                   ],
                   timeframe: '2-4 weeks',
                   resources: ['Policy team', 'Technical team', 'Training resources'],
                   status: 'pending',
                   evidence: [
                     `${violations.length} violations in ${category}`,
-                    `Severity levels: ${violations.map(v => v.severity).join(', ')}`
+                    `Severity levels: ${violations.map((v) => v.severity).join(', ')}`,
                   ],
-                  relatedPolicies: violations.map(v => v.rule),
+                  relatedPolicies: violations.map((v) => v.rule),
                   affectedTeams: [],
                   metrics: {
                     expectedImprovement: Math.min(violations.length * 10, 80),
-                    affectedTraces: traces.filter(t => t.policyStatus?.violations?.some(v => v.category === category)).length,
-                    riskReduction: violations.length * 15
-                  }
+                    affectedTraces: traces.filter((t) =>
+                      t.policyStatus?.violations?.some((v) => v.category === category),
+                    ).length,
+                    riskReduction: violations.length * 15,
+                  },
                 });
               }
             });
@@ -254,9 +276,9 @@ export function GovernanceRecommendations({
         if (traces.length > 0) {
           const operatorCounts = new Map<string, number>();
           const teamCounts = new Map<string, number>();
-          const errorTraces = traces.filter(t => t.status === 'error');
+          const errorTraces = traces.filter((t) => t.status === 'error');
 
-          traces.forEach(trace => {
+          traces.forEach((trace) => {
             const operatorId = trace.operatorContext?.operatorId;
             const teamId = trace.operatorContext?.teamId;
 
@@ -279,7 +301,8 @@ export function GovernanceRecommendations({
               generatedRecommendations.push({
                 id: `workload-distribution-${Date.now()}`,
                 title: 'Improve Workload Distribution',
-                description: 'Significant workload imbalance detected among operators. Redistribution could improve efficiency and reduce burnout.',
+                description:
+                  'Significant workload imbalance detected among operators. Redistribution could improve efficiency and reduce burnout.',
                 category: 'operational_efficiency',
                 priority: 'medium',
                 impact: 'medium',
@@ -290,33 +313,33 @@ export function GovernanceRecommendations({
                   'Identify bottlenecks and overloaded operators',
                   'Implement workload balancing strategies',
                   'Monitor and adjust distribution',
-                  'Provide additional training if needed'
+                  'Provide additional training if needed',
                 ],
                 benefits: [
                   'More balanced operator workloads',
                   'Improved operator satisfaction',
                   'Better resource utilization',
-                  'Reduced risk of burnout'
+                  'Reduced risk of burnout',
                 ],
                 risks: [
                   'Temporary workflow disruption',
                   'Resistance to change',
-                  'Learning curve for new assignments'
+                  'Learning curve for new assignments',
                 ],
                 timeframe: '1-2 weeks',
                 resources: ['Team leads', 'HR support', 'Workflow tools'],
                 status: 'pending',
                 evidence: [
                   `Workload imbalance: ${(workloadImbalance * 100).toFixed(1)}%`,
-                  `Max workload: ${maxWorkload}, Min workload: ${minWorkload}`
+                  `Max workload: ${maxWorkload}, Min workload: ${minWorkload}`,
                 ],
                 relatedPolicies: [],
                 affectedTeams: Array.from(teamCounts.keys()),
                 metrics: {
                   expectedImprovement: Math.round(workloadImbalance * 50),
                   affectedTraces: traces.length,
-                  riskReduction: 25
-                }
+                  riskReduction: 25,
+                },
               });
             }
           }
@@ -326,7 +349,7 @@ export function GovernanceRecommendations({
             generatedRecommendations.push({
               id: `error-reduction-${Date.now()}`,
               title: 'Reduce Error Rates',
-              description: `High error rate detected (${(errorTraces.length / traces.length * 100).toFixed(1)}%). Implementing error prevention measures could significantly improve reliability.`,
+              description: `High error rate detected (${((errorTraces.length / traces.length) * 100).toFixed(1)}%). Implementing error prevention measures could significantly improve reliability.`,
               category: 'operational_efficiency',
               priority: 'high',
               impact: 'high',
@@ -337,40 +360,40 @@ export function GovernanceRecommendations({
                 'Implement error prevention measures',
                 'Enhance error handling and recovery',
                 'Add monitoring and alerting',
-                'Create error response procedures'
+                'Create error response procedures',
               ],
               benefits: [
                 'Reduced error rates',
                 'Improved system reliability',
                 'Better user experience',
-                'Lower operational overhead'
+                'Lower operational overhead',
               ],
               risks: [
                 'Implementation complexity',
                 'Potential performance impact',
-                'Training requirements'
+                'Training requirements',
               ],
               timeframe: '3-6 weeks',
               resources: ['Development team', 'Operations team', 'Monitoring tools'],
               status: 'pending',
               evidence: [
-                `Error rate: ${(errorTraces.length / traces.length * 100).toFixed(1)}%`,
-                `Total errors: ${errorTraces.length} out of ${traces.length} traces`
+                `Error rate: ${((errorTraces.length / traces.length) * 100).toFixed(1)}%`,
+                `Total errors: ${errorTraces.length} out of ${traces.length} traces`,
               ],
               relatedPolicies: [],
               affectedTeams: Array.from(teamCounts.keys()),
               metrics: {
                 expectedImprovement: 60,
                 affectedTraces: errorTraces.length,
-                riskReduction: 40
-              }
+                riskReduction: 40,
+              },
             });
           }
         }
 
         // Team collaboration recommendations
         if (teamMemberships.length > 1) {
-          const smallTeams = teamMemberships.filter(team => team.members.length < 3);
+          const smallTeams = teamMemberships.filter((team) => team.members.length < 3);
           if (smallTeams.length > 1) {
             generatedRecommendations.push({
               id: `team-consolidation-${Date.now()}`,
@@ -387,47 +410,49 @@ export function GovernanceRecommendations({
                 'Plan team restructuring',
                 'Communicate changes to stakeholders',
                 'Implement gradual team consolidation',
-                'Monitor collaboration metrics'
+                'Monitor collaboration metrics',
               ],
               benefits: [
                 'Improved team collaboration',
                 'Better resource sharing',
                 'Reduced coordination overhead',
-                'Enhanced knowledge transfer'
+                'Enhanced knowledge transfer',
               ],
               risks: [
                 'Cultural integration challenges',
                 'Temporary productivity decrease',
                 'Resistance to organizational change',
-                'Loss of team identity'
+                'Loss of team identity',
               ],
               timeframe: '6-12 weeks',
               resources: ['HR team', 'Team leads', 'Change management'],
               status: 'pending',
               evidence: [
                 `${smallTeams.length} teams with fewer than 3 members`,
-                `Average team size: ${(teamMemberships.reduce((sum, team) => sum + team.members.length, 0) / teamMemberships.length).toFixed(1)}`
+                `Average team size: ${(teamMemberships.reduce((sum, team) => sum + team.members.length, 0) / teamMemberships.length).toFixed(1)}`,
               ],
               relatedPolicies: [],
-              affectedTeams: smallTeams.map(team => team.teamId),
+              affectedTeams: smallTeams.map((team) => team.teamId),
               metrics: {
                 expectedImprovement: 30,
-                affectedTraces: traces.filter(t => smallTeams.some(team => team.teamId === t.operatorContext?.teamId)).length,
-                riskReduction: 20
-              }
+                affectedTraces: traces.filter((t) =>
+                  smallTeams.some((team) => team.teamId === t.operatorContext?.teamId),
+                ).length,
+                riskReduction: 20,
+              },
             });
           }
         }
 
         // Sort recommendations by priority and confidence
         const sortedRecommendations = generatedRecommendations.sort((a, b) => {
-          const priorityDiff = PRIORITY_CONFIG[b.priority].weight - PRIORITY_CONFIG[a.priority].weight;
+          const priorityDiff =
+            PRIORITY_CONFIG[b.priority].weight - PRIORITY_CONFIG[a.priority].weight;
           if (priorityDiff !== 0) return priorityDiff;
           return b.confidence - a.confidence;
         });
 
         setRecommendations(sortedRecommendations);
-
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to generate recommendations');
       } finally {
@@ -441,7 +466,7 @@ export function GovernanceRecommendations({
   // Filter recommendations by category
   const filteredRecommendations = useMemo(() => {
     if (selectedCategory === 'all') return recommendations;
-    return recommendations.filter(rec => rec.category === selectedCategory);
+    return recommendations.filter((rec) => rec.category === selectedCategory);
   }, [recommendations, selectedCategory]);
 
   // Get displayed recommendations (with limit)
@@ -451,26 +476,29 @@ export function GovernanceRecommendations({
   }, [filteredRecommendations, showAll, initialLimit]);
 
   // Handle recommendation actions
-  const handleRecommendationAction = (recommendation: GovernanceRecommendation, action: RecommendationAction) => {
+  const handleRecommendationAction = (
+    recommendation: GovernanceRecommendation,
+    action: RecommendationAction,
+  ) => {
     if (onRecommendationAction) {
       onRecommendationAction(recommendation, action);
     }
 
     // Update local state
     if (action === 'accept' || action === 'dismiss') {
-      setRecommendations(prev =>
-        prev.map(rec =>
+      setRecommendations((prev) =>
+        prev.map((rec) =>
           rec.id === recommendation.id
             ? { ...rec, status: action === 'accept' ? 'in_progress' : 'dismissed' }
-            : rec
-        )
+            : rec,
+        ),
       );
     }
   };
 
   // Toggle recommendation expansion
   const toggleRecommendation = (recommendationId: string) => {
-    setExpandedRecommendations(prev => {
+    setExpandedRecommendations((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(recommendationId)) {
         newSet.delete(recommendationId);
@@ -485,8 +513,10 @@ export function GovernanceRecommendations({
     'org-card',
     'governance-recommendations',
     compact ? 'compact' : '',
-    className
-  ].filter(Boolean).join(' ');
+    className,
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   // Loading state
   if (loading) {
@@ -523,9 +553,7 @@ export function GovernanceRecommendations({
         <div className="org-card__content">
           <div className="governance-recommendations-error">
             <div className="governance-recommendations-error__icon">⚠️</div>
-            <div className="governance-recommendations-error__message">
-              {error}
-            </div>
+            <div className="governance-recommendations-error__message">{error}</div>
           </div>
         </div>
       </div>
@@ -563,7 +591,7 @@ export function GovernanceRecommendations({
                 All ({recommendations.length})
               </button>
               {Object.entries(CATEGORY_CONFIG).map(([category, config]) => {
-                const count = recommendations.filter(rec => rec.category === category).length;
+                const count = recommendations.filter((rec) => rec.category === category).length;
                 if (count === 0) return null;
 
                 return (
@@ -573,15 +601,9 @@ export function GovernanceRecommendations({
                     onClick={() => setSelectedCategory(category as GovernanceCategory)}
                     style={{ borderColor: config.color }}
                   >
-                    <span className="governance-category-filter__icon">
-                      {config.icon}
-                    </span>
-                    <span className="governance-category-filter__label">
-                      {config.label}
-                    </span>
-                    <span className="governance-category-filter__count">
-                      {count}
-                    </span>
+                    <span className="governance-category-filter__icon">{config.icon}</span>
+                    <span className="governance-category-filter__label">{config.label}</span>
+                    <span className="governance-category-filter__count">{count}</span>
                   </button>
                 );
               })}
@@ -635,9 +657,7 @@ export function GovernanceRecommendations({
                         </div>
                       </div>
 
-                      <div className="governance-recommendation__title">
-                        {recommendation.title}
-                      </div>
+                      <div className="governance-recommendation__title">{recommendation.title}</div>
 
                       <div className="governance-recommendation__description">
                         {recommendation.description}
@@ -701,9 +721,7 @@ export function GovernanceRecommendations({
                                 <span className="governance-recommendation__step-number">
                                   {index + 1}
                                 </span>
-                                <span className="governance-recommendation__step-text">
-                                  {step}
-                                </span>
+                                <span className="governance-recommendation__step-text">{step}</span>
                               </div>
                             ))}
                           </div>
@@ -725,9 +743,7 @@ export function GovernanceRecommendations({
                             </span>
                           </div>
                           <div className="governance-recommendation__detail">
-                            <span className="governance-recommendation__detail-label">
-                              Effort:
-                            </span>
+                            <span className="governance-recommendation__detail-label">Effort:</span>
                             <span className="governance-recommendation__detail-value">
                               {recommendation.effort}
                             </span>
@@ -783,8 +799,7 @@ export function GovernanceRecommendations({
                 >
                   {showAll
                     ? `Show Less (${initialLimit})`
-                    : `Show All (${filteredRecommendations.length})`
-                  }
+                    : `Show All (${filteredRecommendations.length})`}
                 </button>
               </div>
             )}
@@ -796,7 +811,8 @@ export function GovernanceRecommendations({
               No governance recommendations at this time
             </div>
             <div className="governance-recommendations-empty__description">
-              Your organizational patterns look good! Recommendations will appear here when analysis identifies improvement opportunities.
+              Your organizational patterns look good! Recommendations will appear here when analysis
+              identifies improvement opportunities.
             </div>
           </div>
         )}

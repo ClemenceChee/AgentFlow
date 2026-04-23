@@ -5,15 +5,14 @@
  * optimization recommendations, and system health indicators.
  */
 
-// Performance metrics display
-export { TeamQueryPerformanceChart } from './TeamQueryPerformanceChart.js';
 export { CacheEfficiencyVisualizer } from './CacheEfficiencyVisualizer.js';
-export { OrganizationalIntelligenceMetrics } from './OrganizationalIntelligenceMetrics.js';
-
 // Comparison and analysis
 export { MultiOperatorPerformanceComparison } from './MultiOperatorPerformanceComparison.js';
+export { OrganizationalIntelligenceMetrics } from './OrganizationalIntelligenceMetrics.js';
 export { PerformanceOptimizationRecommendations } from './PerformanceOptimizationRecommendations.js';
+export { RealTimePerformanceMonitor } from './RealTimePerformanceMonitor.js';
 
 // Resource and monitoring
 export { ResourceAllocationInsights } from './ResourceAllocationInsights.js';
-export { RealTimePerformanceMonitor } from './RealTimePerformanceMonitor.js';
+// Performance metrics display
+export { TeamQueryPerformanceChart } from './TeamQueryPerformanceChart.js';

@@ -5,17 +5,18 @@
  * in organizational features and provides appropriate fallbacks.
  */
 
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import type React from 'react';
+import { Component, type ErrorInfo, type ReactNode } from 'react';
 
 // Error types for organizational features
 export type OrganizationalErrorType =
-  | 'api_error'           // API endpoint failures
-  | 'data_validation'     // Data validation failures
-  | 'permission_denied'   // Team access permission errors
-  | 'component_render'    // Component rendering errors
-  | 'hook_error'          // Custom hook errors
-  | 'correlation_error'   // Session correlation errors
-  | 'policy_error'        // Policy evaluation errors
+  | 'api_error' // API endpoint failures
+  | 'data_validation' // Data validation failures
+  | 'permission_denied' // Team access permission errors
+  | 'component_render' // Component rendering errors
+  | 'hook_error' // Custom hook errors
+  | 'correlation_error' // Session correlation errors
+  | 'policy_error' // Policy evaluation errors
   | 'unknown';
 
 // Error boundary state
@@ -56,7 +57,7 @@ const DefaultErrorFallback: React.FC<ErrorBoundaryFallbackProps> = ({
   retryCount,
   maxRetries,
   onRetry,
-  gracefulDegradation
+  gracefulDegradation,
 }) => {
   if (gracefulDegradation && errorType !== 'component_render') {
     // Show simplified version for non-critical errors
@@ -68,8 +69,8 @@ const DefaultErrorFallback: React.FC<ErrorBoundaryFallbackProps> = ({
         </div>
         <div className="org-card__content">
           <p style={{ fontSize: 'var(--xs)', color: 'var(--t3)' }}>
-            Some organizational features are currently unavailable.
-            Core functionality remains accessible.
+            Some organizational features are currently unavailable. Core functionality remains
+            accessible.
           </p>
           {retryCount < maxRetries && (
             <button
@@ -82,7 +83,7 @@ const DefaultErrorFallback: React.FC<ErrorBoundaryFallbackProps> = ({
                 border: 'none',
                 borderRadius: 'var(--r)',
                 fontSize: 'var(--xs)',
-                cursor: 'pointer'
+                cursor: 'pointer',
               }}
             >
               Retry
@@ -102,7 +103,7 @@ const DefaultErrorFallback: React.FC<ErrorBoundaryFallbackProps> = ({
     hook_error: 'Error loading organizational state',
     correlation_error: 'Unable to load session correlations',
     policy_error: 'Error evaluating organizational policies',
-    unknown: 'An unexpected error occurred'
+    unknown: 'An unexpected error occurred',
   };
 
   const userMessage = errorMessages[errorType] || errorMessages.unknown;
@@ -112,41 +113,41 @@ const DefaultErrorFallback: React.FC<ErrorBoundaryFallbackProps> = ({
       className="org-card"
       style={{
         border: '1px solid var(--fail)',
-        background: 'rgba(248, 81, 73, 0.05)'
+        background: 'rgba(248, 81, 73, 0.05)',
       }}
     >
       <div className="org-card__header">
         <div className="org-card__title" style={{ color: 'var(--fail)' }}>
           ⚠️ Organizational Feature Error
         </div>
-        <div className="org-card__subtitle">
-          {boundaryName}
-        </div>
+        <div className="org-card__subtitle">{boundaryName}</div>
       </div>
       <div className="org-card__content">
-        <p style={{ fontSize: 'var(--xs)', marginBottom: 'var(--s2)' }}>
-          {userMessage}
-        </p>
+        <p style={{ fontSize: 'var(--xs)', marginBottom: 'var(--s2)' }}>{userMessage}</p>
 
         {error && process.env.NODE_ENV === 'development' && (
           <details style={{ marginBottom: 'var(--s2)' }}>
-            <summary style={{
-              fontSize: 'var(--xs)',
-              color: 'var(--t3)',
-              cursor: 'pointer',
-              marginBottom: 'var(--s1)'
-            }}>
+            <summary
+              style={{
+                fontSize: 'var(--xs)',
+                color: 'var(--t3)',
+                cursor: 'pointer',
+                marginBottom: 'var(--s1)',
+              }}
+            >
               Technical Details
             </summary>
-            <pre style={{
-              fontSize: 'var(--xs)',
-              color: 'var(--t3)',
-              background: 'var(--bg3)',
-              padding: 'var(--s2)',
-              borderRadius: 'var(--r)',
-              overflow: 'auto',
-              maxHeight: '200px'
-            }}>
+            <pre
+              style={{
+                fontSize: 'var(--xs)',
+                color: 'var(--t3)',
+                background: 'var(--bg3)',
+                padding: 'var(--s2)',
+                borderRadius: 'var(--r)',
+                overflow: 'auto',
+                maxHeight: '200px',
+              }}
+            >
               {error.message}
               {error.stack && `\n\n${error.stack}`}
             </pre>
@@ -164,7 +165,7 @@ const DefaultErrorFallback: React.FC<ErrorBoundaryFallbackProps> = ({
                 border: 'none',
                 borderRadius: 'var(--r)',
                 fontSize: 'var(--xs)',
-                cursor: 'pointer'
+                cursor: 'pointer',
               }}
             >
               Retry ({maxRetries - retryCount} remaining)
@@ -180,7 +181,7 @@ const DefaultErrorFallback: React.FC<ErrorBoundaryFallbackProps> = ({
               border: '1px solid var(--bd)',
               borderRadius: 'var(--r)',
               fontSize: 'var(--xs)',
-              cursor: 'pointer'
+              cursor: 'pointer',
             }}
           >
             Reload Page
@@ -234,7 +235,7 @@ export class OrganizationalErrorBoundary extends Component<
       hasError: false,
       errorType: 'unknown',
       errorBoundary: props.boundaryName || 'Unknown',
-      retryCount: 0
+      retryCount: 0,
     };
   }
 
@@ -242,7 +243,7 @@ export class OrganizationalErrorBoundary extends Component<
     return {
       hasError: true,
       error,
-      errorType: classifyError(error)
+      errorType: classifyError(error),
     };
   }
 
@@ -254,7 +255,7 @@ export class OrganizationalErrorBoundary extends Component<
       error,
       errorInfo,
       errorType,
-      componentStack: errorInfo.componentStack
+      componentStack: errorInfo.componentStack,
     });
 
     if (onError) {
@@ -267,7 +268,7 @@ export class OrganizationalErrorBoundary extends Component<
         errorType,
         boundaryName,
         errorMessage: error.message,
-        componentStack: errorInfo.componentStack.split('\n').slice(0, 5).join('\n')
+        componentStack: errorInfo.componentStack.split('\n').slice(0, 5).join('\n'),
       });
     }
   }
@@ -276,10 +277,10 @@ export class OrganizationalErrorBoundary extends Component<
     const { maxRetries = 3 } = this.props;
 
     if (this.state.retryCount < maxRetries) {
-      this.setState(prevState => ({
+      this.setState((prevState) => ({
         hasError: false,
         error: undefined,
-        retryCount: prevState.retryCount + 1
+        retryCount: prevState.retryCount + 1,
       }));
     }
   };
@@ -293,7 +294,7 @@ export class OrganizationalErrorBoundary extends Component<
       fallbackComponent: FallbackComponent = DefaultErrorFallback,
       maxRetries = 3,
       boundaryName = 'Organizational Component',
-      gracefulDegradation = true
+      gracefulDegradation = true,
     } = this.props;
 
     const fallbackProps: ErrorBoundaryFallbackProps = {
@@ -303,7 +304,7 @@ export class OrganizationalErrorBoundary extends Component<
       retryCount: this.state.retryCount,
       maxRetries,
       onRetry: this.handleRetry,
-      gracefulDegradation
+      gracefulDegradation,
     };
 
     return <FallbackComponent {...fallbackProps} />;
@@ -313,7 +314,7 @@ export class OrganizationalErrorBoundary extends Component<
 // Higher-order component for wrapping components with error boundary
 export function withOrganizationalErrorBoundary<P extends object>(
   WrappedComponent: React.ComponentType<P>,
-  options?: Omit<OrganizationalErrorBoundaryProps, 'children'>
+  options?: Omit<OrganizationalErrorBoundaryProps, 'children'>,
 ) {
   const displayName = WrappedComponent.displayName || WrappedComponent.name || 'Component';
 
@@ -336,7 +337,7 @@ export function useOrganizationalErrorReporter() {
   const reportError = (
     error: Error,
     context: string,
-    errorType: OrganizationalErrorType = 'unknown'
+    errorType: OrganizationalErrorType = 'unknown',
   ) => {
     console.error(`[${context}] Organizational error:`, { error, errorType });
 
@@ -344,7 +345,7 @@ export function useOrganizationalErrorReporter() {
       (window as any).analytics.track('Organizational Error Reported', {
         errorType,
         context,
-        errorMessage: error.message
+        errorMessage: error.message,
       });
     }
   };

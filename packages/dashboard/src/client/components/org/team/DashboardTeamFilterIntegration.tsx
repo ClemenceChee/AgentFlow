@@ -6,11 +6,11 @@
  * and organizational context awareness.
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
-import { TeamFilterDropdown } from './TeamFilterDropdown.js';
-import { useTeamScopedFiltering } from '../../../hooks/organizational/useTeamScopedFiltering.js';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useOrganizationalContext } from '../../../../../contexts/OrganizationalContext';
+import { useTeamScopedFiltering } from '../../../hooks/organizational/useTeamScopedFiltering.js';
 import type { OrganizationalTrace } from '../../../types/organizational.js';
+import { TeamFilterDropdown } from './TeamFilterDropdown.js';
 
 // Component props
 interface DashboardTeamFilterIntegrationProps {
@@ -58,7 +58,7 @@ export function DashboardTeamFilterIntegration({
   showOrgContextToggle = true,
   className = '',
   position = 'right',
-  compact = false
+  compact = false,
 }: DashboardTeamFilterIntegrationProps) {
   const { state, actions } = useOrganizationalContext();
   const [quickFilterTeams, setQuickFilterTeams] = useState<QuickFilterTeam[]>([]);
@@ -73,11 +73,11 @@ export function DashboardTeamFilterIntegration({
     hasTeamAccess,
     setTeamFilter,
     clearTeamFilter,
-    refreshTeamAccess
+    refreshTeamAccess,
   } = useTeamScopedFiltering(traces, {
     persistInUrl: true,
     enforceAccessControl: true,
-    onFilterChange: onFilteredTracesChange
+    onFilterChange: onFilteredTracesChange,
   });
 
   // Load quick filter teams (most active or recently used teams)
@@ -89,7 +89,7 @@ export function DashboardTeamFilterIntegration({
         // Calculate team activity from current traces
         const teamStats = new Map<string, { count: number; lastActivity: number; name?: string }>();
 
-        traces.forEach(trace => {
+        traces.forEach((trace) => {
           const teamId = trace.operatorContext?.teamId;
           if (!teamId || !availableTeamIds.includes(teamId)) return;
 
@@ -132,9 +132,9 @@ export function DashboardTeamFilterIntegration({
               teamId,
               name: teamName,
               memberCount: stats.count,
-              isActive: stats.lastActivity > Date.now() - 24 * 60 * 60 * 1000 // Active in last 24h
+              isActive: stats.lastActivity > Date.now() - 24 * 60 * 60 * 1000, // Active in last 24h
             };
-          })
+          }),
         );
 
         setQuickFilterTeams(quickTeams);
@@ -147,9 +147,12 @@ export function DashboardTeamFilterIntegration({
   }, [traces, availableTeamIds, showQuickFilters, compact]);
 
   // Handle team filter change
-  const handleTeamChange = useCallback((teamId: string | null) => {
-    setTeamFilter(teamId);
-  }, [setTeamFilter]);
+  const handleTeamChange = useCallback(
+    (teamId: string | null) => {
+      setTeamFilter(teamId);
+    },
+    [setTeamFilter],
+  );
 
   // Handle organizational context toggle
   const handleOrgContextToggle = useCallback(() => {
@@ -163,18 +166,16 @@ export function DashboardTeamFilterIntegration({
 
     const totalTraces = filteredTraces.length;
     const teamsInTraces = new Set(
-      filteredTraces
-        .map(trace => trace.operatorContext?.teamId)
-        .filter(Boolean)
+      filteredTraces.map((trace) => trace.operatorContext?.teamId).filter(Boolean),
     ).size;
 
     return {
       totalTraces,
       teamsInTraces,
-      selectedTeamName: selectedTeamId ? (
-        quickFilterTeams.find(t => t.teamId === selectedTeamId)?.name ||
-        selectedTeamId.substring(0, 8)
-      ) : null
+      selectedTeamName: selectedTeamId
+        ? quickFilterTeams.find((t) => t.teamId === selectedTeamId)?.name ||
+          selectedTeamId.substring(0, 8)
+        : null,
     };
   }, [filteredTraces, selectedTeamId, quickFilterTeams, showTeamStats]);
 
@@ -183,8 +184,10 @@ export function DashboardTeamFilterIntegration({
     `position-${position}`,
     compact ? 'compact' : '',
     error ? 'error' : '',
-    className
-  ].filter(Boolean).join(' ');
+    className,
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
     <div className={containerClasses}>
@@ -192,9 +195,7 @@ export function DashboardTeamFilterIntegration({
       {error && !compact && (
         <div className="dashboard-team-filter-error">
           <span className="dashboard-team-filter-error__icon">⚠️</span>
-          <span className="dashboard-team-filter-error__message">
-            {error}
-          </span>
+          <span className="dashboard-team-filter-error__message">{error}</span>
           <button
             className="dashboard-team-filter-error__retry"
             onClick={refreshTeamAccess}
@@ -208,9 +209,7 @@ export function DashboardTeamFilterIntegration({
       {/* Quick Filter Buttons */}
       {showQuickFilters && quickFilterTeams.length > 0 && !compact && (
         <div className="dashboard-team-filter-quick">
-          <div className="dashboard-team-filter-quick__label">
-            Quick filters:
-          </div>
+          <div className="dashboard-team-filter-quick__label">Quick filters:</div>
           <div className="dashboard-team-filter-quick__buttons">
             {quickFilterTeams.map((team) => (
               <button
@@ -221,12 +220,8 @@ export function DashboardTeamFilterIntegration({
                 onClick={() => handleTeamChange(team.teamId)}
                 title={`Filter by team: ${team.name} (${team.memberCount} traces)`}
               >
-                <span className="dashboard-team-filter-quick-button__icon">
-                  👥
-                </span>
-                <span className="dashboard-team-filter-quick-button__name">
-                  {team.name}
-                </span>
+                <span className="dashboard-team-filter-quick-button__icon">👥</span>
+                <span className="dashboard-team-filter-quick-button__name">{team.name}</span>
                 {team.isActive && (
                   <span className="dashboard-team-filter-quick-button__activity-dot" />
                 )}
@@ -239,12 +234,8 @@ export function DashboardTeamFilterIntegration({
                 onClick={clearTeamFilter}
                 title="Clear team filter (show all teams)"
               >
-                <span className="dashboard-team-filter-quick-button__icon">
-                  🌐
-                </span>
-                <span className="dashboard-team-filter-quick-button__name">
-                  All
-                </span>
+                <span className="dashboard-team-filter-quick-button__icon">🌐</span>
+                <span className="dashboard-team-filter-quick-button__name">All</span>
               </button>
             )}
           </div>
@@ -261,7 +252,7 @@ export function DashboardTeamFilterIntegration({
           showMemberCounts={!compact}
           showActivityIndicators={!compact}
           enableSearch={!compact}
-          placeholder={compact ? "Team..." : "Filter by team..."}
+          placeholder={compact ? 'Team...' : 'Filter by team...'}
           className="dashboard-team-filter-dropdown"
         />
 
@@ -272,22 +263,18 @@ export function DashboardTeamFilterIntegration({
               <div className="dashboard-team-filter-stats__filtered">
                 <span className="dashboard-team-filter-stats__icon">👥</span>
                 <span className="dashboard-team-filter-stats__text">
-                  {compact ? (
-                    `${teamStats.totalTraces}`
-                  ) : (
-                    `${teamStats.totalTraces} trace${teamStats.totalTraces !== 1 ? 's' : ''} from ${teamStats.selectedTeamName}`
-                  )}
+                  {compact
+                    ? `${teamStats.totalTraces}`
+                    : `${teamStats.totalTraces} trace${teamStats.totalTraces !== 1 ? 's' : ''} from ${teamStats.selectedTeamName}`}
                 </span>
               </div>
             ) : (
               <div className="dashboard-team-filter-stats__all">
                 <span className="dashboard-team-filter-stats__icon">🌐</span>
                 <span className="dashboard-team-filter-stats__text">
-                  {compact ? (
-                    `${teamStats.totalTraces} (${teamStats.teamsInTraces})`
-                  ) : (
-                    `${teamStats.totalTraces} trace${teamStats.totalTraces !== 1 ? 's' : ''} from ${teamStats.teamsInTraces} team${teamStats.teamsInTraces !== 1 ? 's' : ''}`
-                  )}
+                  {compact
+                    ? `${teamStats.totalTraces} (${teamStats.teamsInTraces})`
+                    : `${teamStats.totalTraces} trace${teamStats.totalTraces !== 1 ? 's' : ''} from ${teamStats.teamsInTraces} team${teamStats.teamsInTraces !== 1 ? 's' : ''}`}
                 </span>
               </div>
             )}
@@ -295,9 +282,7 @@ export function DashboardTeamFilterIntegration({
             {!hasTeamAccess && selectedTeamId && (
               <div className="dashboard-team-filter-stats__access-warning">
                 <span className="dashboard-team-filter-stats__warning-icon">🔒</span>
-                <span className="dashboard-team-filter-stats__warning-text">
-                  Limited access
-                </span>
+                <span className="dashboard-team-filter-stats__warning-text">Limited access</span>
               </div>
             )}
           </div>
@@ -314,17 +299,17 @@ export function DashboardTeamFilterIntegration({
             onClick={handleOrgContextToggle}
             title={`${state.orgContextExpanded ? 'Hide' : 'Show'} organizational context panel`}
           >
-            <span className="dashboard-team-filter-context-button__icon">
-              📋
-            </span>
+            <span className="dashboard-team-filter-context-button__icon">📋</span>
             {!compact && (
               <span className="dashboard-team-filter-context-button__text">
                 {state.orgContextExpanded ? 'Hide' : 'Show'} Context
               </span>
             )}
-            <span className={`dashboard-team-filter-context-button__arrow ${
-              state.orgContextExpanded ? 'up' : 'down'
-            }`}>
+            <span
+              className={`dashboard-team-filter-context-button__arrow ${
+                state.orgContextExpanded ? 'up' : 'down'
+              }`}
+            >
               ▼
             </span>
           </button>
@@ -335,11 +320,7 @@ export function DashboardTeamFilterIntegration({
       {isLoading && (
         <div className="dashboard-team-filter-loading">
           <div className="dashboard-team-filter-loading-spinner" />
-          {!compact && (
-            <span className="dashboard-team-filter-loading-text">
-              Loading teams...
-            </span>
-          )}
+          {!compact && <span className="dashboard-team-filter-loading-text">Loading teams...</span>}
         </div>
       )}
     </div>

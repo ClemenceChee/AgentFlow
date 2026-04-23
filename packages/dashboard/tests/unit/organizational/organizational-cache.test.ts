@@ -12,7 +12,7 @@ describe('OrganizationalCache', () => {
     cache = new OrganizationalCache({
       maxMemory: 1024 * 1024, // 1MB for testing
       maxEntries: 100,
-      cleanupInterval: 1000 // 1 second for testing
+      cleanupInterval: 1000, // 1 second for testing
     });
 
     // Clear any existing cache data
@@ -156,7 +156,7 @@ describe('OrganizationalCache', () => {
 
       // Frequently accessed item should be more likely to remain
       const frequentlyAccessedStillThere = cache.has('frequently-accessed');
-      const rarelyAccessedStillThere = cache.has('rarely-accessed');
+      const _rarelyAccessedStillThere = cache.has('rarely-accessed');
 
       expect(frequentlyAccessedStillThere).toBe(true);
     });
@@ -166,7 +166,7 @@ describe('OrganizationalCache', () => {
     it('gets multiple entries at once', () => {
       const data1 = { value: 1 };
       const data2 = { value: 2 };
-      const data3 = { value: 3 };
+      const _data3 = { value: 3 };
 
       cache.set('key1', data1);
       cache.set('key2', data2);
@@ -182,7 +182,7 @@ describe('OrganizationalCache', () => {
       const entries = [
         { key: 'key1', data: { value: 1 } },
         { key: 'key2', data: { value: 2 } },
-        { key: 'key3', data: { value: 3 } }
+        { key: 'key3', data: { value: 3 } },
       ];
 
       cache.setMultiple(entries);
@@ -277,7 +277,7 @@ describe('OrganizationalCache', () => {
       expect(metadata).toMatchObject({
         priority: 'high',
         accessCount: expect.any(Number),
-        timestamp: expect.any(Number)
+        timestamp: expect.any(Number),
       });
     });
 
@@ -301,19 +301,19 @@ describe('OrganizationalCache', () => {
       (global.fetch as jest.Mock)
         .mockResolvedValueOnce({
           ok: true,
-          json: async () => ({ teams: ['team1', 'team2'] })
+          json: async () => ({ teams: ['team1', 'team2'] }),
         })
         .mockResolvedValueOnce({
           ok: true,
-          json: async () => ({ operators: ['op1', 'op2'] })
+          json: async () => ({ operators: ['op1', 'op2'] }),
         })
         .mockResolvedValueOnce({
           ok: true,
-          json: async () => ({ performance: { metric: 'value' } })
+          json: async () => ({ performance: { metric: 'value' } }),
         })
         .mockResolvedValueOnce({
           ok: true,
-          json: async () => ({ policies: ['policy1'] })
+          json: async () => ({ policies: ['policy1'] }),
         });
 
       await cache.warmCache();
@@ -325,11 +325,10 @@ describe('OrganizationalCache', () => {
     });
 
     it('handles warmup failures gracefully', async () => {
-      (global.fetch as jest.Mock)
-        .mockResolvedValueOnce({
-          ok: false,
-          status: 404
-        });
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+      });
 
       // Should not throw
       await expect(cache.warmCache()).resolves.toBeUndefined();

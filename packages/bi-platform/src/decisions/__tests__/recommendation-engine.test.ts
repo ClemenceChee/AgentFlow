@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { RecommendationEngine } from '../recommendation-engine.js';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AggregatedMetrics } from '../../synthesis/aggregator.js';
+import { RecommendationEngine } from '../recommendation-engine.js';
 
 function createMockDb() {
   return {
@@ -45,9 +45,7 @@ describe('RecommendationEngine', () => {
   });
 
   it('generates performance recommendation for high failure agents', async () => {
-    const agents = [
-      makeAgent('bot1', 'Bot One', 100, 0.70, 0.30, false, 0),
-    ];
+    const agents = [makeAgent('bot1', 'Bot One', 100, 0.7, 0.3, false, 0)];
     engine = new RecommendationEngine(db as any, createMockAggregator(agents) as any);
 
     const recs = await engine.generateRecommendations();
@@ -55,38 +53,32 @@ describe('RecommendationEngine', () => {
 
     const perfRec = recs.find((r) => r.type === 'performance');
     expect(perfRec).toBeDefined();
-    expect(perfRec!.title).toContain('Bot One');
-    expect(['critical', 'high']).toContain(perfRec!.priority);
+    expect(perfRec?.title).toContain('Bot One');
+    expect(['critical', 'high']).toContain(perfRec?.priority);
   });
 
   it('generates cost recommendation for expensive low-success agents', async () => {
-    const agents = [
-      makeAgent('bot2', 'Bot Two', 200, 0.75, 0.25, false, 0, 0.80),
-    ];
+    const agents = [makeAgent('bot2', 'Bot Two', 200, 0.75, 0.25, false, 0, 0.8)];
     engine = new RecommendationEngine(db as any, createMockAggregator(agents) as any);
 
     const recs = await engine.generateRecommendations();
     const costRec = recs.find((r) => r.type === 'cost');
     expect(costRec).toBeDefined();
-    expect(costRec!.title).toContain('Bot Two');
+    expect(costRec?.title).toContain('Bot Two');
   });
 
   it('generates compliance recommendation for drifting agents', async () => {
-    const agents = [
-      makeAgent('bot3', 'Bot Three', 100, 0.95, 0.05, true, 0.5),
-    ];
+    const agents = [makeAgent('bot3', 'Bot Three', 100, 0.95, 0.05, true, 0.5)];
     engine = new RecommendationEngine(db as any, createMockAggregator(agents) as any);
 
     const recs = await engine.generateRecommendations();
     const compRec = recs.find((r) => r.type === 'compliance');
     expect(compRec).toBeDefined();
-    expect(compRec!.priority).toBe('high');
+    expect(compRec?.priority).toBe('high');
   });
 
   it('filters recommendations by role', async () => {
-    const agents = [
-      makeAgent('bot1', 'Bot One', 100, 0.70, 0.30, true, 0.5),
-    ];
+    const agents = [makeAgent('bot1', 'Bot One', 100, 0.7, 0.3, true, 0.5)];
     engine = new RecommendationEngine(db as any, createMockAggregator(agents) as any);
 
     const execRecs = await engine.generateRecommendations('executive');
@@ -99,8 +91,8 @@ describe('RecommendationEngine', () => {
 
   it('sorts recommendations by priority', async () => {
     const agents = [
-      makeAgent('bot1', 'Bot One', 100, 0.50, 0.50, true, 0.8), // Critical
-      makeAgent('bot2', 'Bot Two', 200, 0.75, 0.25, false, 0, 0.80), // Medium
+      makeAgent('bot1', 'Bot One', 100, 0.5, 0.5, true, 0.8), // Critical
+      makeAgent('bot2', 'Bot Two', 200, 0.75, 0.25, false, 0, 0.8), // Medium
     ];
     engine = new RecommendationEngine(db as any, createMockAggregator(agents) as any);
 
@@ -148,9 +140,13 @@ describe('RecommendationEngine', () => {
 });
 
 function makeAgent(
-  id: string, name: string, execs: number,
-  successRate: number, failureRate: number,
-  drifted: boolean, driftScore: number,
+  id: string,
+  name: string,
+  execs: number,
+  successRate: number,
+  failureRate: number,
+  drifted: boolean,
+  driftScore: number,
   costPerExec?: number,
 ) {
   return {

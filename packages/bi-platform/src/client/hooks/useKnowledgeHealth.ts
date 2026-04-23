@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 export interface KnowledgeHealthResponse {
   layers: Array<{ name: string; count: number }>;
@@ -23,7 +23,9 @@ export function useKnowledgeHealth(): KnowledgeHealthResponse | null {
     try {
       const res = await fetch('/api/v1/knowledge-health');
       if (res.ok) setData(await res.json());
-    } catch { /* retry */ }
+    } catch {
+      /* retry */
+    }
   }, []);
 
   useEffect(() => {

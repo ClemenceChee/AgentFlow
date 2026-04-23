@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import type React from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useOrganizationalContext } from '../../../contexts/OrganizationalContext';
 
 // Types for real-time performance monitoring
@@ -122,13 +123,15 @@ export const RealTimePerformanceMonitor: React.FC<Props> = ({
   autoRefresh = true,
   refreshInterval = 5000,
   onAlertAcknowledge,
-  onMetricThresholdUpdate
+  onMetricThresholdUpdate,
 }) => {
   const { selectedTeam, operatorContext } = useOrganizationalContext();
   const [monitorView, setMonitorView] = useState<MonitorView>('dashboard');
   const [timeRange, setTimeRange] = useState<TimeRange>('1h');
   const [selectedMetric, setSelectedMetric] = useState<string | null>(null);
-  const [alertsFilter, setAlertsFilter] = useState<'all' | 'active' | 'acknowledged' | 'resolved'>('active');
+  const [alertsFilter, setAlertsFilter] = useState<'all' | 'active' | 'acknowledged' | 'resolved'>(
+    'active',
+  );
   const [isConnected, setIsConnected] = useState(true);
   const [lastUpdate, setLastUpdate] = useState(Date.now());
   const [pauseUpdates, setPauseUpdates] = useState(false);
@@ -156,7 +159,7 @@ export const RealTimePerformanceMonitor: React.FC<Props> = ({
         timestamp: Date.now(),
         trend: generateTrend(1250),
         status: 'warning',
-        threshold: { warning: 1000, critical: 2000, target: 500 }
+        threshold: { warning: 1000, critical: 2000, target: 500 },
       },
       {
         metricId: 'throughput_qps',
@@ -167,7 +170,7 @@ export const RealTimePerformanceMonitor: React.FC<Props> = ({
         timestamp: Date.now(),
         trend: generateTrend(145),
         status: 'healthy',
-        threshold: { warning: 100, critical: 50, target: 200 }
+        threshold: { warning: 100, critical: 50, target: 200 },
       },
       {
         metricId: 'error_rate',
@@ -178,7 +181,7 @@ export const RealTimePerformanceMonitor: React.FC<Props> = ({
         timestamp: Date.now(),
         trend: generateTrend(2.3),
         status: 'healthy',
-        threshold: { warning: 5, critical: 10, target: 1 }
+        threshold: { warning: 5, critical: 10, target: 1 },
       },
       {
         metricId: 'cpu_utilization',
@@ -189,7 +192,7 @@ export const RealTimePerformanceMonitor: React.FC<Props> = ({
         timestamp: Date.now(),
         trend: generateTrend(67.5),
         status: 'healthy',
-        threshold: { warning: 80, critical: 95, target: 70 }
+        threshold: { warning: 80, critical: 95, target: 70 },
       },
       {
         metricId: 'memory_utilization',
@@ -200,7 +203,7 @@ export const RealTimePerformanceMonitor: React.FC<Props> = ({
         timestamp: Date.now(),
         trend: generateTrend(78.2),
         status: 'warning',
-        threshold: { warning: 75, critical: 90, target: 60 }
+        threshold: { warning: 75, critical: 90, target: 60 },
       },
       {
         metricId: 'cache_hit_rate',
@@ -211,7 +214,7 @@ export const RealTimePerformanceMonitor: React.FC<Props> = ({
         timestamp: Date.now(),
         trend: generateTrend(83.7),
         status: 'healthy',
-        threshold: { warning: 80, critical: 70, target: 90 }
+        threshold: { warning: 80, critical: 70, target: 90 },
       },
       {
         metricId: 'active_users',
@@ -222,7 +225,7 @@ export const RealTimePerformanceMonitor: React.FC<Props> = ({
         timestamp: Date.now(),
         trend: generateTrend(42),
         status: 'healthy',
-        threshold: { warning: 20, critical: 10, target: 50 }
+        threshold: { warning: 20, critical: 10, target: 50 },
       },
       {
         metricId: 'session_duration',
@@ -233,87 +236,93 @@ export const RealTimePerformanceMonitor: React.FC<Props> = ({
         timestamp: Date.now(),
         trend: generateTrend(18.5),
         status: 'healthy',
-        threshold: { warning: 10, critical: 5, target: 25 }
-      }
+        threshold: { warning: 10, critical: 5, target: 25 },
+      },
     ];
-  }, [lastUpdate]); // Regenerate on update
+  }, []); // Regenerate on update
 
-  const mockActiveAlerts: ActiveAlert[] = useMemo(() => [
-    {
-      alertId: 'alert-001',
-      ruleId: 'rule-latency-high',
-      metricId: 'query_latency_p95',
-      severity: 'high',
-      message: 'Query latency P95 exceeded 1000ms threshold for 5 minutes',
-      triggeredAt: Date.now() - 300000,
-      currentValue: 1250,
-      thresholdValue: 1000,
-      affectedResources: ['compute-pool-1', 'cache-cluster-1'],
-      escalationLevel: 1,
-      actionsTaken: [
-        {
-          action: 'Auto-scale compute pool',
-          timestamp: Date.now() - 240000,
-          result: 'success',
-          details: 'Added 2 additional instances to compute pool'
-        }
-      ]
-    },
-    {
-      alertId: 'alert-002',
-      ruleId: 'rule-memory-warning',
-      metricId: 'memory_utilization',
-      severity: 'medium',
-      message: 'Memory utilization above 75% threshold',
-      triggeredAt: Date.now() - 180000,
-      currentValue: 78.2,
-      thresholdValue: 75,
-      affectedResources: ['app-cluster-1'],
-      escalationLevel: 0,
-      actionsTaken: []
-    }
-  ], []);
-
-  const mockSystemHealth: SystemHealth = useMemo(() => ({
-    overall: 'degraded',
-    score: 78,
-    components: [
+  const mockActiveAlerts: ActiveAlert[] = useMemo(
+    () => [
       {
-        name: 'Query Engine',
-        status: 'warning',
-        metrics: ['query_latency_p95', 'throughput_qps'],
-        lastCheck: Date.now() - 30000
+        alertId: 'alert-001',
+        ruleId: 'rule-latency-high',
+        metricId: 'query_latency_p95',
+        severity: 'high',
+        message: 'Query latency P95 exceeded 1000ms threshold for 5 minutes',
+        triggeredAt: Date.now() - 300000,
+        currentValue: 1250,
+        thresholdValue: 1000,
+        affectedResources: ['compute-pool-1', 'cache-cluster-1'],
+        escalationLevel: 1,
+        actionsTaken: [
+          {
+            action: 'Auto-scale compute pool',
+            timestamp: Date.now() - 240000,
+            result: 'success',
+            details: 'Added 2 additional instances to compute pool',
+          },
+        ],
       },
       {
-        name: 'Cache Layer',
-        status: 'healthy',
-        metrics: ['cache_hit_rate'],
-        lastCheck: Date.now() - 15000
+        alertId: 'alert-002',
+        ruleId: 'rule-memory-warning',
+        metricId: 'memory_utilization',
+        severity: 'medium',
+        message: 'Memory utilization above 75% threshold',
+        triggeredAt: Date.now() - 180000,
+        currentValue: 78.2,
+        thresholdValue: 75,
+        affectedResources: ['app-cluster-1'],
+        escalationLevel: 0,
+        actionsTaken: [],
       },
-      {
-        name: 'Resource Pool',
-        status: 'warning',
-        metrics: ['cpu_utilization', 'memory_utilization'],
-        lastCheck: Date.now() - 10000
-      },
-      {
-        name: 'User Experience',
-        status: 'healthy',
-        metrics: ['active_users', 'session_duration'],
-        lastCheck: Date.now() - 5000
-      }
     ],
-    incidents: [
-      {
-        id: 'incident-001',
-        title: 'Elevated query latency in us-east region',
-        status: 'monitoring',
-        severity: 'major',
-        startTime: Date.now() - 1800000,
-        estimatedResolution: Date.now() + 600000
-      }
-    ]
-  }), [lastUpdate]);
+    [],
+  );
+
+  const mockSystemHealth: SystemHealth = useMemo(
+    () => ({
+      overall: 'degraded',
+      score: 78,
+      components: [
+        {
+          name: 'Query Engine',
+          status: 'warning',
+          metrics: ['query_latency_p95', 'throughput_qps'],
+          lastCheck: Date.now() - 30000,
+        },
+        {
+          name: 'Cache Layer',
+          status: 'healthy',
+          metrics: ['cache_hit_rate'],
+          lastCheck: Date.now() - 15000,
+        },
+        {
+          name: 'Resource Pool',
+          status: 'warning',
+          metrics: ['cpu_utilization', 'memory_utilization'],
+          lastCheck: Date.now() - 10000,
+        },
+        {
+          name: 'User Experience',
+          status: 'healthy',
+          metrics: ['active_users', 'session_duration'],
+          lastCheck: Date.now() - 5000,
+        },
+      ],
+      incidents: [
+        {
+          id: 'incident-001',
+          title: 'Elevated query latency in us-east region',
+          status: 'monitoring',
+          severity: 'major',
+          startTime: Date.now() - 1800000,
+          estimatedResolution: Date.now() + 600000,
+        },
+      ],
+    }),
+    [],
+  );
 
   // Auto-refresh effect
   useEffect(() => {
@@ -341,22 +350,33 @@ export const RealTimePerformanceMonitor: React.FC<Props> = ({
 
   const getStatusColor = (status: string): string => {
     switch (status) {
-      case 'healthy': return 'var(--org-success)';
-      case 'warning': return 'var(--org-warning)';
-      case 'critical': return 'var(--org-alert-critical)';
-      case 'maintenance': return 'var(--org-info)';
-      case 'unknown': return 'var(--org-text-muted)';
-      default: return 'var(--org-text-muted)';
+      case 'healthy':
+        return 'var(--org-success)';
+      case 'warning':
+        return 'var(--org-warning)';
+      case 'critical':
+        return 'var(--org-alert-critical)';
+      case 'maintenance':
+        return 'var(--org-info)';
+      case 'unknown':
+        return 'var(--org-text-muted)';
+      default:
+        return 'var(--org-text-muted)';
     }
   };
 
   const getSeverityColor = (severity: string): string => {
     switch (severity) {
-      case 'critical': return 'var(--org-alert-critical)';
-      case 'high': return 'var(--org-alert-high)';
-      case 'medium': return 'var(--org-alert-medium)';
-      case 'low': return 'var(--org-alert-low)';
-      default: return 'var(--org-text-muted)';
+      case 'critical':
+        return 'var(--org-alert-critical)';
+      case 'high':
+        return 'var(--org-alert-high)';
+      case 'medium':
+        return 'var(--org-alert-medium)';
+      case 'low':
+        return 'var(--org-alert-low)';
+      default:
+        return 'var(--org-text-muted)';
     }
   };
 
@@ -369,17 +389,22 @@ export const RealTimePerformanceMonitor: React.FC<Props> = ({
     return `${value.toFixed(1)} ${unit}`;
   };
 
-  const handleAlertAcknowledge = useCallback((alertId: string) => {
-    onAlertAcknowledge?.(alertId);
-    // Update alert status locally
-    console.log(`Acknowledged alert: ${alertId}`);
-  }, [onAlertAcknowledge]);
+  const handleAlertAcknowledge = useCallback(
+    (alertId: string) => {
+      onAlertAcknowledge?.(alertId);
+      // Update alert status locally
+      console.log(`Acknowledged alert: ${alertId}`);
+    },
+    [onAlertAcknowledge],
+  );
 
   const renderDashboard = () => (
     <div className="org-performance-dashboard">
       <div className="org-dashboard-header">
         <div className="org-connection-status">
-          <div className={`org-status-indicator ${isConnected ? 'org-connected' : 'org-disconnected'}`}>
+          <div
+            className={`org-status-indicator ${isConnected ? 'org-connected' : 'org-disconnected'}`}
+          >
             {isConnected ? '🟢 Connected' : '🔴 Disconnected'}
           </div>
           <div className="org-last-update">
@@ -407,7 +432,9 @@ export const RealTimePerformanceMonitor: React.FC<Props> = ({
           <div
             key={metric.metricId}
             className={`org-metric-card ${selectedMetric === metric.metricId ? 'org-selected' : ''}`}
-            onClick={() => setSelectedMetric(selectedMetric === metric.metricId ? null : metric.metricId)}
+            onClick={() =>
+              setSelectedMetric(selectedMetric === metric.metricId ? null : metric.metricId)
+            }
           >
             <div className="org-metric-header">
               <h4>{metric.name}</h4>
@@ -420,9 +447,7 @@ export const RealTimePerformanceMonitor: React.FC<Props> = ({
             </div>
 
             <div className="org-metric-value">
-              <span className="org-current-value">
-                {formatValue(metric.value, metric.unit)}
-              </span>
+              <span className="org-current-value">{formatValue(metric.value, metric.unit)}</span>
               <span className="org-target-value">
                 Target: {formatValue(metric.threshold.target, metric.unit)}
               </span>
@@ -434,28 +459,42 @@ export const RealTimePerformanceMonitor: React.FC<Props> = ({
                   fill="none"
                   stroke={getStatusColor(metric.status)}
                   strokeWidth="1.5"
-                  points={metric.trend.map((point, index) => {
-                    const x = (index / (metric.trend.length - 1)) * 200;
-                    const maxValue = Math.max(...metric.trend.map(p => p.value));
-                    const y = 50 - ((point.value / maxValue) * 40);
-                    return `${x},${y}`;
-                  }).join(' ')}
+                  points={metric.trend
+                    .map((point, index) => {
+                      const x = (index / (metric.trend.length - 1)) * 200;
+                      const maxValue = Math.max(...metric.trend.map((p) => p.value));
+                      const y = 50 - (point.value / maxValue) * 40;
+                      return `${x},${y}`;
+                    })
+                    .join(' ')}
                 />
                 {/* Threshold lines */}
                 <line
                   x1="0"
-                  y1={50 - ((metric.threshold.warning / Math.max(...metric.trend.map(p => p.value))) * 40)}
+                  y1={
+                    50 -
+                    (metric.threshold.warning / Math.max(...metric.trend.map((p) => p.value))) * 40
+                  }
                   x2="200"
-                  y2={50 - ((metric.threshold.warning / Math.max(...metric.trend.map(p => p.value))) * 40)}
+                  y2={
+                    50 -
+                    (metric.threshold.warning / Math.max(...metric.trend.map((p) => p.value))) * 40
+                  }
                   stroke="var(--org-warning)"
                   strokeWidth="0.5"
                   strokeDasharray="2,2"
                 />
                 <line
                   x1="0"
-                  y1={50 - ((metric.threshold.critical / Math.max(...metric.trend.map(p => p.value))) * 40)}
+                  y1={
+                    50 -
+                    (metric.threshold.critical / Math.max(...metric.trend.map((p) => p.value))) * 40
+                  }
                   x2="200"
-                  y2={50 - ((metric.threshold.critical / Math.max(...metric.trend.map(p => p.value))) * 40)}
+                  y2={
+                    50 -
+                    (metric.threshold.critical / Math.max(...metric.trend.map((p) => p.value))) * 40
+                  }
                   stroke="var(--org-alert-critical)"
                   strokeWidth="0.5"
                   strokeDasharray="2,2"
@@ -480,7 +519,7 @@ export const RealTimePerformanceMonitor: React.FC<Props> = ({
                   <h5>24-Hour Trend</h5>
                   <svg viewBox="0 0 600 200" className="org-detailed-trend">
                     {/* Grid lines */}
-                    {[0, 25, 50, 75, 100].map(y => (
+                    {[0, 25, 50, 75, 100].map((y) => (
                       <line
                         key={y}
                         x1="50"
@@ -498,27 +537,33 @@ export const RealTimePerformanceMonitor: React.FC<Props> = ({
                       fill="none"
                       stroke={getStatusColor(metric.status)}
                       strokeWidth="2"
-                      points={metric.trend.map((point, index) => {
-                        const x = 50 + (index / (metric.trend.length - 1)) * 500;
-                        const maxValue = Math.max(...metric.trend.map(p => p.value));
-                        const y = 180 - ((point.value / maxValue) * 160);
-                        return `${x},${y}`;
-                      }).join(' ')}
+                      points={metric.trend
+                        .map((point, index) => {
+                          const x = 50 + (index / (metric.trend.length - 1)) * 500;
+                          const maxValue = Math.max(...metric.trend.map((p) => p.value));
+                          const y = 180 - (point.value / maxValue) * 160;
+                          return `${x},${y}`;
+                        })
+                        .join(' ')}
                     />
 
                     {/* Current value indicator */}
                     <circle
                       cx="550"
-                      cy={180 - ((metric.value / Math.max(...metric.trend.map(p => p.value))) * 160)}
+                      cy={
+                        180 - (metric.value / Math.max(...metric.trend.map((p) => p.value))) * 160
+                      }
                       r="4"
                       fill={getStatusColor(metric.status)}
                     />
 
                     {/* Y-axis labels */}
                     <text x="45" y="25" textAnchor="end" className="org-chart-label">
-                      {Math.max(...metric.trend.map(p => p.value)).toFixed(0)}
+                      {Math.max(...metric.trend.map((p) => p.value)).toFixed(0)}
                     </text>
-                    <text x="45" y="185" textAnchor="end" className="org-chart-label">0</text>
+                    <text x="45" y="185" textAnchor="end" className="org-chart-label">
+                      0
+                    </text>
                   </svg>
                 </div>
 
@@ -530,10 +575,12 @@ export const RealTimePerformanceMonitor: React.FC<Props> = ({
                       <input
                         type="number"
                         value={metric.threshold.warning}
-                        onChange={(e) => onMetricThresholdUpdate?.(metric.metricId, {
-                          ...metric.threshold,
-                          warning: parseFloat(e.target.value)
-                        })}
+                        onChange={(e) =>
+                          onMetricThresholdUpdate?.(metric.metricId, {
+                            ...metric.threshold,
+                            warning: parseFloat(e.target.value),
+                          })
+                        }
                       />
                     </div>
                     <div className="org-threshold-input">
@@ -541,10 +588,12 @@ export const RealTimePerformanceMonitor: React.FC<Props> = ({
                       <input
                         type="number"
                         value={metric.threshold.critical}
-                        onChange={(e) => onMetricThresholdUpdate?.(metric.metricId, {
-                          ...metric.threshold,
-                          critical: parseFloat(e.target.value)
-                        })}
+                        onChange={(e) =>
+                          onMetricThresholdUpdate?.(metric.metricId, {
+                            ...metric.threshold,
+                            critical: parseFloat(e.target.value),
+                          })
+                        }
                       />
                     </div>
                   </div>
@@ -562,10 +611,7 @@ export const RealTimePerformanceMonitor: React.FC<Props> = ({
       <div className="org-alerts-header">
         <h3>Active Alerts</h3>
         <div className="org-alerts-controls">
-          <select
-            value={alertsFilter}
-            onChange={(e) => setAlertsFilter(e.target.value as any)}
-          >
+          <select value={alertsFilter} onChange={(e) => setAlertsFilter(e.target.value as any)}>
             <option value="all">All Alerts</option>
             <option value="active">Active Alerts</option>
             <option value="acknowledged">Acknowledged</option>
@@ -578,25 +624,25 @@ export const RealTimePerformanceMonitor: React.FC<Props> = ({
         <div className="org-alert-counts">
           <div className="org-alert-count org-critical">
             <span className="org-count">
-              {mockActiveAlerts.filter(a => a.severity === 'critical').length}
+              {mockActiveAlerts.filter((a) => a.severity === 'critical').length}
             </span>
             <span className="org-label">Critical</span>
           </div>
           <div className="org-alert-count org-high">
             <span className="org-count">
-              {mockActiveAlerts.filter(a => a.severity === 'high').length}
+              {mockActiveAlerts.filter((a) => a.severity === 'high').length}
             </span>
             <span className="org-label">High</span>
           </div>
           <div className="org-alert-count org-medium">
             <span className="org-count">
-              {mockActiveAlerts.filter(a => a.severity === 'medium').length}
+              {mockActiveAlerts.filter((a) => a.severity === 'medium').length}
             </span>
             <span className="org-label">Medium</span>
           </div>
           <div className="org-alert-count org-low">
             <span className="org-count">
-              {mockActiveAlerts.filter(a => a.severity === 'low').length}
+              {mockActiveAlerts.filter((a) => a.severity === 'low').length}
             </span>
             <span className="org-label">Low</span>
           </div>
@@ -680,12 +726,8 @@ export const RealTimePerformanceMonitor: React.FC<Props> = ({
               >
                 {alert.acknowledgedAt ? 'Acknowledged' : 'Acknowledge'}
               </button>
-              <button className="org-button org-button-secondary">
-                View Details
-              </button>
-              <button className="org-button org-button-tertiary">
-                Escalate
-              </button>
+              <button className="org-button org-button-secondary">View Details</button>
+              <button className="org-button org-button-tertiary">Escalate</button>
             </div>
           </div>
         ))}
@@ -701,12 +743,10 @@ export const RealTimePerformanceMonitor: React.FC<Props> = ({
           <div
             className="org-health-gauge"
             style={{
-              background: `conic-gradient(${getStatusColor(mockSystemHealth.overall)} ${mockSystemHealth.score}%, var(--org-border) 0)`
+              background: `conic-gradient(${getStatusColor(mockSystemHealth.overall)} ${mockSystemHealth.score}%, var(--org-border) 0)`,
             }}
           >
-            <div className="org-health-score-value">
-              {mockSystemHealth.score}
-            </div>
+            <div className="org-health-score-value">{mockSystemHealth.score}</div>
           </div>
           <div className="org-health-status">
             <span className={`org-status org-${mockSystemHealth.overall}`}>
@@ -786,10 +826,7 @@ export const RealTimePerformanceMonitor: React.FC<Props> = ({
         <h2>Real-Time Performance Monitor</h2>
         <div className="org-header-controls">
           <div className="org-time-range-selector">
-            <select
-              value={timeRange}
-              onChange={(e) => setTimeRange(e.target.value as TimeRange)}
-            >
+            <select value={timeRange} onChange={(e) => setTimeRange(e.target.value as TimeRange)}>
               <option value="5m">Last 5 Minutes</option>
               <option value="15m">Last 15 Minutes</option>
               <option value="1h">Last Hour</option>
@@ -798,12 +835,12 @@ export const RealTimePerformanceMonitor: React.FC<Props> = ({
             </select>
           </div>
           <div className="org-monitor-status">
-            <div className={`org-connection-indicator ${isConnected ? 'org-connected' : 'org-disconnected'}`}>
+            <div
+              className={`org-connection-indicator ${isConnected ? 'org-connected' : 'org-disconnected'}`}
+            >
               {isConnected ? '🟢' : '🔴'}
             </div>
-            <span className="org-refresh-interval">
-              Refresh: {refreshInterval / 1000}s
-            </span>
+            <span className="org-refresh-interval">Refresh: {refreshInterval / 1000}s</span>
           </div>
         </div>
       </div>
@@ -814,7 +851,7 @@ export const RealTimePerformanceMonitor: React.FC<Props> = ({
           { key: 'metrics', label: 'Metrics', count: mockRealTimeMetrics.length },
           { key: 'alerts', label: 'Alerts', count: mockActiveAlerts.length },
           { key: 'health', label: 'System Health', count: mockSystemHealth.components.length },
-          { key: 'settings', label: 'Settings' }
+          { key: 'settings', label: 'Settings' },
         ].map((tab) => (
           <button
             key={tab.key}
@@ -822,9 +859,7 @@ export const RealTimePerformanceMonitor: React.FC<Props> = ({
             onClick={() => setMonitorView(tab.key as MonitorView)}
           >
             {tab.label}
-            {tab.count !== undefined && (
-              <span className="org-tab-count">({tab.count})</span>
-            )}
+            {tab.count !== undefined && <span className="org-tab-count">({tab.count})</span>}
           </button>
         ))}
       </div>
@@ -837,16 +872,17 @@ export const RealTimePerformanceMonitor: React.FC<Props> = ({
         {monitorView === 'settings' && (
           <div className="org-settings-placeholder">
             <h3>Monitor Settings</h3>
-            <p>Configuration panel for alert rules, notification channels, and dashboard customization.</p>
+            <p>
+              Configuration panel for alert rules, notification channels, and dashboard
+              customization.
+            </p>
           </div>
         )}
       </div>
 
       {selectedTeam && (
         <div className="org-context-info">
-          <div className="org-context-badge">
-            Real-time monitoring for: {selectedTeam}
-          </div>
+          <div className="org-context-badge">Real-time monitoring for: {selectedTeam}</div>
         </div>
       )}
     </div>

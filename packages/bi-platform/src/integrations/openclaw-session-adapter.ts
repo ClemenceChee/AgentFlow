@@ -5,9 +5,9 @@
  * Tasks: 1.1-1.7
  */
 
-import { readFile, readdir, stat, lstat, readlink } from 'node:fs/promises';
-import { join, resolve, basename } from 'node:path';
-import type { SourceAdapter, SystemHealth, AgentPerformance } from './types.js';
+import { lstat, readdir, readFile, readlink, stat } from 'node:fs/promises';
+import { join, resolve } from 'node:path';
+import type { AgentPerformance, SourceAdapter, SystemHealth } from './types.js';
 
 export interface OpenClawSessionConfig {
   agentsDir: string;
@@ -126,9 +126,7 @@ export class OpenClawSessionAdapter implements SourceAdapter {
           if (!realPaths.has(realPath) || !entry.name.startsWith('vault-')) {
             realPaths.set(realPath, entry.name);
           }
-        } catch {
-          continue;
-        }
+        } catch {}
       }
 
       // Phase 2: Extract data from each unique agent
@@ -229,11 +227,14 @@ export class OpenClawSessionAdapter implements SourceAdapter {
     const indexPath = join(sessionsDir, 'sessions.json');
     try {
       const indexRaw = await readFile(indexPath, 'utf-8');
-      const index = JSON.parse(indexRaw) as Record<string, {
-        sessionId: string;
-        updatedAt: number;
-        sessionFile?: string;
-      }>;
+      const index = JSON.parse(indexRaw) as Record<
+        string,
+        {
+          sessionId: string;
+          updatedAt: number;
+          sessionFile?: string;
+        }
+      >;
 
       const sessions = Object.values(index);
       data.sessionCount = sessions.length;
@@ -250,7 +251,9 @@ export class OpenClawSessionAdapter implements SourceAdapter {
       // No index — fall back to directory listing
       try {
         const files = await readdir(sessionsDir);
-        const jsonlFiles = files.filter((f) => f.endsWith('.jsonl') && !f.includes('.reset.') && !f.includes('.deleted.'));
+        const jsonlFiles = files.filter(
+          (f) => f.endsWith('.jsonl') && !f.includes('.reset.') && !f.includes('.deleted.'),
+        );
         data.sessionCount = jsonlFiles.length;
 
         if (jsonlFiles.length > 0) {
@@ -267,7 +270,9 @@ export class OpenClawSessionAdapter implements SourceAdapter {
     // Parse active JSONL files for usage data
     try {
       const files = await readdir(sessionsDir);
-      const activeJsonl = files.filter((f) => f.endsWith('.jsonl') && !f.includes('.reset.') && !f.includes('.deleted.'));
+      const activeJsonl = files.filter(
+        (f) => f.endsWith('.jsonl') && !f.includes('.reset.') && !f.includes('.deleted.'),
+      );
 
       let currentModel = 'unknown';
       for (const file of activeJsonl) {
@@ -284,7 +289,7 @@ export class OpenClawSessionAdapter implements SourceAdapter {
                 data.activeProvider = event.provider ?? null;
               } else if (event.type === 'message' && event.usage) {
                 const usage = event.usage;
-                const tokens = usage.totalTokens ?? ((usage.input ?? 0) + (usage.output ?? 0));
+                const tokens = usage.totalTokens ?? (usage.input ?? 0) + (usage.output ?? 0);
                 const cost = usage.cost?.total ?? 0;
                 data.totalMessages++;
                 data.totalTokens += tokens;

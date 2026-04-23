@@ -1,12 +1,12 @@
-export { IntegrationManager, GenericRestConnector } from './framework.js';
 export type {
-  ExternalConnector,
   ConnectorHealth,
+  EncryptionConfig,
   ExportPayload,
   ExportResult,
+  ExternalConnector,
   ImportQuery,
   ImportResult,
   IntegrationEvent,
-  EncryptionConfig,
   SyncValidation,
 } from './framework.js';
+export { GenericRestConnector, IntegrationManager } from './framework.js';

@@ -152,9 +152,9 @@ export async function runTraced(config: RunConfig): Promise<RunResult> {
         teamId: process.env?.TEAM_ID,
         instanceId: process.env?.CLAUDE_CODE_INSTANCE_ID,
         timestamp: Date.now(),
-        userAgent: process.env?.CLAUDE_CODE_USER_AGENT
-      }
-    })
+        userAgent: process.env?.CLAUDE_CODE_USER_AGENT,
+      },
+    }),
   };
   const orchestrator = createGraphBuilder(orchestratorConfig);
   const { traceId, spanId } = orchestrator.traceContext;
@@ -253,9 +253,9 @@ export async function runTraced(config: RunConfig): Promise<RunResult> {
           teamId: process.env?.TEAM_ID,
           instanceId: process.env?.CLAUDE_CODE_INSTANCE_ID,
           timestamp: Date.now(),
-          userAgent: process.env?.CLAUDE_CODE_USER_AGENT
-        }
-      })
+          userAgent: process.env?.CLAUDE_CODE_USER_AGENT,
+        },
+      }),
     };
     const childBuilder = createGraphBuilder(childConfig);
 

@@ -6,20 +6,25 @@
  * Tasks: 9.1-9.10
  */
 
-import type { DbPool } from '../db/pool.js';
-import type { CacheClient } from '../cache/cache.js';
-import type { Logger } from '../monitoring/logger.js';
-import type { DataAggregator, AgentAggregation } from '../synthesis/aggregator.js';
-import type { AnomalyDetector } from '../synthesis/anomaly-detector.js';
-import type { RecommendationEngine, Recommendation } from './recommendation-engine.js';
 import type { UserRole } from '../auth/types.js';
+import type { CacheClient } from '../cache/cache.js';
+import type { DbPool } from '../db/pool.js';
+import type { Logger } from '../monitoring/logger.js';
+import type { DataAggregator } from '../synthesis/aggregator.js';
+import type { AnomalyDetector } from '../synthesis/anomaly-detector.js';
+import type { Recommendation, RecommendationEngine } from './recommendation-engine.js';
 
 /**
  * 9.1 — Cross-agent pattern with business impact assessment
  */
 export interface BusinessPattern {
   id: string;
-  type: 'performance_cluster' | 'cost_trend' | 'failure_cascade' | 'efficiency_gap' | 'compliance_drift';
+  type:
+    | 'performance_cluster'
+    | 'cost_trend'
+    | 'failure_cascade'
+    | 'efficiency_gap'
+    | 'compliance_drift';
   title: string;
   description: string;
   affectedAgents: string[];
@@ -74,7 +79,12 @@ export interface ComplianceRisk {
  */
 export interface CriticalAlert {
   id: string;
-  type: 'system_failure' | 'compliance_breach' | 'cost_spike' | 'performance_degradation' | 'pattern_detected';
+  type:
+    | 'system_failure'
+    | 'compliance_breach'
+    | 'cost_spike'
+    | 'performance_degradation'
+    | 'pattern_detected';
   severity: 'critical' | 'high';
   title: string;
   description: string;
@@ -97,10 +107,10 @@ export class DecisionSynthesisService {
   constructor(
     private aggregator: DataAggregator,
     private recommendationEngine: RecommendationEngine,
-    private anomalyDetector: AnomalyDetector,
+    _anomalyDetector: AnomalyDetector,
     private db: DbPool,
     private cache: CacheClient,
-    private logger: Logger,
+    _logger: Logger,
   ) {}
 
   /**
@@ -129,7 +139,10 @@ export class DecisionSynthesisService {
         affectedAgents: failingAgents.map((a) => a.agentId),
         businessImpact: {
           severity: failingAgents.length >= 3 ? 'critical' : 'high',
-          estimatedCostImpact: failingAgents.reduce((sum, a) => sum + a.performance.totalExecutions * a.performance.failureRate * 5, 0),
+          estimatedCostImpact: failingAgents.reduce(
+            (sum, a) => sum + a.performance.totalExecutions * a.performance.failureRate * 5,
+            0,
+          ),
           affectedOperations: failingAgents.map((a) => a.agentName),
           riskCategory: 'operational_resilience',
         },
@@ -139,9 +152,12 @@ export class DecisionSynthesisService {
     }
 
     // Pattern: Cost trend — agents with disproportionate cost
-    const withCost = agents.filter((a) => a.efficiency.costPerExecution != null && a.efficiency.costPerExecution! > 0);
+    const withCost = agents.filter(
+      (a) => a.efficiency.costPerExecution != null && a.efficiency.costPerExecution! > 0,
+    );
     if (withCost.length >= 2) {
-      const avgCost = withCost.reduce((s, a) => s + a.efficiency.costPerExecution!, 0) / withCost.length;
+      const avgCost =
+        withCost.reduce((s, a) => s + a.efficiency.costPerExecution!, 0) / withCost.length;
       const expensive = withCost.filter((a) => a.efficiency.costPerExecution! > avgCost * 2);
       if (expensive.length > 0) {
         patterns.push({
@@ -152,7 +168,11 @@ export class DecisionSynthesisService {
           affectedAgents: expensive.map((a) => a.agentId),
           businessImpact: {
             severity: 'medium',
-            estimatedCostImpact: expensive.reduce((s, a) => s + (a.efficiency.costPerExecution! - avgCost) * a.performance.totalExecutions, 0),
+            estimatedCostImpact: expensive.reduce(
+              (s, a) =>
+                s + (a.efficiency.costPerExecution! - avgCost) * a.performance.totalExecutions,
+              0,
+            ),
             affectedOperations: expensive.map((a) => a.agentName),
             riskCategory: 'cost_efficiency',
           },
@@ -166,7 +186,9 @@ export class DecisionSynthesisService {
     const successRates = agents.map((a) => a.performance.successRate).filter((r) => r > 0);
     if (successRates.length >= 3) {
       const avgRate = successRates.reduce((s, r) => s + r, 0) / successRates.length;
-      const underperformers = agents.filter((a) => a.performance.successRate < avgRate * 0.7 && a.performance.totalExecutions > 10);
+      const underperformers = agents.filter(
+        (a) => a.performance.successRate < avgRate * 0.7 && a.performance.totalExecutions > 10,
+      );
       if (underperformers.length > 0) {
         patterns.push({
           id: nextId(),
@@ -215,12 +237,15 @@ export class DecisionSynthesisService {
    * 9.7 — Strategic/operational/tactical categorization.
    */
   async getBusinessRecommendations(role?: string): Promise<CategorizedRecommendation[]> {
-    const recs = await this.recommendationEngine.generateRecommendations(role as UserRole | undefined);
+    const recs = await this.recommendationEngine.generateRecommendations(
+      role as UserRole | undefined,
+    );
 
     return recs.map((rec) => ({
       ...rec,
       category: categorizeRecommendation(rec),
-      businessDomain: rec.type === 'cost' ? 'finance' : rec.type === 'compliance' ? 'governance' : 'operations',
+      businessDomain:
+        rec.type === 'cost' ? 'finance' : rec.type === 'compliance' ? 'governance' : 'operations',
       stakeholders: rec.targetRoles,
     }));
   }
@@ -228,14 +253,16 @@ export class DecisionSynthesisService {
   /**
    * 9.3 — Business stakeholder notification payloads.
    */
-  async getStakeholderNotifications(): Promise<Array<{
-    recipientRole: string;
-    notificationType: string;
-    title: string;
-    message: string;
-    severity: string;
-    actionRequired: boolean;
-  }>> {
+  async getStakeholderNotifications(): Promise<
+    Array<{
+      recipientRole: string;
+      notificationType: string;
+      title: string;
+      message: string;
+      severity: string;
+      actionRequired: boolean;
+    }>
+  > {
     const patterns = await this.detectPatterns();
     const notifications: Array<{
       recipientRole: string;
@@ -247,7 +274,10 @@ export class DecisionSynthesisService {
     }> = [];
 
     for (const pattern of patterns) {
-      if (pattern.businessImpact.severity === 'critical' || pattern.businessImpact.severity === 'high') {
+      if (
+        pattern.businessImpact.severity === 'critical' ||
+        pattern.businessImpact.severity === 'high'
+      ) {
         notifications.push({
           recipientRole: 'executive',
           notificationType: 'critical_pattern',
@@ -274,28 +304,32 @@ export class DecisionSynthesisService {
   /**
    * 9.4 — Decision pattern BI integration (query historical decisions).
    */
-  async getDecisionHistory(limit = 20): Promise<Array<{
-    id: string;
-    type: string;
-    title: string;
-    status: string;
-    confidence: number;
-    decidedAt: string;
-  }>> {
-    const { rows } = await this.db.query<{
+  async getDecisionHistory(limit = 20): Promise<
+    Array<{
       id: string;
-      decision_type: string;
+      type: string;
       title: string;
       status: string;
-      confidence_score: string;
-      decided_at: string;
-    }>(
-      `SELECT id, decision_type, title, status, confidence_score, decided_at
+      confidence: number;
+      decidedAt: string;
+    }>
+  > {
+    const { rows } = await this.db
+      .query<{
+        id: string;
+        decision_type: string;
+        title: string;
+        status: string;
+        confidence_score: string;
+        decided_at: string;
+      }>(
+        `SELECT id, decision_type, title, status, confidence_score, decided_at
        FROM business_decisions
        ORDER BY decided_at DESC
        LIMIT $1`,
-      [limit],
-    ).catch(() => ({ rows: [] }));
+        [limit],
+      )
+      .catch(() => ({ rows: [] }));
 
     return rows.map((r) => ({
       id: r.id,
@@ -347,10 +381,17 @@ export class DecisionSynthesisService {
       }));
 
     const recommendations: string[] = [];
-    if (roiMultiplier < 1) recommendations.push('Overall delegation ROI is below 1x — review agent cost optimization');
-    if (costPerDelegation > 0.5) recommendations.push('Average cost per delegation is high — consider model downgrades for simple tasks');
+    if (roiMultiplier < 1)
+      recommendations.push('Overall delegation ROI is below 1x — review agent cost optimization');
+    if (costPerDelegation > 0.5)
+      recommendations.push(
+        'Average cost per delegation is high — consider model downgrades for simple tasks',
+      );
     const lowPerformers = agents.filter((a) => a.performance.successRate < 0.7);
-    if (lowPerformers.length > 0) recommendations.push(`${lowPerformers.length} agents below 70% success — retrain or reconfigure`);
+    if (lowPerformers.length > 0)
+      recommendations.push(
+        `${lowPerformers.length} agents below 70% success — retrain or reconfigure`,
+      );
 
     const analysis: DelegationRoiAnalysis = {
       period: 'last_30_days',
@@ -371,7 +412,10 @@ export class DecisionSynthesisService {
   /**
    * 9.6 — Business validation for confidence scoring.
    */
-  validateConfidence(confidence: number, sampleSize: number): {
+  validateConfidence(
+    confidence: number,
+    sampleSize: number,
+  ): {
     adjustedConfidence: number;
     reliability: 'high' | 'medium' | 'low';
     reasoning: string;
@@ -383,9 +427,10 @@ export class DecisionSynthesisService {
     return {
       adjustedConfidence: Math.round(adjusted * 100) / 100,
       reliability: adjusted >= 0.8 ? 'high' : adjusted >= 0.5 ? 'medium' : 'low',
-      reasoning: sampleSize < 30
-        ? `Low sample size (${sampleSize}) reduces confidence from ${(confidence * 100).toFixed(0)}% to ${(adjusted * 100).toFixed(0)}%`
-        : `Sufficient data (${sampleSize} samples) — confidence ${(adjusted * 100).toFixed(0)}%`,
+      reasoning:
+        sampleSize < 30
+          ? `Low sample size (${sampleSize}) reduces confidence from ${(confidence * 100).toFixed(0)}% to ${(adjusted * 100).toFixed(0)}%`
+          : `Sufficient data (${sampleSize} samples) — confidence ${(adjusted * 100).toFixed(0)}%`,
     };
   }
 
@@ -430,7 +475,12 @@ export class DecisionSynthesisService {
         regulation: 'Operational Reliability',
         description: `${highFailure.length} agent(s) with failure rates exceeding 20% threshold`,
         affectedAgents: highFailure.map((a) => a.agentId),
-        currentScore: Math.max(0, 100 - highFailure.reduce((s, a) => s + a.performance.failureRate * 100, 0) / highFailure.length),
+        currentScore: Math.max(
+          0,
+          100 -
+            highFailure.reduce((s, a) => s + a.performance.failureRate * 100, 0) /
+              highFailure.length,
+        ),
         trendDirection: 'degrading',
         requiredActions: [
           'Investigate root causes of failures',
@@ -447,19 +497,30 @@ export class DecisionSynthesisService {
   /**
    * 9.9 — Financial impact notifications.
    */
-  async getFinancialImpactAlerts(): Promise<Array<{
-    type: string;
-    description: string;
-    amount: number;
-    currency: string;
-    trend: string;
-  }>> {
+  async getFinancialImpactAlerts(): Promise<
+    Array<{
+      type: string;
+      description: string;
+      amount: number;
+      currency: string;
+      trend: string;
+    }>
+  > {
     const latest = this.aggregator.getLatest();
     if (!latest) return [];
 
-    const alerts: Array<{ type: string; description: string; amount: number; currency: string; trend: string }> = [];
+    const alerts: Array<{
+      type: string;
+      description: string;
+      amount: number;
+      currency: string;
+      trend: string;
+    }> = [];
 
-    const totalCost = latest.agents.reduce((s, a) => s + (a.efficiency.costPerExecution ?? 0) * a.performance.totalExecutions, 0);
+    const totalCost = latest.agents.reduce(
+      (s, a) => s + (a.efficiency.costPerExecution ?? 0) * a.performance.totalExecutions,
+      0,
+    );
     if (totalCost > 100) {
       alerts.push({
         type: 'cost_threshold',
@@ -471,7 +532,11 @@ export class DecisionSynthesisService {
     }
 
     const wastedCost = latest.agents.reduce(
-      (s, a) => s + (a.efficiency.costPerExecution ?? 0) * a.performance.totalExecutions * a.performance.failureRate,
+      (s, a) =>
+        s +
+        (a.efficiency.costPerExecution ?? 0) *
+          a.performance.totalExecutions *
+          a.performance.failureRate,
       0,
     );
     if (wastedCost > 10) {
@@ -494,10 +559,7 @@ export class DecisionSynthesisService {
     const cached = await this.cache.get<CriticalAlert[]>('bi:critical-alerts');
     if (cached) return cached;
 
-    const [patterns, risks] = await Promise.all([
-      this.detectPatterns(),
-      this.getComplianceRisks(),
-    ]);
+    const [patterns, risks] = await Promise.all([this.detectPatterns(), this.getComplianceRisks()]);
 
     const alerts: CriticalAlert[] = [];
     const now = new Date().toISOString();
@@ -505,10 +567,20 @@ export class DecisionSynthesisService {
 
     // Convert critical patterns to alerts
     for (const pattern of patterns) {
-      if (pattern.businessImpact.severity === 'critical' || pattern.businessImpact.severity === 'high') {
+      if (
+        pattern.businessImpact.severity === 'critical' ||
+        pattern.businessImpact.severity === 'high'
+      ) {
         alerts.push({
           id: `alert-${++idCounter}`,
-          type: pattern.type === 'failure_cascade' ? 'system_failure' : pattern.type === 'compliance_drift' ? 'compliance_breach' : pattern.type === 'cost_trend' ? 'cost_spike' : 'pattern_detected',
+          type:
+            pattern.type === 'failure_cascade'
+              ? 'system_failure'
+              : pattern.type === 'compliance_drift'
+                ? 'compliance_breach'
+                : pattern.type === 'cost_trend'
+                  ? 'cost_spike'
+                  : 'pattern_detected',
           severity: pattern.businessImpact.severity === 'critical' ? 'critical' : 'high',
           title: pattern.title,
           description: pattern.description,
@@ -545,7 +617,11 @@ export class DecisionSynthesisService {
 // --- Helpers ---
 
 function categorizeRecommendation(rec: Recommendation): 'strategic' | 'operational' | 'tactical' {
-  if (rec.type === 'strategic' || (rec.impact.timeframe === 'next_quarter' && rec.priority === 'high')) return 'strategic';
+  if (
+    rec.type === 'strategic' ||
+    (rec.impact.timeframe === 'next_quarter' && rec.priority === 'high')
+  )
+    return 'strategic';
   if (rec.type === 'compliance' || rec.type === 'risk') return 'operational';
   return 'tactical';
 }

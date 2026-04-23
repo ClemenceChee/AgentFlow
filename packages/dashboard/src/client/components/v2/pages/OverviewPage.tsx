@@ -29,7 +29,7 @@ function toBadge(kind: DotKind): BadgeKind {
 }
 
 /** Group agents by their team field (first slash-prefix of agentId) as a best-effort. */
-function rollUpTeams(agents: AgentStats[], groups: GroupedAgents | null): TeamRollup[] {
+function rollUpTeams(_agents: AgentStats[], groups: GroupedAgents | null): TeamRollup[] {
   const list = groups?.groups ?? [];
   if (list.length === 0) return [];
   return list.map((g) => {

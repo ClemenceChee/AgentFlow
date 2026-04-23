@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 export interface Anomaly {
   id: string;
@@ -34,7 +34,9 @@ export function useAnomalies(): AnomaliesResponse | null {
     try {
       const res = await fetch('/api/v1/anomalies');
       if (res.ok) setData(await res.json());
-    } catch { /* retry */ }
+    } catch {
+      /* retry */
+    }
   }, []);
 
   useEffect(() => {
