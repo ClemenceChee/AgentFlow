@@ -26,6 +26,7 @@ import type {
   GraphStatus,
   MutableExecutionNode,
   NodeStatus,
+  OperatorContext,
   StartNodeOptions,
   TraceEvent,
 } from './types.js';
@@ -120,169 +121,23 @@ async function generateOrganizationalBriefing(
   }
 
   // Fallback: Generate basic briefing from available context
-  return generateFallbackBriefing(operatorContext, agentId, trigger, timestamp);
+  return generateFallbackBriefing(operatorContext, timestamp, agentId, trigger);
 }
 
 /**
  * Attempt to generate briefing using SOMA vault integration.
  */
 async function generateSOMABriefing(
-  operatorContext: import('./types.js').OperatorContext,
-  agentId?: string,
-  trigger?: string
+  _operatorContext: import('./types.js').OperatorContext,
+  _agentId?: string,
+  _trigger?: string,
 ): Promise<OrganizationalBriefing | null> {
-  try {
-    // Dynamic import to avoid hard dependency on SOMA
-    // Try multiple possible SOMA locations
-    let createVault;
-    try {
-      ({ createVault } = await import('../../soma/src/vault.js'));
-    } catch {
-      try {
-        ({ createVault } = await import('../../../soma/src/vault.js'));
-      } catch {
-        try {
-          ({ createVault } = await import('soma/vault'));
-        } catch {
-          // SOMA not available
-          return null;
-        }
-      }
-    }
-    const vault = createVault();
-
-    const insights: OrganizationalInsight[] = [];
-    const warnings: string[] = [];
-    const recommendations: string[] = [];
-    const relatedSessions: RelatedSessionInfo[] = [];
-    let teamContext: TeamBriefingContext | undefined;
-
-    // Get team context if available
-    if (operatorContext.teamId) {
-      try {
-        const teamEntities = vault.listByTeam(operatorContext.teamId, { limit: 50 });
-        const teamStats = vault.getTeamStats()[operatorContext.teamId];
-
-        if (teamStats) {
-          teamContext = {
-            teamId: operatorContext.teamId,
-            recentActivity: {
-              sessionsLastWeek: teamStats.entityCount,
-              activeOperators: Object.keys(teamStats.types).length,
-              commonPatterns: Object.keys(teamStats.types).slice(0, 3),
-            },
-            currentFocus: Object.keys(teamStats.types).slice(0, 2),
-            knowledgeGaps: [],
-            collaboration: {
-              crossTeamSessions: 0,
-              externalTeams: [],
-              knowledgeSharing: teamStats.entityCount
-            }
-          };
-
-          insights.push({
-            type: 'collaboration',
-            title: `Team ${operatorContext.teamId} Activity`,
-            description: `Found ${teamStats.entityCount} recent team activities with focus on ${Object.keys(teamStats.types)[0] || 'various tasks'}`,
-            confidence: 0.8,
-            actionable: true,
-            relatedEntities: [operatorContext.teamId],
-            timestamp: Date.now()
-          });
-        }
-      } catch (error) {
-        warnings.push(`Failed to retrieve team context: ${error instanceof Error ? error.message : String(error)}`);
-      }
-    }
-
-    // Get operator's recent activity
-    try {
-      const operatorEntities = vault.listByOperator(operatorContext.operatorId, { limit: 10 });
-
-      if (operatorEntities.length > 0) {
-        insights.push({
-          type: 'pattern',
-          title: 'Recent Activity Pattern',
-          description: `Found ${operatorEntities.length} recent sessions with similar patterns`,
-          confidence: 0.7,
-          actionable: true,
-          relatedEntities: operatorEntities.map(e => e.id),
-          timestamp: Date.now()
-        });
-
-        // Create related session info from recent operator entities
-        for (const entity of operatorEntities.slice(0, 3)) {
-          relatedSessions.push({
-            sessionId: entity.id,
-            operatorId: operatorContext.operatorId,
-            timestamp: entity.updated ? new Date(entity.updated).getTime() : Date.now(),
-            similarity: 0.6,
-            context: entity.name || 'Previous session',
-            outcome: entity.status === 'active' ? 'success' : undefined
-          });
-        }
-      }
-    } catch (error) {
-      warnings.push(`Failed to retrieve operator activity: ${error instanceof Error ? error.message : String(error)}`);
-    }
-
-    // Add performance insights if available
-    try {
-      const performanceMetrics = vault.getOrganizationalQueryMetrics();
-      if (performanceMetrics.summary.totalOperatorQueries > 0) {
-        insights.push({
-          type: 'performance',
-          title: 'System Performance',
-          description: `Organizational queries performing at ${performanceMetrics.summary.averageOperatorQueryTime.toFixed(1)}ms average`,
-          confidence: 0.9,
-          actionable: false,
-          relatedEntities: [],
-          timestamp: Date.now()
-        });
-      }
-    } catch (error) {
-      // Performance metrics not critical for briefing
-    }
-
-    // Generate recommendations based on context
-    if (operatorContext.teamId) {
-      recommendations.push('Team context enabled - collaborative insights available');
-    } else {
-      recommendations.push('Consider setting TEAM_ID environment variable for team insights');
-    }
-
-    if (insights.length === 0) {
-      insights.push({
-        type: 'workflow',
-        title: 'New Session',
-        description: 'Starting fresh execution - no prior patterns detected',
-        confidence: 1.0,
-        actionable: false,
-        relatedEntities: [],
-        timestamp: Date.now()
-      });
-    }
-
-    const summary = insights.length > 0
-      ? `Organizational context available: ${insights.length} insights from SOMA vault`
-      : 'Organizational context enabled but limited data available';
-
-    return {
-      status: 'available',
-      summary,
-      insights,
-      warnings,
-      recommendations,
-      relatedSessions,
-      teamContext,
-      timestamp: Date.now(),
-      source: 'soma_vault'
-    };
-
-  } catch (error) {
-    // SOMA integration failed
-    return null;
-  }
+  // The SOMA package lives in a separate private repo. Per the
+  // AgentFlow↔SOMA contract, integration is filesystem-only via `.soma/`
+  // (see packages/bi-platform/src/integrations/soma-adapter.ts).
+  // Module imports from this package are intentionally not present.
+  // Callers fall back to generateFallbackBriefing when this returns null.
+  return null;
 }
 
 /**
@@ -290,9 +145,9 @@ async function generateSOMABriefing(
  */
 function generateFallbackBriefing(
   operatorContext: import('./types.js').OperatorContext,
-  agentId?: string,
-  trigger?: string,
-  timestamp: number
+  timestamp: number,
+  _agentId?: string,
+  _trigger?: string,
 ): OrganizationalBriefing {
   const insights: OrganizationalInsight[] = [];
   const warnings: string[] = [];
@@ -446,14 +301,20 @@ export function createGraphBuilder(config?: AgentFlowConfig): GraphBuilder {
   //   TEAM_ID - Team identifier for organizational context
   //   CLAUDE_CODE_INSTANCE_ID - Instance identifier (CLI, desktop, web, etc.)
   //   CLAUDE_CODE_USER_AGENT - User agent string for the Claude Code instance
-  const operatorContext = config?.operatorContext ?? (typeof process !== 'undefined' ? {
-    operatorId: process.env?.OPERATOR_ID,
-    sessionId: process.env?.CLAUDE_CODE_SESSION_ID,
-    teamId: process.env?.TEAM_ID,
-    instanceId: process.env?.CLAUDE_CODE_INSTANCE_ID,
-    timestamp: Date.now(),
-    userAgent: process.env?.CLAUDE_CODE_USER_AGENT
-  } : undefined);
+  const operatorContext: OperatorContext | undefined =
+    config?.operatorContext ??
+    (typeof process !== 'undefined' &&
+    process.env?.OPERATOR_ID &&
+    process.env?.CLAUDE_CODE_SESSION_ID
+      ? {
+          operatorId: process.env.OPERATOR_ID,
+          sessionId: process.env.CLAUDE_CODE_SESSION_ID,
+          teamId: process.env.TEAM_ID,
+          instanceId: process.env.CLAUDE_CODE_INSTANCE_ID,
+          timestamp: Date.now(),
+          userAgent: process.env.CLAUDE_CODE_USER_AGENT,
+        }
+      : undefined);
 
   // Validate operator authentication if organizational context is enabled
   function validateOperatorAuthentication(context: OperatorContext | undefined): {
@@ -500,40 +361,6 @@ export function createGraphBuilder(config?: AgentFlowConfig): GraphBuilder {
     return { valid: true, warnings, auditEvent };
   }
 
-  // Perform operator authentication validation
-  const authValidation = validateOperatorAuthentication(operatorContext);
-  if (!authValidation.valid) {
-    // Log security audit event for failed authentication
-    if (authValidation.auditEvent) {
-      events.push({
-        type: 'security_audit',
-        timestamp: authValidation.auditEvent.timestamp,
-        data: authValidation.auditEvent
-      });
-    }
-    throw new Error(`Operator authentication failed: ${authValidation.auditEvent?.reason}`);
-  }
-
-  // Log successful authentication audit event
-  if (authValidation.auditEvent) {
-    events.push({
-      type: 'security_audit',
-      timestamp: authValidation.auditEvent.timestamp,
-      data: authValidation.auditEvent
-    });
-  }
-
-  // Log authentication warnings if any
-  if (authValidation.warnings && authValidation.warnings.length > 0) {
-    for (const warning of authValidation.warnings) {
-      events.push({
-        type: 'warning',
-        timestamp: Date.now(),
-        data: { message: warning, category: 'operator_auth' }
-      });
-    }
-  }
-
   // --- Mutable internal state (closure scope) ---
   const graphId = generateId();
   const startTime = Date.now();
@@ -548,6 +375,43 @@ export function createGraphBuilder(config?: AgentFlowConfig): GraphBuilder {
   const sessionHooks = config?.sessionHooks;
   let sessionInitialized = false;
   let organizationalBriefing: OrganizationalBriefing | null = null;
+
+  // Perform operator authentication validation
+  const authValidation = validateOperatorAuthentication(operatorContext);
+  if (!authValidation.valid) {
+    // Log security audit event for failed authentication
+    if (authValidation.auditEvent) {
+      events.push({
+        eventType: 'custom',
+        nodeId: '',
+        timestamp: authValidation.auditEvent.timestamp,
+        data: { category: 'security_audit', ...authValidation.auditEvent },
+      });
+    }
+    throw new Error(`Operator authentication failed: ${authValidation.auditEvent?.reason}`);
+  }
+
+  // Log successful authentication audit event
+  if (authValidation.auditEvent) {
+    events.push({
+      eventType: 'custom',
+      nodeId: '',
+      timestamp: authValidation.auditEvent.timestamp,
+      data: { category: 'security_audit', ...authValidation.auditEvent },
+    });
+  }
+
+  // Log authentication warnings if any
+  if (authValidation.warnings && authValidation.warnings.length > 0) {
+    for (const warning of authValidation.warnings) {
+      events.push({
+        eventType: 'custom',
+        nodeId: '',
+        timestamp: Date.now(),
+        data: { category: 'operator_auth', level: 'warning', message: warning },
+      });
+    }
+  }
 
 
   function assertNotBuilt(): void {
@@ -788,11 +652,9 @@ export function createGraphBuilder(config?: AgentFlowConfig): GraphBuilder {
 
               try {
                 const result = sessionHooks.onSessionStart!(hookContext as any);
-                if (result && typeof result.then === 'function') {
-                  result.catch((error: any) => {
-                    console.warn('[AgentFlow] Async session start hook failed:', error);
-                  });
-                }
+                Promise.resolve(result).catch((error: unknown) => {
+                  console.warn('[AgentFlow] Async session start hook failed:', error);
+                });
               } catch (error) {
                 console.warn('[AgentFlow] Session start hook failed:', error);
               }
@@ -812,11 +674,9 @@ export function createGraphBuilder(config?: AgentFlowConfig): GraphBuilder {
                 };
 
                 const result = sessionHooks.onSessionStart!(hookContext as any);
-                if (result && typeof result.then === 'function') {
-                  result.catch((error: any) => {
-                    console.warn('[AgentFlow] Async session start hook failed after briefing error:', error);
-                  });
-                }
+                Promise.resolve(result).catch((hookErr: unknown) => {
+                  console.warn('[AgentFlow] Async session start hook failed after briefing error:', hookErr);
+                });
               } catch (hookError) {
                 console.warn('[AgentFlow] Session start hook failed after briefing error:', hookError);
               }

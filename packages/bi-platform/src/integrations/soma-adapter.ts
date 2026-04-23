@@ -3,6 +3,15 @@
  *
  * Reads soma-report.json and vault data to provide business intelligence.
  * Does NOT import SOMA directly; reads its output files for loose coupling.
+ *
+ * Boundary contract (see openspec change clean-soma-from-agentflow-repo):
+ * SOMA source code lives in the private ClemenceChee/soma repository. This
+ * file — and any future AgentFlow integration with SOMA — MUST interact
+ * with SOMA only by reading filesystem artifacts under the configured
+ * `.soma/` directory (e.g. `.soma/soma-report.json`, `.soma/vault/*`).
+ * It MUST NOT `import` or `require` the `soma` module. The boundary is
+ * enforced by .gitignore (which excludes `packages/soma/` and `.soma/`)
+ * and by the grep regression check in that change's tasks.
  */
 
 import { readFile, stat } from 'node:fs/promises';
