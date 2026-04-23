@@ -24,8 +24,7 @@
     "db:rollback": "tsx src/db/rollback.ts"
   },
   "dependencies": {
-    "agentflow-core": "*",
-    "soma": "*"
+    "agentflow-core": "*"
   },
   "peerDependencies": {
     "pg": "^8.13.0",
