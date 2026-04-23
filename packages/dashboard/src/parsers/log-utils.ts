@@ -154,7 +154,7 @@ export function detectActivityPattern(line: string): LogActivity | null {
     const logMatch = line.match(
       /^(\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}:\d{2}[.\d]*Z?)\s+(\w+)?\s*:?\s*(.+)/,
     );
-    if (logMatch && logMatch[1]) {
+    if (logMatch?.[1]) {
       timestamp = new Date(logMatch[1]).getTime();
       level = logMatch[2] || 'info';
       action = logMatch[3] || '';

@@ -7,17 +7,19 @@
 
 import type {
   OperatorContext,
+  OrganizationalTrace,
   PolicyStatus,
   SessionCorrelation,
+  TeamFilterState,
   TeamMembership,
-  OrganizationalTrace,
-  TeamFilterState
 } from '../../types/organizational.js';
 
 /**
  * Validate operator context data
  */
-export function validateOperatorContext(operatorContext: unknown): operatorContext is OperatorContext {
+export function validateOperatorContext(
+  operatorContext: unknown,
+): operatorContext is OperatorContext {
   if (!operatorContext || typeof operatorContext !== 'object') {
     return false;
   }
@@ -48,7 +50,10 @@ export function validatePolicyStatus(policyStatus: unknown): policyStatus is Pol
   const status = policyStatus as Partial<PolicyStatus>;
 
   // Required fields
-  if (!status.compliance || !['compliant', 'warning', 'violation', 'pending'].includes(status.compliance)) {
+  if (
+    !status.compliance ||
+    !['compliant', 'warning', 'violation', 'pending'].includes(status.compliance)
+  ) {
     return false;
   }
 
@@ -58,7 +63,8 @@ export function validatePolicyStatus(policyStatus: unknown): policyStatus is Pol
   // Validate evaluation structure
   for (const evaluation of status.evaluations) {
     if (!evaluation.policyId || typeof evaluation.policyId !== 'string') return false;
-    if (!evaluation.status || !['pass', 'fail', 'warning'].includes(evaluation.status)) return false;
+    if (!evaluation.status || !['pass', 'fail', 'warning'].includes(evaluation.status))
+      return false;
   }
 
   return true;
@@ -67,7 +73,9 @@ export function validatePolicyStatus(policyStatus: unknown): policyStatus is Pol
 /**
  * Validate session correlation data
  */
-export function validateSessionCorrelation(correlation: unknown): correlation is SessionCorrelation {
+export function validateSessionCorrelation(
+  correlation: unknown,
+): correlation is SessionCorrelation {
   if (!correlation || typeof correlation !== 'object') {
     return false;
   }
@@ -79,8 +87,14 @@ export function validateSessionCorrelation(correlation: unknown): correlation is
   // Validate related sessions structure
   for (const session of corr.relatedSessions) {
     if (!session.sessionId || typeof session.sessionId !== 'string') return false;
-    if (typeof session.confidence !== 'number' || session.confidence < 0 || session.confidence > 1) return false;
-    if (!session.relationshipType || !['continuation', 'similar-problem', 'handoff', 'collaboration'].includes(session.relationshipType)) {
+    if (typeof session.confidence !== 'number' || session.confidence < 0 || session.confidence > 1)
+      return false;
+    if (
+      !session.relationshipType ||
+      !['continuation', 'similar-problem', 'handoff', 'collaboration'].includes(
+        session.relationshipType,
+      )
+    ) {
       return false;
     }
     if (typeof session.timestamp !== 'number') return false;
@@ -133,7 +147,8 @@ export function validateOrganizationalTrace(trace: unknown): trace is Organizati
   // Validate organizational extensions if present
   if (orgTrace.operatorContext && !validateOperatorContext(orgTrace.operatorContext)) return false;
   if (orgTrace.policyStatus && !validatePolicyStatus(orgTrace.policyStatus)) return false;
-  if (orgTrace.sessionCorrelation && !validateSessionCorrelation(orgTrace.sessionCorrelation)) return false;
+  if (orgTrace.sessionCorrelation && !validateSessionCorrelation(orgTrace.sessionCorrelation))
+    return false;
 
   return true;
 }
@@ -148,7 +163,8 @@ export function validateTeamFilterState(filterState: unknown): filterState is Te
 
   const filter = filterState as Partial<TeamFilterState>;
 
-  if (filter.selectedTeamId !== undefined && typeof filter.selectedTeamId !== 'string') return false;
+  if (filter.selectedTeamId !== undefined && typeof filter.selectedTeamId !== 'string')
+    return false;
   if (!Array.isArray(filter.availableTeams)) return false;
   if (typeof filter.filterActive !== 'boolean') return false;
 
@@ -167,10 +183,10 @@ export function validateTeamFilterState(filterState: unknown): filterState is Te
  * Check if operator has access to team data
  */
 export function hasTeamAccess(
-  operatorId: string,
+  _operatorId: string,
   teamId: string,
   allowedTeams: string[] = [],
-  isSuperUser: boolean = false
+  isSuperUser: boolean = false,
 ): boolean {
   if (isSuperUser) return true;
   if (!teamId) return true; // No team restrictions
@@ -184,7 +200,7 @@ export function isTraceVisible(
   trace: OrganizationalTrace,
   operatorId: string,
   allowedTeams: string[] = [],
-  isSuperUser: boolean = false
+  isSuperUser: boolean = false,
 ): boolean {
   // Super users can see everything
   if (isSuperUser) return true;
@@ -215,7 +231,7 @@ export function sanitizeOperatorContext(operatorContext: OperatorContext): Opera
     instanceId: operatorContext.instanceId,
     timestamp: operatorContext.timestamp,
     // Remove potentially sensitive user agent details
-    userAgent: operatorContext.userAgent?.split(' ')[0] || operatorContext.userAgent
+    userAgent: operatorContext.userAgent?.split(' ')[0] || operatorContext.userAgent,
   };
 }
 
@@ -231,9 +247,9 @@ export function checkOrganizationalDataCompleteness(trace: OrganizationalTrace):
 } {
   const checks = {
     hasOperatorContext: !!trace.operatorContext,
-    hasTeamContext: !!(trace.operatorContext?.teamId),
+    hasTeamContext: !!trace.operatorContext?.teamId,
     hasPolicyStatus: !!trace.policyStatus,
-    hasSessionCorrelation: !!trace.sessionCorrelation
+    hasSessionCorrelation: !!trace.sessionCorrelation,
   };
 
   const totalChecks = Object.keys(checks).length;
@@ -242,7 +258,7 @@ export function checkOrganizationalDataCompleteness(trace: OrganizationalTrace):
 
   return {
     ...checks,
-    completeness
+    completeness,
   };
 }
 
@@ -251,7 +267,7 @@ export function checkOrganizationalDataCompleteness(trace: OrganizationalTrace):
  */
 export function validateApiResponse<T>(
   response: unknown,
-  validator: (data: unknown) => data is T
+  validator: (data: unknown) => data is T,
 ): { valid: boolean; data?: T; error?: string } {
   try {
     if (!response || typeof response !== 'object') {
@@ -266,7 +282,7 @@ export function validateApiResponse<T>(
   } catch (error) {
     return {
       valid: false,
-      error: error instanceof Error ? error.message : 'Validation error'
+      error: error instanceof Error ? error.message : 'Validation error',
     };
   }
 }

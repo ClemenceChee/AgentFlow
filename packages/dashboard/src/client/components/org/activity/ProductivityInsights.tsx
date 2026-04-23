@@ -5,11 +5,19 @@
  * actionable recommendations, and comparative benchmarking.
  */
 
-import { useState, useEffect } from 'react';
-import { BarChart3, TrendingUp, Clock, Target, Zap, Users, AlertCircle, CheckCircle, ArrowUp, ArrowDown } from 'lucide-react';
+import {
+  AlertCircle,
+  ArrowDown,
+  ArrowUp,
+  BarChart3,
+  CheckCircle,
+  Target,
+  TrendingUp,
+  Zap,
+} from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useOrganizationalContext } from '../../../../contexts/OrganizationalContext';
 import type { SessionCorrelation } from '../../../types/organizational.js';
-import type { OperatorTimeline } from './OperatorTimelineView.js';
 
 export interface ProductivityMetric {
   readonly metricId: string;
@@ -41,7 +49,12 @@ export interface ProductivityRecommendation {
   readonly recommendationId: string;
   readonly title: string;
   readonly description: string;
-  readonly category: 'time-management' | 'tool-optimization' | 'workflow-improvement' | 'skill-development' | 'collaboration';
+  readonly category:
+    | 'time-management'
+    | 'tool-optimization'
+    | 'workflow-improvement'
+    | 'skill-development'
+    | 'collaboration';
   readonly priority: 'low' | 'medium' | 'high' | 'urgent';
   readonly effort: 'minimal' | 'low' | 'medium' | 'high';
   readonly timeline: 'immediate' | 'short-term' | 'medium-term' | 'long-term';
@@ -54,13 +67,20 @@ export interface ProductivityRecommendation {
 }
 
 export interface BenchmarkComparison {
-  readonly comparisonType: 'team-average' | 'industry-standard' | 'top-performer' | 'historical-self';
-  readonly metrics: Record<string, {
-    userValue: number;
-    benchmarkValue: number;
-    percentile: number;
-    gap: number;
-  }>;
+  readonly comparisonType:
+    | 'team-average'
+    | 'industry-standard'
+    | 'top-performer'
+    | 'historical-self';
+  readonly metrics: Record<
+    string,
+    {
+      userValue: number;
+      benchmarkValue: number;
+      percentile: number;
+      gap: number;
+    }
+  >;
   readonly overallScore: number;
   readonly strengths: readonly string[];
   readonly improvementAreas: readonly string[];
@@ -101,113 +121,151 @@ interface ProductivityInsightsProps {
 
 const getMetricTrendIcon = (trend: ProductivityMetric['trend'], trendPercentage: number) => {
   if (trend === 'increasing') {
-    return <ArrowUp className={`h-3 w-3 ${trendPercentage > 10 ? 'org-text-success' : 'org-text-info'}`} />;
+    return (
+      <ArrowUp
+        className={`h-3 w-3 ${trendPercentage > 10 ? 'org-text-success' : 'org-text-info'}`}
+      />
+    );
   }
   if (trend === 'decreasing') {
-    return <ArrowDown className={`h-3 w-3 ${Math.abs(trendPercentage) > 10 ? 'org-text-error' : 'org-text-warning'}`} />;
+    return (
+      <ArrowDown
+        className={`h-3 w-3 ${Math.abs(trendPercentage) > 10 ? 'org-text-error' : 'org-text-warning'}`}
+      />
+    );
   }
   return <div className="w-3 h-3 rounded-full org-bg-muted" />;
 };
 
 const getInsightTypeIcon = (type: ProductivityInsight['type']) => {
   switch (type) {
-    case 'opportunity': return <Target className="h-4 w-4" />;
-    case 'strength': return <CheckCircle className="h-4 w-4" />;
-    case 'concern': return <AlertCircle className="h-4 w-4" />;
-    case 'trend': return <TrendingUp className="h-4 w-4" />;
-    default: return <BarChart3 className="h-4 w-4" />;
+    case 'opportunity':
+      return <Target className="h-4 w-4" />;
+    case 'strength':
+      return <CheckCircle className="h-4 w-4" />;
+    case 'concern':
+      return <AlertCircle className="h-4 w-4" />;
+    case 'trend':
+      return <TrendingUp className="h-4 w-4" />;
+    default:
+      return <BarChart3 className="h-4 w-4" />;
   }
 };
 
 const getInsightTypeColor = (type: ProductivityInsight['type']) => {
   switch (type) {
-    case 'opportunity': return 'org-text-warning';
-    case 'strength': return 'org-text-success';
-    case 'concern': return 'org-text-error';
-    case 'trend': return 'org-text-info';
-    default: return 'org-text-muted';
+    case 'opportunity':
+      return 'org-text-warning';
+    case 'strength':
+      return 'org-text-success';
+    case 'concern':
+      return 'org-text-error';
+    case 'trend':
+      return 'org-text-info';
+    default:
+      return 'org-text-muted';
   }
 };
 
 const getPriorityColor = (priority: ProductivityRecommendation['priority']) => {
   switch (priority) {
-    case 'urgent': return 'org-badge-error';
-    case 'high': return 'org-badge-warning';
-    case 'medium': return 'org-badge-info';
-    case 'low': return 'org-badge-secondary';
-    default: return 'org-badge-muted';
+    case 'urgent':
+      return 'org-badge-error';
+    case 'high':
+      return 'org-badge-warning';
+    case 'medium':
+      return 'org-badge-info';
+    case 'low':
+      return 'org-badge-secondary';
+    default:
+      return 'org-badge-muted';
   }
 };
 
 const getEffortColor = (effort: ProductivityRecommendation['effort']) => {
   switch (effort) {
-    case 'minimal': return 'org-text-success';
-    case 'low': return 'org-text-info';
-    case 'medium': return 'org-text-warning';
-    case 'high': return 'org-text-error';
-    default: return 'org-text-muted';
+    case 'minimal':
+      return 'org-text-success';
+    case 'low':
+      return 'org-text-info';
+    case 'medium':
+      return 'org-text-warning';
+    case 'high':
+      return 'org-text-error';
+    default:
+      return 'org-text-muted';
   }
 };
 
 const formatMetricValue = (value: number, unit: ProductivityMetric['unit']): string => {
   switch (unit) {
-    case 'percentage': return `${Math.round(value * 100)}%`;
-    case 'hours': return `${value.toFixed(1)}h`;
-    case 'count': return Math.round(value).toString();
-    case 'score': return `${Math.round(value * 100)}/100`;
-    case 'ratio': return `${value.toFixed(2)}:1`;
-    default: return value.toString();
+    case 'percentage':
+      return `${Math.round(value * 100)}%`;
+    case 'hours':
+      return `${value.toFixed(1)}h`;
+    case 'count':
+      return Math.round(value).toString();
+    case 'score':
+      return `${Math.round(value * 100)}/100`;
+    case 'ratio':
+      return `${value.toFixed(2)}:1`;
+    default:
+      return value.toString();
   }
 };
 
 const OverviewView: React.FC<{
   analysis: ProductivityAnalysis;
 }> = ({ analysis }) => {
-  const keyMetrics = analysis.metrics.filter(m =>
-    ['output', 'efficiency', 'quality'].includes(m.category)
-  ).slice(0, 6);
+  const keyMetrics = analysis.metrics
+    .filter((m) => ['output', 'efficiency', 'quality'].includes(m.category))
+    .slice(0, 6);
 
-  const criticalInsights = analysis.insights.filter(i =>
-    i.impact === 'high' || i.impact === 'critical'
-  ).slice(0, 4);
+  const criticalInsights = analysis.insights
+    .filter((i) => i.impact === 'high' || i.impact === 'critical')
+    .slice(0, 4);
 
   const topRecommendations = analysis.recommendations
-    .filter(r => r.priority === 'high' || r.priority === 'urgent')
+    .filter((r) => r.priority === 'high' || r.priority === 'urgent')
     .slice(0, 3);
 
   return (
     <div className="org-productivity-overview">
       <div className="grid grid-cols-4 gap-4 mb-6">
         <div className="org-stat-card">
-          <div className={`org-stat-value ${
-            analysis.overallProductivityScore >= 80 ? 'org-text-success' :
-            analysis.overallProductivityScore >= 60 ? 'org-text-info' :
-            'org-text-warning'
-          }`}>
+          <div
+            className={`org-stat-value ${
+              analysis.overallProductivityScore >= 80
+                ? 'org-text-success'
+                : analysis.overallProductivityScore >= 60
+                  ? 'org-text-info'
+                  : 'org-text-warning'
+            }`}
+          >
             {Math.round(analysis.overallProductivityScore)}
           </div>
           <div className="org-stat-label">Productivity Score</div>
-          <div className={`org-text-xs ${
-            analysis.productivityTrend === 'improving' ? 'org-text-success' :
-            analysis.productivityTrend === 'declining' ? 'org-text-error' :
-            'org-text-muted'
-          }`}>
+          <div
+            className={`org-text-xs ${
+              analysis.productivityTrend === 'improving'
+                ? 'org-text-success'
+                : analysis.productivityTrend === 'declining'
+                  ? 'org-text-error'
+                  : 'org-text-muted'
+            }`}
+          >
             {analysis.productivityTrend}
           </div>
         </div>
         <div className="org-stat-card">
           <div className="org-stat-value">{analysis.insights.length}</div>
           <div className="org-stat-label">Insights Generated</div>
-          <div className="org-text-xs org-text-muted">
-            {criticalInsights.length} high impact
-          </div>
+          <div className="org-text-xs org-text-muted">{criticalInsights.length} high impact</div>
         </div>
         <div className="org-stat-card">
           <div className="org-stat-value">{analysis.recommendations.length}</div>
           <div className="org-stat-label">Recommendations</div>
-          <div className="org-text-xs org-text-muted">
-            {topRecommendations.length} priority
-          </div>
+          <div className="org-text-xs org-text-muted">{topRecommendations.length} priority</div>
         </div>
         <div className="org-stat-card">
           <div className="org-stat-value">{analysis.focusAreas.length}</div>
@@ -233,9 +291,11 @@ const OverviewView: React.FC<{
                     {formatMetricValue(metric.value, metric.unit)}
                   </div>
                   {metric.benchmark && (
-                    <div className={`org-text-xs ${
-                      metric.value >= metric.benchmark ? 'org-text-success' : 'org-text-warning'
-                    }`}>
+                    <div
+                      className={`org-text-xs ${
+                        metric.value >= metric.benchmark ? 'org-text-success' : 'org-text-warning'
+                      }`}
+                    >
                       vs {formatMetricValue(metric.benchmark, metric.unit)} benchmark
                     </div>
                   )}
@@ -287,11 +347,15 @@ const OverviewView: React.FC<{
                   <div className="org-font-medium org-text-sm mb-1">{insight.title}</div>
                   <p className="org-text-sm org-text-muted">{insight.description}</p>
                   <div className="flex items-center space-x-2 mt-1">
-                    <span className={`org-badge org-badge-xs ${
-                      insight.impact === 'critical' ? 'org-badge-error' :
-                      insight.impact === 'high' ? 'org-badge-warning' :
-                      'org-badge-info'
-                    }`}>
+                    <span
+                      className={`org-badge org-badge-xs ${
+                        insight.impact === 'critical'
+                          ? 'org-badge-error'
+                          : insight.impact === 'high'
+                            ? 'org-badge-warning'
+                            : 'org-badge-info'
+                      }`}
+                    >
                       {insight.impact} impact
                     </span>
                     <span className="org-text-xs org-text-muted">
@@ -313,7 +377,9 @@ const OverviewView: React.FC<{
                   <div className="flex-1">
                     <div className="flex items-center space-x-2 mb-1">
                       <span className="org-font-medium org-text-sm">{recommendation.title}</span>
-                      <span className={`org-badge org-badge-xs ${getPriorityColor(recommendation.priority)}`}>
+                      <span
+                        className={`org-badge org-badge-xs ${getPriorityColor(recommendation.priority)}`}
+                      >
                         {recommendation.priority}
                       </span>
                     </div>
@@ -343,20 +409,24 @@ const MetricsView: React.FC<{
 }> = ({ analysis, categoryFilter }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
-  const filteredMetrics = selectedCategory === 'all' ?
-    analysis.metrics :
-    analysis.metrics.filter(m => m.category === selectedCategory);
+  const filteredMetrics =
+    selectedCategory === 'all'
+      ? analysis.metrics
+      : analysis.metrics.filter((m) => m.category === selectedCategory);
 
-  const displayMetrics = categoryFilter ?
-    filteredMetrics.filter(m => categoryFilter.includes(m.category)) :
-    filteredMetrics;
+  const displayMetrics = categoryFilter
+    ? filteredMetrics.filter((m) => categoryFilter.includes(m.category))
+    : filteredMetrics;
 
-  const categories = [...new Set(analysis.metrics.map(m => m.category))];
-  const metricsByCategory = displayMetrics.reduce((acc, metric) => {
-    if (!acc[metric.category]) acc[metric.category] = [];
-    acc[metric.category].push(metric);
-    return acc;
-  }, {} as Record<string, ProductivityMetric[]>);
+  const categories = [...new Set(analysis.metrics.map((m) => m.category))];
+  const metricsByCategory = displayMetrics.reduce(
+    (acc, metric) => {
+      if (!acc[metric.category]) acc[metric.category] = [];
+      acc[metric.category].push(metric);
+      return acc;
+    },
+    {} as Record<string, ProductivityMetric[]>,
+  );
 
   return (
     <div className="org-productivity-metrics">
@@ -368,7 +438,7 @@ const MetricsView: React.FC<{
           className="org-select org-select-sm"
         >
           <option value="all">All Categories</option>
-          {categories.map(cat => (
+          {categories.map((cat) => (
             <option key={cat} value={cat} className="capitalize">
               {cat}
             </option>
@@ -399,19 +469,30 @@ const MetricsView: React.FC<{
                       <span className="org-text-2xl org-font-bold">
                         {formatMetricValue(metric.value, metric.unit)}
                       </span>
-                      <span className={`org-text-sm ${
-                        metric.trend === 'increasing' ? 'org-text-success' :
-                        metric.trend === 'decreasing' ? 'org-text-error' :
-                        'org-text-muted'
-                      }`}>
-                        {metric.trendPercentage > 0 ? '+' : ''}{metric.trendPercentage.toFixed(1)}%
+                      <span
+                        className={`org-text-sm ${
+                          metric.trend === 'increasing'
+                            ? 'org-text-success'
+                            : metric.trend === 'decreasing'
+                              ? 'org-text-error'
+                              : 'org-text-muted'
+                        }`}
+                      >
+                        {metric.trendPercentage > 0 ? '+' : ''}
+                        {metric.trendPercentage.toFixed(1)}%
                       </span>
                     </div>
 
                     {metric.benchmark && (
                       <div className="flex items-center justify-between org-text-sm">
                         <span className="org-text-muted">Benchmark:</span>
-                        <span className={metric.value >= metric.benchmark ? 'org-text-success' : 'org-text-warning'}>
+                        <span
+                          className={
+                            metric.value >= metric.benchmark
+                              ? 'org-text-success'
+                              : 'org-text-warning'
+                          }
+                        >
                           {formatMetricValue(metric.benchmark, metric.unit)}
                         </span>
                       </div>
@@ -420,7 +501,11 @@ const MetricsView: React.FC<{
                     {metric.target && (
                       <div className="flex items-center justify-between org-text-sm">
                         <span className="org-text-muted">Target:</span>
-                        <span className={metric.value >= metric.target ? 'org-text-success' : 'org-text-info'}>
+                        <span
+                          className={
+                            metric.value >= metric.target ? 'org-text-success' : 'org-text-info'
+                          }
+                        >
                           {formatMetricValue(metric.target, metric.unit)}
                         </span>
                       </div>
@@ -429,15 +514,20 @@ const MetricsView: React.FC<{
                     <div className="w-full org-bg-surface rounded-full h-2">
                       <div
                         className={`h-2 rounded-full ${
-                          metric.value >= (metric.target || metric.benchmark || metric.value) ? 'org-bg-success' :
-                          metric.value >= (metric.benchmark || metric.target || metric.value) * 0.8 ? 'org-bg-info' :
-                          'org-bg-warning'
+                          metric.value >= (metric.target || metric.benchmark || metric.value)
+                            ? 'org-bg-success'
+                            : metric.value >=
+                                (metric.benchmark || metric.target || metric.value) * 0.8
+                              ? 'org-bg-info'
+                              : 'org-bg-warning'
                         }`}
                         style={{
                           width: `${Math.min(
-                            (metric.value / (metric.target || metric.benchmark || metric.value * 1.2)) * 100,
-                            100
-                          )}%`
+                            (metric.value /
+                              (metric.target || metric.benchmark || metric.value * 1.2)) *
+                              100,
+                            100,
+                          )}%`,
                         }}
                       />
                     </div>
@@ -470,26 +560,29 @@ const RecommendationsView: React.FC<{
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'priority' | 'impact' | 'effort'>('priority');
 
-  const filteredRecommendations = selectedCategory === 'all' ?
-    analysis.recommendations :
-    analysis.recommendations.filter(r => r.category === selectedCategory);
+  const filteredRecommendations =
+    selectedCategory === 'all'
+      ? analysis.recommendations
+      : analysis.recommendations.filter((r) => r.category === selectedCategory);
 
   const sortedRecommendations = [...filteredRecommendations].sort((a, b) => {
     switch (sortBy) {
-      case 'priority':
+      case 'priority': {
         const priorityOrder = ['urgent', 'high', 'medium', 'low'];
         return priorityOrder.indexOf(a.priority) - priorityOrder.indexOf(b.priority);
+      }
       case 'impact':
         return b.potentialProductivityGain - a.potentialProductivityGain;
-      case 'effort':
+      case 'effort': {
         const effortOrder = ['minimal', 'low', 'medium', 'high'];
         return effortOrder.indexOf(a.effort) - effortOrder.indexOf(b.effort);
+      }
       default:
         return 0;
     }
   });
 
-  const categories = [...new Set(analysis.recommendations.map(r => r.category))];
+  const categories = [...new Set(analysis.recommendations.map((r) => r.category))];
 
   return (
     <div className="org-productivity-recommendations">
@@ -502,7 +595,7 @@ const RecommendationsView: React.FC<{
             className="org-select org-select-sm"
           >
             <option value="all">All Categories</option>
-            {categories.map(cat => (
+            {categories.map((cat) => (
               <option key={cat} value={cat} className="capitalize">
                 {cat.replace('-', ' ')}
               </option>
@@ -527,7 +620,9 @@ const RecommendationsView: React.FC<{
               <div className="flex-1">
                 <div className="flex items-center space-x-2 mb-2">
                   <h5 className="org-font-semibold">{recommendation.title}</h5>
-                  <span className={`org-badge org-badge-sm ${getPriorityColor(recommendation.priority)}`}>
+                  <span
+                    className={`org-badge org-badge-sm ${getPriorityColor(recommendation.priority)}`}
+                  >
                     {recommendation.priority} priority
                   </span>
                   <span className="org-badge org-badge-secondary org-badge-sm capitalize">
@@ -556,7 +651,10 @@ const RecommendationsView: React.FC<{
                 <h6 className="org-font-medium mb-2 org-text-sm">Specific Actions</h6>
                 <ul className="space-y-1">
                   {recommendation.specificActions.slice(0, 4).map((action, index) => (
-                    <li key={index} className="org-text-sm org-text-muted flex items-start space-x-2">
+                    <li
+                      key={index}
+                      className="org-text-sm org-text-muted flex items-start space-x-2"
+                    >
                       <span className="org-text-primary mt-0.5">•</span>
                       <span>{action}</span>
                     </li>
@@ -601,7 +699,7 @@ const RecommendationsView: React.FC<{
               <div className="mt-3 pt-3 org-border-t">
                 <h6 className="org-font-medium mb-2 org-text-sm">Dependencies</h6>
                 <div className="flex flex-wrap gap-1">
-                  {recommendation.dependencies.map(dependency => (
+                  {recommendation.dependencies.map((dependency) => (
                     <span key={dependency} className="org-badge org-badge-warning org-badge-xs">
                       {dependency}
                     </span>
@@ -646,11 +744,15 @@ const BenchmarksView: React.FC<{
                 Overall performance: {Math.round(benchmark.overallScore * 100)}%
               </div>
             </div>
-            <div className={`org-text-2xl org-font-bold ${
-              benchmark.overallScore >= 0.8 ? 'org-text-success' :
-              benchmark.overallScore >= 0.6 ? 'org-text-info' :
-              'org-text-warning'
-            }`}>
+            <div
+              className={`org-text-2xl org-font-bold ${
+                benchmark.overallScore >= 0.8
+                  ? 'org-text-success'
+                  : benchmark.overallScore >= 0.6
+                    ? 'org-text-info'
+                    : 'org-text-warning'
+              }`}
+            >
               {Math.round(benchmark.overallScore * 100)}%
             </div>
           </div>
@@ -659,21 +761,27 @@ const BenchmarksView: React.FC<{
             <div>
               <h6 className="org-font-medium mb-3">Metric Comparisons</h6>
               <div className="space-y-3">
-                {Object.entries(benchmark.metrics).slice(0, 5).map(([metricName, data]) => (
-                  <div key={metricName} className="flex items-center justify-between">
-                    <span className="org-text-sm org-font-medium">{metricName}</span>
-                    <div className="text-right">
-                      <div className={`org-text-sm org-font-semibold ${
-                        data.userValue >= data.benchmarkValue ? 'org-text-success' : 'org-text-warning'
-                      }`}>
-                        {data.userValue.toFixed(1)} vs {data.benchmarkValue.toFixed(1)}
-                      </div>
-                      <div className="org-text-xs org-text-muted">
-                        {data.percentile}th percentile
+                {Object.entries(benchmark.metrics)
+                  .slice(0, 5)
+                  .map(([metricName, data]) => (
+                    <div key={metricName} className="flex items-center justify-between">
+                      <span className="org-text-sm org-font-medium">{metricName}</span>
+                      <div className="text-right">
+                        <div
+                          className={`org-text-sm org-font-semibold ${
+                            data.userValue >= data.benchmarkValue
+                              ? 'org-text-success'
+                              : 'org-text-warning'
+                          }`}
+                        >
+                          {data.userValue.toFixed(1)} vs {data.benchmarkValue.toFixed(1)}
+                        </div>
+                        <div className="org-text-xs org-text-muted">
+                          {data.percentile}th percentile
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
               </div>
             </div>
 
@@ -692,7 +800,9 @@ const BenchmarksView: React.FC<{
                   </div>
                 </div>
                 <div>
-                  <div className="org-text-sm org-font-medium mb-1 org-text-warning">Improvement Areas</div>
+                  <div className="org-text-sm org-font-medium mb-1 org-text-warning">
+                    Improvement Areas
+                  </div>
                   <div className="space-y-1">
                     {benchmark.improvementAreas.slice(0, 3).map((area, areaIndex) => (
                       <div key={areaIndex} className="flex items-start space-x-2 org-text-sm">
@@ -710,11 +820,19 @@ const BenchmarksView: React.FC<{
             <div className="org-text-sm">
               <span className="org-font-medium">Performance Summary:</span>
               <span className="org-text-muted ml-2">
-                You're performing {benchmark.overallScore >= 0.8 ? 'above average' :
-                benchmark.overallScore >= 0.6 ? 'at average level' : 'below average'} compared to{' '}
-                {benchmark.comparisonType.replace('-', ' ')}.
+                You're performing{' '}
+                {benchmark.overallScore >= 0.8
+                  ? 'above average'
+                  : benchmark.overallScore >= 0.6
+                    ? 'at average level'
+                    : 'below average'}{' '}
+                compared to {benchmark.comparisonType.replace('-', ' ')}.
                 {benchmark.overallScore < 0.8 && (
-                  <> Focus on {benchmark.improvementAreas.slice(0, 2).join(' and ')} to improve your ranking.</>
+                  <>
+                    {' '}
+                    Focus on {benchmark.improvementAreas.slice(0, 2).join(' and ')} to improve your
+                    ranking.
+                  </>
                 )}
               </span>
             </div>
@@ -732,7 +850,7 @@ export const ProductivityInsights: React.FC<ProductivityInsightsProps> = ({
   categoryFilter,
   showBenchmarks = true,
   onActionRecommendation,
-  className = ''
+  className = '',
 }) => {
   const { teamFilter } = useOrganizationalContext();
   const [analysis, setAnalysis] = useState<ProductivityAnalysis | null>(null);
@@ -749,7 +867,7 @@ export const ProductivityInsights: React.FC<ProductivityInsightsProps> = ({
           week: 604800000,
           month: 2592000000,
           quarter: 7776000000,
-          'half-year': 15552000000
+          'half-year': 15552000000,
         }[timeRange];
 
         const endTime = Date.now();
@@ -768,7 +886,7 @@ export const ProductivityInsights: React.FC<ProductivityInsightsProps> = ({
             benchmark: 38,
             target: 45,
             description: 'Number of tasks successfully completed',
-            calculationPeriod: 'weekly'
+            calculationPeriod: 'weekly',
           },
           {
             metricId: 'code-quality',
@@ -779,9 +897,9 @@ export const ProductivityInsights: React.FC<ProductivityInsightsProps> = ({
             trend: 'stable',
             trendPercentage: 2.1,
             benchmark: 0.82,
-            target: 0.90,
+            target: 0.9,
             description: 'Automated code quality assessment score',
-            calculationPeriod: 'daily'
+            calculationPeriod: 'daily',
           },
           {
             metricId: 'collaboration-ratio',
@@ -791,9 +909,9 @@ export const ProductivityInsights: React.FC<ProductivityInsightsProps> = ({
             unit: 'percentage',
             trend: 'increasing',
             trendPercentage: 8.7,
-            benchmark: 0.30,
+            benchmark: 0.3,
             description: 'Percentage of time spent in collaborative activities',
-            calculationPeriod: 'weekly'
+            calculationPeriod: 'weekly',
           },
           {
             metricId: 'focus-time',
@@ -806,7 +924,7 @@ export const ProductivityInsights: React.FC<ProductivityInsightsProps> = ({
             benchmark: 5.0,
             target: 5.5,
             description: 'Hours per day in uninterrupted focus work',
-            calculationPeriod: 'daily'
+            calculationPeriod: 'daily',
           },
           {
             metricId: 'learning-rate',
@@ -818,8 +936,8 @@ export const ProductivityInsights: React.FC<ProductivityInsightsProps> = ({
             trendPercentage: 18.9,
             benchmark: 2.0,
             description: 'Rate of skill and knowledge acquisition',
-            calculationPeriod: 'monthly'
-          }
+            calculationPeriod: 'monthly',
+          },
         ];
 
         const mockInsights: ProductivityInsight[] = [
@@ -827,56 +945,77 @@ export const ProductivityInsights: React.FC<ProductivityInsightsProps> = ({
             insightId: 'insight-1',
             type: 'concern',
             title: 'Declining Focus Time',
-            description: 'Deep focus time has decreased by 12.5% over the past month, impacting complex task completion',
+            description:
+              'Deep focus time has decreased by 12.5% over the past month, impacting complex task completion',
             impact: 'high',
             confidence: 0.89,
             relatedMetrics: ['focus-time', 'tasks-completed'],
-            evidenceData: ['Increased interruptions', 'More context switching', 'Longer task completion times'],
-            actionable: true
+            evidenceData: [
+              'Increased interruptions',
+              'More context switching',
+              'Longer task completion times',
+            ],
+            actionable: true,
           },
           {
             insightId: 'insight-2',
             type: 'strength',
             title: 'Strong Collaboration Growth',
-            description: 'Collaboration activities have increased significantly while maintaining quality standards',
+            description:
+              'Collaboration activities have increased significantly while maintaining quality standards',
             impact: 'medium',
             confidence: 0.92,
             relatedMetrics: ['collaboration-ratio', 'code-quality'],
-            evidenceData: ['More pair programming', 'Increased code reviews', 'Knowledge sharing sessions'],
-            actionable: false
+            evidenceData: [
+              'More pair programming',
+              'Increased code reviews',
+              'Knowledge sharing sessions',
+            ],
+            actionable: false,
           },
           {
             insightId: 'insight-3',
             type: 'opportunity',
             title: 'Learning Momentum',
-            description: 'Rapid learning velocity indicates readiness for more challenging assignments',
+            description:
+              'Rapid learning velocity indicates readiness for more challenging assignments',
             impact: 'medium',
             confidence: 0.85,
             relatedMetrics: ['learning-rate'],
-            evidenceData: ['Completed advanced courses', 'Applied new techniques', 'Mentored colleagues'],
-            actionable: true
-          }
+            evidenceData: [
+              'Completed advanced courses',
+              'Applied new techniques',
+              'Mentored colleagues',
+            ],
+            actionable: true,
+          },
         ];
 
         const mockRecommendations: ProductivityRecommendation[] = [
           {
             recommendationId: 'rec-1',
             title: 'Implement Focus Time Blocks',
-            description: 'Schedule dedicated 2-hour blocks for deep work to restore focus time levels',
+            description:
+              'Schedule dedicated 2-hour blocks for deep work to restore focus time levels',
             category: 'time-management',
             priority: 'high',
             effort: 'low',
             timeline: 'immediate',
-            expectedImpact: 'Restore focus time to 5+ hours daily, improve task completion rate by 20%',
+            expectedImpact:
+              'Restore focus time to 5+ hours daily, improve task completion rate by 20%',
             specificActions: [
               'Block 9-11 AM for deep work daily',
               'Turn off non-critical notifications',
               'Use focus mode on devices',
-              'Communicate focus schedule to team'
+              'Communicate focus schedule to team',
             ],
-            successMetrics: ['Daily focus time > 5 hours', 'Fewer context switches', 'Faster task completion'],
+            successMetrics: [
+              'Daily focus time > 5 hours',
+              'Fewer context switches',
+              'Faster task completion',
+            ],
             estimatedTimeInvestment: 2,
-            potentialProductivityGain: 25
+            potentialProductivityGain: 25,
           },
           {
             recommendationId: 'rec-2',
@@ -886,64 +1025,104 @@ export const ProductivityInsights: React.FC<ProductivityInsightsProps> = ({
             priority: 'medium',
             effort: 'medium',
             timeline: 'short-term',
-            expectedImpact: 'Accelerate career growth, increase project impact, maintain learning momentum',
+            expectedImpact:
+              'Accelerate career growth, increase project impact, maintain learning momentum',
             specificActions: [
               'Request assignment to architecture projects',
               'Lead technical initiatives',
               'Mentor junior developers',
-              'Propose innovative solutions'
+              'Propose innovative solutions',
             ],
-            successMetrics: ['Project complexity level', 'Technical leadership opportunities', 'Knowledge sharing frequency'],
+            successMetrics: [
+              'Project complexity level',
+              'Technical leadership opportunities',
+              'Knowledge sharing frequency',
+            ],
             dependencies: ['Manager approval', 'Available challenging projects'],
             estimatedTimeInvestment: 10,
-            potentialProductivityGain: 15
+            potentialProductivityGain: 15,
           },
           {
             recommendationId: 'rec-3',
             title: 'Optimize Collaboration Workflows',
-            description: 'Streamline collaborative processes to maintain quality while improving efficiency',
+            description:
+              'Streamline collaborative processes to maintain quality while improving efficiency',
             category: 'workflow-improvement',
             priority: 'medium',
             effort: 'medium',
             timeline: 'medium-term',
-            expectedImpact: 'Reduce collaboration overhead, maintain quality standards, increase throughput',
+            expectedImpact:
+              'Reduce collaboration overhead, maintain quality standards, increase throughput',
             specificActions: [
               'Implement async code reviews',
               'Use collaborative editing tools',
               'Establish communication protocols',
-              'Automate routine collaborative tasks'
+              'Automate routine collaborative tasks',
             ],
-            successMetrics: ['Collaboration efficiency ratio', 'Quality metrics maintained', 'Time to completion'],
+            successMetrics: [
+              'Collaboration efficiency ratio',
+              'Quality metrics maintained',
+              'Time to completion',
+            ],
             estimatedTimeInvestment: 8,
-            potentialProductivityGain: 18
-          }
+            potentialProductivityGain: 18,
+          },
         ];
 
-        const mockBenchmarks: BenchmarkComparison[] = showBenchmarks ? [
-          {
-            comparisonType: 'team-average',
-            metrics: {
-              'Tasks Completed': { userValue: 42, benchmarkValue: 38, percentile: 75, gap: 4 },
-              'Code Quality': { userValue: 0.87, benchmarkValue: 0.82, percentile: 80, gap: 0.05 },
-              'Focus Time': { userValue: 4.2, benchmarkValue: 5.0, percentile: 40, gap: -0.8 },
-              'Collaboration': { userValue: 0.35, benchmarkValue: 0.30, percentile: 70, gap: 0.05 }
-            },
-            overallScore: 0.73,
-            strengths: ['Task completion rate', 'Code quality maintenance', 'Collaborative engagement'],
-            improvementAreas: ['Focus time management', 'Interruption handling', 'Time blocking discipline']
-          },
-          {
-            comparisonType: 'industry-standard',
-            metrics: {
-              'Tasks Completed': { userValue: 42, benchmarkValue: 35, percentile: 85, gap: 7 },
-              'Code Quality': { userValue: 0.87, benchmarkValue: 0.85, percentile: 65, gap: 0.02 },
-              'Focus Time': { userValue: 4.2, benchmarkValue: 4.8, percentile: 45, gap: -0.6 }
-            },
-            overallScore: 0.78,
-            strengths: ['Above-average output', 'Solid quality standards', 'Industry-competitive performance'],
-            improvementAreas: ['Focus time optimization', 'Distraction management']
-          }
-        ] : [];
+        const mockBenchmarks: BenchmarkComparison[] = showBenchmarks
+          ? [
+              {
+                comparisonType: 'team-average',
+                metrics: {
+                  'Tasks Completed': { userValue: 42, benchmarkValue: 38, percentile: 75, gap: 4 },
+                  'Code Quality': {
+                    userValue: 0.87,
+                    benchmarkValue: 0.82,
+                    percentile: 80,
+                    gap: 0.05,
+                  },
+                  'Focus Time': { userValue: 4.2, benchmarkValue: 5.0, percentile: 40, gap: -0.8 },
+                  Collaboration: {
+                    userValue: 0.35,
+                    benchmarkValue: 0.3,
+                    percentile: 70,
+                    gap: 0.05,
+                  },
+                },
+                overallScore: 0.73,
+                strengths: [
+                  'Task completion rate',
+                  'Code quality maintenance',
+                  'Collaborative engagement',
+                ],
+                improvementAreas: [
+                  'Focus time management',
+                  'Interruption handling',
+                  'Time blocking discipline',
+                ],
+              },
+              {
+                comparisonType: 'industry-standard',
+                metrics: {
+                  'Tasks Completed': { userValue: 42, benchmarkValue: 35, percentile: 85, gap: 7 },
+                  'Code Quality': {
+                    userValue: 0.87,
+                    benchmarkValue: 0.85,
+                    percentile: 65,
+                    gap: 0.02,
+                  },
+                  'Focus Time': { userValue: 4.2, benchmarkValue: 4.8, percentile: 45, gap: -0.6 },
+                },
+                overallScore: 0.78,
+                strengths: [
+                  'Above-average output',
+                  'Solid quality standards',
+                  'Industry-competitive performance',
+                ],
+                improvementAreas: ['Focus time optimization', 'Distraction management'],
+              },
+            ]
+          : [];
 
         setAnalysis({
           operatorId: sessionCorrelation.operatorId,
@@ -958,16 +1137,16 @@ export const ProductivityInsights: React.FC<ProductivityInsightsProps> = ({
           focusAreas: [
             'Focus time management',
             'Distraction reduction',
-            'Time blocking implementation'
+            'Time blocking implementation',
           ],
           strengths: [
             'High task completion rate',
             'Strong code quality',
             'Effective collaboration',
-            'Rapid learning ability'
+            'Rapid learning ability',
           ],
           nextReviewDate: endTime + 604800000, // 1 week from now
-          generatedAt: Date.now()
+          generatedAt: Date.now(),
         });
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to generate productivity analysis');
@@ -1017,19 +1196,15 @@ export const ProductivityInsights: React.FC<ProductivityInsightsProps> = ({
       <div className="flex items-center justify-between mb-6">
         <h3 className="org-text-xl org-font-semibold">Productivity Insights</h3>
         <div className="org-text-sm org-text-muted">
-          Analysis for {timeRange} • Next review: {new Date(analysis.nextReviewDate).toLocaleDateString()}
+          Analysis for {timeRange} • Next review:{' '}
+          {new Date(analysis.nextReviewDate).toLocaleDateString()}
         </div>
       </div>
 
       {mode === 'overview' && <OverviewView analysis={analysis} />}
-      {mode === 'metrics' && (
-        <MetricsView analysis={analysis} categoryFilter={categoryFilter} />
-      )}
+      {mode === 'metrics' && <MetricsView analysis={analysis} categoryFilter={categoryFilter} />}
       {mode === 'recommendations' && (
-        <RecommendationsView
-          analysis={analysis}
-          onActionRecommendation={onActionRecommendation}
-        />
+        <RecommendationsView analysis={analysis} onActionRecommendation={onActionRecommendation} />
       )}
       {mode === 'benchmarks' && <BenchmarksView analysis={analysis} />}
     </div>

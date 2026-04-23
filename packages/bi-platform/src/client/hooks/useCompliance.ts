@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 export interface RegulationSummary {
   regulation: string;
@@ -31,7 +31,10 @@ export interface ViolationsResponse {
 
 const POLL = 30_000;
 
-export function useCompliance(): { overview: ComplianceResponse | null; violations: ViolationsResponse | null } {
+export function useCompliance(): {
+  overview: ComplianceResponse | null;
+  violations: ViolationsResponse | null;
+} {
   const [overview, setOverview] = useState<ComplianceResponse | null>(null);
   const [violations, setViolations] = useState<ViolationsResponse | null>(null);
 
@@ -43,7 +46,9 @@ export function useCompliance(): { overview: ComplianceResponse | null; violatio
       ]);
       if (oRes.ok) setOverview(await oRes.json());
       if (vRes.ok) setViolations(await vRes.json());
-    } catch { /* retry */ }
+    } catch {
+      /* retry */
+    }
   }, []);
 
   useEffect(() => {

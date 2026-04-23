@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, type ReactNode, useContext, useState } from 'react';
 
 export interface TeamFilter {
   readonly id: string;
@@ -34,7 +34,7 @@ const mockTeams: TeamFilter[] = [
   { id: 'product', name: 'Product', selected: false },
   { id: 'design', name: 'Design', selected: false },
   { id: 'marketing', name: 'Marketing', selected: false },
-  { id: 'support', name: 'Support', selected: false }
+  { id: 'support', name: 'Support', selected: false },
 ];
 
 export function OrganizationalContextProvider({ children }: Props) {
@@ -45,23 +45,19 @@ export function OrganizationalContextProvider({ children }: Props) {
     const isSelected = selectedTeams.includes(teamId);
 
     if (isSelected) {
-      setSelectedTeams(prev => prev.filter(id => id !== teamId));
+      setSelectedTeams((prev) => prev.filter((id) => id !== teamId));
     } else {
-      setSelectedTeams(prev => [...prev, teamId]);
+      setSelectedTeams((prev) => [...prev, teamId]);
     }
 
-    setTeamFilters(prev =>
-      prev.map(team =>
-        team.id === teamId
-          ? { ...team, selected: !team.selected }
-          : team
-      )
+    setTeamFilters((prev) =>
+      prev.map((team) => (team.id === teamId ? { ...team, selected: !team.selected } : team)),
     );
   };
 
   const clearTeamSelection = () => {
     setSelectedTeams([]);
-    setTeamFilters(prev => prev.map(team => ({ ...team, selected: false })));
+    setTeamFilters((prev) => prev.map((team) => ({ ...team, selected: false })));
   };
 
   const contextValue: OrganizationalContextType = {
@@ -69,12 +65,10 @@ export function OrganizationalContextProvider({ children }: Props) {
     teamFilters,
     setSelectedTeams,
     toggleTeamSelection,
-    clearTeamSelection
+    clearTeamSelection,
   };
 
   return (
-    <OrganizationalContext.Provider value={contextValue}>
-      {children}
-    </OrganizationalContext.Provider>
+    <OrganizationalContext.Provider value={contextValue}>{children}</OrganizationalContext.Provider>
   );
 }

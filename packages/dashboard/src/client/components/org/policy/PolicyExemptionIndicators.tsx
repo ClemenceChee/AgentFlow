@@ -6,8 +6,7 @@
  * renewal requests and exemption tracking.
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
-import type { PolicyComplianceLevel } from '../../../types/organizational.js';
+import { useEffect, useMemo, useState } from 'react';
 
 // Component props
 interface PolicyExemptionIndicatorsProps {
@@ -143,69 +142,59 @@ interface ExemptionAttachment {
 }
 
 // Exemption enums
-type ExemptionType =
-  | 'temporary'
-  | 'conditional'
-  | 'emergency'
-  | 'permanent'
-  | 'recurring';
+type ExemptionType = 'temporary' | 'conditional' | 'emergency' | 'permanent' | 'recurring';
 
-type ExemptionScope =
-  | 'specific_action'
-  | 'policy_rule'
-  | 'entire_policy'
-  | 'category';
+type ExemptionScope = 'specific_action' | 'policy_rule' | 'entire_policy' | 'category';
 
-type ExemptionStatus =
-  | 'active'
-  | 'expired'
-  | 'revoked'
-  | 'suspended';
+type ExemptionStatus = 'active' | 'expired' | 'revoked' | 'suspended';
 
 // Configuration
-const EXEMPTION_TYPE_CONFIG: Record<ExemptionType, {
-  label: string;
-  icon: string;
-  color: string;
-  description: string;
-}> = {
+const EXEMPTION_TYPE_CONFIG: Record<
+  ExemptionType,
+  {
+    label: string;
+    icon: string;
+    color: string;
+    description: string;
+  }
+> = {
   temporary: {
     label: 'Temporary',
     icon: '⏰',
     color: 'var(--org-temporal)',
-    description: 'Limited time exemption'
+    description: 'Limited time exemption',
   },
   conditional: {
     label: 'Conditional',
     icon: '🔀',
     color: 'var(--org-conditional)',
-    description: 'Exemption with specific conditions'
+    description: 'Exemption with specific conditions',
   },
   emergency: {
     label: 'Emergency',
     icon: '🚨',
     color: 'var(--fail)',
-    description: 'Emergency override exemption'
+    description: 'Emergency override exemption',
   },
   permanent: {
     label: 'Permanent',
     icon: '♾️',
     color: 'var(--org-permanent)',
-    description: 'Long-term exemption'
+    description: 'Long-term exemption',
   },
   recurring: {
     label: 'Recurring',
     icon: '🔄',
     color: 'var(--org-recurring)',
-    description: 'Regularly renewed exemption'
-  }
+    description: 'Regularly renewed exemption',
+  },
 };
 
 const RISK_LEVEL_CONFIG = {
   low: { label: 'Low', color: 'var(--success)', icon: '🟢' },
   medium: { label: 'Medium', color: 'var(--warn)', icon: '🟡' },
   high: { label: 'High', color: 'var(--fail)', icon: '🟠' },
-  critical: { label: 'Critical', color: 'var(--fail)', icon: '🔴' }
+  critical: { label: 'Critical', color: 'var(--fail)', icon: '🔴' },
 };
 
 /**
@@ -222,7 +211,7 @@ export function PolicyExemptionIndicators({
   compact = false,
   onExemptionClick,
   onRenewalRequest,
-  onExemptionRevoke
+  onExemptionRevoke,
 }: PolicyExemptionIndicatorsProps) {
   const [exemptions, setExemptions] = useState<PolicyExemption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -244,7 +233,7 @@ export function PolicyExemptionIndicators({
           ...(teamId && { teamId }),
           ...(operatorId && { operatorId }),
           ...(policyId && { policyId }),
-          ...(showActiveOnly && { status: 'active' })
+          ...(showActiveOnly && { status: 'active' }),
         });
 
         const response = await fetch(`/api/policy/exemptions?${params}`);
@@ -254,7 +243,6 @@ export function PolicyExemptionIndicators({
 
         const data = await response.json();
         setExemptions(data.exemptions || []);
-
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load exemptions');
         // Generate mock data for development
@@ -266,7 +254,7 @@ export function PolicyExemptionIndicators({
     };
 
     loadExemptions();
-  }, [teamId, operatorId, policyId, showActiveOnly]);
+  }, [teamId, operatorId, policyId, showActiveOnly, generateMockExemptions]);
 
   // Generate mock exemption data
   const generateMockExemptions = (): PolicyExemption[] => {
@@ -279,8 +267,8 @@ export function PolicyExemptionIndicators({
       const status = statuses[index % statuses.length];
       const riskLevel = riskLevels[index % riskLevels.length];
       const now = Date.now();
-      const grantedAt = now - (index * 7 * 24 * 60 * 60 * 1000);
-      const expiresAt = grantedAt + (30 * 24 * 60 * 60 * 1000); // 30 days
+      const grantedAt = now - index * 7 * 24 * 60 * 60 * 1000;
+      const expiresAt = grantedAt + 30 * 24 * 60 * 60 * 1000; // 30 days
 
       return {
         id: `exemption-${index + 1}`,
@@ -293,21 +281,26 @@ export function PolicyExemptionIndicators({
         businessJustification: `Required for urgent ${type} business requirements that cannot wait for standard policy compliance`,
         riskAssessment: {
           level: riskLevel,
-          score: riskLevel === 'low' ? 25 : riskLevel === 'medium' ? 50 : riskLevel === 'high' ? 75 : 90,
+          score:
+            riskLevel === 'low' ? 25 : riskLevel === 'medium' ? 50 : riskLevel === 'high' ? 75 : 90,
           factors: [`${riskLevel} risk operation`, 'Limited scope', 'Temporary duration'],
           mitigations: ['Enhanced monitoring', 'Regular reviews', 'Approval workflow'],
           residualRisk: `${riskLevel} residual risk after mitigations`,
           assessedBy: 'risk-officer',
-          assessedAt: grantedAt
+          assessedAt: grantedAt,
         },
         grantedAt,
-        expiresAt: status === 'active' ? expiresAt : grantedAt + (15 * 24 * 60 * 60 * 1000),
+        expiresAt: status === 'active' ? expiresAt : grantedAt + 15 * 24 * 60 * 60 * 1000,
         grantedBy: 'policy-admin',
         grantedByName: 'Policy Administrator',
         beneficiary: {
           type: operatorId ? 'operator' : teamId ? 'team' : 'resource',
           id: operatorId || teamId || `resource-${index}`,
-          name: operatorId ? 'Current User' : teamId ? `Team ${teamId.substring(0, 8)}` : `Resource ${index}`
+          name: operatorId
+            ? 'Current User'
+            : teamId
+              ? `Team ${teamId.substring(0, 8)}`
+              : `Resource ${index}`,
         },
         conditions: [
           {
@@ -315,57 +308,64 @@ export function PolicyExemptionIndicators({
             type: 'temporal',
             description: 'Valid only during business hours',
             parameters: { startHour: 9, endHour: 17 },
-            satisfied: true
+            satisfied: true,
           },
           {
             id: `condition-${index}-2`,
             type: 'monitoring',
             description: 'All actions must be logged',
             parameters: { logLevel: 'detailed' },
-            satisfied: true
-          }
+            satisfied: true,
+          },
         ],
         monitoring: {
           enabled: true,
           frequency: 'continuous',
-          alerts: status === 'active' && index === 0 ? [
-            {
-              id: 'alert-1',
-              type: 'expiration',
-              severity: 'warning',
-              message: 'Exemption expires in 7 days',
-              timestamp: now - (60 * 60 * 1000),
-              acknowledged: false
-            }
-          ] : [],
+          alerts:
+            status === 'active' && index === 0
+              ? [
+                  {
+                    id: 'alert-1',
+                    type: 'expiration',
+                    severity: 'warning',
+                    message: 'Exemption expires in 7 days',
+                    timestamp: now - 60 * 60 * 1000,
+                    acknowledged: false,
+                  },
+                ]
+              : [],
           usage: [
             {
-              timestamp: now - (2 * 60 * 60 * 1000),
+              timestamp: now - 2 * 60 * 60 * 1000,
               action: 'data_access',
               result: 'allowed',
-              context: { resource: 'sensitive-data', reason: 'business-critical' }
-            }
+              context: { resource: 'sensitive-data', reason: 'business-critical' },
+            },
           ],
-          lastChecked: now - (30 * 60 * 1000)
+          lastChecked: now - 30 * 60 * 1000,
         },
-        renewalHistory: index === 1 ? [
-          {
-            id: 'renewal-1',
-            requestedAt: grantedAt - (10 * 24 * 60 * 60 * 1000),
-            requestedBy: 'current-user',
-            requestedDuration: 30 * 24 * 60 * 60 * 1000,
-            status: 'approved',
-            reviewedBy: 'policy-admin',
-            reviewedAt: grantedAt - (9 * 24 * 60 * 60 * 1000),
-            reason: 'Legitimate business need continues'
-          }
-        ] : [],
+        renewalHistory:
+          index === 1
+            ? [
+                {
+                  id: 'renewal-1',
+                  requestedAt: grantedAt - 10 * 24 * 60 * 60 * 1000,
+                  requestedBy: 'current-user',
+                  requestedDuration: 30 * 24 * 60 * 60 * 1000,
+                  status: 'approved',
+                  reviewedBy: 'policy-admin',
+                  reviewedAt: grantedAt - 9 * 24 * 60 * 60 * 1000,
+                  reason: 'Legitimate business need continues',
+                },
+              ]
+            : [],
         metadata: {
           requestId: `request-${index + 1}`,
           category: 'data_access',
           tags: [type, riskLevel, 'business-critical'],
-          priority: riskLevel === 'critical' ? 'critical' : riskLevel === 'high' ? 'high' : 'medium'
-        }
+          priority:
+            riskLevel === 'critical' ? 'critical' : riskLevel === 'high' ? 'high' : 'medium',
+        },
       };
     });
   };
@@ -375,7 +375,7 @@ export function PolicyExemptionIndicators({
     let filtered = exemptions;
 
     if (showActiveOnly) {
-      filtered = filtered.filter(exemption => exemption.status === 'active');
+      filtered = filtered.filter((exemption) => exemption.status === 'active');
     }
 
     return filtered.sort((a, b) => {
@@ -394,11 +394,10 @@ export function PolicyExemptionIndicators({
   // Get exemptions expiring soon
   const expiringExemptions = useMemo(() => {
     const now = Date.now();
-    const sevenDaysFromNow = now + (7 * 24 * 60 * 60 * 1000);
+    const sevenDaysFromNow = now + 7 * 24 * 60 * 60 * 1000;
 
-    return sortedExemptions.filter(exemption =>
-      exemption.status === 'active' &&
-      exemption.expiresAt <= sevenDaysFromNow
+    return sortedExemptions.filter(
+      (exemption) => exemption.status === 'active' && exemption.expiresAt <= sevenDaysFromNow,
     );
   }, [sortedExemptions]);
 
@@ -424,23 +423,25 @@ export function PolicyExemptionIndicators({
     }
 
     // Update local state to show pending renewal
-    setExemptions(prev => prev.map(exemption =>
-      exemption.id === exemptionId
-        ? {
-            ...exemption,
-            renewalHistory: [
-              ...exemption.renewalHistory,
-              {
-                id: `renewal-${Date.now()}`,
-                requestedAt: Date.now(),
-                requestedBy: 'current-user',
-                requestedDuration: duration,
-                status: 'pending'
-              }
-            ]
-          }
-        : exemption
-    ));
+    setExemptions((prev) =>
+      prev.map((exemption) =>
+        exemption.id === exemptionId
+          ? {
+              ...exemption,
+              renewalHistory: [
+                ...exemption.renewalHistory,
+                {
+                  id: `renewal-${Date.now()}`,
+                  requestedAt: Date.now(),
+                  requestedBy: 'current-user',
+                  requestedDuration: duration,
+                  status: 'pending',
+                },
+              ],
+            }
+          : exemption,
+      ),
+    );
 
     setShowRenewalDialog(null);
   };
@@ -449,8 +450,10 @@ export function PolicyExemptionIndicators({
     'org-card',
     'policy-exemption-indicators',
     compact ? 'compact' : '',
-    className
-  ].filter(Boolean).join(' ');
+    className,
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   // Loading state
   if (loading) {
@@ -465,9 +468,7 @@ export function PolicyExemptionIndicators({
         <div className="org-card__content">
           <div className="policy-exemption-loading">
             <div className="policy-exemption-loading-spinner" />
-            <div className="policy-exemption-loading-text">
-              Loading policy exemptions...
-            </div>
+            <div className="policy-exemption-loading-text">Loading policy exemptions...</div>
           </div>
         </div>
       </div>
@@ -487,9 +488,7 @@ export function PolicyExemptionIndicators({
         <div className="org-card__content">
           <div className="policy-exemption-error">
             <div className="policy-exemption-error__icon">⚠️</div>
-            <div className="policy-exemption-error__message">
-              {error}
-            </div>
+            <div className="policy-exemption-error__message">{error}</div>
           </div>
         </div>
       </div>
@@ -503,15 +502,11 @@ export function PolicyExemptionIndicators({
           <span className="policy-exemption-indicators__icon">🛡️</span>
           Policy Exemptions
           {sortedExemptions.length > 0 && (
-            <span className="policy-exemption-indicators__count">
-              {sortedExemptions.length}
-            </span>
+            <span className="policy-exemption-indicators__count">{sortedExemptions.length}</span>
           )}
         </div>
         {expiringExemptions.length > 0 && (
-          <div className="org-card__subtitle">
-            ⚠️ {expiringExemptions.length} expiring soon
-          </div>
+          <div className="org-card__subtitle">⚠️ {expiringExemptions.length} expiring soon</div>
         )}
       </div>
 
@@ -521,12 +516,10 @@ export function PolicyExemptionIndicators({
           <div className="policy-exemption-expiring-alert">
             <div className="policy-exemption-expiring-alert__header">
               <div className="policy-exemption-expiring-alert__icon">⚠️</div>
-              <div className="policy-exemption-expiring-alert__title">
-                Exemptions Expiring Soon
-              </div>
+              <div className="policy-exemption-expiring-alert__title">Exemptions Expiring Soon</div>
             </div>
             <div className="policy-exemption-expiring-list">
-              {expiringExemptions.slice(0, 3).map(exemption => {
+              {expiringExemptions.slice(0, 3).map((exemption) => {
                 const typeConfig = EXEMPTION_TYPE_CONFIG[exemption.type];
 
                 return (
@@ -549,10 +542,12 @@ export function PolicyExemptionIndicators({
                     {showRenewalOptions && (
                       <button
                         className="policy-exemption-expiring-item__renew"
-                        onClick={() => setShowRenewalDialog({
-                          exemptionId: exemption.id,
-                          currentDuration: exemption.expiresAt - exemption.grantedAt
-                        })}
+                        onClick={() =>
+                          setShowRenewalDialog({
+                            exemptionId: exemption.id,
+                            currentDuration: exemption.expiresAt - exemption.grantedAt,
+                          })
+                        }
                       >
                         Renew
                       </button>
@@ -567,11 +562,13 @@ export function PolicyExemptionIndicators({
         {/* Exemptions List */}
         {sortedExemptions.length > 0 ? (
           <div className="policy-exemption-list">
-            {sortedExemptions.slice(0, compact ? 3 : 8).map(exemption => {
+            {sortedExemptions.slice(0, compact ? 3 : 8).map((exemption) => {
               const typeConfig = EXEMPTION_TYPE_CONFIG[exemption.type];
               const riskConfig = RISK_LEVEL_CONFIG[exemption.riskAssessment.level];
               const isExpanded = selectedExemption === exemption.id;
-              const isExpiring = exemption.status === 'active' && exemption.expiresAt <= Date.now() + (7 * 24 * 60 * 60 * 1000);
+              const isExpiring =
+                exemption.status === 'active' &&
+                exemption.expiresAt <= Date.now() + 7 * 24 * 60 * 60 * 1000;
 
               return (
                 <div
@@ -591,14 +588,10 @@ export function PolicyExemptionIndicators({
                         >
                           {typeConfig.icon}
                         </span>
-                        <span className="policy-exemption-item__label">
-                          {typeConfig.label}
-                        </span>
+                        <span className="policy-exemption-item__label">{typeConfig.label}</span>
                       </div>
 
-                      <div className="policy-exemption-item__policy">
-                        {exemption.policyName}
-                      </div>
+                      <div className="policy-exemption-item__policy">{exemption.policyName}</div>
 
                       <div className="policy-exemption-item__beneficiary">
                         {exemption.beneficiary.name || exemption.beneficiary.id}
@@ -620,9 +613,7 @@ export function PolicyExemptionIndicators({
                       </div>
                     </div>
 
-                    <div className="policy-exemption-item__arrow">
-                      {isExpanded ? '▲' : '▼'}
-                    </div>
+                    <div className="policy-exemption-item__arrow">{isExpanded ? '▲' : '▼'}</div>
                   </button>
 
                   {isExpanded && showDetails && (
@@ -640,7 +631,9 @@ export function PolicyExemptionIndicators({
                             </div>
                           </div>
                           <div className="policy-exemption-detail-field">
-                            <div className="policy-exemption-detail-field__label">Business Justification:</div>
+                            <div className="policy-exemption-detail-field__label">
+                              Business Justification:
+                            </div>
                             <div className="policy-exemption-detail-field__value">
                               {exemption.businessJustification}
                             </div>
@@ -655,7 +648,7 @@ export function PolicyExemptionIndicators({
                             Conditions ({exemption.conditions.length})
                           </div>
                           <div className="policy-exemption-conditions">
-                            {exemption.conditions.map(condition => (
+                            {exemption.conditions.map((condition) => (
                               <div
                                 key={condition.id}
                                 className={`policy-exemption-condition ${condition.satisfied ? 'satisfied' : 'unsatisfied'}`}
@@ -694,7 +687,9 @@ export function PolicyExemptionIndicators({
                           </div>
 
                           <div className="policy-exemption-risk-factors">
-                            <div className="policy-exemption-risk-factors__title">Risk Factors:</div>
+                            <div className="policy-exemption-risk-factors__title">
+                              Risk Factors:
+                            </div>
                             <div className="policy-exemption-risk-factors__list">
                               {exemption.riskAssessment.factors.map((factor, index) => (
                                 <div key={index} className="policy-exemption-risk-factor">
@@ -713,7 +708,7 @@ export function PolicyExemptionIndicators({
                             Active Alerts
                           </div>
                           <div className="policy-exemption-alerts">
-                            {exemption.monitoring.alerts.slice(0, 3).map(alert => (
+                            {exemption.monitoring.alerts.slice(0, 3).map((alert) => (
                               <div
                                 key={alert.id}
                                 className={`policy-exemption-alert ${alert.severity}`}
@@ -740,10 +735,12 @@ export function PolicyExemptionIndicators({
                         {showRenewalOptions && exemption.status === 'active' && (
                           <button
                             className="policy-exemption-action policy-exemption-action--renew"
-                            onClick={() => setShowRenewalDialog({
-                              exemptionId: exemption.id,
-                              currentDuration: exemption.expiresAt - exemption.grantedAt
-                            })}
+                            onClick={() =>
+                              setShowRenewalDialog({
+                                exemptionId: exemption.id,
+                                currentDuration: exemption.expiresAt - exemption.grantedAt,
+                              })
+                            }
                           >
                             Request Renewal
                           </button>
@@ -766,16 +763,15 @@ export function PolicyExemptionIndicators({
 
             {sortedExemptions.length > (compact ? 3 : 8) && (
               <div className="policy-exemption-more">
-                +{sortedExemptions.length - (compact ? 3 : 8)} more exemption{sortedExemptions.length - (compact ? 3 : 8) !== 1 ? 's' : ''}
+                +{sortedExemptions.length - (compact ? 3 : 8)} more exemption
+                {sortedExemptions.length - (compact ? 3 : 8) !== 1 ? 's' : ''}
               </div>
             )}
           </div>
         ) : (
           <div className="policy-exemption-empty">
             <div className="policy-exemption-empty__icon">🛡️</div>
-            <div className="policy-exemption-empty__message">
-              No policy exemptions
-            </div>
+            <div className="policy-exemption-empty__message">No policy exemptions</div>
             <div className="policy-exemption-empty__description">
               Policy exemptions will appear here when granted for specific policies or operations.
             </div>
@@ -801,9 +797,7 @@ export function PolicyExemptionIndicators({
 
             <div className="policy-exemption-renewal-dialog__content">
               <div className="policy-exemption-renewal-dialog__field">
-                <label className="policy-exemption-renewal-dialog__label">
-                  Renewal Duration:
-                </label>
+                <label className="policy-exemption-renewal-dialog__label">Renewal Duration:</label>
                 <select className="policy-exemption-renewal-dialog__select">
                   <option value={7 * 24 * 60 * 60 * 1000}>7 days</option>
                   <option value={14 * 24 * 60 * 60 * 1000}>14 days</option>
@@ -822,7 +816,9 @@ export function PolicyExemptionIndicators({
               </button>
               <button
                 className="policy-exemption-renewal-dialog__action policy-exemption-renewal-dialog__action--submit"
-                onClick={() => handleRenewalRequest(showRenewalDialog.exemptionId, 30 * 24 * 60 * 60 * 1000)}
+                onClick={() =>
+                  handleRenewalRequest(showRenewalDialog.exemptionId, 30 * 24 * 60 * 60 * 1000)
+                }
               >
                 Request Renewal
               </button>

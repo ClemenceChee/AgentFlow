@@ -5,13 +5,14 @@
  * team access control, and state management integration for dashboard filtering.
  */
 
-import React, { useState, useEffect, useMemo, useRef, memo, useCallback } from 'react';
+import type React from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { useOrganizationalContext } from '../../../contexts/OrganizationalContext';
 import { useOrganizationalData } from '../../../hooks/organizational/index.js';
-import { useHoverPrefetch } from '../../../hooks/usePrefetch.js';
 import { useTeamData } from '../../../hooks/useOrganizationalCache.js';
-import { useExpensiveMemo, useStableCallback, withDeepMemo } from '../../../utils/react-optimizations.js';
-import type { TeamMembership, TeamAccessLevel } from '../../../types/organizational.js';
+import { useHoverPrefetch } from '../../../hooks/usePrefetch.js';
+import type { TeamAccessLevel, TeamMembership } from '../../../types/organizational.js';
+import { useExpensiveMemo, useStableCallback } from '../../../utils/react-optimizations.js';
 
 // Component props
 interface TeamFilterDropdownProps {
@@ -59,7 +60,7 @@ interface TeamOption {
 }
 
 // Optimized Team Option Item Component
-const TeamOptionItem = memo<{
+const _TeamOptionItem = memo<{
   option: TeamOption;
   isSelected: boolean;
   showMemberCounts: boolean;
@@ -68,81 +69,82 @@ const TeamOptionItem = memo<{
   getActivityStatus: (ratio: number) => string;
   formatTeamName: (team: TeamMembership) => string;
   hoverHandlers: any;
-}>(({
-  option,
-  isSelected,
-  showMemberCounts,
-  showActivityIndicators,
-  onSelect,
-  getActivityStatus,
-  formatTeamName,
-  hoverHandlers
-}) => {
-  const handleSelect = useStableCallback(() => {
-    onSelect(option.team.teamId);
-  }, [onSelect, option.team.teamId]);
+}>(
+  ({
+    option,
+    isSelected,
+    showMemberCounts,
+    showActivityIndicators,
+    onSelect,
+    getActivityStatus,
+    formatTeamName,
+    hoverHandlers,
+  }) => {
+    const handleSelect = useStableCallback(() => {
+      onSelect(option.team.teamId);
+    }, [onSelect, option.team.teamId]);
 
-  return (
-    <button
-      className={`team-filter-dropdown__option ${isSelected ? 'selected' : ''}`}
-      onClick={handleSelect}
-      role="option"
-      aria-selected={isSelected}
-      {...hoverHandlers}
-    >
-      <div className="team-filter-dropdown__option-content">
-        <div className="team-filter-dropdown__option-icon">
-          👥
-        </div>
+    return (
+      <button
+        className={`team-filter-dropdown__option ${isSelected ? 'selected' : ''}`}
+        onClick={handleSelect}
+        role="option"
+        aria-selected={isSelected}
+        {...hoverHandlers}
+      >
+        <div className="team-filter-dropdown__option-content">
+          <div className="team-filter-dropdown__option-icon">👥</div>
 
-        <div className="team-filter-dropdown__option-text">
-          <div className="team-filter-dropdown__option-name">
-            {formatTeamName(option.team)}
-            {option.accessLevel === 'admin' && (
-              <span className="team-filter-access-badge admin" title="Admin access">
-                👑
-              </span>
-            )}
-            {option.accessLevel === 'maintainer' && (
-              <span className="team-filter-access-badge maintainer" title="Maintainer access">
-                🔧
-              </span>
-            )}
-          </div>
-
-          {(showMemberCounts || showActivityIndicators) && (
-            <div className="team-filter-dropdown__option-meta">
-              {showMemberCounts && (
-                <span>
-                  {option.memberCount} member{option.memberCount !== 1 ? 's' : ''}
+          <div className="team-filter-dropdown__option-text">
+            <div className="team-filter-dropdown__option-name">
+              {formatTeamName(option.team)}
+              {option.accessLevel === 'admin' && (
+                <span className="team-filter-access-badge admin" title="Admin access">
+                  👑
                 </span>
               )}
-              {showActivityIndicators && option.activeMembers > 0 && (
-                <span className="team-filter-activity-indicator">
-                  <div className={`activity-dot ${getActivityStatus(option.activityRatio)}`} />
-                  {option.activeMembers} active
+              {option.accessLevel === 'maintainer' && (
+                <span className="team-filter-access-badge maintainer" title="Maintainer access">
+                  🔧
                 </span>
               )}
             </div>
-          )}
-        </div>
 
-        <div className="team-filter-dropdown__option-id">
-          <code>{option.team.teamId.substring(0, 6)}...</code>
+            {(showMemberCounts || showActivityIndicators) && (
+              <div className="team-filter-dropdown__option-meta">
+                {showMemberCounts && (
+                  <span>
+                    {option.memberCount} member{option.memberCount !== 1 ? 's' : ''}
+                  </span>
+                )}
+                {showActivityIndicators && option.activeMembers > 0 && (
+                  <span className="team-filter-activity-indicator">
+                    <div className={`activity-dot ${getActivityStatus(option.activityRatio)}`} />
+                    {option.activeMembers} active
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="team-filter-dropdown__option-id">
+            <code>{option.team.teamId.substring(0, 6)}...</code>
+          </div>
         </div>
-      </div>
-    </button>
-  );
-}, (prevProps, nextProps) => {
-  // Custom comparison for optimal performance
-  return (
-    prevProps.option === nextProps.option &&
-    prevProps.isSelected === nextProps.isSelected &&
-    prevProps.showMemberCounts === nextProps.showMemberCounts &&
-    prevProps.showActivityIndicators === nextProps.showActivityIndicators &&
-    prevProps.onSelect === nextProps.onSelect
-  );
-});
+      </button>
+    );
+  },
+  (prevProps, nextProps) => {
+    // Custom comparison for optimal performance
+    return (
+      prevProps.option === nextProps.option &&
+      prevProps.isSelected === nextProps.isSelected &&
+      prevProps.showMemberCounts === nextProps.showMemberCounts &&
+      prevProps.showActivityIndicators === nextProps.showActivityIndicators &&
+      prevProps.onSelect === nextProps.onSelect
+    );
+  },
+);
 
 /**
  * Team Filter Dropdown Component (Optimized)
@@ -158,7 +160,7 @@ const TeamFilterDropdownComponent = function TeamFilterDropdown({
   placeholder = 'Select team...',
   maxHeight = '300px',
   enableSearch = true,
-  customFilter
+  customFilter,
 }: TeamFilterDropdownProps) {
   const { state } = useOrganizationalContext();
   const { useTeamMembership } = useOrganizationalData();
@@ -175,65 +177,75 @@ const TeamFilterDropdownComponent = function TeamFilterDropdown({
     data: teams,
     error,
     isLoading: loading,
-    refetch: refreshTeams
+    refetch: refreshTeams,
   } = useTeamData(undefined, {
     refetchOnWindowFocus: false,
     refetchInterval: 5 * 60 * 1000, // Refresh every 5 minutes
-    staleTime: 2 * 60 * 1000 // Consider stale after 2 minutes
+    staleTime: 2 * 60 * 1000, // Consider stale after 2 minutes
   });
 
   // Process team options with access levels and activity (optimized)
-  const teamOptions = useExpensiveMemo((): TeamOption[] => {
-    if (!teams || !Array.isArray(teams)) return [];
+  const teamOptions = useExpensiveMemo(
+    (): TeamOption[] => {
+      if (!teams || !Array.isArray(teams)) return [];
 
-    const now = new Date();
-    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-    const currentOperator = state.currentOperator;
+      const now = new Date();
+      const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      const currentOperator = state.currentOperator;
 
-    return teams.map(team => {
-      // Calculate activity metrics
-      const activeMembers = team.members.filter(
-        m => m.lastActivity && new Date(m.lastActivity) > oneDayAgo
-      ).length;
+      return teams.map((team) => {
+        // Calculate activity metrics
+        const activeMembers = team.members.filter(
+          (m) => m.lastActivity && new Date(m.lastActivity) > oneDayAgo,
+        ).length;
 
-      // Get current user's access level to this team
-      const membership = team.members.find(m => m.operatorId === currentOperator);
-      const accessLevel = membership?.accessLevel || 'observer';
+        // Get current user's access level to this team
+        const membership = team.members.find((m) => m.operatorId === currentOperator);
+        const accessLevel = membership?.accessLevel || 'observer';
 
-      return {
-        team,
-        accessLevel,
-        memberCount: team.members.length,
-        activeMembers,
-        activityRatio: team.members.length > 0 ? activeMembers / team.members.length : 0
-      };
-    });
-  }, [teams, state.currentOperator], 'TeamOptions Processing');
+        return {
+          team,
+          accessLevel,
+          memberCount: team.members.length,
+          activeMembers,
+          activityRatio: team.members.length > 0 ? activeMembers / team.members.length : 0,
+        };
+      });
+    },
+    [teams, state.currentOperator],
+    'TeamOptions Processing',
+  );
 
   // Filter teams based on search query (optimized)
-  const filteredTeamOptions = useExpensiveMemo(() => {
-    if (!searchQuery) return teamOptions;
+  const filteredTeamOptions = useExpensiveMemo(
+    () => {
+      if (!searchQuery) return teamOptions;
 
-    const query = searchQuery.toLowerCase().trim();
+      const query = searchQuery.toLowerCase().trim();
 
-    return teamOptions.filter(option => {
-      if (customFilter) {
-        return customFilter(option.team, query);
-      }
+      return teamOptions.filter((option) => {
+        if (customFilter) {
+          return customFilter(option.team, query);
+        }
 
-      // Default filtering logic
-      const teamName = (option.team.teamName || '').toLowerCase();
-      const teamId = option.team.teamId.toLowerCase();
+        // Default filtering logic
+        const teamName = (option.team.teamName || '').toLowerCase();
+        const teamId = option.team.teamId.toLowerCase();
 
-      return teamName.includes(query) ||
-             teamId.includes(query) ||
-             teamId.substring(0, 8).includes(query);
-    });
-  }, [teamOptions, searchQuery, customFilter], 'Team Filtering');
+        return (
+          teamName.includes(query) ||
+          teamId.includes(query) ||
+          teamId.substring(0, 8).includes(query)
+        );
+      });
+    },
+    [teamOptions, searchQuery, customFilter],
+    'Team Filtering',
+  );
 
   // Get selected team info
   const selectedTeam = useMemo(() => {
-    return teamOptions.find(option => option.team.teamId === selectedTeamId);
+    return teamOptions.find((option) => option.team.teamId === selectedTeamId);
   }, [teamOptions, selectedTeamId]);
 
   // Handle dropdown toggle (optimized)
@@ -250,11 +262,14 @@ const TeamFilterDropdownComponent = function TeamFilterDropdown({
   }, [disabled, isOpen, enableSearch]);
 
   // Handle team selection (optimized)
-  const handleTeamSelect = useStableCallback((teamId: string | null) => {
-    onTeamChange(teamId);
-    setIsOpen(false);
-    setSearchQuery('');
-  }, [onTeamChange]);
+  const handleTeamSelect = useStableCallback(
+    (teamId: string | null) => {
+      onTeamChange(teamId);
+      setIsOpen(false);
+      setSearchQuery('');
+    },
+    [onTeamChange],
+  );
 
   // Handle outside click
   useEffect(() => {
@@ -272,15 +287,18 @@ const TeamFilterDropdownComponent = function TeamFilterDropdown({
   }, [isOpen]);
 
   // Handle keyboard navigation (optimized)
-  const handleKeyDown = useStableCallback((event: React.KeyboardEvent) => {
-    if (event.key === 'Escape') {
-      setIsOpen(false);
-      setSearchQuery('');
-    }
-    if (event.key === 'Enter' && !isOpen) {
-      setIsOpen(true);
-    }
-  }, [isOpen]);
+  const handleKeyDown = useStableCallback(
+    (event: React.KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsOpen(false);
+        setSearchQuery('');
+      }
+      if (event.key === 'Enter' && !isOpen) {
+        setIsOpen(true);
+      }
+    },
+    [isOpen],
+  );
 
   // Get activity status for team
   const getActivityStatus = (activityRatio: number): string => {
@@ -300,8 +318,10 @@ const TeamFilterDropdownComponent = function TeamFilterDropdown({
     disabled ? 'disabled' : '',
     error ? 'error' : '',
     loading ? 'loading' : '',
-    className
-  ].filter(Boolean).join(' ');
+    className,
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
     <div className={dropdownClasses} ref={dropdownRef}>
@@ -313,15 +333,14 @@ const TeamFilterDropdownComponent = function TeamFilterDropdown({
         disabled={disabled}
         aria-expanded={isOpen}
         aria-haspopup="listbox"
-        title={selectedTeam ?
-          `Team: ${formatTeamName(selectedTeam.team)} (${selectedTeam.memberCount} members)` :
-          placeholder
+        title={
+          selectedTeam
+            ? `Team: ${formatTeamName(selectedTeam.team)} (${selectedTeam.memberCount} members)`
+            : placeholder
         }
       >
         <div className="team-filter-dropdown__button-content">
-          <div className="team-filter-dropdown__icon">
-            👥
-          </div>
+          <div className="team-filter-dropdown__icon">👥</div>
 
           <div className="team-filter-dropdown__text">
             {selectedTeam ? (
@@ -334,7 +353,9 @@ const TeamFilterDropdownComponent = function TeamFilterDropdown({
                     {selectedTeam.memberCount} member{selectedTeam.memberCount !== 1 ? 's' : ''}
                     {showActivityIndicators && selectedTeam.activeMembers > 0 && (
                       <span className="team-filter-dropdown__activity-dot">
-                        <div className={`activity-dot ${getActivityStatus(selectedTeam.activityRatio)}`} />
+                        <div
+                          className={`activity-dot ${getActivityStatus(selectedTeam.activityRatio)}`}
+                        />
                         {selectedTeam.activeMembers} active
                       </span>
                     )}
@@ -342,9 +363,7 @@ const TeamFilterDropdownComponent = function TeamFilterDropdown({
                 )}
               </>
             ) : (
-              <div className="team-filter-dropdown__placeholder">
-                {placeholder}
-              </div>
+              <div className="team-filter-dropdown__placeholder">{placeholder}</div>
             )}
           </div>
         </div>
@@ -353,9 +372,7 @@ const TeamFilterDropdownComponent = function TeamFilterDropdown({
           {loading ? (
             <div className="team-filter-loading-spinner" />
           ) : (
-            <span className={`team-filter-arrow ${isOpen ? 'up' : 'down'}`}>
-              ▼
-            </span>
+            <span className={`team-filter-arrow ${isOpen ? 'up' : 'down'}`}>▼</span>
           )}
         </div>
       </button>
@@ -374,9 +391,7 @@ const TeamFilterDropdownComponent = function TeamFilterDropdown({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
-              <div className="team-filter-dropdown__search-icon">
-                🔍
-              </div>
+              <div className="team-filter-dropdown__search-icon">🔍</div>
             </div>
           )}
 
@@ -387,11 +402,7 @@ const TeamFilterDropdownComponent = function TeamFilterDropdown({
               <div className="team-filter-dropdown__error-message">
                 {error.message || String(error)}
               </div>
-              <button
-                className="team-filter-dropdown__retry"
-                onClick={refreshTeams}
-                type="button"
-              >
+              <button className="team-filter-dropdown__retry" onClick={refreshTeams} type="button">
                 Retry
               </button>
             </div>
@@ -401,9 +412,7 @@ const TeamFilterDropdownComponent = function TeamFilterDropdown({
           {loading && (
             <div className="team-filter-dropdown__loading">
               <div className="team-filter-loading-spinner" />
-              <div className="team-filter-dropdown__loading-text">
-                Loading teams...
-              </div>
+              <div className="team-filter-dropdown__loading-text">Loading teams...</div>
             </div>
           )}
 
@@ -419,13 +428,9 @@ const TeamFilterDropdownComponent = function TeamFilterDropdown({
                   aria-selected={!selectedTeamId}
                 >
                   <div className="team-filter-dropdown__option-content">
-                    <div className="team-filter-dropdown__option-icon">
-                      🌐
-                    </div>
+                    <div className="team-filter-dropdown__option-icon">🌐</div>
                     <div className="team-filter-dropdown__option-text">
-                      <div className="team-filter-dropdown__option-name">
-                        All Teams
-                      </div>
+                      <div className="team-filter-dropdown__option-name">All Teams</div>
                       <div className="team-filter-dropdown__option-meta">
                         View traces from all teams
                       </div>
@@ -436,11 +441,9 @@ const TeamFilterDropdownComponent = function TeamFilterDropdown({
 
               {/* Individual Team Options */}
               {filteredTeamOptions.map((option) => {
-                const hoverHandlers = createHoverHandlers(
-                  option.team.teamId,
-                  'team',
-                  { priority: 'normal' }
-                );
+                const hoverHandlers = createHoverHandlers(option.team.teamId, 'team', {
+                  priority: 'normal',
+                });
 
                 return (
                   <button
@@ -453,48 +456,51 @@ const TeamFilterDropdownComponent = function TeamFilterDropdown({
                     aria-selected={selectedTeamId === option.team.teamId}
                     {...hoverHandlers}
                   >
-                  <div className="team-filter-dropdown__option-content">
-                    <div className="team-filter-dropdown__option-icon">
-                      👥
-                    </div>
+                    <div className="team-filter-dropdown__option-content">
+                      <div className="team-filter-dropdown__option-icon">👥</div>
 
-                    <div className="team-filter-dropdown__option-text">
-                      <div className="team-filter-dropdown__option-name">
-                        {formatTeamName(option.team)}
-                        {option.accessLevel === 'admin' && (
-                          <span className="team-filter-access-badge admin" title="Admin access">
-                            👑
-                          </span>
-                        )}
-                        {option.accessLevel === 'maintainer' && (
-                          <span className="team-filter-access-badge maintainer" title="Maintainer access">
-                            🔧
-                          </span>
-                        )}
-                      </div>
-
-                      {(showMemberCounts || showActivityIndicators) && (
-                        <div className="team-filter-dropdown__option-meta">
-                          {showMemberCounts && (
-                            <span>
-                              {option.memberCount} member{option.memberCount !== 1 ? 's' : ''}
+                      <div className="team-filter-dropdown__option-text">
+                        <div className="team-filter-dropdown__option-name">
+                          {formatTeamName(option.team)}
+                          {option.accessLevel === 'admin' && (
+                            <span className="team-filter-access-badge admin" title="Admin access">
+                              👑
                             </span>
                           )}
-                          {showActivityIndicators && option.activeMembers > 0 && (
-                            <span className="team-filter-activity-indicator">
-                              <div className={`activity-dot ${getActivityStatus(option.activityRatio)}`} />
-                              {option.activeMembers} active
+                          {option.accessLevel === 'maintainer' && (
+                            <span
+                              className="team-filter-access-badge maintainer"
+                              title="Maintainer access"
+                            >
+                              🔧
                             </span>
                           )}
                         </div>
-                      )}
-                    </div>
 
-                    <div className="team-filter-dropdown__option-id">
-                      <code>{option.team.teamId.substring(0, 6)}...</code>
+                        {(showMemberCounts || showActivityIndicators) && (
+                          <div className="team-filter-dropdown__option-meta">
+                            {showMemberCounts && (
+                              <span>
+                                {option.memberCount} member{option.memberCount !== 1 ? 's' : ''}
+                              </span>
+                            )}
+                            {showActivityIndicators && option.activeMembers > 0 && (
+                              <span className="team-filter-activity-indicator">
+                                <div
+                                  className={`activity-dot ${getActivityStatus(option.activityRatio)}`}
+                                />
+                                {option.activeMembers} active
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="team-filter-dropdown__option-id">
+                        <code>{option.team.teamId.substring(0, 6)}...</code>
+                      </div>
                     </div>
-                  </div>
-                </button>
+                  </button>
                 );
               })}
 
@@ -512,9 +518,7 @@ const TeamFilterDropdownComponent = function TeamFilterDropdown({
               {(!teams || teams.length === 0) && !loading && !error && (
                 <div className="team-filter-dropdown__empty">
                   <div className="team-filter-dropdown__empty-icon">👥</div>
-                  <div className="team-filter-dropdown__empty-message">
-                    No teams available
-                  </div>
+                  <div className="team-filter-dropdown__empty-message">No teams available</div>
                 </div>
               )}
             </div>
@@ -523,7 +527,7 @@ const TeamFilterDropdownComponent = function TeamFilterDropdown({
       )}
     </div>
   );
-}
+};
 
 // Export optimized component with memo
 export const TeamFilterDropdown = memo(TeamFilterDropdownComponent, (prevProps, nextProps) => {

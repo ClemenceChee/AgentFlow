@@ -6,7 +6,6 @@
  * in a structured card format.
  */
 
-import React from 'react';
 import type { OperatorContext } from '../../../types/organizational.js';
 
 // Component props
@@ -39,16 +38,9 @@ export function OperatorContextCard({
   className = '',
   showTechnicalDetails = false,
   onOperatorClick,
-  onTeamClick
+  onTeamClick,
 }: OperatorContextCardProps) {
-  const {
-    operatorId,
-    sessionId,
-    teamId,
-    instanceId,
-    timestamp,
-    userAgent
-  } = operatorContext;
+  const { operatorId, sessionId, teamId, instanceId, timestamp, userAgent } = operatorContext;
 
   // Format timestamp for display
   const formatTimestamp = (timestamp?: number): string => {
@@ -85,12 +77,9 @@ export function OperatorContextCard({
     return id.length > length ? `${id.substring(0, length)}...` : id;
   };
 
-  const cardClasses = [
-    'org-card',
-    'operator-context-card',
-    compact ? 'compact' : '',
-    className
-  ].filter(Boolean).join(' ');
+  const cardClasses = ['org-card', 'operator-context-card', compact ? 'compact' : '', className]
+    .filter(Boolean)
+    .join(' ');
 
   return (
     <div className={cardClasses}>
@@ -99,11 +88,7 @@ export function OperatorContextCard({
           <span className="operator-context-card__icon">👤</span>
           Operator Context
         </div>
-        {timestamp && (
-          <div className="org-card__timestamp">
-            {formatTimestamp(timestamp)}
-          </div>
-        )}
+        {timestamp && <div className="org-card__timestamp">{formatTimestamp(timestamp)}</div>}
       </div>
 
       <div className="org-card__content">
@@ -170,7 +155,8 @@ export function OperatorContextCard({
                     {getClientType(userAgent) === 'Desktop' && '🖥️'}
                     {getClientType(userAgent) === 'VS Code' && '📝'}
                     {getClientType(userAgent) === 'Web' && '🌐'}
-                    {!['CLI', 'Desktop', 'VS Code', 'Web'].includes(getClientType(userAgent)) && '🔧'}
+                    {!['CLI', 'Desktop', 'VS Code', 'Web'].includes(getClientType(userAgent)) &&
+                      '🔧'}
                   </span>
                   {getClientType(userAgent)}
                 </span>
@@ -198,10 +184,7 @@ export function OperatorContextCard({
               {userAgent && (
                 <div className="operator-context-field">
                   <div className="operator-context-field__label">User Agent</div>
-                  <div
-                    className="operator-context-field__value technical"
-                    title={userAgent}
-                  >
+                  <div className="operator-context-field__value technical" title={userAgent}>
                     <code>{compact ? truncateId(userAgent, 20) : userAgent}</code>
                   </div>
                 </div>
@@ -224,7 +207,9 @@ export function OperatorContextCard({
           <div className="operator-context-actions">
             <button
               className="operator-context-action"
-              onClick={() => {/* TODO: Navigate to session correlation view */}}
+              onClick={() => {
+                /* TODO: Navigate to session correlation view */
+              }}
               title="View related sessions"
             >
               <span className="operator-context-action__icon">🔗</span>
@@ -241,17 +226,13 @@ export function OperatorContextCard({
         <div className="operator-context-card__summary">
           <div className="operator-context-summary-item">
             <span className="operator-context-summary-item__icon">👤</span>
-            <span className="operator-context-summary-item__text">
-              {truncateId(operatorId, 6)}
-            </span>
+            <span className="operator-context-summary-item__text">{truncateId(operatorId, 6)}</span>
           </div>
 
           {teamId && (
             <div className="operator-context-summary-item">
               <span className="operator-context-summary-item__icon">👥</span>
-              <span className="operator-context-summary-item__text">
-                {truncateId(teamId, 6)}
-              </span>
+              <span className="operator-context-summary-item__text">{truncateId(teamId, 6)}</span>
             </div>
           )}
 
@@ -263,9 +244,7 @@ export function OperatorContextCard({
               {getClientType(userAgent) === 'Web' && '🌐'}
               {!['CLI', 'Desktop', 'VS Code', 'Web'].includes(getClientType(userAgent)) && '🔧'}
             </span>
-            <span className="operator-context-summary-item__text">
-              {getClientType(userAgent)}
-            </span>
+            <span className="operator-context-summary-item__text">{getClientType(userAgent)}</span>
           </div>
         </div>
       )}

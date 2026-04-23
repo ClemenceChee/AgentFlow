@@ -1,18 +1,18 @@
-import React, { useState } from 'react';
-import type { KpisResponse, BusinessMetric } from '../hooks/useKpis';
+import { useState } from 'react';
 import type { AgentsResponse } from '../hooks/useAgents';
 import type { AnomaliesResponse } from '../hooks/useAnomalies';
-import type { RoiResponse } from '../hooks/useRoi';
-import type { FreshnessResponse } from '../hooks/useFreshness';
-import type { TokenEconomicsResponse } from '../hooks/useTokenEconomics';
-import type { KnowledgeHealthResponse } from '../hooks/useKnowledgeHealth';
 import type { CronHealthResponse } from '../hooks/useCronHealth';
-import { KpiCard } from './KpiCard';
+import type { FreshnessResponse } from '../hooks/useFreshness';
+import type { KnowledgeHealthResponse } from '../hooks/useKnowledgeHealth';
+import type { KpisResponse } from '../hooks/useKpis';
+import type { RoiResponse } from '../hooks/useRoi';
+import type { TokenEconomicsResponse } from '../hooks/useTokenEconomics';
+import { AgentDrillDown } from './AgentDrillDown';
+import { AnomalyList } from './AnomalyList';
 import { AgentOverviewChart } from './charts/AgentOverviewChart';
 import { VaultLayerChart } from './charts/VaultLayerChart';
+import { KpiCard } from './KpiCard';
 import { RoiSummary } from './RoiSummary';
-import { AnomalyList } from './AnomalyList';
-import { AgentDrillDown } from './AgentDrillDown';
 
 interface Props {
   kpis: KpisResponse | null;
@@ -25,7 +25,15 @@ interface Props {
   cronHealth: CronHealthResponse | null;
 }
 
-export function ExecutiveDashboard({ kpis, agents, anomalies, roi, tokenEconomics, knowledgeHealth, cronHealth }: Props) {
+export function ExecutiveDashboard({
+  kpis,
+  agents,
+  anomalies,
+  roi,
+  tokenEconomics,
+  knowledgeHealth,
+  cronHealth,
+}: Props) {
   const [drillKpi, setDrillKpi] = useState<string | null>(null);
   const [drillAgent, setDrillAgent] = useState<string | null>(null);
 
@@ -61,7 +69,9 @@ export function ExecutiveDashboard({ kpis, agents, anomalies, roi, tokenEconomic
             </div>
           )}
         </div>
-        {drillKpi && <KpiDrillDown name={drillKpi} agents={agents} onClose={() => setDrillKpi(null)} />}
+        {drillKpi && (
+          <KpiDrillDown name={drillKpi} agents={agents} onClose={() => setDrillKpi(null)} />
+        )}
       </section>
 
       {/* Two-column: Agent Overview + ROI */}
@@ -72,7 +82,10 @@ export function ExecutiveDashboard({ kpis, agents, anomalies, roi, tokenEconomic
               <span className="bi-card__title">Agent Performance</span>
               <span className="bi-card__subtitle">{agents?.totalAgents ?? 0} agents</span>
             </div>
-            <AgentOverviewChart agents={agents} onSelect={(id) => setDrillAgent(id === drillAgent ? null : id)} />
+            <AgentOverviewChart
+              agents={agents}
+              onSelect={(id) => setDrillAgent(id === drillAgent ? null : id)}
+            />
           </div>
         </section>
         <section className="bi-section">
@@ -88,13 +101,23 @@ export function ExecutiveDashboard({ kpis, agents, anomalies, roi, tokenEconomic
           <div className="bi-card">
             <div className="bi-card__header">
               <span className="bi-card__title">Token Spend</span>
-              {tokenEconomics.wastedWarning && <span className="badge badge--warn">High waste</span>}
+              {tokenEconomics.wastedWarning && (
+                <span className="badge badge--warn">High waste</span>
+              )}
             </div>
-            <div style={{ fontSize: 'var(--xxl)', fontWeight: 700, fontFamily: 'var(--fm)', color: 'var(--t1)' }}>
+            <div
+              style={{
+                fontSize: 'var(--xxl)',
+                fontWeight: 700,
+                fontFamily: 'var(--fm)',
+                color: 'var(--t1)',
+              }}
+            >
               ${tokenEconomics.totalSpend.toFixed(2)}
             </div>
             <div style={{ fontSize: 'var(--xs)', color: 'var(--t3)', marginTop: 'var(--s1)' }}>
-              Wasted: ${tokenEconomics.wastedSpend.toFixed(2)} ({tokenEconomics.wastedPct.toFixed(0)}%)
+              Wasted: ${tokenEconomics.wastedSpend.toFixed(2)} (
+              {tokenEconomics.wastedPct.toFixed(0)}%)
             </div>
             {tokenEconomics.perModel.length > 0 && (
               <div style={{ marginTop: 'var(--s2)', fontSize: 'var(--xs)', color: 'var(--t2)' }}>
@@ -120,21 +143,38 @@ export function ExecutiveDashboard({ kpis, agents, anomalies, roi, tokenEconomic
           <div className="bi-card">
             <div className="bi-card__header">
               <span className="bi-card__title">Cron Reliability</span>
-              <span className={`badge badge--${cronHealth.overallSuccessRate >= 0.8 ? 'ok' : cronHealth.overallSuccessRate >= 0.5 ? 'warn' : 'fail'}`}>
+              <span
+                className={`badge badge--${cronHealth.overallSuccessRate >= 0.8 ? 'ok' : cronHealth.overallSuccessRate >= 0.5 ? 'warn' : 'fail'}`}
+              >
                 {(cronHealth.overallSuccessRate * 100).toFixed(0)}%
               </span>
             </div>
-            <div style={{ fontSize: 'var(--xxl)', fontWeight: 700, fontFamily: 'var(--fm)', color: cronHealth.overallSuccessRate >= 0.8 ? 'var(--ok)' : 'var(--warn)' }}>
+            <div
+              style={{
+                fontSize: 'var(--xxl)',
+                fontWeight: 700,
+                fontFamily: 'var(--fm)',
+                color: cronHealth.overallSuccessRate >= 0.8 ? 'var(--ok)' : 'var(--warn)',
+              }}
+            >
               {cronHealth.totalRuns} runs
             </div>
             <div style={{ fontSize: 'var(--xs)', color: 'var(--t3)', marginTop: 'var(--s1)' }}>
-              {cronHealth.totalJobs} jobs &middot; {(cronHealth.totalTokens / 1000).toFixed(0)}K tokens
+              {cronHealth.totalJobs} jobs &middot; {(cronHealth.totalTokens / 1000).toFixed(0)}K
+              tokens
             </div>
-            {cronHealth.jobs.filter((j) => j.lastStatus === 'error').slice(0, 3).map((j) => (
-              <div key={j.jobId} className="badge badge--fail" style={{ marginTop: 'var(--s1)', fontSize: 'var(--xs)' }}>
-                {j.jobId}: {j.lastError?.slice(0, 40) ?? 'error'}
-              </div>
-            ))}
+            {cronHealth.jobs
+              .filter((j) => j.lastStatus === 'error')
+              .slice(0, 3)
+              .map((j) => (
+                <div
+                  key={j.jobId}
+                  className="badge badge--fail"
+                  style={{ marginTop: 'var(--s1)', fontSize: 'var(--xs)' }}
+                >
+                  {j.jobId}: {j.lastError?.slice(0, 40) ?? 'error'}
+                </div>
+              ))}
           </div>
         )}
       </div>
@@ -155,21 +195,41 @@ export function ExecutiveDashboard({ kpis, agents, anomalies, roi, tokenEconomic
   );
 }
 
-function KpiDrillDown({ name, agents, onClose }: { name: string; agents: AgentsResponse | null; onClose: () => void }) {
+function KpiDrillDown({
+  name,
+  agents,
+  onClose,
+}: {
+  name: string;
+  agents: AgentsResponse | null;
+  onClose: () => void;
+}) {
   return (
     <div className="bi-drill">
-      <button className="bi-drill__close" onClick={onClose}>&times; Close</button>
+      <button className="bi-drill__close" onClick={onClose}>
+        &times; Close
+      </button>
       <h3 style={{ marginBottom: 8 }}>{fmtKpiName(name)}</h3>
       {name === 'active_agents' && agents && (
         <table className="bi-table">
           <thead>
-            <tr><th>Agent</th><th>Status</th><th>Executions</th><th>Success Rate</th></tr>
+            <tr>
+              <th>Agent</th>
+              <th>Status</th>
+              <th>Executions</th>
+              <th>Success Rate</th>
+            </tr>
           </thead>
           <tbody>
             {agents.agents.map((a) => (
               <tr key={a.agentId}>
                 <td>{a.agentName}</td>
-                <td><span className="bi-agent-status"><span className={`dot dot--${statusColor(a.status)}`} />{a.status}</span></td>
+                <td>
+                  <span className="bi-agent-status">
+                    <span className={`dot dot--${statusColor(a.status)}`} />
+                    {a.status}
+                  </span>
+                </td>
                 <td>{a.totalExecutions.toLocaleString()}</td>
                 <td>{a.successRate.toFixed(1)}%</td>
               </tr>

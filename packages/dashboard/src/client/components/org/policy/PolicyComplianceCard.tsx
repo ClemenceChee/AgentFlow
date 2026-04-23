@@ -6,9 +6,9 @@
  * with comprehensive policy analysis and remediation guidance.
  */
 
-import React, { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
+import type { PolicyStatus, PolicyViolation } from '../../../types/organizational.js';
 import { PolicyStatusIndicator } from './PolicyStatusIndicator.js';
-import type { PolicyStatus, PolicyViolation, PolicyComplianceLevel } from '../../../types/organizational.js';
 
 // Component props
 interface PolicyComplianceCardProps {
@@ -50,29 +50,29 @@ const VIOLATION_SEVERITY_CONFIG = {
     color: 'var(--fail)',
     bgColor: 'rgba(239, 68, 68, 0.1)',
     icon: '🚨',
-    priority: 4
+    priority: 4,
   },
   high: {
     label: 'High',
     color: 'var(--warn)',
     bgColor: 'rgba(251, 191, 36, 0.1)',
     icon: '⚠️',
-    priority: 3
+    priority: 3,
   },
   medium: {
     label: 'Medium',
     color: 'var(--org-primary)',
     bgColor: 'rgba(59, 130, 246, 0.1)',
     icon: 'ℹ️',
-    priority: 2
+    priority: 2,
   },
   low: {
     label: 'Low',
     color: 'var(--t3)',
     bgColor: 'rgba(156, 163, 175, 0.1)',
     icon: '📝',
-    priority: 1
-  }
+    priority: 1,
+  },
 };
 
 // Policy category icons
@@ -85,7 +85,7 @@ const POLICY_CATEGORY_ICONS: Record<string, string> = {
   operational: '⚙️',
   financial: '💰',
   legal: '⚖️',
-  technical: '🔧'
+  technical: '🔧',
 };
 
 /**
@@ -101,10 +101,10 @@ export function PolicyComplianceCard({
   compact = false,
   onViolationClick,
   onRecommendationClick,
-  onRemediationAction
+  onRemediationAction,
 }: PolicyComplianceCardProps) {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
-    new Set(compact ? [] : ['overview'])
+    new Set(compact ? [] : ['overview']),
   );
 
   // Sort violations by severity
@@ -122,7 +122,7 @@ export function PolicyComplianceCard({
   const violationsByCategory = useMemo(() => {
     const grouped: Record<string, PolicyViolation[]> = {};
 
-    sortedViolations.forEach(violation => {
+    sortedViolations.forEach((violation) => {
       const category = violation.category || 'operational';
       if (!grouped[category]) {
         grouped[category] = [];
@@ -135,22 +135,25 @@ export function PolicyComplianceCard({
 
   // Calculate compliance metrics
   const complianceMetrics = useMemo(() => {
-    const totalChecks = (policyStatus.checkedPolicies?.length || 0);
+    const totalChecks = policyStatus.checkedPolicies?.length || 0;
     const violationCount = sortedViolations.length;
     const recommendationCount = policyStatus.recommendations.length;
 
     // Calculate severity breakdown
-    const severityBreakdown = sortedViolations.reduce((acc, violation) => {
-      acc[violation.severity] = (acc[violation.severity] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    const severityBreakdown = sortedViolations.reduce(
+      (acc, violation) => {
+        acc[violation.severity] = (acc[violation.severity] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
 
     return {
       totalChecks,
       violationCount,
       recommendationCount,
       severityBreakdown,
-      compliancePercentage: policyStatus.score ? Math.round(policyStatus.score * 100) : null
+      compliancePercentage: policyStatus.score ? Math.round(policyStatus.score * 100) : null,
     };
   }, [policyStatus, sortedViolations]);
 
@@ -158,7 +161,7 @@ export function PolicyComplianceCard({
   const toggleSection = (sectionId: string) => {
     if (!expandable) return;
 
-    setExpandedSections(prev => {
+    setExpandedSections((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(sectionId)) {
         newSet.delete(sectionId);
@@ -179,15 +182,40 @@ export function PolicyComplianceCard({
     // This would typically come from the policy engine
     // For now, we'll generate some common actions based on category
     const actions: Record<string, string[]> = {
-      data_governance: ['Review data classification', 'Update data retention policy', 'Configure data access controls'],
-      access_control: ['Review user permissions', 'Update access policies', 'Enable additional authentication'],
+      data_governance: [
+        'Review data classification',
+        'Update data retention policy',
+        'Configure data access controls',
+      ],
+      access_control: [
+        'Review user permissions',
+        'Update access policies',
+        'Enable additional authentication',
+      ],
       privacy: ['Update privacy settings', 'Review data sharing agreements', 'Enable data masking'],
-      security: ['Apply security patches', 'Update security configurations', 'Enable security monitoring'],
-      compliance: ['Review compliance requirements', 'Update documentation', 'Schedule compliance audit'],
-      operational: ['Review operational procedures', 'Update configuration', 'Schedule maintenance'],
+      security: [
+        'Apply security patches',
+        'Update security configurations',
+        'Enable security monitoring',
+      ],
+      compliance: [
+        'Review compliance requirements',
+        'Update documentation',
+        'Schedule compliance audit',
+      ],
+      operational: [
+        'Review operational procedures',
+        'Update configuration',
+        'Schedule maintenance',
+      ],
     };
 
-    return actions[violation.category || 'operational'] || ['Review violation details', 'Contact administrator'];
+    return (
+      actions[violation.category || 'operational'] || [
+        'Review violation details',
+        'Contact administrator',
+      ]
+    );
   };
 
   const cardClasses = [
@@ -195,22 +223,18 @@ export function PolicyComplianceCard({
     'policy-compliance-card',
     `policy-compliance-card--${policyStatus.compliance}`,
     compact ? 'compact' : '',
-    className
-  ].filter(Boolean).join(' ');
+    className,
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
     <div className={cardClasses}>
       {/* Card Header */}
       <div className="org-card__header">
         <div className="org-card__title">
-          <PolicyStatusIndicator
-            policyStatus={policyStatus}
-            asBadge={true}
-            compact={compact}
-          />
-          <span className="policy-compliance-card__title">
-            Policy Compliance
-          </span>
+          <PolicyStatusIndicator policyStatus={policyStatus} asBadge={true} compact={compact} />
+          <span className="policy-compliance-card__title">Policy Compliance</span>
         </div>
         <div className="org-card__subtitle">
           {policyStatus.evaluatedAt && (
@@ -232,9 +256,11 @@ export function PolicyComplianceCard({
               Compliance Overview
             </div>
             {expandable && (
-              <span className={`policy-compliance-section__arrow ${
-                expandedSections.has('overview') ? 'expanded' : 'collapsed'
-              }`}>
+              <span
+                className={`policy-compliance-section__arrow ${
+                  expandedSections.has('overview') ? 'expanded' : 'collapsed'
+                }`}
+              >
                 ▼
               </span>
             )}
@@ -248,9 +274,7 @@ export function PolicyComplianceCard({
                     <div className="policy-compliance-metric__value">
                       {complianceMetrics.compliancePercentage}%
                     </div>
-                    <div className="policy-compliance-metric__label">
-                      Compliant
-                    </div>
+                    <div className="policy-compliance-metric__label">Compliant</div>
                   </div>
                 )}
 
@@ -277,9 +301,7 @@ export function PolicyComplianceCard({
                     <div className="policy-compliance-metric__value">
                       {complianceMetrics.totalChecks}
                     </div>
-                    <div className="policy-compliance-metric__label">
-                      Total Checks
-                    </div>
+                    <div className="policy-compliance-metric__label">Total Checks</div>
                   </div>
                 )}
               </div>
@@ -291,34 +313,37 @@ export function PolicyComplianceCard({
                     Violations by Severity
                   </div>
                   <div className="policy-compliance-severity-bars">
-                    {Object.entries(complianceMetrics.severityBreakdown).map(([severity, count]) => {
-                      const config = VIOLATION_SEVERITY_CONFIG[severity as keyof typeof VIOLATION_SEVERITY_CONFIG];
-                      if (!config) return null;
+                    {Object.entries(complianceMetrics.severityBreakdown).map(
+                      ([severity, count]) => {
+                        const config =
+                          VIOLATION_SEVERITY_CONFIG[
+                            severity as keyof typeof VIOLATION_SEVERITY_CONFIG
+                          ];
+                        if (!config) return null;
 
-                      const percentage = (count / complianceMetrics.violationCount) * 100;
+                        const percentage = (count / complianceMetrics.violationCount) * 100;
 
-                      return (
-                        <div key={severity} className="policy-compliance-severity-bar">
-                          <div className="policy-compliance-severity-bar__info">
-                            <span className="policy-compliance-severity-bar__label">
-                              {config.icon} {config.label}
-                            </span>
-                            <span className="policy-compliance-severity-bar__count">
-                              {count}
-                            </span>
+                        return (
+                          <div key={severity} className="policy-compliance-severity-bar">
+                            <div className="policy-compliance-severity-bar__info">
+                              <span className="policy-compliance-severity-bar__label">
+                                {config.icon} {config.label}
+                              </span>
+                              <span className="policy-compliance-severity-bar__count">{count}</span>
+                            </div>
+                            <div className="policy-compliance-severity-bar__progress">
+                              <div
+                                className="policy-compliance-severity-bar__fill"
+                                style={{
+                                  width: `${percentage}%`,
+                                  backgroundColor: config.color,
+                                }}
+                              />
+                            </div>
                           </div>
-                          <div className="policy-compliance-severity-bar__progress">
-                            <div
-                              className="policy-compliance-severity-bar__fill"
-                              style={{
-                                width: `${percentage}%`,
-                                backgroundColor: config.color
-                              }}
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      },
+                    )}
                   </div>
                 </div>
               )}
@@ -339,9 +364,11 @@ export function PolicyComplianceCard({
                 Policy Violations ({sortedViolations.length})
               </div>
               {expandable && (
-                <span className={`policy-compliance-section__arrow ${
-                  expandedSections.has('violations') ? 'expanded' : 'collapsed'
-                }`}>
+                <span
+                  className={`policy-compliance-section__arrow ${
+                    expandedSections.has('violations') ? 'expanded' : 'collapsed'
+                  }`}
+                >
                   ▼
                 </span>
               )}
@@ -357,7 +384,7 @@ export function PolicyComplianceCard({
                           {POLICY_CATEGORY_ICONS[category] || '📋'}
                         </span>
                         <span className="policy-compliance-violation-category__name">
-                          {category.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                          {category.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
                         </span>
                         <span className="policy-compliance-violation-category__count">
                           {violations.length}
@@ -402,7 +429,9 @@ export function PolicyComplianceCard({
                                   <details>
                                     <summary>View Details</summary>
                                     <div className="policy-compliance-violation__details-content">
-                                      {typeof violation.details === 'string' ? violation.details : JSON.stringify(violation.details, null, 2)}
+                                      {typeof violation.details === 'string'
+                                        ? violation.details
+                                        : JSON.stringify(violation.details, null, 2)}
                                     </div>
                                   </details>
                                 </div>
@@ -415,15 +444,17 @@ export function PolicyComplianceCard({
                                     Remediation Actions:
                                   </div>
                                   <div className="policy-compliance-violation__actions-list">
-                                    {getRemediationActions(violation).slice(0, 2).map((action, actionIndex) => (
-                                      <button
-                                        key={actionIndex}
-                                        className="policy-compliance-violation__action"
-                                        onClick={() => onRemediationAction?.(action, violation)}
-                                      >
-                                        {action}
-                                      </button>
-                                    ))}
+                                    {getRemediationActions(violation)
+                                      .slice(0, 2)
+                                      .map((action, actionIndex) => (
+                                        <button
+                                          key={actionIndex}
+                                          className="policy-compliance-violation__action"
+                                          onClick={() => onRemediationAction?.(action, violation)}
+                                        >
+                                          {action}
+                                        </button>
+                                      ))}
                                   </div>
                                 </div>
                               )}
@@ -442,7 +473,8 @@ export function PolicyComplianceCard({
 
                         {violations.length > (compact ? 2 : 5) && (
                           <div className="policy-compliance-violation-more">
-                            +{violations.length - (compact ? 2 : 5)} more {category} violation{violations.length - (compact ? 2 : 5) !== 1 ? 's' : ''}
+                            +{violations.length - (compact ? 2 : 5)} more {category} violation
+                            {violations.length - (compact ? 2 : 5) !== 1 ? 's' : ''}
                           </div>
                         )}
                       </div>
@@ -467,9 +499,11 @@ export function PolicyComplianceCard({
                 Recommendations ({policyStatus.recommendations.length})
               </div>
               {expandable && (
-                <span className={`policy-compliance-section__arrow ${
-                  expandedSections.has('recommendations') ? 'expanded' : 'collapsed'
-                }`}>
+                <span
+                  className={`policy-compliance-section__arrow ${
+                    expandedSections.has('recommendations') ? 'expanded' : 'collapsed'
+                  }`}
+                >
                   ▼
                 </span>
               )}
@@ -478,23 +512,26 @@ export function PolicyComplianceCard({
             {(!expandable || expandedSections.has('recommendations')) && (
               <div className="policy-compliance-section__content">
                 <div className="policy-compliance-recommendations">
-                  {policyStatus.recommendations.slice(0, compact ? 3 : 8).map((recommendation, index) => (
-                    <div key={index} className="policy-compliance-recommendation">
-                      <button
-                        className="policy-compliance-recommendation__content"
-                        onClick={() => onRecommendationClick?.(recommendation, index)}
-                      >
-                        <span className="policy-compliance-recommendation__bullet">💡</span>
-                        <span className="policy-compliance-recommendation__text">
-                          {recommendation}
-                        </span>
-                      </button>
-                    </div>
-                  ))}
+                  {policyStatus.recommendations
+                    .slice(0, compact ? 3 : 8)
+                    .map((recommendation, index) => (
+                      <div key={index} className="policy-compliance-recommendation">
+                        <button
+                          className="policy-compliance-recommendation__content"
+                          onClick={() => onRecommendationClick?.(recommendation, index)}
+                        >
+                          <span className="policy-compliance-recommendation__bullet">💡</span>
+                          <span className="policy-compliance-recommendation__text">
+                            {recommendation}
+                          </span>
+                        </button>
+                      </div>
+                    ))}
 
                   {policyStatus.recommendations.length > (compact ? 3 : 8) && (
                     <div className="policy-compliance-recommendations-more">
-                      +{policyStatus.recommendations.length - (compact ? 3 : 8)} more recommendation{policyStatus.recommendations.length - (compact ? 3 : 8) !== 1 ? 's' : ''}
+                      +{policyStatus.recommendations.length - (compact ? 3 : 8)} more recommendation
+                      {policyStatus.recommendations.length - (compact ? 3 : 8) !== 1 ? 's' : ''}
                     </div>
                   )}
                 </div>
@@ -516,9 +553,11 @@ export function PolicyComplianceCard({
                 Compliance History
               </div>
               {expandable && (
-                <span className={`policy-compliance-section__arrow ${
-                  expandedSections.has('history') ? 'expanded' : 'collapsed'
-                }`}>
+                <span
+                  className={`policy-compliance-section__arrow ${
+                    expandedSections.has('history') ? 'expanded' : 'collapsed'
+                  }`}
+                >
                   ▼
                 </span>
               )}

@@ -4,7 +4,7 @@
  */
 
 import { readdir, readFile } from 'node:fs/promises';
-import { join, basename } from 'node:path';
+import { basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { DbPool } from './pool.js';
 
@@ -28,9 +28,7 @@ export async function runMigrations(pool: DbPool): Promise<string[]> {
   const appliedSet = new Set(applied.map((r) => r.name));
 
   // Read migration files
-  const files = (await readdir(MIGRATIONS_DIR))
-    .filter((f) => f.endsWith('.sql'))
-    .sort();
+  const files = (await readdir(MIGRATIONS_DIR)).filter((f) => f.endsWith('.sql')).sort();
 
   const newlyApplied: string[] = [];
 

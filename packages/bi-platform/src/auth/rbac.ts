@@ -10,9 +10,7 @@ import { ROLE_PERMISSIONS } from './types.js';
 /**
  * Middleware: require authentication. Populates ctx.userId and ctx.userRole.
  */
-export function requireAuth(
-  verifyFn: (token: string) => Promise<AuthUser>,
-): Middleware {
+export function requireAuth(verifyFn: (token: string) => Promise<AuthUser>): Middleware {
   return async (ctx: RouteContext, next: () => Promise<void>): Promise<void> => {
     const authHeader = ctx.req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {

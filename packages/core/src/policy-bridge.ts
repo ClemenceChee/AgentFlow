@@ -60,7 +60,14 @@ export interface OrganizationalPolicy {
 
 export interface PolicyCondition {
   readonly field: string;
-  readonly operator: 'equals' | 'not_equals' | 'contains' | 'matches' | 'in' | 'greater_than' | 'less_than';
+  readonly operator:
+    | 'equals'
+    | 'not_equals'
+    | 'contains'
+    | 'matches'
+    | 'in'
+    | 'greater_than'
+    | 'less_than';
   readonly value: unknown;
   readonly weight: number;
 }
@@ -133,7 +140,11 @@ export interface PolicyWarning {
 
 export interface ApprovalRequirement {
   readonly id: string;
-  readonly type: 'operator_approval' | 'team_lead_approval' | 'cross_team_approval' | 'governance_approval';
+  readonly type:
+    | 'operator_approval'
+    | 'team_lead_approval'
+    | 'cross_team_approval'
+    | 'governance_approval';
   readonly description: string;
   readonly requiredApprovers: string[];
   readonly currentApprovals: string[];
@@ -250,27 +261,27 @@ export class PolicyBridge {
           field: 'operatorContext.operatorId',
           operator: 'not_equals',
           value: null,
-          weight: 1.0
+          weight: 1.0,
         },
         {
           field: 'operatorContext.sessionId',
           operator: 'not_equals',
           value: null,
-          weight: 1.0
-        }
+          weight: 1.0,
+        },
       ],
       actions: [
         {
           type: 'audit',
           parameters: { category: 'authentication' },
-          message: 'Operator authentication validated'
-        }
+          message: 'Operator authentication validated',
+        },
       ],
       metadata: {
         createdBy: 'system',
         version: 1,
-        effectiveDate: Date.now()
-      }
+        effectiveDate: Date.now(),
+      },
     });
 
     // Team Boundary Policy
@@ -287,25 +298,25 @@ export class PolicyBridge {
           field: 'operatorContext.teamId',
           operator: 'not_equals',
           value: null,
-          weight: 0.8
-        }
+          weight: 0.8,
+        },
       ],
       actions: [
         {
           type: 'inject_context',
           parameters: { contextType: 'team_scope' },
-          message: 'Team context injected for privacy compliance'
+          message: 'Team context injected for privacy compliance',
         },
         {
           type: 'audit',
-          parameters: { category: 'data_access' }
-        }
+          parameters: { category: 'data_access' },
+        },
       ],
       metadata: {
         createdBy: 'system',
         version: 1,
-        effectiveDate: Date.now()
-      }
+        effectiveDate: Date.now(),
+      },
     });
 
     // Cross-Team Access Policy
@@ -322,25 +333,25 @@ export class PolicyBridge {
           field: 'sessionContext.crossTeamAccess',
           operator: 'equals',
           value: true,
-          weight: 1.0
-        }
+          weight: 1.0,
+        },
       ],
       actions: [
         {
           type: 'warn',
           parameters: {},
-          message: 'Cross-team access detected - ensure proper authorization'
+          message: 'Cross-team access detected - ensure proper authorization',
         },
         {
           type: 'audit',
-          parameters: { category: 'cross_team_access', priority: 'high' }
-        }
+          parameters: { category: 'cross_team_access', priority: 'high' },
+        },
       ],
       metadata: {
         createdBy: 'system',
         version: 1,
-        effectiveDate: Date.now()
-      }
+        effectiveDate: Date.now(),
+      },
     });
 
     // Session Correlation Policy
@@ -357,21 +368,21 @@ export class PolicyBridge {
           field: 'sessionContext.relatedSessions.length',
           operator: 'greater_than',
           value: 0,
-          weight: 0.6
-        }
+          weight: 0.6,
+        },
       ],
       actions: [
         {
           type: 'inject_context',
           parameters: { contextType: 'session_correlation' },
-          message: 'Related session context available for continuity'
-        }
+          message: 'Related session context available for continuity',
+        },
       ],
       metadata: {
         createdBy: 'system',
         version: 1,
-        effectiveDate: Date.now()
-      }
+        effectiveDate: Date.now(),
+      },
     });
 
     // Governance Workflow Policy
@@ -388,21 +399,21 @@ export class PolicyBridge {
           field: 'metadata.complexity',
           operator: 'greater_than',
           value: 0.8,
-          weight: 0.7
-        }
+          weight: 0.7,
+        },
       ],
       actions: [
         {
           type: 'require_approval',
           parameters: { approverRole: 'senior_operator' },
-          message: 'High-complexity operation requires senior operator approval'
-        }
+          message: 'High-complexity operation requires senior operator approval',
+        },
       ],
       metadata: {
         createdBy: 'system',
         version: 1,
-        effectiveDate: Date.now()
-      }
+        effectiveDate: Date.now(),
+      },
     });
   }
 
@@ -434,7 +445,7 @@ export class PolicyBridge {
           appliedConditions: [],
           recommendations: ['Review policy configuration'],
           auditRequired: true,
-          metadata: { error: true }
+          metadata: { error: true },
         });
       }
     }
@@ -447,7 +458,7 @@ export class PolicyBridge {
    */
   private async evaluatePolicy(
     policy: OrganizationalPolicy,
-    context: PolicyEvaluationContext
+    context: PolicyEvaluationContext,
   ): Promise<PolicyEvaluationResult> {
     let score = 0;
     let totalWeight = 0;
@@ -506,8 +517,8 @@ export class PolicyBridge {
       metadata: {
         policyType: policy.type,
         policyScope: policy.scope,
-        priority: policy.priority
-      }
+        priority: policy.priority,
+      },
     };
   }
 
@@ -523,23 +534,31 @@ export class PolicyBridge {
       case 'not_equals':
         return contextValue !== condition.value;
       case 'contains':
-        return typeof contextValue === 'string' &&
-               typeof condition.value === 'string' &&
-               contextValue.includes(condition.value);
+        return (
+          typeof contextValue === 'string' &&
+          typeof condition.value === 'string' &&
+          contextValue.includes(condition.value)
+        );
       case 'matches':
-        return typeof contextValue === 'string' &&
-               typeof condition.value === 'string' &&
-               new RegExp(condition.value).test(contextValue);
+        return (
+          typeof contextValue === 'string' &&
+          typeof condition.value === 'string' &&
+          new RegExp(condition.value).test(contextValue)
+        );
       case 'in':
         return Array.isArray(condition.value) && condition.value.includes(contextValue);
       case 'greater_than':
-        return typeof contextValue === 'number' &&
-               typeof condition.value === 'number' &&
-               contextValue > condition.value;
+        return (
+          typeof contextValue === 'number' &&
+          typeof condition.value === 'number' &&
+          contextValue > condition.value
+        );
       case 'less_than':
-        return typeof contextValue === 'number' &&
-               typeof condition.value === 'number' &&
-               contextValue < condition.value;
+        return (
+          typeof contextValue === 'number' &&
+          typeof condition.value === 'number' &&
+          contextValue < condition.value
+        );
       default:
         return false;
     }
@@ -570,14 +589,14 @@ export class PolicyBridge {
     policy: OrganizationalPolicy,
     appliedConditions: PolicyCondition[],
     confidence: number,
-    result: PolicyEvaluationResult['result']
+    result: PolicyEvaluationResult['result'],
   ): string {
     if (appliedConditions.length === 0) {
       return `Policy "${policy.name}" conditions not met`;
     }
 
-    const conditionDescriptions = appliedConditions.map(c =>
-      `${c.field} ${c.operator} ${JSON.stringify(c.value)}`
+    const conditionDescriptions = appliedConditions.map(
+      (c) => `${c.field} ${c.operator} ${JSON.stringify(c.value)}`,
     );
 
     return `Policy "${policy.name}" ${result} (confidence: ${(confidence * 100).toFixed(1)}%) - Conditions: ${conditionDescriptions.join(', ')}`;
@@ -588,7 +607,7 @@ export class PolicyBridge {
    */
   async generateOrganizationalGuidance(
     context: PolicyEvaluationContext,
-    policyResults: PolicyEvaluationResult[]
+    policyResults: PolicyEvaluationResult[],
   ): Promise<OrganizationalGuidance> {
     const recommendations: Recommendation[] = [];
     const warnings: PolicyWarning[] = [];
@@ -598,7 +617,7 @@ export class PolicyBridge {
     const auditEntries: AuditEntry[] = [];
 
     let complianceScore = 1.0;
-    let briefingParts: string[] = [];
+    const briefingParts: string[] = [];
 
     // Process policy results
     for (const result of policyResults) {
@@ -612,7 +631,7 @@ export class PolicyBridge {
           severity: 'critical',
           description: result.reasoning,
           remediation: result.recommendations,
-          reportRequired: true
+          reportRequired: true,
         });
       } else if (result.result === 'warn') {
         complianceScore -= 0.1;
@@ -623,7 +642,7 @@ export class PolicyBridge {
           description: result.reasoning,
           policyId: result.policyId,
           requiresAction: false,
-          suggestedActions: result.recommendations
+          suggestedActions: result.recommendations,
         });
       } else if (result.result === 'require_approval') {
         approvals.push({
@@ -632,8 +651,8 @@ export class PolicyBridge {
           description: result.reasoning,
           requiredApprovers: ['senior_operator'],
           currentApprovals: [],
-          deadline: Date.now() + (24 * 60 * 60 * 1000), // 24 hours
-          blockingExecution: true
+          deadline: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
+          blockingExecution: true,
         });
       }
 
@@ -647,7 +666,7 @@ export class PolicyBridge {
           priority: result.confidence > 0.8 ? 'high' : 'medium',
           actionable: true,
           estimatedImpact: 'Improved compliance and workflow efficiency',
-          relatedPolicies: [result.policyId]
+          relatedPolicies: [result.policyId],
         });
       }
 
@@ -661,9 +680,9 @@ export class PolicyBridge {
           context: {
             policyId: result.policyId,
             confidence: result.confidence,
-            appliedConditions: result.appliedConditions
+            appliedConditions: result.appliedConditions,
           },
-          result: 'success'
+          result: 'success',
         });
       }
     }
@@ -680,9 +699,10 @@ export class PolicyBridge {
       }
     }
 
-    const briefing = briefingParts.length > 0
-      ? `Policy evaluation completed: ${briefingParts.join(', ')}`
-      : 'No significant policy actions required';
+    const briefing =
+      briefingParts.length > 0
+        ? `Policy evaluation completed: ${briefingParts.join(', ')}`
+        : 'No significant policy actions required';
 
     const compliant = violations.length === 0 && approvals.length === 0;
 
@@ -697,14 +717,14 @@ export class PolicyBridge {
         compliant,
         score: Math.max(0, Math.min(1, complianceScore)),
         violations,
-        requirements: approvals.map(a => ({
+        requirements: approvals.map((a) => ({
           id: a.id,
           type: 'approval',
           description: a.description,
-          fulfilled: a.currentApprovals.length >= a.requiredApprovers.length
+          fulfilled: a.currentApprovals.length >= a.requiredApprovers.length,
         })),
-        auditTrail: auditEntries
-      }
+        auditTrail: auditEntries,
+      },
     };
   }
 
@@ -727,13 +747,13 @@ export class PolicyBridge {
               id: e.id,
               name: e.name,
               type: e.type,
-              updated: e.updated
+              updated: e.updated,
             })),
             activityCount: teamEntities.length,
-            lastActivity: teamEntities[0]?.updated
+            lastActivity: teamEntities[0]?.updated,
           },
           priority: 5,
-          persistent: false
+          persistent: false,
         };
       }
     } catch (error) {
@@ -785,24 +805,24 @@ export function createPolicyBridge(config?: Partial<PolicyBridgeConfig>): Policy
     somaIntegration: {
       enabled: true,
       vaultPath: '.soma/vault',
-      governanceEnabled: true
+      governanceEnabled: true,
     },
     policyEvaluation: {
       enablePreExecution: true,
       enableDuringExecution: false,
       enablePostExecution: true,
-      timeoutMs: 1000
+      timeoutMs: 1000,
     },
     recommendations: {
       enableBriefings: true,
       enableRealTimeGuidance: false,
-      verbosity: 'normal'
+      verbosity: 'normal',
     },
     compliance: {
       enforceTeamBoundaries: true,
       requireOperatorValidation: true,
-      auditAllActions: true
-    }
+      auditAllActions: true,
+    },
   };
 
   const mergedConfig = { ...defaultConfig, ...config };

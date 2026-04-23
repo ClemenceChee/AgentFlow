@@ -7,7 +7,7 @@
  */
 
 import React from 'react';
-import type { PolicyStatus, PolicyComplianceLevel } from '../../../types/organizational.js';
+import type { PolicyComplianceLevel, PolicyStatus } from '../../../types/organizational.js';
 
 // Component props
 interface PolicyStatusIndicatorProps {
@@ -43,21 +43,24 @@ interface PolicyStatusIndicatorProps {
 }
 
 // Policy compliance level configuration
-const COMPLIANCE_LEVEL_CONFIG: Record<PolicyComplianceLevel, {
-  label: string;
-  icon: string;
-  color: string;
-  bgColor: string;
-  description: string;
-  priority: number;
-}> = {
+const COMPLIANCE_LEVEL_CONFIG: Record<
+  PolicyComplianceLevel,
+  {
+    label: string;
+    icon: string;
+    color: string;
+    bgColor: string;
+    description: string;
+    priority: number;
+  }
+> = {
   compliant: {
     label: 'Compliant',
     icon: '✅',
     color: 'var(--success)',
     bgColor: 'rgba(34, 197, 94, 0.1)',
     description: 'Meets all policy requirements',
-    priority: 4
+    priority: 4,
   },
   warning: {
     label: 'Warning',
@@ -65,7 +68,7 @@ const COMPLIANCE_LEVEL_CONFIG: Record<PolicyComplianceLevel, {
     color: 'var(--warn)',
     bgColor: 'rgba(251, 191, 36, 0.1)',
     description: 'Some policy concerns detected',
-    priority: 2
+    priority: 2,
   },
   violation: {
     label: 'Violation',
@@ -73,7 +76,7 @@ const COMPLIANCE_LEVEL_CONFIG: Record<PolicyComplianceLevel, {
     color: 'var(--fail)',
     bgColor: 'rgba(239, 68, 68, 0.1)',
     description: 'Policy violation detected',
-    priority: 1
+    priority: 1,
   },
   pending: {
     label: 'Pending',
@@ -81,46 +84,49 @@ const COMPLIANCE_LEVEL_CONFIG: Record<PolicyComplianceLevel, {
     color: 'var(--t3)',
     bgColor: 'rgba(156, 163, 175, 0.1)',
     description: 'Policy evaluation in progress',
-    priority: 3
-  }
+    priority: 3,
+  },
 };
 
 // Policy category configuration
-const POLICY_CATEGORY_CONFIG: Record<string, {
-  label: string;
-  icon: string;
-  color: string;
-}> = {
+const POLICY_CATEGORY_CONFIG: Record<
+  string,
+  {
+    label: string;
+    icon: string;
+    color: string;
+  }
+> = {
   data_governance: {
     label: 'Data Governance',
     icon: '🗂️',
-    color: 'var(--org-primary)'
+    color: 'var(--org-primary)',
   },
   access_control: {
     label: 'Access Control',
     icon: '🔐',
-    color: 'var(--org-secondary)'
+    color: 'var(--org-secondary)',
   },
   privacy: {
     label: 'Privacy',
     icon: '🛡️',
-    color: 'var(--org-privacy)'
+    color: 'var(--org-privacy)',
   },
   security: {
     label: 'Security',
     icon: '🔒',
-    color: 'var(--org-security)'
+    color: 'var(--org-security)',
   },
   compliance: {
     label: 'Compliance',
     icon: '📋',
-    color: 'var(--org-compliance)'
+    color: 'var(--org-compliance)',
   },
   operational: {
     label: 'Operational',
     icon: '⚙️',
-    color: 'var(--org-operational)'
-  }
+    color: 'var(--org-operational)',
+  },
 };
 
 /**
@@ -136,7 +142,7 @@ export function PolicyStatusIndicator({
   clickable = false,
   onClick,
   asBadge = false,
-  size = 'medium'
+  size = 'medium',
 }: PolicyStatusIndicatorProps) {
   const config = COMPLIANCE_LEVEL_CONFIG[policyStatus.compliance];
 
@@ -144,14 +150,17 @@ export function PolicyStatusIndicator({
   const violationsByCategory = React.useMemo(() => {
     if (!policyStatus.violations?.length) return {};
 
-    return policyStatus.violations.reduce((acc, violation) => {
-      const category = violation.category || 'operational';
-      if (!acc[category]) {
-        acc[category] = [];
-      }
-      acc[category].push(violation);
-      return acc;
-    }, {} as Record<string, typeof policyStatus.violations>);
+    return policyStatus.violations.reduce(
+      (acc, violation) => {
+        const category = violation.category || 'operational';
+        if (!acc[category]) {
+          acc[category] = [];
+        }
+        acc[category].push(violation);
+        return acc;
+      },
+      {} as Record<string, typeof policyStatus.violations>,
+    );
   }, [policyStatus.violations]);
 
   // Get highest severity violation
@@ -180,8 +189,10 @@ export function PolicyStatusIndicator({
     asBadge ? 'policy-status-badge' : '',
     compact ? 'compact' : '',
     clickable ? 'clickable' : '',
-    className
-  ].filter(Boolean).join(' ');
+    className,
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   // Badge style (minimal)
   if (asBadge) {
@@ -191,23 +202,15 @@ export function PolicyStatusIndicator({
         style={{
           backgroundColor: config.bgColor,
           color: config.color,
-          border: `1px solid ${config.color}`
+          border: `1px solid ${config.color}`,
         }}
         onClick={handleClick}
         title={`Policy Status: ${config.label} - ${config.description}`}
       >
-        <span className="policy-status-badge__icon">
-          {config.icon}
-        </span>
-        {!compact && (
-          <span className="policy-status-badge__label">
-            {config.label}
-          </span>
-        )}
+        <span className="policy-status-badge__icon">{config.icon}</span>
+        {!compact && <span className="policy-status-badge__label">{config.label}</span>}
         {showRecommendationCount && policyStatus.recommendations.length > 0 && (
-          <span className="policy-status-badge__count">
-            {policyStatus.recommendations.length}
-          </span>
+          <span className="policy-status-badge__count">{policyStatus.recommendations.length}</span>
         )}
       </div>
     );
@@ -219,21 +222,14 @@ export function PolicyStatusIndicator({
       {/* Main Status Display */}
       <div className="policy-status-indicator__main">
         <div className="policy-status-indicator__header">
-          <div
-            className="policy-status-indicator__icon"
-            style={{ color: config.color }}
-          >
+          <div className="policy-status-indicator__icon" style={{ color: config.color }}>
             {config.icon}
           </div>
 
           <div className="policy-status-indicator__content">
-            <div className="policy-status-indicator__label">
-              {config.label}
-            </div>
+            <div className="policy-status-indicator__label">{config.label}</div>
             {!compact && (
-              <div className="policy-status-indicator__description">
-                {config.description}
-              </div>
+              <div className="policy-status-indicator__description">{config.description}</div>
             )}
           </div>
 
@@ -278,9 +274,7 @@ export function PolicyStatusIndicator({
                 <span className="policy-status-metric__value">
                   {Math.round(policyStatus.score * 100)}%
                 </span>
-                <span className="policy-status-metric__label">
-                  score
-                </span>
+                <span className="policy-status-metric__label">score</span>
               </div>
             )}
           </div>
@@ -293,15 +287,13 @@ export function PolicyStatusIndicator({
           {/* Policy Categories */}
           {Object.keys(violationsByCategory).length > 0 && (
             <div className="policy-status-details-section">
-              <div className="policy-status-details-section__header">
-                Policy Areas
-              </div>
+              <div className="policy-status-details-section__header">Policy Areas</div>
               <div className="policy-status-categories">
                 {Object.entries(violationsByCategory).map(([category, violations]) => {
                   const categoryConfig = POLICY_CATEGORY_CONFIG[category] || {
                     label: category,
                     icon: '📋',
-                    color: 'var(--t2)'
+                    color: 'var(--t2)',
                   };
 
                   return (
@@ -316,12 +308,8 @@ export function PolicyStatusIndicator({
                       >
                         {categoryConfig.icon}
                       </span>
-                      <span className="policy-status-category__label">
-                        {categoryConfig.label}
-                      </span>
-                      <span className="policy-status-category__count">
-                        {violations.length}
-                      </span>
+                      <span className="policy-status-category__label">{categoryConfig.label}</span>
+                      <span className="policy-status-category__count">{violations.length}</span>
                     </div>
                   );
                 })}
@@ -332,17 +320,18 @@ export function PolicyStatusIndicator({
           {/* Highest Severity Violation */}
           {showViolationDetails && highestSeverityViolation && (
             <div className="policy-status-details-section">
-              <div className="policy-status-details-section__header">
-                Primary Concern
-              </div>
+              <div className="policy-status-details-section__header">Primary Concern</div>
               <div className="policy-status-violation">
                 <div className="policy-status-violation__header">
                   <div
                     className="policy-status-violation__severity"
                     style={{
-                      color: highestSeverityViolation.severity === 'critical' ? 'var(--fail)' :
-                             highestSeverityViolation.severity === 'high' ? 'var(--warn)' :
-                             'var(--t2)'
+                      color:
+                        highestSeverityViolation.severity === 'critical'
+                          ? 'var(--fail)'
+                          : highestSeverityViolation.severity === 'high'
+                            ? 'var(--warn)'
+                            : 'var(--t2)',
                     }}
                   >
                     {highestSeverityViolation.severity.toUpperCase()}
@@ -363,21 +352,20 @@ export function PolicyStatusIndicator({
           {/* Top Recommendations */}
           {policyStatus.recommendations.length > 0 && (
             <div className="policy-status-details-section">
-              <div className="policy-status-details-section__header">
-                Recommendations
-              </div>
+              <div className="policy-status-details-section__header">Recommendations</div>
               <div className="policy-status-recommendations">
-                {policyStatus.recommendations.slice(0, compact ? 1 : 3).map((recommendation, index) => (
-                  <div key={index} className="policy-status-recommendation">
-                    <span className="policy-status-recommendation__bullet">•</span>
-                    <span className="policy-status-recommendation__text">
-                      {recommendation}
-                    </span>
-                  </div>
-                ))}
+                {policyStatus.recommendations
+                  .slice(0, compact ? 1 : 3)
+                  .map((recommendation, index) => (
+                    <div key={index} className="policy-status-recommendation">
+                      <span className="policy-status-recommendation__bullet">•</span>
+                      <span className="policy-status-recommendation__text">{recommendation}</span>
+                    </div>
+                  ))}
                 {policyStatus.recommendations.length > 3 && !compact && (
                   <div className="policy-status-recommendations-more">
-                    +{policyStatus.recommendations.length - 3} more recommendation{policyStatus.recommendations.length - 3 !== 1 ? 's' : ''}
+                    +{policyStatus.recommendations.length - 3} more recommendation
+                    {policyStatus.recommendations.length - 3 !== 1 ? 's' : ''}
                   </div>
                 )}
               </div>
@@ -394,7 +382,7 @@ export function PolicyStatusIndicator({
               className="policy-status-progress-bar__fill"
               style={{
                 width: `${policyStatus.score * 100}%`,
-                backgroundColor: config.color
+                backgroundColor: config.color,
               }}
             />
           </div>
@@ -405,11 +393,7 @@ export function PolicyStatusIndicator({
       )}
 
       {/* Click Indicator */}
-      {clickable && (
-        <div className="policy-status-indicator__click-hint">
-          Click for details →
-        </div>
-      )}
+      {clickable && <div className="policy-status-indicator__click-hint">Click for details →</div>}
     </div>
   );
 }
@@ -437,7 +421,7 @@ export function PolicyStatusSummary({
   policyStatuses,
   className = '',
   compact = false,
-  onStatusClick
+  onStatusClick,
 }: PolicyStatusSummaryProps) {
   // Calculate summary statistics
   const summary = React.useMemo(() => {
@@ -445,7 +429,7 @@ export function PolicyStatusSummary({
       compliant: 0,
       warning: 0,
       violation: 0,
-      pending: 0
+      pending: 0,
     };
 
     let totalRecommendations = 0;
@@ -453,7 +437,7 @@ export function PolicyStatusSummary({
     let averageScore = 0;
     let scoredPolicies = 0;
 
-    policyStatuses.forEach(policy => {
+    policyStatuses.forEach((policy) => {
       counts[policy.compliance]++;
       totalRecommendations += policy.recommendations.length;
       totalViolations += policy.violations?.length || 0;
@@ -473,30 +457,35 @@ export function PolicyStatusSummary({
       totalRecommendations,
       totalViolations,
       averageScore,
-      totalPolicies: policyStatuses.length
+      totalPolicies: policyStatuses.length,
     };
   }, [policyStatuses]);
 
   // Determine overall status
-  const overallStatus: PolicyComplianceLevel = summary.counts.violation > 0 ? 'violation' :
-    summary.counts.warning > 0 ? 'warning' :
-    summary.counts.pending > 0 ? 'pending' : 'compliant';
+  const overallStatus: PolicyComplianceLevel =
+    summary.counts.violation > 0
+      ? 'violation'
+      : summary.counts.warning > 0
+        ? 'warning'
+        : summary.counts.pending > 0
+          ? 'pending'
+          : 'compliant';
 
   const containerClasses = [
     'policy-status-summary',
     `policy-status-summary--${overallStatus}`,
     compact ? 'compact' : '',
-    className
-  ].filter(Boolean).join(' ');
+    className,
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   if (policyStatuses.length === 0) {
     return (
       <div className={containerClasses}>
         <div className="policy-status-summary__empty">
           <div className="policy-status-summary__empty-icon">📋</div>
-          <div className="policy-status-summary__empty-text">
-            No policy evaluations available
-          </div>
+          <div className="policy-status-summary__empty-text">No policy evaluations available</div>
         </div>
       </div>
     );
@@ -505,9 +494,7 @@ export function PolicyStatusSummary({
   return (
     <div className={containerClasses}>
       <div className="policy-status-summary__header">
-        <div className="policy-status-summary__title">
-          Policy Compliance Overview
-        </div>
+        <div className="policy-status-summary__title">Policy Compliance Overview</div>
         <div className="policy-status-summary__meta">
           {summary.totalPolicies} polic{summary.totalPolicies !== 1 ? 'ies' : 'y'} evaluated
         </div>
@@ -533,13 +520,9 @@ export function PolicyStatusSummary({
                   {config.icon}
                 </div>
                 <div className="policy-status-summary__item-content">
-                  <div className="policy-status-summary__item-count">
-                    {count}
-                  </div>
+                  <div className="policy-status-summary__item-count">{count}</div>
                   {!compact && (
-                    <div className="policy-status-summary__item-label">
-                      {config.label}
-                    </div>
+                    <div className="policy-status-summary__item-label">{config.label}</div>
                   )}
                 </div>
               </button>
@@ -552,9 +535,7 @@ export function PolicyStatusSummary({
           <div className="policy-status-summary__stats">
             {summary.totalViolations > 0 && (
               <div className="policy-status-summary__stat">
-                <span className="policy-status-summary__stat-value">
-                  {summary.totalViolations}
-                </span>
+                <span className="policy-status-summary__stat-value">{summary.totalViolations}</span>
                 <span className="policy-status-summary__stat-label">
                   total violation{summary.totalViolations !== 1 ? 's' : ''}
                 </span>
@@ -577,9 +558,7 @@ export function PolicyStatusSummary({
                 <span className="policy-status-summary__stat-value">
                   {Math.round(summary.averageScore * 100)}%
                 </span>
-                <span className="policy-status-summary__stat-label">
-                  avg compliance
-                </span>
+                <span className="policy-status-summary__stat-label">avg compliance</span>
               </div>
             )}
           </div>

@@ -1,6 +1,6 @@
 import { getFailures, getHungNodes, getStats } from 'agentflow-core';
-import type { WatchedTrace } from './watcher.js';
 import type { OrganizationalIntelligence } from './client/types/organizational.js';
+import type { WatchedTrace } from './watcher.js';
 
 export interface AgentMetrics {
   agentId: string;
@@ -149,15 +149,15 @@ export class AgentStats {
     const oneHourAgo = now - 60 * 60 * 1000;
 
     // Estimate operator insights from agent activity patterns
-    const uniqueOperatorIds = new Set<string>();
+    const _uniqueOperatorIds = new Set<string>();
     const recentCollaborationEvents = agents.reduce((count, agent) => {
-      const recentActivity = agent.recentActivity.filter(a => a.timestamp > oneHourAgo);
+      const recentActivity = agent.recentActivity.filter((a) => a.timestamp > oneHourAgo);
       return count + recentActivity.length;
     }, 0);
 
     // Estimate team insights (placeholder calculations)
     const estimatedTeams = Math.max(1, Math.ceil(agents.length / 3)); // Rough estimate
-    const activeAgentsCount = agents.filter(agent => agent.lastExecution > oneHourAgo).length;
+    const activeAgentsCount = agents.filter((agent) => agent.lastExecution > oneHourAgo).length;
 
     return {
       operatorInsights: {

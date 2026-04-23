@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 export interface Evidence {
   source: string;
@@ -46,7 +46,9 @@ export function useDecisionRecommendations(): RecommendationsResponse | null {
     try {
       const res = await fetch('/api/v1/decisions/recommendations');
       if (res.ok) setData(await res.json());
-    } catch { /* retry */ }
+    } catch {
+      /* retry */
+    }
   }, []);
 
   useEffect(() => {

@@ -152,7 +152,7 @@ export function createMemoryCache(defaultTtlSeconds = 300): CacheClient {
     },
 
     async invalidatePattern(pattern: string): Promise<number> {
-      const regex = new RegExp('^' + pattern.replace(/\*/g, '.*') + '$');
+      const regex = new RegExp(`^${pattern.replace(/\*/g, '.*')}$`);
       let count = 0;
       for (const key of store.keys()) {
         if (regex.test(key)) {

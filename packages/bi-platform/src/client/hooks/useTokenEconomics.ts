@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 export interface TokenEconomicsResponse {
   totalSpend: number;
@@ -22,7 +22,9 @@ export function useTokenEconomics(): TokenEconomicsResponse | null {
     try {
       const res = await fetch('/api/v1/token-economics');
       if (res.ok) setData(await res.json());
-    } catch { /* retry */ }
+    } catch {
+      /* retry */
+    }
   }, []);
 
   useEffect(() => {

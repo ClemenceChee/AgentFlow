@@ -1,10 +1,16 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import type React from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useOrganizationalContext } from '../../../contexts/OrganizationalContext';
 
 // Types for collaboration analysis
 interface CollaborationGap {
   readonly id: string;
-  readonly type: 'knowledge_silo' | 'skill_gap' | 'communication_barrier' | 'workflow_inefficiency' | 'resource_bottleneck';
+  readonly type:
+    | 'knowledge_silo'
+    | 'skill_gap'
+    | 'communication_barrier'
+    | 'workflow_inefficiency'
+    | 'resource_bottleneck';
   readonly severity: 'low' | 'medium' | 'high' | 'critical';
   readonly affectedOperators: string[];
   readonly affectedTeams: string[];
@@ -20,7 +26,12 @@ interface CollaborationGap {
 interface OptimizationOpportunity {
   readonly id: string;
   readonly title: string;
-  readonly category: 'mentoring' | 'knowledge_sharing' | 'process_improvement' | 'resource_allocation' | 'skill_development';
+  readonly category:
+    | 'mentoring'
+    | 'knowledge_sharing'
+    | 'process_improvement'
+    | 'resource_allocation'
+    | 'skill_development';
   readonly priority: 'low' | 'medium' | 'high' | 'urgent';
   readonly description: string;
   readonly expectedBenefits: {
@@ -100,221 +111,261 @@ interface Props {
 export const CollaborationOpportunityIdentifier: React.FC<Props> = ({
   className = '',
   onOpportunitySelect,
-  showRealTimeUpdates = true
+  showRealTimeUpdates = true,
 }) => {
   const { selectedTeam, operatorContext } = useOrganizationalContext();
   const [viewMode, setViewMode] = useState<ViewMode>('overview');
   const [selectedGap, setSelectedGap] = useState<string | null>(null);
   const [selectedOpportunity, setSelectedOpportunity] = useState<string | null>(null);
-  const [networkViewMode, setNetworkViewMode] = useState<'knowledge' | 'collaboration' | 'mentoring'>('collaboration');
+  const [networkViewMode, setNetworkViewMode] = useState<
+    'knowledge' | 'collaboration' | 'mentoring'
+  >('collaboration');
   const [timeRange, setTimeRange] = useState<'week' | 'month' | 'quarter'>('month');
   const [autoRefresh, setAutoRefresh] = useState(showRealTimeUpdates);
 
   // Mock data - replace with actual API calls
-  const mockGaps: CollaborationGap[] = useMemo(() => [
-    {
-      id: 'gap-001',
-      type: 'knowledge_silo',
-      severity: 'high',
-      affectedOperators: ['op-123', 'op-456'],
-      affectedTeams: ['team-frontend', 'team-backend'],
-      description: 'Frontend team lacks backend database optimization knowledge, leading to repeated performance issues',
-      impact: {
-        productivityLoss: 25,
-        qualityRisk: 0.7,
-        learningOpportunity: 0.9
+  const mockGaps: CollaborationGap[] = useMemo(
+    () => [
+      {
+        id: 'gap-001',
+        type: 'knowledge_silo',
+        severity: 'high',
+        affectedOperators: ['op-123', 'op-456'],
+        affectedTeams: ['team-frontend', 'team-backend'],
+        description:
+          'Frontend team lacks backend database optimization knowledge, leading to repeated performance issues',
+        impact: {
+          productivityLoss: 25,
+          qualityRisk: 0.7,
+          learningOpportunity: 0.9,
+        },
+        identifiedAt: Date.now() - 86400000,
       },
-      identifiedAt: Date.now() - 86400000
-    },
-    {
-      id: 'gap-002',
-      type: 'communication_barrier',
-      severity: 'medium',
-      affectedOperators: ['op-789', 'op-012'],
-      affectedTeams: ['team-design', 'team-frontend'],
-      description: 'Asynchronous communication gaps between design and frontend causing implementation delays',
-      impact: {
-        productivityLoss: 15,
-        qualityRisk: 0.5,
-        learningOpportunity: 0.6
+      {
+        id: 'gap-002',
+        type: 'communication_barrier',
+        severity: 'medium',
+        affectedOperators: ['op-789', 'op-012'],
+        affectedTeams: ['team-design', 'team-frontend'],
+        description:
+          'Asynchronous communication gaps between design and frontend causing implementation delays',
+        impact: {
+          productivityLoss: 15,
+          qualityRisk: 0.5,
+          learningOpportunity: 0.6,
+        },
+        identifiedAt: Date.now() - 172800000,
       },
-      identifiedAt: Date.now() - 172800000
-    },
-    {
-      id: 'gap-003',
-      type: 'skill_gap',
-      severity: 'critical',
-      affectedOperators: ['op-345', 'op-678'],
-      affectedTeams: ['team-infra'],
-      description: 'Critical kubernetes expertise gap in infrastructure team affecting deployment reliability',
-      impact: {
-        productivityLoss: 40,
-        qualityRisk: 0.9,
-        learningOpportunity: 0.8
+      {
+        id: 'gap-003',
+        type: 'skill_gap',
+        severity: 'critical',
+        affectedOperators: ['op-345', 'op-678'],
+        affectedTeams: ['team-infra'],
+        description:
+          'Critical kubernetes expertise gap in infrastructure team affecting deployment reliability',
+        impact: {
+          productivityLoss: 40,
+          qualityRisk: 0.9,
+          learningOpportunity: 0.8,
+        },
+        identifiedAt: Date.now() - 259200000,
       },
-      identifiedAt: Date.now() - 259200000
-    }
-  ], []);
-
-  const mockOpportunities: OptimizationOpportunity[] = useMemo(() => [
-    {
-      id: 'opp-001',
-      title: 'Cross-Team Database Knowledge Transfer Program',
-      category: 'knowledge_sharing',
-      priority: 'high',
-      description: 'Implement weekly knowledge sharing sessions between backend and frontend teams focusing on database optimization techniques',
-      expectedBenefits: {
-        productivityGain: 30,
-        qualityImprovement: 0.8,
-        learningAcceleration: 0.9,
-        collaborationScore: 0.7
-      },
-      implementation: {
-        effort: 'medium',
-        timeline: '6-8 weeks',
-        resources: ['Senior Backend Engineer', 'Meeting Rooms', 'Documentation Platform'],
-        steps: [
-          'Identify key database optimization topics',
-          'Schedule recurring knowledge sharing sessions',
-          'Create shared documentation repository',
-          'Implement hands-on workshops',
-          'Establish mentorship pairs'
-        ]
-      },
-      roi: {
-        score: 85,
-        paybackPeriod: '3 months',
-        confidenceLevel: 0.8
-      },
-      relatedGaps: ['gap-001']
-    },
-    {
-      id: 'opp-002',
-      title: 'Design-Frontend Collaboration Workflow',
-      category: 'process_improvement',
-      priority: 'medium',
-      description: 'Establish structured handoff process with design system components and regular sync points',
-      expectedBenefits: {
-        productivityGain: 20,
-        qualityImprovement: 0.6,
-        learningAcceleration: 0.5,
-        collaborationScore: 0.8
-      },
-      implementation: {
-        effort: 'low',
-        timeline: '3-4 weeks',
-        resources: ['Design System', 'Project Management Tool', 'Collaboration Platform'],
-        steps: [
-          'Define design-to-development handoff checklist',
-          'Implement regular design-frontend sync meetings',
-          'Create shared component library',
-          'Establish feedback loops'
-        ]
-      },
-      roi: {
-        score: 70,
-        paybackPeriod: '2 months',
-        confidenceLevel: 0.9
-      },
-      relatedGaps: ['gap-002']
-    },
-    {
-      id: 'opp-003',
-      title: 'Kubernetes Expertise Development Program',
-      category: 'skill_development',
-      priority: 'urgent',
-      description: 'Intensive kubernetes training program with external expert mentorship and hands-on projects',
-      expectedBenefits: {
-        productivityGain: 50,
-        qualityImprovement: 0.9,
-        learningAcceleration: 0.8,
-        collaborationScore: 0.6
-      },
-      implementation: {
-        effort: 'high',
-        timeline: '12-16 weeks',
-        resources: ['External K8s Expert', 'Training Budget', 'Test Environment', 'Dedicated Learning Time'],
-        steps: [
-          'Hire kubernetes consultant for intensive training',
-          'Set up dedicated learning environment',
-          'Create structured learning path',
-          'Implement pair programming with expert',
-          'Establish internal expertise sharing'
-        ]
-      },
-      roi: {
-        score: 95,
-        paybackPeriod: '4 months',
-        confidenceLevel: 0.7
-      },
-      relatedGaps: ['gap-003']
-    }
-  ], []);
-
-  const mockMetrics: CollaborationMetrics = useMemo(() => ({
-    overallScore: 72,
-    knowledgeSharingRate: 65,
-    crossTeamCollaboration: 0.7,
-    mentorshipActivity: 3.2,
-    problemSolvingEfficiency: 4.5,
-    learningVelocity: 2.1,
-    trends: {
-      period: 'Last 30 days',
-      change: 8,
-      trajectory: 'improving'
-    }
-  }), []);
-
-  const mockSuggestions: TeamOptimizationSuggestion[] = useMemo(() => [
-    {
-      id: 'sug-001',
-      teamId: 'team-frontend',
-      teamName: 'Frontend Team',
-      suggestion: 'Implement rotating code review assignments to increase knowledge sharing across different parts of the codebase',
-      category: 'process',
-      impact: 'medium',
-      implementation: {
-        complexity: 'simple',
-        timeframe: '2 weeks',
-        requirements: ['Code review tool configuration', 'Team agreement on process']
-      },
-      expectedOutcome: 'Increased code familiarity and reduced knowledge silos',
-      successMetrics: ['Review participation rate', 'Cross-component contributions', 'Bug detection rate']
-    },
-    {
-      id: 'sug-002',
-      teamId: 'team-backend',
-      teamName: 'Backend Team',
-      suggestion: 'Create architectural decision record (ADR) writing rotation to improve documentation and decision transparency',
-      category: 'communication',
-      impact: 'high',
-      implementation: {
-        complexity: 'moderate',
-        timeframe: '4 weeks',
-        requirements: ['ADR template', 'Documentation platform', 'Review process']
-      },
-      expectedOutcome: 'Better architectural decisions and improved team alignment',
-      successMetrics: ['ADR completion rate', 'Decision clarity scores', 'Onboarding efficiency']
-    }
-  ], []);
-
-  const mockNetwork: CollaborationNetwork = useMemo(() => ({
-    nodes: [
-      { id: 'op-123', type: 'operator', label: 'Alice Frontend', strength: 0.9, centrality: 0.8 },
-      { id: 'op-456', type: 'operator', label: 'Bob Backend', strength: 0.8, centrality: 0.9 },
-      { id: 'op-789', type: 'operator', label: 'Carol Design', strength: 0.7, centrality: 0.6 },
-      { id: 'team-frontend', type: 'team', label: 'Frontend Team', strength: 0.8, centrality: 0.7 },
-      { id: 'team-backend', type: 'team', label: 'Backend Team', strength: 0.9, centrality: 0.8 },
-      { id: 'skill-react', type: 'skill', label: 'React', strength: 0.9, centrality: 0.7 },
-      { id: 'skill-nodejs', type: 'skill', label: 'Node.js', strength: 0.8, centrality: 0.8 }
     ],
-    edges: [
-      { source: 'op-123', target: 'op-456', weight: 0.7, type: 'project_collaboration' },
-      { source: 'op-456', target: 'op-789', weight: 0.4, type: 'knowledge_transfer' },
-      { source: 'op-123', target: 'skill-react', weight: 0.9, type: 'knowledge_transfer' },
-      { source: 'op-456', target: 'skill-nodejs', weight: 0.8, type: 'knowledge_transfer' }
-    ]
-  }), []);
+    [],
+  );
+
+  const mockOpportunities: OptimizationOpportunity[] = useMemo(
+    () => [
+      {
+        id: 'opp-001',
+        title: 'Cross-Team Database Knowledge Transfer Program',
+        category: 'knowledge_sharing',
+        priority: 'high',
+        description:
+          'Implement weekly knowledge sharing sessions between backend and frontend teams focusing on database optimization techniques',
+        expectedBenefits: {
+          productivityGain: 30,
+          qualityImprovement: 0.8,
+          learningAcceleration: 0.9,
+          collaborationScore: 0.7,
+        },
+        implementation: {
+          effort: 'medium',
+          timeline: '6-8 weeks',
+          resources: ['Senior Backend Engineer', 'Meeting Rooms', 'Documentation Platform'],
+          steps: [
+            'Identify key database optimization topics',
+            'Schedule recurring knowledge sharing sessions',
+            'Create shared documentation repository',
+            'Implement hands-on workshops',
+            'Establish mentorship pairs',
+          ],
+        },
+        roi: {
+          score: 85,
+          paybackPeriod: '3 months',
+          confidenceLevel: 0.8,
+        },
+        relatedGaps: ['gap-001'],
+      },
+      {
+        id: 'opp-002',
+        title: 'Design-Frontend Collaboration Workflow',
+        category: 'process_improvement',
+        priority: 'medium',
+        description:
+          'Establish structured handoff process with design system components and regular sync points',
+        expectedBenefits: {
+          productivityGain: 20,
+          qualityImprovement: 0.6,
+          learningAcceleration: 0.5,
+          collaborationScore: 0.8,
+        },
+        implementation: {
+          effort: 'low',
+          timeline: '3-4 weeks',
+          resources: ['Design System', 'Project Management Tool', 'Collaboration Platform'],
+          steps: [
+            'Define design-to-development handoff checklist',
+            'Implement regular design-frontend sync meetings',
+            'Create shared component library',
+            'Establish feedback loops',
+          ],
+        },
+        roi: {
+          score: 70,
+          paybackPeriod: '2 months',
+          confidenceLevel: 0.9,
+        },
+        relatedGaps: ['gap-002'],
+      },
+      {
+        id: 'opp-003',
+        title: 'Kubernetes Expertise Development Program',
+        category: 'skill_development',
+        priority: 'urgent',
+        description:
+          'Intensive kubernetes training program with external expert mentorship and hands-on projects',
+        expectedBenefits: {
+          productivityGain: 50,
+          qualityImprovement: 0.9,
+          learningAcceleration: 0.8,
+          collaborationScore: 0.6,
+        },
+        implementation: {
+          effort: 'high',
+          timeline: '12-16 weeks',
+          resources: [
+            'External K8s Expert',
+            'Training Budget',
+            'Test Environment',
+            'Dedicated Learning Time',
+          ],
+          steps: [
+            'Hire kubernetes consultant for intensive training',
+            'Set up dedicated learning environment',
+            'Create structured learning path',
+            'Implement pair programming with expert',
+            'Establish internal expertise sharing',
+          ],
+        },
+        roi: {
+          score: 95,
+          paybackPeriod: '4 months',
+          confidenceLevel: 0.7,
+        },
+        relatedGaps: ['gap-003'],
+      },
+    ],
+    [],
+  );
+
+  const mockMetrics: CollaborationMetrics = useMemo(
+    () => ({
+      overallScore: 72,
+      knowledgeSharingRate: 65,
+      crossTeamCollaboration: 0.7,
+      mentorshipActivity: 3.2,
+      problemSolvingEfficiency: 4.5,
+      learningVelocity: 2.1,
+      trends: {
+        period: 'Last 30 days',
+        change: 8,
+        trajectory: 'improving',
+      },
+    }),
+    [],
+  );
+
+  const mockSuggestions: TeamOptimizationSuggestion[] = useMemo(
+    () => [
+      {
+        id: 'sug-001',
+        teamId: 'team-frontend',
+        teamName: 'Frontend Team',
+        suggestion:
+          'Implement rotating code review assignments to increase knowledge sharing across different parts of the codebase',
+        category: 'process',
+        impact: 'medium',
+        implementation: {
+          complexity: 'simple',
+          timeframe: '2 weeks',
+          requirements: ['Code review tool configuration', 'Team agreement on process'],
+        },
+        expectedOutcome: 'Increased code familiarity and reduced knowledge silos',
+        successMetrics: [
+          'Review participation rate',
+          'Cross-component contributions',
+          'Bug detection rate',
+        ],
+      },
+      {
+        id: 'sug-002',
+        teamId: 'team-backend',
+        teamName: 'Backend Team',
+        suggestion:
+          'Create architectural decision record (ADR) writing rotation to improve documentation and decision transparency',
+        category: 'communication',
+        impact: 'high',
+        implementation: {
+          complexity: 'moderate',
+          timeframe: '4 weeks',
+          requirements: ['ADR template', 'Documentation platform', 'Review process'],
+        },
+        expectedOutcome: 'Better architectural decisions and improved team alignment',
+        successMetrics: ['ADR completion rate', 'Decision clarity scores', 'Onboarding efficiency'],
+      },
+    ],
+    [],
+  );
+
+  const mockNetwork: CollaborationNetwork = useMemo(
+    () => ({
+      nodes: [
+        { id: 'op-123', type: 'operator', label: 'Alice Frontend', strength: 0.9, centrality: 0.8 },
+        { id: 'op-456', type: 'operator', label: 'Bob Backend', strength: 0.8, centrality: 0.9 },
+        { id: 'op-789', type: 'operator', label: 'Carol Design', strength: 0.7, centrality: 0.6 },
+        {
+          id: 'team-frontend',
+          type: 'team',
+          label: 'Frontend Team',
+          strength: 0.8,
+          centrality: 0.7,
+        },
+        { id: 'team-backend', type: 'team', label: 'Backend Team', strength: 0.9, centrality: 0.8 },
+        { id: 'skill-react', type: 'skill', label: 'React', strength: 0.9, centrality: 0.7 },
+        { id: 'skill-nodejs', type: 'skill', label: 'Node.js', strength: 0.8, centrality: 0.8 },
+      ],
+      edges: [
+        { source: 'op-123', target: 'op-456', weight: 0.7, type: 'project_collaboration' },
+        { source: 'op-456', target: 'op-789', weight: 0.4, type: 'knowledge_transfer' },
+        { source: 'op-123', target: 'skill-react', weight: 0.9, type: 'knowledge_transfer' },
+        { source: 'op-456', target: 'skill-nodejs', weight: 0.8, type: 'knowledge_transfer' },
+      ],
+    }),
+    [],
+  );
 
   // Auto-refresh effect
   useEffect(() => {
@@ -330,21 +381,31 @@ export const CollaborationOpportunityIdentifier: React.FC<Props> = ({
 
   const getSeverityColor = (severity: string): string => {
     switch (severity) {
-      case 'critical': return 'var(--org-alert-critical)';
-      case 'high': return 'var(--org-alert-high)';
-      case 'medium': return 'var(--org-alert-medium)';
-      case 'low': return 'var(--org-alert-low)';
-      default: return 'var(--org-text-muted)';
+      case 'critical':
+        return 'var(--org-alert-critical)';
+      case 'high':
+        return 'var(--org-alert-high)';
+      case 'medium':
+        return 'var(--org-alert-medium)';
+      case 'low':
+        return 'var(--org-alert-low)';
+      default:
+        return 'var(--org-text-muted)';
     }
   };
 
   const getPriorityColor = (priority: string): string => {
     switch (priority) {
-      case 'urgent': return 'var(--org-alert-critical)';
-      case 'high': return 'var(--org-alert-high)';
-      case 'medium': return 'var(--org-alert-medium)';
-      case 'low': return 'var(--org-alert-low)';
-      default: return 'var(--org-text-muted)';
+      case 'urgent':
+        return 'var(--org-alert-critical)';
+      case 'high':
+        return 'var(--org-alert-high)';
+      case 'medium':
+        return 'var(--org-alert-medium)';
+      case 'low':
+        return 'var(--org-alert-low)';
+      default:
+        return 'var(--org-text-muted)';
     }
   };
 
@@ -375,7 +436,9 @@ export const CollaborationOpportunityIdentifier: React.FC<Props> = ({
       <div className="org-summary-cards">
         <div className="org-summary-card org-alert-high">
           <h4>Critical Gaps Identified</h4>
-          <div className="org-summary-value">{mockGaps.filter(g => g.severity === 'critical' || g.severity === 'high').length}</div>
+          <div className="org-summary-value">
+            {mockGaps.filter((g) => g.severity === 'critical' || g.severity === 'high').length}
+          </div>
           <p>High-impact collaboration gaps requiring immediate attention</p>
         </div>
         <div className="org-summary-card org-success">
@@ -429,9 +492,7 @@ export const CollaborationOpportunityIdentifier: React.FC<Props> = ({
                 {gap.severity.toUpperCase()}
               </div>
               <div className="org-gap-type">{gap.type.replace('_', ' ')}</div>
-              <div className="org-gap-impact">
-                {gap.impact.productivityLoss}% productivity loss
-              </div>
+              <div className="org-gap-impact">{gap.impact.productivityLoss}% productivity loss</div>
             </div>
             <div className="org-gap-description">{gap.description}</div>
             <div className="org-gap-affected">
@@ -466,8 +527,8 @@ export const CollaborationOpportunityIdentifier: React.FC<Props> = ({
                 <div className="org-related-opportunities">
                   <h5>Related Opportunities</h5>
                   {mockOpportunities
-                    .filter(opp => opp.relatedGaps.includes(gap.id))
-                    .map(opp => (
+                    .filter((opp) => opp.relatedGaps.includes(gap.id))
+                    .map((opp) => (
                       <div key={opp.id} className="org-related-opportunity">
                         <span>{opp.title}</span>
                         <span className="org-roi-score">ROI: {opp.roi.score}</span>
@@ -507,7 +568,9 @@ export const CollaborationOpportunityIdentifier: React.FC<Props> = ({
           <div
             key={opportunity.id}
             className={`org-opportunity-card ${selectedOpportunity === opportunity.id ? 'org-selected' : ''}`}
-            onClick={() => setSelectedOpportunity(selectedOpportunity === opportunity.id ? null : opportunity.id)}
+            onClick={() =>
+              setSelectedOpportunity(selectedOpportunity === opportunity.id ? null : opportunity.id)
+            }
           >
             <div className="org-opportunity-header">
               <h4>{opportunity.title}</h4>
@@ -565,7 +628,9 @@ export const CollaborationOpportunityIdentifier: React.FC<Props> = ({
                       <div className="org-progress-bar">
                         <div
                           className="org-progress-fill org-success"
-                          style={{ width: `${opportunity.expectedBenefits.qualityImprovement * 100}%` }}
+                          style={{
+                            width: `${opportunity.expectedBenefits.qualityImprovement * 100}%`,
+                          }}
                         />
                       </div>
                     </div>
@@ -574,7 +639,9 @@ export const CollaborationOpportunityIdentifier: React.FC<Props> = ({
                       <div className="org-progress-bar">
                         <div
                           className="org-progress-fill org-info"
-                          style={{ width: `${opportunity.expectedBenefits.learningAcceleration * 100}%` }}
+                          style={{
+                            width: `${opportunity.expectedBenefits.learningAcceleration * 100}%`,
+                          }}
                         />
                       </div>
                     </div>
@@ -583,7 +650,9 @@ export const CollaborationOpportunityIdentifier: React.FC<Props> = ({
                       <div className="org-progress-bar">
                         <div
                           className="org-progress-fill org-primary"
-                          style={{ width: `${opportunity.expectedBenefits.collaborationScore * 100}%` }}
+                          style={{
+                            width: `${opportunity.expectedBenefits.collaborationScore * 100}%`,
+                          }}
                         />
                       </div>
                     </div>
@@ -599,9 +668,7 @@ export const CollaborationOpportunityIdentifier: React.FC<Props> = ({
                   >
                     Start Implementation
                   </button>
-                  <button className="org-button org-button-secondary">
-                    Save for Later
-                  </button>
+                  <button className="org-button org-button-secondary">Save for Later</button>
                 </div>
               </div>
             )}
@@ -631,8 +698,8 @@ export const CollaborationOpportunityIdentifier: React.FC<Props> = ({
         <svg className="org-network-svg" viewBox="0 0 600 400">
           {/* Render network edges */}
           {mockNetwork.edges.map((edge, index) => {
-            const sourceNode = mockNetwork.nodes.find(n => n.id === edge.source);
-            const targetNode = mockNetwork.nodes.find(n => n.id === edge.target);
+            const sourceNode = mockNetwork.nodes.find((n) => n.id === edge.source);
+            const targetNode = mockNetwork.nodes.find((n) => n.id === edge.target);
             if (!sourceNode || !targetNode) return null;
 
             // Simple layout - replace with force-directed layout
@@ -662,24 +729,17 @@ export const CollaborationOpportunityIdentifier: React.FC<Props> = ({
             const y = 100 + Math.floor(index / 3) * 100;
             const radius = 20 + node.centrality * 20;
 
-            const nodeColor = node.type === 'operator' ? 'var(--org-primary)' :
-                             node.type === 'team' ? 'var(--org-success)' : 'var(--org-info)';
+            const nodeColor =
+              node.type === 'operator'
+                ? 'var(--org-primary)'
+                : node.type === 'team'
+                  ? 'var(--org-success)'
+                  : 'var(--org-info)';
 
             return (
               <g key={node.id}>
-                <circle
-                  cx={x}
-                  cy={y}
-                  r={radius}
-                  fill={nodeColor}
-                  opacity={0.7}
-                />
-                <text
-                  x={x}
-                  y={y + radius + 15}
-                  textAnchor="middle"
-                  className="org-network-label"
-                >
+                <circle cx={x} cy={y} r={radius} fill={nodeColor} opacity={0.7} />
+                <text x={x} y={y + radius + 15} textAnchor="middle" className="org-network-label">
                   {node.label}
                 </text>
               </g>
@@ -730,7 +790,9 @@ export const CollaborationOpportunityIdentifier: React.FC<Props> = ({
                 <span className={`org-impact-badge org-impact-${suggestion.impact}`}>
                   {suggestion.impact} impact
                 </span>
-                <span className={`org-complexity-badge org-complexity-${suggestion.implementation.complexity}`}>
+                <span
+                  className={`org-complexity-badge org-complexity-${suggestion.implementation.complexity}`}
+                >
                   {suggestion.implementation.complexity}
                 </span>
               </div>
@@ -766,12 +828,8 @@ export const CollaborationOpportunityIdentifier: React.FC<Props> = ({
               </div>
             </div>
             <div className="org-suggestion-actions">
-              <button className="org-button org-button-primary">
-                Implement Suggestion
-              </button>
-              <button className="org-button org-button-secondary">
-                Share with Team
-              </button>
+              <button className="org-button org-button-primary">Implement Suggestion</button>
+              <button className="org-button org-button-secondary">Share with Team</button>
             </div>
           </div>
         ))}
@@ -785,10 +843,7 @@ export const CollaborationOpportunityIdentifier: React.FC<Props> = ({
         <h2>Collaboration Opportunity Identifier</h2>
         <div className="org-header-controls">
           <div className="org-time-range-selector">
-            <select
-              value={timeRange}
-              onChange={(e) => setTimeRange(e.target.value as any)}
-            >
+            <select value={timeRange} onChange={(e) => setTimeRange(e.target.value as any)}>
               <option value="week">Last Week</option>
               <option value="month">Last Month</option>
               <option value="quarter">Last Quarter</option>
@@ -813,7 +868,7 @@ export const CollaborationOpportunityIdentifier: React.FC<Props> = ({
           { key: 'gaps', label: `Gaps (${mockGaps.length})` },
           { key: 'opportunities', label: `Opportunities (${mockOpportunities.length})` },
           { key: 'network', label: 'Network' },
-          { key: 'suggestions', label: `Suggestions (${mockSuggestions.length})` }
+          { key: 'suggestions', label: `Suggestions (${mockSuggestions.length})` },
         ].map((tab) => (
           <button
             key={tab.key}
@@ -835,9 +890,7 @@ export const CollaborationOpportunityIdentifier: React.FC<Props> = ({
 
       {selectedTeam && (
         <div className="org-context-info">
-          <div className="org-context-badge">
-            Analyzing team: {selectedTeam}
-          </div>
+          <div className="org-context-badge">Analyzing team: {selectedTeam}</div>
         </div>
       )}
     </div>

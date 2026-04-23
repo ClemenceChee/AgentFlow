@@ -7,16 +7,12 @@
  * Task: 3.2
  */
 
+import type { CacheClient } from '../../cache/cache.js';
+import type { DbPool } from '../../db/pool.js';
 import type { Router } from '../router.js';
 import { sendJson } from '../router.js';
-import type { DbPool } from '../../db/pool.js';
-import type { CacheClient } from '../../cache/cache.js';
 
-export function registerFinancialRoutes(
-  router: Router,
-  db: DbPool,
-  cache: CacheClient,
-): void {
+export function registerFinancialRoutes(router: Router, db: DbPool, cache: CacheClient): void {
   // ROI summary
   router.get('/api/v1/analytics/roi', async (ctx) => {
     const period = ctx.query.period ?? '30d';

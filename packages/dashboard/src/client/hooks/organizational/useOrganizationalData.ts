@@ -5,14 +5,13 @@
  * team filtering, operator activity, and session correlation information.
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useOrganizationalContext } from '../../contexts/OrganizationalContext.js';
 import type {
-  OrganizationalTrace,
-  TeamFilterState,
   OperatorActivityPattern,
+  OrganizationalTrace,
   SessionCorrelation,
-  TeamPerformanceMetrics
+  TeamPerformanceMetrics,
 } from '../../types/organizational.js';
 
 // Re-export the main organizational context hook
@@ -22,43 +21,53 @@ export { useOrganizationalContext } from '../../contexts/OrganizationalContext.j
  * Hook for team filtering functionality
  */
 export function useTeamFilter() {
-  const { state, setTeamFilter, clearTeamFilter, refreshTeams, getCurrentTeamContext, isTeamAccessible } = useOrganizationalContext();
-
-  const teamFilter = useMemo(() => ({
-    // Current filter state
-    selectedTeamId: state.teamFilter.selectedTeamId,
-    availableTeams: state.teamFilter.availableTeams,
-    filterActive: state.teamFilter.filterActive,
-
-    // Loading and error states
-    loading: state.loading.teams,
-    error: state.errors.teams,
-
-    // Current team context
-    currentTeam: getCurrentTeamContext(),
-
-    // Actions
-    setTeam: setTeamFilter,
-    clearFilter: clearTeamFilter,
-    refresh: refreshTeams,
-
-    // Utility functions
-    isAccessible: isTeamAccessible,
-
-    // Get filtered team options (only accessible teams)
-    accessibleTeams: state.teamFilter.availableTeams.filter(team =>
-      team.isAccessible || isTeamAccessible(team.teamId)
-    ),
-  }), [
-    state.teamFilter,
-    state.loading.teams,
-    state.errors.teams,
-    getCurrentTeamContext,
+  const {
+    state,
     setTeamFilter,
     clearTeamFilter,
     refreshTeams,
-    isTeamAccessible
-  ]);
+    getCurrentTeamContext,
+    isTeamAccessible,
+  } = useOrganizationalContext();
+
+  const teamFilter = useMemo(
+    () => ({
+      // Current filter state
+      selectedTeamId: state.teamFilter.selectedTeamId,
+      availableTeams: state.teamFilter.availableTeams,
+      filterActive: state.teamFilter.filterActive,
+
+      // Loading and error states
+      loading: state.loading.teams,
+      error: state.errors.teams,
+
+      // Current team context
+      currentTeam: getCurrentTeamContext(),
+
+      // Actions
+      setTeam: setTeamFilter,
+      clearFilter: clearTeamFilter,
+      refresh: refreshTeams,
+
+      // Utility functions
+      isAccessible: isTeamAccessible,
+
+      // Get filtered team options (only accessible teams)
+      accessibleTeams: state.teamFilter.availableTeams.filter(
+        (team) => team.isAccessible || isTeamAccessible(team.teamId),
+      ),
+    }),
+    [
+      state.teamFilter,
+      state.loading.teams,
+      state.errors.teams,
+      getCurrentTeamContext,
+      setTeamFilter,
+      clearTeamFilter,
+      refreshTeams,
+      isTeamAccessible,
+    ],
+  );
 
   return teamFilter;
 }
@@ -69,22 +78,25 @@ export function useTeamFilter() {
 export function useOrganizationalIntelligence() {
   const { state, refreshIntelligence } = useOrganizationalContext();
 
-  const intelligence = useMemo(() => ({
-    data: state.intelligence,
-    loading: state.loading.intelligence,
-    error: state.errors.intelligence,
-    refresh: refreshIntelligence,
+  const intelligence = useMemo(
+    () => ({
+      data: state.intelligence,
+      loading: state.loading.intelligence,
+      error: state.errors.intelligence,
+      refresh: refreshIntelligence,
 
-    // Convenient access to specific insights
-    operatorInsights: state.intelligence?.operatorInsights,
-    teamInsights: state.intelligence?.teamInsights,
-    performanceInsights: state.intelligence?.performanceInsights,
-  }), [
-    state.intelligence,
-    state.loading.intelligence,
-    state.errors.intelligence,
-    refreshIntelligence
-  ]);
+      // Convenient access to specific insights
+      operatorInsights: state.intelligence?.operatorInsights,
+      teamInsights: state.intelligence?.teamInsights,
+      performanceInsights: state.intelligence?.performanceInsights,
+    }),
+    [
+      state.intelligence,
+      state.loading.intelligence,
+      state.errors.intelligence,
+      refreshIntelligence,
+    ],
+  );
 
   return intelligence;
 }
@@ -92,7 +104,10 @@ export function useOrganizationalIntelligence() {
 /**
  * Hook for operator activity data
  */
-export function useOperatorActivity(operatorId: string, timeframe: '1h' | '24h' | '7d' | '30d' = '24h') {
+export function useOperatorActivity(
+  operatorId: string,
+  timeframe: '1h' | '24h' | '7d' | '30d' = '24h',
+) {
   const [data, setData] = useState<OperatorActivityPattern | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -104,7 +119,9 @@ export function useOperatorActivity(operatorId: string, timeframe: '1h' | '24h' 
     setError(null);
 
     try {
-      const response = await fetch(`/api/operators/${encodeURIComponent(operatorId)}/activity?timeframe=${timeframe}`);
+      const response = await fetch(
+        `/api/operators/${encodeURIComponent(operatorId)}/activity?timeframe=${timeframe}`,
+      );
       if (!response.ok) {
         throw new Error(`Failed to fetch operator activity: ${response.statusText}`);
       }
@@ -131,11 +148,13 @@ export function useOperatorActivity(operatorId: string, timeframe: '1h' | '24h' 
     loading,
     error,
     refresh: fetchActivity,
-    summary: data ? {
-      totalSessions: data.timeline.length,
-      patternCount: data.patterns.length,
-      timeframe
-    } : null
+    summary: data
+      ? {
+          totalSessions: data.timeline.length,
+          patternCount: data.patterns.length,
+          timeframe,
+        }
+      : null,
   };
 }
 
@@ -148,37 +167,42 @@ export function useSessionCorrelation(sessionId: string, limit: number = 20) {
   const [error, setError] = useState<string | null>(null);
   const [nextCursor, setNextCursor] = useState<number | null>(null);
 
-  const fetchCorrelations = useCallback(async (cursor?: number) => {
-    if (!sessionId) return;
+  const fetchCorrelations = useCallback(
+    async (cursor?: number) => {
+      if (!sessionId) return;
 
-    setLoading(true);
-    setError(null);
+      setLoading(true);
+      setError(null);
 
-    try {
-      const params = new URLSearchParams({
-        limit: limit.toString(),
-        ...(cursor && { cursor: cursor.toString() })
-      });
+      try {
+        const params = new URLSearchParams({
+          limit: limit.toString(),
+          ...(cursor && { cursor: cursor.toString() }),
+        });
 
-      const response = await fetch(`/api/sessions/${encodeURIComponent(sessionId)}/correlations?${params}`);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch session correlations: ${response.statusText}`);
+        const response = await fetch(
+          `/api/sessions/${encodeURIComponent(sessionId)}/correlations?${params}`,
+        );
+        if (!response.ok) {
+          throw new Error(`Failed to fetch session correlations: ${response.statusText}`);
+        }
+
+        const correlationData = await response.json();
+        setData({
+          relatedSessions: correlationData.correlations || [],
+          continuationChain: [], // TODO: Extract from correlations
+          similaritySummary: correlationData.correlations[0]?.similarity,
+        });
+        setNextCursor(correlationData.nextCursor);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load session correlations');
+        setData(null);
+      } finally {
+        setLoading(false);
       }
-
-      const correlationData = await response.json();
-      setData({
-        relatedSessions: correlationData.correlations || [],
-        continuationChain: [], // TODO: Extract from correlations
-        similaritySummary: correlationData.correlations[0]?.similarity
-      });
-      setNextCursor(correlationData.nextCursor);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load session correlations');
-      setData(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [sessionId, limit]);
+    },
+    [sessionId, limit],
+  );
 
   const loadMore = useCallback(() => {
     if (nextCursor && !loading) {
@@ -197,11 +221,17 @@ export function useSessionCorrelation(sessionId: string, limit: number = 20) {
     refresh: () => fetchCorrelations(),
     loadMore,
     hasMore: !!nextCursor,
-    summary: data ? {
-      totalCorrelations: data.relatedSessions.length,
-      continuationCount: data.relatedSessions.filter(s => s.relationshipType === 'continuation').length,
-      collaborationCount: data.relatedSessions.filter(s => s.relationshipType === 'collaboration').length,
-    } : null
+    summary: data
+      ? {
+          totalCorrelations: data.relatedSessions.length,
+          continuationCount: data.relatedSessions.filter(
+            (s) => s.relationshipType === 'continuation',
+          ).length,
+          collaborationCount: data.relatedSessions.filter(
+            (s) => s.relationshipType === 'collaboration',
+          ).length,
+        }
+      : null,
   };
 }
 
@@ -237,19 +267,24 @@ export function useTeamPerformance(teamId?: string) {
           metrics: {
             successRate: stats.globalSuccessRate / 100,
             averageExecutionTime: 5000, // Placeholder
-            totalExecutions: Math.floor(stats.totalExecutions / Math.max(intelligence.teamInsights.totalTeams, 1)),
-            activeOperators: Math.floor(intelligence.operatorInsights.activeOperators / Math.max(intelligence.teamInsights.totalTeams, 1)),
-            collaborationScore: 0.75 // Placeholder
+            totalExecutions: Math.floor(
+              stats.totalExecutions / Math.max(intelligence.teamInsights.totalTeams, 1),
+            ),
+            activeOperators: Math.floor(
+              intelligence.operatorInsights.activeOperators /
+                Math.max(intelligence.teamInsights.totalTeams, 1),
+            ),
+            collaborationScore: 0.75, // Placeholder
           },
           queryPerformance: {
             averageLatency: intelligence.performanceInsights.organizationalQueryLatency,
             cacheHitRate: intelligence.performanceInsights.teamScopedCacheHitRate,
-            throughput: 150 // Placeholder
+            throughput: 150, // Placeholder
           },
           trends: {
             timeframe: 'day',
-            dataPoints: [] // Placeholder - would come from historical data
-          }
+            dataPoints: [], // Placeholder - would come from historical data
+          },
         });
       }
     } catch (err) {
@@ -268,7 +303,7 @@ export function useTeamPerformance(teamId?: string) {
     data,
     loading,
     error,
-    refresh: fetchMetrics
+    refresh: fetchMetrics,
   };
 }
 
@@ -278,33 +313,39 @@ export function useTeamPerformance(teamId?: string) {
 export function useOrganizationalTraceFilter() {
   const { state } = useOrganizationalContext();
 
-  const filterTrace = useCallback((trace: OrganizationalTrace): boolean => {
-    // If no team filter is active, show all traces
-    if (!state.teamFilter.filterActive || !state.teamFilter.selectedTeamId) {
-      return true;
-    }
+  const filterTrace = useCallback(
+    (trace: OrganizationalTrace): boolean => {
+      // If no team filter is active, show all traces
+      if (!state.teamFilter.filterActive || !state.teamFilter.selectedTeamId) {
+        return true;
+      }
 
-    // Check if trace has organizational context
-    if (!trace.operatorContext) {
-      return true; // Show traces without organizational context for backward compatibility
-    }
+      // Check if trace has organizational context
+      if (!trace.operatorContext) {
+        return true; // Show traces without organizational context for backward compatibility
+      }
 
-    // Filter by team
-    return trace.operatorContext.teamId === state.teamFilter.selectedTeamId;
-  }, [state.teamFilter]);
+      // Filter by team
+      return trace.operatorContext.teamId === state.teamFilter.selectedTeamId;
+    },
+    [state.teamFilter],
+  );
 
-  const getFilterSummary = useCallback(() => ({
-    active: state.teamFilter.filterActive,
-    teamId: state.teamFilter.selectedTeamId,
-    teamName: state.teamFilter.availableTeams.find(
-      t => t.teamId === state.teamFilter.selectedTeamId
-    )?.teamName,
-  }), [state.teamFilter]);
+  const getFilterSummary = useCallback(
+    () => ({
+      active: state.teamFilter.filterActive,
+      teamId: state.teamFilter.selectedTeamId,
+      teamName: state.teamFilter.availableTeams.find(
+        (t) => t.teamId === state.teamFilter.selectedTeamId,
+      )?.teamName,
+    }),
+    [state.teamFilter],
+  );
 
   return {
     filterTrace,
     getFilterSummary,
-    isFiltered: state.teamFilter.filterActive
+    isFiltered: state.teamFilter.filterActive,
   };
 }
 
@@ -334,7 +375,7 @@ export function useOrganizationalData() {
     hooks: {
       useOperatorActivity,
       useSessionCorrelation,
-      useTeamPerformance
-    }
+      useTeamPerformance,
+    },
   };
 }

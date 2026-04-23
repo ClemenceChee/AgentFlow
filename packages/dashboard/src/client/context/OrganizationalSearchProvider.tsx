@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useMemo } from 'react';
+import type React from 'react';
+import { createContext, useContext, useMemo, useState } from 'react';
 
 export interface SearchFilters {
   readonly teams?: string[];
@@ -53,7 +54,7 @@ const mockSearchData: SearchResult[] = [
     description: '12 active operators, 95% performance rate',
     metadata: { memberCount: 12, performanceRate: 0.95 },
     relevance: 1.0,
-    category: 'teams'
+    category: 'teams',
   },
   {
     id: 'team-product',
@@ -62,7 +63,7 @@ const mockSearchData: SearchResult[] = [
     description: '8 active operators, 87% performance rate',
     metadata: { memberCount: 8, performanceRate: 0.87 },
     relevance: 0.9,
-    category: 'teams'
+    category: 'teams',
   },
 
   // Operators
@@ -73,7 +74,7 @@ const mockSearchData: SearchResult[] = [
     description: 'Engineering Team • 156 sessions this week',
     metadata: { team: 'Engineering', sessionCount: 156, efficiency: 0.92 },
     relevance: 0.95,
-    category: 'operators'
+    category: 'operators',
   },
   {
     id: 'operator-bob',
@@ -82,7 +83,7 @@ const mockSearchData: SearchResult[] = [
     description: 'Product Team • 89 sessions this week',
     metadata: { team: 'Product', sessionCount: 89, efficiency: 0.88 },
     relevance: 0.85,
-    category: 'operators'
+    category: 'operators',
   },
 
   // Sessions
@@ -93,7 +94,7 @@ const mockSearchData: SearchResult[] = [
     description: 'High correlation score: 0.87 • 23 related sessions',
     metadata: { correlationScore: 0.87, relatedCount: 23 },
     relevance: 0.9,
-    category: 'sessions'
+    category: 'sessions',
   },
 
   // Policies
@@ -104,7 +105,7 @@ const mockSearchData: SearchResult[] = [
     description: '98% compliance rate • Last updated 2 days ago',
     metadata: { complianceRate: 0.98, lastUpdated: '2 days ago' },
     relevance: 0.85,
-    category: 'policies'
+    category: 'policies',
   },
 
   // Performance
@@ -115,7 +116,7 @@ const mockSearchData: SearchResult[] = [
     description: 'Potential 15% performance improvement identified',
     metadata: { improvementPotential: 0.15, priority: 'high' },
     relevance: 0.8,
-    category: 'performance'
+    category: 'performance',
   },
 
   // Activity patterns
@@ -126,14 +127,14 @@ const mockSearchData: SearchResult[] = [
     description: 'Pattern identified in 34% of engineering sessions',
     metadata: { frequency: 0.34, team: 'Engineering' },
     relevance: 0.75,
-    category: 'activity'
-  }
+    category: 'activity',
+  },
 ];
 
 export function OrganizationalSearchProvider({ children }: Props) {
   const [query, setQuery] = useState('');
   const [filters, setFilters] = useState<SearchFilters>({});
-  const [isSearching, setIsSearching] = useState(false);
+  const [isSearching, _setIsSearching] = useState(false);
 
   const searchGlobal = (searchQuery: string, searchFilters: SearchFilters = {}) => {
     if (!searchQuery.trim()) return [];
@@ -142,30 +143,33 @@ export function OrganizationalSearchProvider({ children }: Props) {
     let filteredResults = mockSearchData;
 
     // Apply text search
-    filteredResults = filteredResults.filter(result =>
-      result.title.toLowerCase().includes(queryLower) ||
-      result.description.toLowerCase().includes(queryLower) ||
-      result.category.toLowerCase().includes(queryLower)
+    filteredResults = filteredResults.filter(
+      (result) =>
+        result.title.toLowerCase().includes(queryLower) ||
+        result.description.toLowerCase().includes(queryLower) ||
+        result.category.toLowerCase().includes(queryLower),
     );
 
     // Apply filters
     if (searchFilters.teams && searchFilters.teams.length > 0) {
-      filteredResults = filteredResults.filter(result =>
-        !result.metadata.team || searchFilters.teams!.includes(result.metadata.team)
+      filteredResults = filteredResults.filter(
+        (result) => !result.metadata.team || searchFilters.teams?.includes(result.metadata.team),
       );
     }
 
     if (searchFilters.categories && searchFilters.categories.length > 0) {
-      filteredResults = filteredResults.filter(result =>
-        searchFilters.categories!.includes(result.category)
+      filteredResults = filteredResults.filter((result) =>
+        searchFilters.categories?.includes(result.category),
       );
     }
 
     if (searchFilters.status && searchFilters.status !== 'all') {
-      filteredResults = filteredResults.filter(result => {
+      filteredResults = filteredResults.filter((result) => {
         // Mock status filtering logic
         if (result.type === 'operator') {
-          return searchFilters.status === 'active' ? result.metadata.sessionCount > 50 : result.metadata.sessionCount <= 50;
+          return searchFilters.status === 'active'
+            ? result.metadata.sessionCount > 50
+            : result.metadata.sessionCount <= 50;
         }
         return true;
       });
@@ -178,7 +182,7 @@ export function OrganizationalSearchProvider({ children }: Props) {
   const results = useMemo(() => {
     if (!query.trim()) return [];
     return searchGlobal(query, filters);
-  }, [query, filters]);
+  }, [query, filters, searchGlobal]);
 
   const clearSearch = () => {
     setQuery('');
@@ -193,7 +197,7 @@ export function OrganizationalSearchProvider({ children }: Props) {
     setQuery,
     setFilters,
     clearSearch,
-    searchGlobal
+    searchGlobal,
   };
 
   return (

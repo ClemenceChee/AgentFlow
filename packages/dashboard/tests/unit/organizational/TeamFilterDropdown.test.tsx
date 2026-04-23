@@ -2,22 +2,22 @@
  * Unit Tests for TeamFilterDropdown Component
  */
 
-import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type React from 'react';
 import { TeamFilterDropdown } from '../../../src/client/components/org/team/TeamFilterDropdown';
 import { OrganizationalContextProvider } from '../../../src/client/contexts/OrganizationalContext';
 import type { TeamMembership } from '../../../src/client/types/organizational';
 
 // Mock the hooks
 jest.mock('../../../src/client/hooks/useOrganizationalCache', () => ({
-  useTeamData: jest.fn()
+  useTeamData: jest.fn(),
 }));
 
 jest.mock('../../../src/client/hooks/usePrefetch', () => ({
   useHoverPrefetch: jest.fn(() => ({
-    createHoverHandlers: jest.fn(() => ({}))
-  }))
+    createHoverHandlers: jest.fn(() => ({})),
+  })),
 }));
 
 // Mock team data
@@ -29,14 +29,14 @@ const mockTeams: TeamMembership[] = [
       {
         operatorId: 'op-1',
         accessLevel: 'admin' as const,
-        lastActivity: new Date().toISOString()
+        lastActivity: new Date().toISOString(),
       },
       {
         operatorId: 'op-2',
         accessLevel: 'member' as const,
-        lastActivity: new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString() // 25 hours ago
-      }
-    ]
+        lastActivity: new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString(), // 25 hours ago
+      },
+    ],
   },
   {
     teamId: 'team-2',
@@ -45,16 +45,16 @@ const mockTeams: TeamMembership[] = [
       {
         operatorId: 'op-3',
         accessLevel: 'maintainer' as const,
-        lastActivity: new Date().toISOString()
-      }
-    ]
-  }
+        lastActivity: new Date().toISOString(),
+      },
+    ],
+  },
 ];
 
 const mockOrganizationalContext = {
   state: {
-    currentOperator: 'op-1'
-  }
+    currentOperator: 'op-1',
+  },
 };
 
 // Helper component wrapper
@@ -71,7 +71,7 @@ describe('TeamFilterDropdown', () => {
     disabled: false,
     showAllTeamsOption: true,
     showMemberCounts: true,
-    showActivityIndicators: true
+    showActivityIndicators: true,
   };
 
   beforeEach(() => {
@@ -83,7 +83,7 @@ describe('TeamFilterDropdown', () => {
       data: mockTeams,
       error: null,
       isLoading: false,
-      refetch: jest.fn()
+      refetch: jest.fn(),
     });
   });
 
@@ -91,7 +91,7 @@ describe('TeamFilterDropdown', () => {
     render(
       <TestWrapper>
         <TeamFilterDropdown {...defaultProps} />
-      </TestWrapper>
+      </TestWrapper>,
     );
 
     expect(screen.getByRole('button', { expanded: false })).toBeInTheDocument();
@@ -102,7 +102,7 @@ describe('TeamFilterDropdown', () => {
     render(
       <TestWrapper>
         <TeamFilterDropdown {...defaultProps} placeholder="Choose a team" />
-      </TestWrapper>
+      </TestWrapper>,
     );
 
     expect(screen.getByText('Choose a team')).toBeInTheDocument();
@@ -112,7 +112,7 @@ describe('TeamFilterDropdown', () => {
     render(
       <TestWrapper>
         <TeamFilterDropdown {...defaultProps} selectedTeamId="team-1" />
-      </TestWrapper>
+      </TestWrapper>,
     );
 
     expect(screen.getByText('Engineering Team')).toBeInTheDocument();
@@ -125,7 +125,7 @@ describe('TeamFilterDropdown', () => {
     render(
       <TestWrapper>
         <TeamFilterDropdown {...defaultProps} />
-      </TestWrapper>
+      </TestWrapper>,
     );
 
     const button = screen.getByRole('button');
@@ -141,7 +141,7 @@ describe('TeamFilterDropdown', () => {
     render(
       <TestWrapper>
         <TeamFilterDropdown {...defaultProps} />
-      </TestWrapper>
+      </TestWrapper>,
     );
 
     await user.click(screen.getByRole('button'));
@@ -155,7 +155,7 @@ describe('TeamFilterDropdown', () => {
     render(
       <TestWrapper>
         <TeamFilterDropdown {...defaultProps} showAllTeamsOption={false} />
-      </TestWrapper>
+      </TestWrapper>,
     );
 
     await user.click(screen.getByRole('button'));
@@ -169,7 +169,7 @@ describe('TeamFilterDropdown', () => {
     render(
       <TestWrapper>
         <TeamFilterDropdown {...defaultProps} />
-      </TestWrapper>
+      </TestWrapper>,
     );
 
     await user.click(screen.getByRole('button'));
@@ -187,7 +187,7 @@ describe('TeamFilterDropdown', () => {
     render(
       <TestWrapper>
         <TeamFilterDropdown {...defaultProps} onTeamChange={onTeamChange} />
-      </TestWrapper>
+      </TestWrapper>,
     );
 
     await user.click(screen.getByRole('button'));
@@ -203,7 +203,7 @@ describe('TeamFilterDropdown', () => {
     render(
       <TestWrapper>
         <TeamFilterDropdown {...defaultProps} onTeamChange={onTeamChange} />
-      </TestWrapper>
+      </TestWrapper>,
     );
 
     await user.click(screen.getByRole('button'));
@@ -218,7 +218,7 @@ describe('TeamFilterDropdown', () => {
     render(
       <TestWrapper>
         <TeamFilterDropdown {...defaultProps} enableSearch={true} />
-      </TestWrapper>
+      </TestWrapper>,
     );
 
     await user.click(screen.getByRole('button'));
@@ -236,7 +236,7 @@ describe('TeamFilterDropdown', () => {
     render(
       <TestWrapper>
         <TeamFilterDropdown {...defaultProps} enableSearch={true} />
-      </TestWrapper>
+      </TestWrapper>,
     );
 
     await user.click(screen.getByRole('button'));
@@ -256,7 +256,7 @@ describe('TeamFilterDropdown', () => {
           <TeamFilterDropdown {...defaultProps} />
         </TestWrapper>
         <div data-testid="outside">Outside element</div>
-      </div>
+      </div>,
     );
 
     const button = screen.getByRole('button');
@@ -273,7 +273,7 @@ describe('TeamFilterDropdown', () => {
     render(
       <TestWrapper>
         <TeamFilterDropdown {...defaultProps} />
-      </TestWrapper>
+      </TestWrapper>,
     );
 
     const button = screen.getByRole('button');
@@ -295,7 +295,7 @@ describe('TeamFilterDropdown', () => {
     render(
       <TestWrapper>
         <TeamFilterDropdown {...defaultProps} showActivityIndicators={true} />
-      </TestWrapper>
+      </TestWrapper>,
     );
 
     await user.click(screen.getByRole('button'));
@@ -310,7 +310,7 @@ describe('TeamFilterDropdown', () => {
     render(
       <TestWrapper>
         <TeamFilterDropdown {...defaultProps} />
-      </TestWrapper>
+      </TestWrapper>,
     );
 
     await user.click(screen.getByRole('button'));
@@ -323,7 +323,7 @@ describe('TeamFilterDropdown', () => {
     render(
       <TestWrapper>
         <TeamFilterDropdown {...defaultProps} disabled={true} />
-      </TestWrapper>
+      </TestWrapper>,
     );
 
     const button = screen.getByRole('button');
@@ -336,13 +336,13 @@ describe('TeamFilterDropdown', () => {
       data: null,
       error: null,
       isLoading: true,
-      refetch: jest.fn()
+      refetch: jest.fn(),
     });
 
     render(
       <TestWrapper>
         <TeamFilterDropdown {...defaultProps} />
-      </TestWrapper>
+      </TestWrapper>,
     );
 
     // Check for loading spinner in the dropdown arrow
@@ -358,13 +358,13 @@ describe('TeamFilterDropdown', () => {
       data: null,
       error: new Error('Failed to load teams'),
       isLoading: false,
-      refetch
+      refetch,
     });
 
     render(
       <TestWrapper>
         <TeamFilterDropdown {...defaultProps} />
-      </TestWrapper>
+      </TestWrapper>,
     );
 
     await user.click(screen.getByRole('button'));
@@ -385,13 +385,13 @@ describe('TeamFilterDropdown', () => {
       data: [],
       error: null,
       isLoading: false,
-      refetch: jest.fn()
+      refetch: jest.fn(),
     });
 
     render(
       <TestWrapper>
         <TeamFilterDropdown {...defaultProps} />
-      </TestWrapper>
+      </TestWrapper>,
     );
 
     await user.click(screen.getByRole('button'));
@@ -406,7 +406,7 @@ describe('TeamFilterDropdown', () => {
     render(
       <TestWrapper>
         <TeamFilterDropdown {...defaultProps} customFilter={customFilter} enableSearch={true} />
-      </TestWrapper>
+      </TestWrapper>,
     );
 
     await user.click(screen.getByRole('button'));

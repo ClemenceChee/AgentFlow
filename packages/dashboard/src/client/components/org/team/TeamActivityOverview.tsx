@@ -6,8 +6,8 @@
  * real-time team dynamics with collaboration indicators.
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
-import type { OrganizationalTrace, OperatorContext, TeamMembership } from '../../../types/organizational.js';
+import { useEffect, useMemo, useState } from 'react';
+import type { OrganizationalTrace, TeamMembership } from '../../../types/organizational.js';
 
 // Component props
 interface TeamActivityOverviewProps {
@@ -90,7 +90,7 @@ export function TeamActivityOverview({
   className = '',
   compact = false,
   onOperatorClick,
-  onActivityPattern
+  onActivityPattern,
 }: TeamActivityOverviewProps) {
   const [operatorActivities, setOperatorActivities] = useState<OperatorActivity[]>([]);
   const [activityTimeline, setActivityTimeline] = useState<ActivityTimeBucket[]>([]);
@@ -106,12 +106,11 @@ export function TeamActivityOverview({
       '1h': 60 * 60 * 1000,
       '6h': 6 * 60 * 60 * 1000,
       '24h': 24 * 60 * 60 * 1000,
-      '7d': 7 * 24 * 60 * 60 * 1000
+      '7d': 7 * 24 * 60 * 60 * 1000,
     }[timeRange];
 
-    return traces.filter(trace =>
-      trace.operatorContext?.teamId === teamId &&
-      trace.timestamp > (now - timeRangeMs)
+    return traces.filter(
+      (trace) => trace.operatorContext?.teamId === teamId && trace.timestamp > now - timeRangeMs,
     );
   }, [traces, teamId, timeRange]);
 
@@ -120,14 +119,14 @@ export function TeamActivityOverview({
     const operatorMap = new Map<string, OrganizationalTrace[]>();
 
     // Group traces by operator
-    teamTraces.forEach(trace => {
+    teamTraces.forEach((trace) => {
       const operatorId = trace.operatorContext?.operatorId;
       if (!operatorId) return;
 
       if (!operatorMap.has(operatorId)) {
         operatorMap.set(operatorId, []);
       }
-      operatorMap.get(operatorId)!.push(trace);
+      operatorMap.get(operatorId)?.push(trace);
     });
 
     const totalTraces = teamTraces.length;
@@ -147,42 +146,50 @@ export function TeamActivityOverview({
         } catch {
           operatorNames.set(operatorId, operatorId.substring(0, 8));
         }
-      })
+      }),
     );
 
     for (const [operatorId, operatorTraces] of operatorMap.entries()) {
       const tracesCount = operatorTraces.length;
-      const lastActivity = Math.max(...operatorTraces.map(t => t.timestamp));
-      const isActive = (now - lastActivity) < 30 * 60 * 1000; // Active in last 30 minutes
+      const lastActivity = Math.max(...operatorTraces.map((t) => t.timestamp));
+      const isActive = now - lastActivity < 30 * 60 * 1000; // Active in last 30 minutes
 
       // Calculate workload percentage
       const workloadPercentage = totalTraces > 0 ? (tracesCount / totalTraces) * 100 : 0;
 
       // Calculate success rate
-      const successfulTraces = operatorTraces.filter(t => t.status === 'success').length;
+      const successfulTraces = operatorTraces.filter((t) => t.status === 'success').length;
       const successRate = tracesCount > 0 ? successfulTraces / tracesCount : 0;
 
       // Calculate average response time
       const responseTimes = operatorTraces
-        .filter(t => t.endTime && t.startTime)
-        .map(t => t.endTime! - t.startTime);
-      const averageResponseTime = responseTimes.length > 0 ?
-        responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length : 0;
+        .filter((t) => t.endTime && t.startTime)
+        .map((t) => t.endTime! - t.startTime);
+      const averageResponseTime =
+        responseTimes.length > 0
+          ? responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length
+          : 0;
 
       // Determine activity pattern
-      const activityPattern = isActive ? 'active' :
-        workloadPercentage > 20 ? 'moderate' :
-        workloadPercentage > 5 ? 'light' : 'inactive';
+      const activityPattern = isActive
+        ? 'active'
+        : workloadPercentage > 20
+          ? 'moderate'
+          : workloadPercentage > 5
+            ? 'light'
+            : 'inactive';
 
       // Calculate collaboration score (simplified - based on trace overlap patterns)
-      const collaborationScore = operatorTraces.filter(trace =>
-        teamTraces.some(otherTrace =>
-          otherTrace.operatorContext?.operatorId !== operatorId &&
-          Math.abs(otherTrace.timestamp - trace.timestamp) < 60 * 60 * 1000 && // Within 1 hour
-          (otherTrace.sessionCorrelation?.correlatedSessions.includes(trace.id) ||
-           trace.sessionCorrelation?.correlatedSessions.includes(otherTrace.id))
-        )
-      ).length / tracesCount;
+      const collaborationScore =
+        operatorTraces.filter((trace) =>
+          teamTraces.some(
+            (otherTrace) =>
+              otherTrace.operatorContext?.operatorId !== operatorId &&
+              Math.abs(otherTrace.timestamp - trace.timestamp) < 60 * 60 * 1000 && // Within 1 hour
+              (otherTrace.sessionCorrelation?.correlatedSessions.includes(trace.id) ||
+                trace.sessionCorrelation?.correlatedSessions.includes(otherTrace.id)),
+          ),
+        ).length / tracesCount;
 
       activities.push({
         operatorId,
@@ -195,7 +202,7 @@ export function TeamActivityOverview({
         successRate,
         activityPattern,
         collaborationScore,
-        recentTraces: operatorTraces.slice(-5) // Last 5 traces
+        recentTraces: operatorTraces.slice(-5), // Last 5 traces
       });
     }
 
@@ -208,15 +215,15 @@ export function TeamActivityOverview({
     if (!showActivityTimeline) return [];
 
     const bucketSize = {
-      '1h': 5 * 60 * 1000,      // 5-minute buckets
-      '6h': 30 * 60 * 1000,     // 30-minute buckets
+      '1h': 5 * 60 * 1000, // 5-minute buckets
+      '6h': 30 * 60 * 1000, // 30-minute buckets
       '24h': 2 * 60 * 60 * 1000, // 2-hour buckets
-      '7d': 6 * 60 * 60 * 1000   // 6-hour buckets
+      '7d': 6 * 60 * 60 * 1000, // 6-hour buckets
     }[timeRange];
 
     const buckets = new Map<number, ActivityTimeBucket>();
 
-    teamTraces.forEach(trace => {
+    teamTraces.forEach((trace) => {
       const operatorId = trace.operatorContext?.operatorId;
       if (!operatorId) return;
 
@@ -226,12 +233,15 @@ export function TeamActivityOverview({
         buckets.set(bucketTime, {
           timestamp: bucketTime,
           operatorActivities: new Map(),
-          totalActivity: 0
+          totalActivity: 0,
         });
       }
 
       const bucket = buckets.get(bucketTime)!;
-      bucket.operatorActivities.set(operatorId, (bucket.operatorActivities.get(operatorId) || 0) + 1);
+      bucket.operatorActivities.set(
+        operatorId,
+        (bucket.operatorActivities.get(operatorId) || 0) + 1,
+      );
       bucket.totalActivity++;
     });
 
@@ -241,64 +251,67 @@ export function TeamActivityOverview({
   }, [teamTraces, showActivityTimeline, timeRange]);
 
   // Detect activity patterns
-  const detectActivityPatterns = useCallback((activities: OperatorActivity[]): ActivityPattern[] => {
-    const patterns: ActivityPattern[] = [];
+  const detectActivityPatterns = useCallback(
+    (activities: OperatorActivity[]): ActivityPattern[] => {
+      const patterns: ActivityPattern[] = [];
 
-    // Check for uneven workload distribution
-    const totalWorkload = activities.reduce((sum, op) => sum + op.workloadPercentage, 0);
-    const averageWorkload = totalWorkload / activities.length;
-    const unevenOperators = activities.filter(op =>
-      Math.abs(op.workloadPercentage - averageWorkload) > averageWorkload * 0.5
-    );
+      // Check for uneven workload distribution
+      const totalWorkload = activities.reduce((sum, op) => sum + op.workloadPercentage, 0);
+      const averageWorkload = totalWorkload / activities.length;
+      const unevenOperators = activities.filter(
+        (op) => Math.abs(op.workloadPercentage - averageWorkload) > averageWorkload * 0.5,
+      );
 
-    if (unevenOperators.length > 0) {
-      patterns.push({
-        type: 'uneven_distribution',
-        description: `Workload distribution is uneven across ${unevenOperators.length} operators`,
-        severity: unevenOperators.length > activities.length / 2 ? 'warning' : 'info',
-        operators: unevenOperators.map(op => op.operatorId),
-        suggestion: 'Consider redistributing work or providing additional support'
-      });
-    }
+      if (unevenOperators.length > 0) {
+        patterns.push({
+          type: 'uneven_distribution',
+          description: `Workload distribution is uneven across ${unevenOperators.length} operators`,
+          severity: unevenOperators.length > activities.length / 2 ? 'warning' : 'info',
+          operators: unevenOperators.map((op) => op.operatorId),
+          suggestion: 'Consider redistributing work or providing additional support',
+        });
+      }
 
-    // Check for peak activity
-    const activeOperators = activities.filter(op => op.isActive).length;
-    const totalOperators = activities.length;
-    if (activeOperators > totalOperators * 0.8) {
-      patterns.push({
-        type: 'peak_activity',
-        description: `High activity: ${activeOperators}/${totalOperators} operators currently active`,
-        severity: 'info',
-        operators: activities.filter(op => op.isActive).map(op => op.operatorId),
-        suggestion: 'Monitor for potential resource constraints'
-      });
-    }
+      // Check for peak activity
+      const activeOperators = activities.filter((op) => op.isActive).length;
+      const totalOperators = activities.length;
+      if (activeOperators > totalOperators * 0.8) {
+        patterns.push({
+          type: 'peak_activity',
+          description: `High activity: ${activeOperators}/${totalOperators} operators currently active`,
+          severity: 'info',
+          operators: activities.filter((op) => op.isActive).map((op) => op.operatorId),
+          suggestion: 'Monitor for potential resource constraints',
+        });
+      }
 
-    // Check for low activity
-    if (activeOperators < totalOperators * 0.3 && totalOperators > 2) {
-      patterns.push({
-        type: 'low_activity',
-        description: `Low activity: Only ${activeOperators}/${totalOperators} operators active`,
-        severity: 'warning',
-        operators: activities.filter(op => !op.isActive).map(op => op.operatorId),
-        suggestion: 'Check if additional operators need to be engaged'
-      });
-    }
+      // Check for low activity
+      if (activeOperators < totalOperators * 0.3 && totalOperators > 2) {
+        patterns.push({
+          type: 'low_activity',
+          description: `Low activity: Only ${activeOperators}/${totalOperators} operators active`,
+          severity: 'warning',
+          operators: activities.filter((op) => !op.isActive).map((op) => op.operatorId),
+          suggestion: 'Check if additional operators need to be engaged',
+        });
+      }
 
-    // Check for collaboration spike
-    const highCollabOperators = activities.filter(op => op.collaborationScore > 0.3);
-    if (highCollabOperators.length > totalOperators * 0.6) {
-      patterns.push({
-        type: 'collaboration_spike',
-        description: `High collaboration: ${highCollabOperators.length} operators working closely together`,
-        severity: 'info',
-        operators: highCollabOperators.map(op => op.operatorId),
-        suggestion: 'Consider if knowledge sharing opportunities can be captured'
-      });
-    }
+      // Check for collaboration spike
+      const highCollabOperators = activities.filter((op) => op.collaborationScore > 0.3);
+      if (highCollabOperators.length > totalOperators * 0.6) {
+        patterns.push({
+          type: 'collaboration_spike',
+          description: `High collaboration: ${highCollabOperators.length} operators working closely together`,
+          severity: 'info',
+          operators: highCollabOperators.map((op) => op.operatorId),
+          suggestion: 'Consider if knowledge sharing opportunities can be captured',
+        });
+      }
 
-    return patterns;
-  }, []);
+      return patterns;
+    },
+    [],
+  );
 
   // Load activity data
   useEffect(() => {
@@ -309,7 +322,7 @@ export function TeamActivityOverview({
 
         const [activities, timeline] = await Promise.all([
           calculateOperatorActivities(),
-          Promise.resolve(calculateActivityTimeline())
+          Promise.resolve(calculateActivityTimeline()),
         ]);
 
         setOperatorActivities(activities);
@@ -317,14 +330,13 @@ export function TeamActivityOverview({
 
         // Detect and report activity patterns
         const patterns = detectActivityPatterns(activities);
-        patterns.forEach(pattern => {
+        patterns.forEach((pattern) => {
           if (onActivityPattern) {
             onActivityPattern(pattern);
           }
         });
 
         setLastUpdate(Date.now());
-
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load activity data');
       } finally {
@@ -333,7 +345,12 @@ export function TeamActivityOverview({
     };
 
     loadActivityData();
-  }, [calculateOperatorActivities, calculateActivityTimeline, detectActivityPatterns, onActivityPattern]);
+  }, [
+    calculateOperatorActivities,
+    calculateActivityTimeline,
+    detectActivityPatterns,
+    onActivityPattern,
+  ]);
 
   // Load team information
   useEffect(() => {
@@ -379,20 +396,22 @@ export function TeamActivityOverview({
   // Get activity level color
   const getActivityLevelColor = (pattern: string): string => {
     switch (pattern) {
-      case 'active': return 'var(--success)';
-      case 'moderate': return 'var(--org-primary)';
-      case 'light': return 'var(--warn)';
-      case 'inactive': return 'var(--t3)';
-      default: return 'var(--t2)';
+      case 'active':
+        return 'var(--success)';
+      case 'moderate':
+        return 'var(--org-primary)';
+      case 'light':
+        return 'var(--warn)';
+      case 'inactive':
+        return 'var(--t3)';
+      default:
+        return 'var(--t2)';
     }
   };
 
-  const cardClasses = [
-    'org-card',
-    'team-activity-overview',
-    compact ? 'compact' : '',
-    className
-  ].filter(Boolean).join(' ');
+  const cardClasses = ['org-card', 'team-activity-overview', compact ? 'compact' : '', className]
+    .filter(Boolean)
+    .join(' ');
 
   // Loading state
   if (loading) {
@@ -407,9 +426,7 @@ export function TeamActivityOverview({
         <div className="org-card__content">
           <div className="team-activity-loading">
             <div className="team-activity-loading-spinner" />
-            <div className="team-activity-loading-text">
-              Loading team activity data...
-            </div>
+            <div className="team-activity-loading-text">Loading team activity data...</div>
           </div>
         </div>
       </div>
@@ -429,9 +446,7 @@ export function TeamActivityOverview({
         <div className="org-card__content">
           <div className="team-activity-error">
             <div className="team-activity-error__icon">⚠️</div>
-            <div className="team-activity-error__message">
-              {error}
-            </div>
+            <div className="team-activity-error__message">{error}</div>
           </div>
         </div>
       </div>
@@ -451,7 +466,8 @@ export function TeamActivityOverview({
           )}
         </div>
         <div className="org-card__subtitle">
-          {timeRange.toUpperCase()} • {operatorActivities.length} operator{operatorActivities.length !== 1 ? 's' : ''}
+          {timeRange.toUpperCase()} • {operatorActivities.length} operator
+          {operatorActivities.length !== 1 ? 's' : ''}
           {realTimeUpdates && (
             <span className="team-activity-overview__last-update">
               • Updated {formatTimeAgo(lastUpdate)}
@@ -466,18 +482,14 @@ export function TeamActivityOverview({
           <div className="team-activity-summary-stat">
             <div className="team-activity-summary-stat__icon">👥</div>
             <div className="team-activity-summary-stat__value">
-              {operatorActivities.filter(op => op.isActive).length}
+              {operatorActivities.filter((op) => op.isActive).length}
             </div>
-            <div className="team-activity-summary-stat__label">
-              Active Now
-            </div>
+            <div className="team-activity-summary-stat__label">Active Now</div>
           </div>
 
           <div className="team-activity-summary-stat">
             <div className="team-activity-summary-stat__icon">📈</div>
-            <div className="team-activity-summary-stat__value">
-              {teamTraces.length}
-            </div>
+            <div className="team-activity-summary-stat__value">{teamTraces.length}</div>
             <div className="team-activity-summary-stat__label">
               {compact ? 'Traces' : 'Total Traces'}
             </div>
@@ -487,7 +499,12 @@ export function TeamActivityOverview({
             <div className="team-activity-summary-stat">
               <div className="team-activity-summary-stat__icon">🤝</div>
               <div className="team-activity-summary-stat__value">
-                {(operatorActivities.reduce((sum, op) => sum + op.collaborationScore, 0) / operatorActivities.length * 100).toFixed(0)}%
+                {(
+                  (operatorActivities.reduce((sum, op) => sum + op.collaborationScore, 0) /
+                    operatorActivities.length) *
+                  100
+                ).toFixed(0)}
+                %
               </div>
               <div className="team-activity-summary-stat__label">
                 {compact ? 'Collab' : 'Collaboration'}
@@ -539,7 +556,7 @@ export function TeamActivityOverview({
                         className="team-activity-operator__workload-fill"
                         style={{
                           width: `${operator.workloadPercentage}%`,
-                          backgroundColor: getActivityLevelColor(operator.activityPattern)
+                          backgroundColor: getActivityLevelColor(operator.activityPattern),
                         }}
                       />
                     </div>
@@ -577,7 +594,8 @@ export function TeamActivityOverview({
 
             {operatorActivities.length > (compact ? 3 : 8) && (
               <div className="team-activity-operators-overflow">
-                +{operatorActivities.length - (compact ? 3 : 8)} more operator{operatorActivities.length - (compact ? 3 : 8) !== 1 ? 's' : ''}
+                +{operatorActivities.length - (compact ? 3 : 8)} more operator
+                {operatorActivities.length - (compact ? 3 : 8) !== 1 ? 's' : ''}
               </div>
             )}
           </div>
@@ -590,12 +608,12 @@ export function TeamActivityOverview({
               <div className="team-activity-section__title">Activity Timeline</div>
             </div>
             <div className="team-activity-timeline-chart">
-              {activityTimeline.map((bucket, index) => (
+              {activityTimeline.map((bucket, _index) => (
                 <div
                   key={bucket.timestamp}
                   className="team-activity-timeline-bar"
                   style={{
-                    height: `${Math.min(bucket.totalActivity * 20, 100)}px`
+                    height: `${Math.min(bucket.totalActivity * 20, 100)}px`,
                   }}
                   title={`${bucket.totalActivity} activities at ${new Date(bucket.timestamp).toLocaleTimeString()}`}
                 />

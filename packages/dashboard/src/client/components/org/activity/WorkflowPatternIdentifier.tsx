@@ -5,11 +5,19 @@
  * and provides optimization recommendations based on activity sequences.
  */
 
-import { useState, useEffect } from 'react';
-import { Workflow, RepeatIcon, Zap, Clock, TrendingUp, AlertCircle, Lightbulb, BarChart3 } from 'lucide-react';
+import {
+  AlertCircle,
+  BarChart3,
+  Clock,
+  Lightbulb,
+  RepeatIcon,
+  TrendingUp,
+  Workflow,
+  Zap,
+} from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useOrganizationalContext } from '../../../../contexts/OrganizationalContext';
 import type { SessionCorrelation } from '../../../types/organizational.js';
-import type { ActivityEvent } from './OperatorTimelineView.js';
 
 export interface WorkflowStep {
   readonly stepId: string;
@@ -42,7 +50,12 @@ export interface WorkflowPattern {
 export interface OptimizationOpportunity {
   readonly opportunityId: string;
   readonly patternId: string;
-  readonly type: 'automation' | 'elimination' | 'parallelization' | 'simplification' | 'standardization';
+  readonly type:
+    | 'automation'
+    | 'elimination'
+    | 'parallelization'
+    | 'simplification'
+    | 'standardization';
   readonly title: string;
   readonly description: string;
   readonly potentialSavings: number; // Time savings in milliseconds
@@ -88,63 +101,95 @@ interface WorkflowPatternIdentifierProps {
 
 const getComplexityColor = (complexity: WorkflowPattern['complexity']) => {
   switch (complexity) {
-    case 'low': return 'org-text-success';
-    case 'medium': return 'org-text-info';
-    case 'high': return 'org-text-warning';
-    case 'very-high': return 'org-text-error';
-    default: return 'org-text-muted';
+    case 'low':
+      return 'org-text-success';
+    case 'medium':
+      return 'org-text-info';
+    case 'high':
+      return 'org-text-warning';
+    case 'very-high':
+      return 'org-text-error';
+    default:
+      return 'org-text-muted';
   }
 };
 
 const getStepTypeIcon = (type: WorkflowStep['stepType']) => {
   switch (type) {
-    case 'action': return <Zap className="h-3 w-3" />;
-    case 'decision': return <TrendingUp className="h-3 w-3" />;
-    case 'wait': return <Clock className="h-3 w-3" />;
-    case 'collaboration': return <RepeatIcon className="h-3 w-3" />;
-    case 'validation': return <AlertCircle className="h-3 w-3" />;
-    default: return <Workflow className="h-3 w-3" />;
+    case 'action':
+      return <Zap className="h-3 w-3" />;
+    case 'decision':
+      return <TrendingUp className="h-3 w-3" />;
+    case 'wait':
+      return <Clock className="h-3 w-3" />;
+    case 'collaboration':
+      return <RepeatIcon className="h-3 w-3" />;
+    case 'validation':
+      return <AlertCircle className="h-3 w-3" />;
+    default:
+      return <Workflow className="h-3 w-3" />;
   }
 };
 
 const getStepTypeColor = (type: WorkflowStep['stepType']) => {
   switch (type) {
-    case 'action': return 'org-step-action';
-    case 'decision': return 'org-step-decision';
-    case 'wait': return 'org-step-wait';
-    case 'collaboration': return 'org-step-collaboration';
-    case 'validation': return 'org-step-validation';
-    default: return 'org-step-default';
+    case 'action':
+      return 'org-step-action';
+    case 'decision':
+      return 'org-step-decision';
+    case 'wait':
+      return 'org-step-wait';
+    case 'collaboration':
+      return 'org-step-collaboration';
+    case 'validation':
+      return 'org-step-validation';
+    default:
+      return 'org-step-default';
   }
 };
 
 const getOpportunityTypeColor = (type: OptimizationOpportunity['type']) => {
   switch (type) {
-    case 'automation': return 'org-opportunity-automation';
-    case 'elimination': return 'org-opportunity-elimination';
-    case 'parallelization': return 'org-opportunity-parallelization';
-    case 'simplification': return 'org-opportunity-simplification';
-    case 'standardization': return 'org-opportunity-standardization';
-    default: return 'org-opportunity-default';
+    case 'automation':
+      return 'org-opportunity-automation';
+    case 'elimination':
+      return 'org-opportunity-elimination';
+    case 'parallelization':
+      return 'org-opportunity-parallelization';
+    case 'simplification':
+      return 'org-opportunity-simplification';
+    case 'standardization':
+      return 'org-opportunity-standardization';
+    default:
+      return 'org-opportunity-default';
   }
 };
 
 const getImpactColor = (impact: OptimizationOpportunity['impact']) => {
   switch (impact) {
-    case 'critical': return 'org-text-error';
-    case 'high': return 'org-text-warning';
-    case 'medium': return 'org-text-info';
-    case 'low': return 'org-text-success';
-    default: return 'org-text-muted';
+    case 'critical':
+      return 'org-text-error';
+    case 'high':
+      return 'org-text-warning';
+    case 'medium':
+      return 'org-text-info';
+    case 'low':
+      return 'org-text-success';
+    default:
+      return 'org-text-muted';
   }
 };
 
 const getTrendIcon = (trend: WorkflowPattern['trend']) => {
   switch (trend) {
-    case 'increasing': return <TrendingUp className="h-3 w-3 org-text-warning" />;
-    case 'decreasing': return <TrendingUp className="h-3 w-3 org-text-success transform rotate-180" />;
-    case 'stable': return <BarChart3 className="h-3 w-3 org-text-muted" />;
-    default: return <BarChart3 className="h-3 w-3 org-text-muted" />;
+    case 'increasing':
+      return <TrendingUp className="h-3 w-3 org-text-warning" />;
+    case 'decreasing':
+      return <TrendingUp className="h-3 w-3 org-text-success transform rotate-180" />;
+    case 'stable':
+      return <BarChart3 className="h-3 w-3 org-text-muted" />;
+    default:
+      return <BarChart3 className="h-3 w-3 org-text-muted" />;
   }
 };
 
@@ -164,15 +209,22 @@ const PatternsView: React.FC<{
   const [sortBy, setSortBy] = useState<'frequency' | 'efficiency' | 'duration'>('frequency');
 
   const filteredPatterns = analysis.patterns
-    .filter(pattern => pattern.frequency >= minFrequency)
-    .filter(pattern => !patternTypes || patternTypes.length === 0 || patternTypes.includes(pattern.name));
+    .filter((pattern) => pattern.frequency >= minFrequency)
+    .filter(
+      (pattern) =>
+        !patternTypes || patternTypes.length === 0 || patternTypes.includes(pattern.name),
+    );
 
   const sortedPatterns = [...filteredPatterns].sort((a, b) => {
     switch (sortBy) {
-      case 'frequency': return b.frequency - a.frequency;
-      case 'efficiency': return a.efficiency - b.efficiency; // Lower efficiency first (needs more attention)
-      case 'duration': return b.avgTotalDuration - a.avgTotalDuration;
-      default: return b.frequency - a.frequency;
+      case 'frequency':
+        return b.frequency - a.frequency;
+      case 'efficiency':
+        return a.efficiency - b.efficiency; // Lower efficiency first (needs more attention)
+      case 'duration':
+        return b.avgTotalDuration - a.avgTotalDuration;
+      default:
+        return b.frequency - a.frequency;
     }
   });
 
@@ -190,9 +242,7 @@ const PatternsView: React.FC<{
             <option value="efficiency">Sort by Efficiency</option>
             <option value="duration">Sort by Duration</option>
           </select>
-          <span className="org-text-sm org-text-muted">
-            {sortedPatterns.length} patterns
-          </span>
+          <span className="org-text-sm org-text-muted">{sortedPatterns.length} patterns</span>
         </div>
       </div>
 
@@ -200,7 +250,7 @@ const PatternsView: React.FC<{
         {sortedPatterns.map((pattern) => {
           const isSelected = selectedPattern === pattern.patternId;
           const totalPotentialSavings = analysis.opportunities
-            .filter(opp => opp.patternId === pattern.patternId)
+            .filter((opp) => opp.patternId === pattern.patternId)
             .reduce((sum, opp) => sum + opp.potentialSavings, 0);
 
           return (
@@ -211,13 +261,17 @@ const PatternsView: React.FC<{
               >
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-start space-x-3">
-                    <div className={`w-10 h-10 rounded-lg org-bg-primary-light flex items-center justify-center`}>
+                    <div
+                      className={`w-10 h-10 rounded-lg org-bg-primary-light flex items-center justify-center`}
+                    >
                       <Workflow className="h-5 w-5 org-text-primary" />
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center space-x-2 mb-1">
                         <h5 className="org-font-semibold">{pattern.name}</h5>
-                        <span className={`org-badge org-badge-xs ${getComplexityColor(pattern.complexity)}`}>
+                        <span
+                          className={`org-badge org-badge-xs ${getComplexityColor(pattern.complexity)}`}
+                        >
                           {pattern.complexity}
                         </span>
                         {getTrendIcon(pattern.trend)}
@@ -227,7 +281,9 @@ const PatternsView: React.FC<{
                         <span>Frequency: {pattern.frequency}x</span>
                         <span>Avg Duration: {formatDuration(pattern.avgTotalDuration)}</span>
                         <span>Success Rate: {Math.round(pattern.successRate * 100)}%</span>
-                        <span className={`${pattern.efficiency >= 0.7 ? 'org-text-success' : pattern.efficiency >= 0.5 ? 'org-text-warning' : 'org-text-error'}`}>
+                        <span
+                          className={`${pattern.efficiency >= 0.7 ? 'org-text-success' : pattern.efficiency >= 0.5 ? 'org-text-warning' : 'org-text-error'}`}
+                        >
                           Efficiency: {Math.round(pattern.efficiency * 100)}%
                         </span>
                       </div>
@@ -253,7 +309,9 @@ const PatternsView: React.FC<{
                           {pattern.sequence.map((step, index) => (
                             <div key={step.stepId} className="flex items-center space-x-3">
                               <div className="flex items-center space-x-2">
-                                <div className={`w-6 h-6 rounded-full ${getStepTypeColor(step.stepType)} flex items-center justify-center`}>
+                                <div
+                                  className={`w-6 h-6 rounded-full ${getStepTypeColor(step.stepType)} flex items-center justify-center`}
+                                >
                                   <span className="org-text-white org-text-xs org-font-semibold">
                                     {index + 1}
                                   </span>
@@ -282,8 +340,11 @@ const PatternsView: React.FC<{
                           <div>
                             <span className="org-text-muted">Triggers:</span>
                             <div className="flex flex-wrap gap-1 mt-1">
-                              {pattern.triggers.map(trigger => (
-                                <span key={trigger} className="org-badge org-badge-secondary org-badge-xs">
+                              {pattern.triggers.map((trigger) => (
+                                <span
+                                  key={trigger}
+                                  className="org-badge org-badge-secondary org-badge-xs"
+                                >
                                   {trigger}
                                 </span>
                               ))}
@@ -292,8 +353,11 @@ const PatternsView: React.FC<{
                           <div>
                             <span className="org-text-muted">Outcomes:</span>
                             <div className="flex flex-wrap gap-1 mt-1">
-                              {pattern.outcomes.map(outcome => (
-                                <span key={outcome} className="org-badge org-badge-info org-badge-xs">
+                              {pattern.outcomes.map((outcome) => (
+                                <span
+                                  key={outcome}
+                                  className="org-badge org-badge-info org-badge-xs"
+                                >
                                   {outcome}
                                 </span>
                               ))}
@@ -335,20 +399,30 @@ const OpportunitiesView: React.FC<{
   const [selectedType, setSelectedType] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'savings' | 'impact' | 'effort'>('savings');
 
-  const filteredOpportunities = selectedType === 'all' ?
-    analysis.opportunities :
-    analysis.opportunities.filter(opp => opp.type === selectedType);
+  const filteredOpportunities =
+    selectedType === 'all'
+      ? analysis.opportunities
+      : analysis.opportunities.filter((opp) => opp.type === selectedType);
 
   const sortedOpportunities = [...filteredOpportunities].sort((a, b) => {
     switch (sortBy) {
-      case 'savings': return b.potentialSavings - a.potentialSavings;
-      case 'impact': return ['low', 'medium', 'high', 'critical'].indexOf(b.impact) - ['low', 'medium', 'high', 'critical'].indexOf(a.impact);
-      case 'effort': return ['low', 'medium', 'high'].indexOf(a.effort) - ['low', 'medium', 'high'].indexOf(b.effort);
-      default: return b.potentialSavings - a.potentialSavings;
+      case 'savings':
+        return b.potentialSavings - a.potentialSavings;
+      case 'impact':
+        return (
+          ['low', 'medium', 'high', 'critical'].indexOf(b.impact) -
+          ['low', 'medium', 'high', 'critical'].indexOf(a.impact)
+        );
+      case 'effort':
+        return (
+          ['low', 'medium', 'high'].indexOf(a.effort) - ['low', 'medium', 'high'].indexOf(b.effort)
+        );
+      default:
+        return b.potentialSavings - a.potentialSavings;
     }
   });
 
-  const opportunityTypes = [...new Set(analysis.opportunities.map(opp => opp.type))];
+  const opportunityTypes = [...new Set(analysis.opportunities.map((opp) => opp.type))];
 
   return (
     <div className="org-workflow-opportunities">
@@ -361,7 +435,7 @@ const OpportunitiesView: React.FC<{
             className="org-select org-select-sm"
           >
             <option value="all">All Types</option>
-            {opportunityTypes.map(type => (
+            {opportunityTypes.map((type) => (
               <option key={type} value={type} className="capitalize">
                 {type}
               </option>
@@ -381,26 +455,36 @@ const OpportunitiesView: React.FC<{
 
       <div className="space-y-4">
         {sortedOpportunities.map((opportunity) => {
-          const relatedPattern = analysis.patterns.find(p => p.patternId === opportunity.patternId);
+          const relatedPattern = analysis.patterns.find(
+            (p) => p.patternId === opportunity.patternId,
+          );
 
           return (
             <div key={opportunity.opportunityId} className="org-card-inner">
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-start space-x-3">
-                  <div className={`w-10 h-10 rounded-lg ${getOpportunityTypeColor(opportunity.type)} flex items-center justify-center`}>
+                  <div
+                    className={`w-10 h-10 rounded-lg ${getOpportunityTypeColor(opportunity.type)} flex items-center justify-center`}
+                  >
                     <Lightbulb className="h-5 w-5 text-white" />
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center space-x-2 mb-1">
                       <h5 className="org-font-semibold">{opportunity.title}</h5>
-                      <span className={`org-badge org-badge-xs ${getImpactColor(opportunity.impact)}`}>
+                      <span
+                        className={`org-badge org-badge-xs ${getImpactColor(opportunity.impact)}`}
+                      >
                         {opportunity.impact} impact
                       </span>
-                      <span className={`org-badge org-badge-xs ${
-                        opportunity.effort === 'low' ? 'org-badge-success' :
-                        opportunity.effort === 'medium' ? 'org-badge-warning' :
-                        'org-badge-error'
-                      }`}>
+                      <span
+                        className={`org-badge org-badge-xs ${
+                          opportunity.effort === 'low'
+                            ? 'org-badge-success'
+                            : opportunity.effort === 'medium'
+                              ? 'org-badge-warning'
+                              : 'org-badge-error'
+                        }`}
+                      >
                         {opportunity.effort} effort
                       </span>
                     </div>
@@ -409,9 +493,7 @@ const OpportunitiesView: React.FC<{
                       <span className="capitalize">{opportunity.type}</span>
                       <span className="capitalize">{opportunity.implementation} timeline</span>
                       <span>Confidence: {Math.round(opportunity.confidence * 100)}%</span>
-                      {relatedPattern && (
-                        <span>Pattern: {relatedPattern.name}</span>
-                      )}
+                      {relatedPattern && <span>Pattern: {relatedPattern.name}</span>}
                     </div>
                   </div>
                 </div>
@@ -528,9 +610,7 @@ const AnalysisView: React.FC<{ analysis: PatternAnalysis }> = ({ analysis }) => 
             <div key={step.stepId} className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <div className="w-6 h-6 rounded-full org-bg-error-light flex items-center justify-center">
-                  <span className="org-text-error org-font-semibold org-text-xs">
-                    {index + 1}
-                  </span>
+                  <span className="org-text-error org-font-semibold org-text-xs">{index + 1}</span>
                 </div>
                 <div>
                   <div className="org-font-medium org-text-sm">{step.name}</div>
@@ -540,9 +620,7 @@ const AnalysisView: React.FC<{ analysis: PatternAnalysis }> = ({ analysis }) => 
                 </div>
               </div>
               <div className="text-right">
-                <div className="org-font-semibold org-text-error">
-                  {Math.round(impact * 100)}%
-                </div>
+                <div className="org-font-semibold org-text-error">{Math.round(impact * 100)}%</div>
                 <div className="org-text-xs org-text-muted">impact</div>
               </div>
             </div>
@@ -554,11 +632,14 @@ const AnalysisView: React.FC<{ analysis: PatternAnalysis }> = ({ analysis }) => 
         <h4 className="org-font-semibold mb-4">Pattern Categories</h4>
         <div className="space-y-3">
           {Object.entries(
-            analysis.patterns.reduce((acc, pattern) => {
-              const category = pattern.sequence[0]?.category || 'other';
-              acc[category] = (acc[category] || 0) + 1;
-              return acc;
-            }, {} as Record<string, number>)
+            analysis.patterns.reduce(
+              (acc, pattern) => {
+                const category = pattern.sequence[0]?.category || 'other';
+                acc[category] = (acc[category] || 0) + 1;
+                return acc;
+              },
+              {} as Record<string, number>,
+            ),
           )
             .sort(([, a], [, b]) => b - a)
             .slice(0, 6)
@@ -583,8 +664,7 @@ const AnalysisView: React.FC<{ analysis: PatternAnalysis }> = ({ analysis }) => 
                   </div>
                 </div>
               );
-            })
-          }
+            })}
         </div>
       </div>
     </div>
@@ -596,7 +676,7 @@ const AnalysisView: React.FC<{ analysis: PatternAnalysis }> = ({ analysis }) => 
           <div className="org-text-muted mb-2">Total Potential Savings</div>
           <div className="org-text-2xl org-font-bold org-text-success">
             {formatDuration(
-              analysis.opportunities.reduce((sum, opp) => sum + opp.potentialSavings, 0)
+              analysis.opportunities.reduce((sum, opp) => sum + opp.potentialSavings, 0),
             )}
           </div>
           <div className="org-text-muted">across all opportunities</div>
@@ -604,14 +684,18 @@ const AnalysisView: React.FC<{ analysis: PatternAnalysis }> = ({ analysis }) => 
         <div>
           <div className="org-text-muted mb-2">High-Impact Opportunities</div>
           <div className="org-text-2xl org-font-bold org-text-warning">
-            {analysis.opportunities.filter(opp => opp.impact === 'high' || opp.impact === 'critical').length}
+            {
+              analysis.opportunities.filter(
+                (opp) => opp.impact === 'high' || opp.impact === 'critical',
+              ).length
+            }
           </div>
           <div className="org-text-muted">ready for implementation</div>
         </div>
         <div>
           <div className="org-text-muted mb-2">Automation Candidates</div>
           <div className="org-text-2xl org-font-bold org-text-info">
-            {analysis.opportunities.filter(opp => opp.type === 'automation').length}
+            {analysis.opportunities.filter((opp) => opp.type === 'automation').length}
           </div>
           <div className="org-text-muted">processes identified</div>
         </div>
@@ -621,8 +705,8 @@ const AnalysisView: React.FC<{ analysis: PatternAnalysis }> = ({ analysis }) => 
 );
 
 const TrendsView: React.FC<{ analysis: PatternAnalysis }> = ({ analysis }) => {
-  const trendingPatterns = analysis.patterns.filter(p => p.trend === 'increasing');
-  const decliningPatterns = analysis.patterns.filter(p => p.trend === 'decreasing');
+  const trendingPatterns = analysis.patterns.filter((p) => p.trend === 'increasing');
+  const decliningPatterns = analysis.patterns.filter((p) => p.trend === 'decreasing');
 
   return (
     <div className="org-workflow-trends">
@@ -635,12 +719,12 @@ const TrendsView: React.FC<{ analysis: PatternAnalysis }> = ({ analysis }) => {
                 <div key={pattern.patternId} className="flex items-center justify-between">
                   <div>
                     <div className="org-font-medium org-text-sm">{pattern.name}</div>
-                    <div className="org-text-xs org-text-muted">
-                      {pattern.frequency}x frequency
-                    </div>
+                    <div className="org-text-xs org-text-muted">{pattern.frequency}x frequency</div>
                   </div>
                   <div className="text-right">
-                    <div className="org-text-warning org-font-semibold">+{Math.floor(Math.random() * 30 + 10)}%</div>
+                    <div className="org-text-warning org-font-semibold">
+                      +{Math.floor(Math.random() * 30 + 10)}%
+                    </div>
                     <div className="org-text-xs org-text-muted">this period</div>
                   </div>
                 </div>
@@ -659,12 +743,12 @@ const TrendsView: React.FC<{ analysis: PatternAnalysis }> = ({ analysis }) => {
                 <div key={pattern.patternId} className="flex items-center justify-between">
                   <div>
                     <div className="org-font-medium org-text-sm">{pattern.name}</div>
-                    <div className="org-text-xs org-text-muted">
-                      {pattern.frequency}x frequency
-                    </div>
+                    <div className="org-text-xs org-text-muted">{pattern.frequency}x frequency</div>
                   </div>
                   <div className="text-right">
-                    <div className="org-text-success org-font-semibold">-{Math.floor(Math.random() * 25 + 5)}%</div>
+                    <div className="org-text-success org-font-semibold">
+                      -{Math.floor(Math.random() * 25 + 5)}%
+                    </div>
                     <div className="org-text-xs org-text-muted">this period</div>
                   </div>
                 </div>
@@ -695,8 +779,12 @@ const TrendsView: React.FC<{ analysis: PatternAnalysis }> = ({ analysis }) => {
               style={{
                 left: `${10 + index * 25}%`,
                 right: `${10 + (2 - index) * 25}%`,
-                backgroundColor: pattern.trend === 'increasing' ? '#f59e0b' :
-                                pattern.trend === 'decreasing' ? '#10b981' : '#6b7280'
+                backgroundColor:
+                  pattern.trend === 'increasing'
+                    ? '#f59e0b'
+                    : pattern.trend === 'decreasing'
+                      ? '#10b981'
+                      : '#6b7280',
               }}
               title={pattern.name}
             />
@@ -739,7 +827,7 @@ export const WorkflowPatternIdentifier: React.FC<WorkflowPatternIdentifierProps>
   minFrequency = 3,
   patternTypes,
   onSelectOpportunity,
-  className = ''
+  className = '',
 }) => {
   const { teamFilter } = useOrganizationalContext();
   const [analysis, setAnalysis] = useState<PatternAnalysis | null>(null);
@@ -756,7 +844,7 @@ export const WorkflowPatternIdentifier: React.FC<WorkflowPatternIdentifierProps>
           week: 604800000,
           month: 2592000000,
           quarter: 7776000000,
-          year: 31536000000
+          year: 31536000000,
         }[timeRange];
 
         // Generate mock pattern analysis data
@@ -769,7 +857,7 @@ export const WorkflowPatternIdentifier: React.FC<WorkflowPatternIdentifierProps>
             averageDuration: 7200000, // 2 hours
             variability: 0.3,
             automationPotential: 0.2,
-            bottleneckScore: 0.3
+            bottleneckScore: 0.3,
           },
           {
             stepId: 'step-2',
@@ -779,7 +867,7 @@ export const WorkflowPatternIdentifier: React.FC<WorkflowPatternIdentifierProps>
             averageDuration: 1800000, // 30 minutes
             variability: 0.5,
             automationPotential: 0.6,
-            bottleneckScore: 0.8
+            bottleneckScore: 0.8,
           },
           {
             stepId: 'step-3',
@@ -789,7 +877,7 @@ export const WorkflowPatternIdentifier: React.FC<WorkflowPatternIdentifierProps>
             averageDuration: 600000, // 10 minutes
             variability: 0.7,
             automationPotential: 0.1,
-            bottleneckScore: 0.9
+            bottleneckScore: 0.9,
           },
           {
             stepId: 'step-4',
@@ -799,15 +887,16 @@ export const WorkflowPatternIdentifier: React.FC<WorkflowPatternIdentifierProps>
             averageDuration: 900000, // 15 minutes
             variability: 0.4,
             automationPotential: 0.9,
-            bottleneckScore: 0.6
-          }
+            bottleneckScore: 0.6,
+          },
         ];
 
         const mockPatterns: WorkflowPattern[] = [
           {
             patternId: 'pattern-1',
             name: 'Standard Development Cycle',
-            description: 'Code → Review → Approval → Deploy sequence used for most feature development',
+            description:
+              'Code → Review → Approval → Deploy sequence used for most feature development',
             sequence: mockSteps,
             frequency: 45,
             avgTotalDuration: 10500000, // 2h 55m
@@ -818,13 +907,13 @@ export const WorkflowPatternIdentifier: React.FC<WorkflowPatternIdentifierProps>
             outcomes: ['deployed feature', 'resolved issue'],
             variations: 8,
             lastSeen: Date.now() - 3600000,
-            trend: 'increasing'
+            trend: 'increasing',
           },
           {
             patternId: 'pattern-2',
             name: 'Hotfix Emergency Process',
             description: 'Accelerated workflow for critical production fixes',
-            sequence: mockSteps.filter(s => s.stepId !== 'step-3'), // Skip approval for hotfixes
+            sequence: mockSteps.filter((s) => s.stepId !== 'step-3'), // Skip approval for hotfixes
             frequency: 12,
             avgTotalDuration: 2700000, // 45 minutes
             successRate: 0.92,
@@ -834,7 +923,7 @@ export const WorkflowPatternIdentifier: React.FC<WorkflowPatternIdentifierProps>
             outcomes: ['production fix', 'system stability'],
             variations: 3,
             lastSeen: Date.now() - 7200000,
-            trend: 'stable'
+            trend: 'stable',
           },
           {
             patternId: 'pattern-3',
@@ -850,8 +939,8 @@ export const WorkflowPatternIdentifier: React.FC<WorkflowPatternIdentifierProps>
             outcomes: ['prototype', 'research findings'],
             variations: 12,
             lastSeen: Date.now() - 86400000,
-            trend: 'decreasing'
-          }
+            trend: 'decreasing',
+          },
         ];
 
         const mockOpportunities: OptimizationOpportunity[] = [
@@ -860,7 +949,8 @@ export const WorkflowPatternIdentifier: React.FC<WorkflowPatternIdentifierProps>
             patternId: 'pattern-1',
             type: 'automation',
             title: 'Automate Code Review Checks',
-            description: 'Implement automated checks for common review criteria to reduce manual review time',
+            description:
+              'Implement automated checks for common review criteria to reduce manual review time',
             potentialSavings: 900000, // 15 minutes per review
             implementation: 'short-term',
             effort: 'medium',
@@ -869,7 +959,7 @@ export const WorkflowPatternIdentifier: React.FC<WorkflowPatternIdentifierProps>
             prerequisites: ['CI/CD setup', 'linting rules defined'],
             riskFactors: ['false positives', 'reduced code quality discussions'],
             successExamples: ['Similar automation at Company X saved 20% review time'],
-            affectedOperators: [sessionCorrelation.operatorId]
+            affectedOperators: [sessionCorrelation.operatorId],
           },
           {
             opportunityId: 'opp-2',
@@ -885,7 +975,7 @@ export const WorkflowPatternIdentifier: React.FC<WorkflowPatternIdentifierProps>
             prerequisites: ['review assignment system'],
             riskFactors: ['coordination overhead'],
             successExamples: ['Parallel reviews reduced bottlenecks in similar teams'],
-            affectedOperators: [sessionCorrelation.operatorId]
+            affectedOperators: [sessionCorrelation.operatorId],
           },
           {
             opportunityId: 'opp-3',
@@ -901,8 +991,8 @@ export const WorkflowPatternIdentifier: React.FC<WorkflowPatternIdentifierProps>
             prerequisites: ['incident response team'],
             riskFactors: ['process rigidity'],
             successExamples: ['Standardized hotfix reduced MTTR by 30%'],
-            affectedOperators: [sessionCorrelation.operatorId]
-          }
+            affectedOperators: [sessionCorrelation.operatorId],
+          },
         ];
 
         setAnalysis({
@@ -915,11 +1005,11 @@ export const WorkflowPatternIdentifier: React.FC<WorkflowPatternIdentifierProps>
           topBottlenecks: [
             { step: mockSteps[2], impact: 0.85 }, // Approval Decision
             { step: mockSteps[1], impact: 0.75 }, // Code Review
-            { step: mockSteps[3], impact: 0.45 }  // Deployment
+            { step: mockSteps[3], impact: 0.45 }, // Deployment
           ],
           trendingSources: ['automated testing', 'code reviews', 'deployment'],
           analyzedOperators: [sessionCorrelation.operatorId],
-          generatedAt: Date.now()
+          generatedAt: Date.now(),
         });
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to analyze workflow patterns');
@@ -969,16 +1059,13 @@ export const WorkflowPatternIdentifier: React.FC<WorkflowPatternIdentifierProps>
       <div className="flex items-center justify-between mb-6">
         <h3 className="org-text-xl org-font-semibold">Workflow Pattern Analysis</h3>
         <div className="org-text-sm org-text-muted">
-          {analysis.patterns.length} patterns • {analysis.opportunities.length} opportunities • {timeRange}
+          {analysis.patterns.length} patterns • {analysis.opportunities.length} opportunities •{' '}
+          {timeRange}
         </div>
       </div>
 
       {mode === 'patterns' && (
-        <PatternsView
-          analysis={analysis}
-          minFrequency={minFrequency}
-          patternTypes={patternTypes}
-        />
+        <PatternsView analysis={analysis} minFrequency={minFrequency} patternTypes={patternTypes} />
       )}
       {mode === 'opportunities' && (
         <OpportunitiesView analysis={analysis} onSelectOpportunity={onSelectOpportunity} />

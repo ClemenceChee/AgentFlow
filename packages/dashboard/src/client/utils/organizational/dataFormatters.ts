@@ -6,11 +6,11 @@
  */
 
 import type {
+  OperatorActivityPattern,
   OperatorContext,
   PolicyStatus,
   SessionCorrelation,
-  OperatorActivityPattern,
-  TeamPerformanceMetrics
+  TeamPerformanceMetrics,
 } from '../../types/organizational.js';
 
 /**
@@ -27,9 +27,7 @@ export function formatOperatorId(operatorId: string): string {
  * Format team ID to human-readable team name
  */
 export function formatTeamName(teamId: string): string {
-  return teamId
-    .replace(/-/g, ' ')
-    .replace(/\b\w/g, l => l.toUpperCase());
+  return teamId.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
 }
 
 /**
@@ -112,7 +110,9 @@ export function formatConfidence(confidence: number): string {
 /**
  * Format relationship type for display
  */
-export function formatRelationshipType(type: SessionCorrelation['relatedSessions'][0]['relationshipType']): {
+export function formatRelationshipType(
+  type: SessionCorrelation['relatedSessions'][0]['relationshipType'],
+): {
   text: string;
   description: string;
   color: string;
@@ -122,31 +122,31 @@ export function formatRelationshipType(type: SessionCorrelation['relatedSessions
       return {
         text: 'Continuation',
         description: 'Same operator continuing work',
-        color: 'blue'
+        color: 'blue',
       };
     case 'collaboration':
       return {
         text: 'Collaboration',
         description: 'Team member collaboration',
-        color: 'purple'
+        color: 'purple',
       };
     case 'handoff':
       return {
         text: 'Handoff',
         description: 'Work passed between operators',
-        color: 'orange'
+        color: 'orange',
       };
     case 'similar-problem':
       return {
         text: 'Similar Problem',
         description: 'Similar issues or solutions',
-        color: 'green'
+        color: 'green',
       };
     default:
       return {
         text: 'Related',
         description: 'Related session',
-        color: 'gray'
+        color: 'gray',
       };
   }
 }
@@ -177,7 +177,10 @@ export function formatDuration(durationMs: number): string {
 /**
  * Format performance metrics for display
  */
-export function formatPerformanceMetric(value: number, type: 'percentage' | 'latency' | 'rate' | 'count'): string {
+export function formatPerformanceMetric(
+  value: number,
+  type: 'percentage' | 'latency' | 'rate' | 'count',
+): string {
   switch (type) {
     case 'percentage':
       return `${Math.round(value * 100)}%`;
@@ -213,28 +216,28 @@ export function formatActivityPattern(pattern: OperatorActivityPattern['patterns
         title: 'Workflow Pattern',
         description: pattern.description,
         confidence,
-        color: 'blue'
+        color: 'blue',
       };
     case 'problem-solving':
       return {
         title: 'Problem-Solving Pattern',
         description: pattern.description,
         confidence,
-        color: 'green'
+        color: 'green',
       };
     case 'collaboration':
       return {
         title: 'Collaboration Pattern',
         description: pattern.description,
         confidence,
-        color: 'purple'
+        color: 'purple',
       };
     default:
       return {
         title: 'Activity Pattern',
         description: pattern.description,
         confidence,
-        color: 'gray'
+        color: 'gray',
       };
   }
 }
@@ -254,7 +257,9 @@ export function getOperatorContextSummary(operatorContext: OperatorContext): {
     team: operatorContext.teamId ? formatTeamName(operatorContext.teamId) : undefined,
     session: formatSessionId(operatorContext.sessionId),
     instance: formatInstanceType(operatorContext.instanceId, operatorContext.userAgent),
-    timestamp: operatorContext.timestamp ? formatRelativeTime(operatorContext.timestamp) : 'Unknown'
+    timestamp: operatorContext.timestamp
+      ? formatRelativeTime(operatorContext.timestamp)
+      : 'Unknown',
   };
 }
 

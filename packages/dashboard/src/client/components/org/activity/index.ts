@@ -5,15 +5,13 @@
  * and workflow pattern identification.
  */
 
+export { CollaborationOpportunityIdentifier } from './CollaborationOpportunityIdentifier.js';
+export { MultiOperatorComparison } from './MultiOperatorComparison.js';
 // Timeline components
 export { OperatorTimelineView } from './OperatorTimelineView.js';
-export { MultiOperatorComparison } from './MultiOperatorComparison.js';
-export { TeamCollaborationTimeline } from './TeamCollaborationTimeline.js';
-
-// Pattern analysis components
-export { WorkflowPatternIdentifier } from './WorkflowPatternIdentifier.js';
 export { ProblemSolvingPatternAnalysis } from './ProblemSolvingPatternAnalysis.js';
-
 // Productivity components
 export { ProductivityInsights } from './ProductivityInsights.js';
-export { CollaborationOpportunityIdentifier } from './CollaborationOpportunityIdentifier.js';
+export { TeamCollaborationTimeline } from './TeamCollaborationTimeline.js';
+// Pattern analysis components
+export { WorkflowPatternIdentifier } from './WorkflowPatternIdentifier.js';

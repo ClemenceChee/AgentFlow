@@ -6,10 +6,10 @@
  *        4.9 (insights), 4.10 (monitoring)
  */
 
-import type { TerminologyMapper } from './terminology.js';
-import type { DbPool } from '../db/pool.js';
-import type { CacheClient } from '../cache/cache.js';
 import type { UserRole } from '../auth/types.js';
+import type { CacheClient } from '../cache/cache.js';
+import type { DbPool } from '../db/pool.js';
+import type { TerminologyMapper } from './terminology.js';
 
 export interface QueryRequest {
   question: string;
@@ -53,12 +53,24 @@ const QUERY_PATTERNS: Array<{
   type: string;
   handler: string;
 }> = [
-  { pattern: /how\s+(are|is)\s+(.+)\s+performing/i, type: 'agent_performance', handler: 'agentPerformance' },
+  {
+    pattern: /how\s+(are|is)\s+(.+)\s+performing/i,
+    type: 'agent_performance',
+    handler: 'agentPerformance',
+  },
   { pattern: /what('s| is)\s+the\s+roi/i, type: 'roi_analysis', handler: 'roiAnalysis' },
   { pattern: /are\s+we\s+compliant/i, type: 'compliance_check', handler: 'complianceCheck' },
   { pattern: /show\s+(me\s+)?violations/i, type: 'violations', handler: 'violations' },
-  { pattern: /what('s| is)\s+the\s+(failure|error)\s+rate/i, type: 'failure_rate', handler: 'failureRate' },
-  { pattern: /how\s+much\s+(does|do|is|are)\s+(.+)\s+cost/i, type: 'cost_analysis', handler: 'costAnalysis' },
+  {
+    pattern: /what('s| is)\s+the\s+(failure|error)\s+rate/i,
+    type: 'failure_rate',
+    handler: 'failureRate',
+  },
+  {
+    pattern: /how\s+much\s+(does|do|is|are)\s+(.+)\s+cost/i,
+    type: 'cost_analysis',
+    handler: 'costAnalysis',
+  },
   { pattern: /top\s+(\d+)\s+agents/i, type: 'top_agents', handler: 'topAgents' },
   { pattern: /worst\s+performing/i, type: 'worst_agents', handler: 'worstAgents' },
   { pattern: /anomal(y|ies)/i, type: 'anomalies', handler: 'anomalies' },
@@ -67,16 +79,57 @@ const QUERY_PATTERNS: Array<{
 
 /** Role-based data access restrictions. */
 const ROLE_ACCESS: Record<UserRole, string[]> = {
-  executive: ['agent_performance', 'roi_analysis', 'compliance_check', 'top_agents', 'worst_agents', 'trend_analysis', 'cost_analysis', 'anomalies', 'violations', 'failure_rate'],
-  manager: ['agent_performance', 'roi_analysis', 'compliance_check', 'top_agents', 'worst_agents', 'trend_analysis', 'cost_analysis', 'anomalies', 'violations', 'failure_rate'],
-  analyst: ['agent_performance', 'compliance_check', 'top_agents', 'worst_agents', 'trend_analysis', 'anomalies', 'failure_rate'],
+  executive: [
+    'agent_performance',
+    'roi_analysis',
+    'compliance_check',
+    'top_agents',
+    'worst_agents',
+    'trend_analysis',
+    'cost_analysis',
+    'anomalies',
+    'violations',
+    'failure_rate',
+  ],
+  manager: [
+    'agent_performance',
+    'roi_analysis',
+    'compliance_check',
+    'top_agents',
+    'worst_agents',
+    'trend_analysis',
+    'cost_analysis',
+    'anomalies',
+    'violations',
+    'failure_rate',
+  ],
+  analyst: [
+    'agent_performance',
+    'compliance_check',
+    'top_agents',
+    'worst_agents',
+    'trend_analysis',
+    'anomalies',
+    'failure_rate',
+  ],
   viewer: ['agent_performance', 'compliance_check', 'top_agents'],
-  admin: ['agent_performance', 'roi_analysis', 'compliance_check', 'top_agents', 'worst_agents', 'trend_analysis', 'cost_analysis', 'anomalies', 'violations', 'failure_rate'],
+  admin: [
+    'agent_performance',
+    'roi_analysis',
+    'compliance_check',
+    'top_agents',
+    'worst_agents',
+    'trend_analysis',
+    'cost_analysis',
+    'anomalies',
+    'violations',
+    'failure_rate',
+  ],
 };
 
 export class QueryTranslator {
   constructor(
-    private terminology: TerminologyMapper,
+    _terminology: TerminologyMapper,
     private db: DbPool,
     private cache: CacheClient,
   ) {}
@@ -98,7 +151,8 @@ export class QueryTranslator {
     const matched = this.matchPattern(question);
     if (!matched) {
       return {
-        answer: "I couldn't understand that question. Try asking about agent performance, ROI, compliance, costs, or anomalies.",
+        answer:
+          "I couldn't understand that question. Try asking about agent performance, ROI, compliance, costs, or anomalies.",
         data: null,
         interpretation: 'Unrecognized query pattern',
         insights: [],
@@ -155,7 +209,9 @@ export class QueryTranslator {
     return result;
   }
 
-  private matchPattern(question: string): { type: string; handler: string; match: RegExpMatchArray } | null {
+  private matchPattern(
+    question: string,
+  ): { type: string; handler: string; match: RegExpMatchArray } | null {
     for (const p of QUERY_PATTERNS) {
       const match = question.match(p.pattern);
       if (match) return { type: p.type, handler: p.handler, match };
@@ -165,7 +221,7 @@ export class QueryTranslator {
 
   private async translateToSql(
     matched: { type: string; handler: string; match: RegExpMatchArray },
-    request: QueryRequest,
+    _request: QueryRequest,
   ): Promise<TranslatedQuery> {
     const handlers: Record<string, () => TranslatedQuery> = {
       agentPerformance: () => ({
@@ -275,7 +331,7 @@ export class QueryTranslator {
   private formatResult(
     queryType: string,
     rows: Record<string, unknown>[],
-    question: string,
+    _question: string,
     _request: QueryRequest,
   ): QueryResult {
     const insights: string[] = [];
@@ -293,7 +349,10 @@ export class QueryTranslator {
       switch (queryType) {
         case 'agent_performance':
           answer = `Found ${rows.length} agent(s) with activity in the last 30 days.`;
-          followUps.push('Which agent has the highest failure rate?', "What's the cost breakdown by agent?");
+          followUps.push(
+            'Which agent has the highest failure rate?',
+            "What's the cost breakdown by agent?",
+          );
           break;
         case 'roi_analysis':
           answer = `Financial breakdown across ${rows.length} categor${rows.length === 1 ? 'y' : 'ies'}.`;
@@ -311,7 +370,9 @@ export class QueryTranslator {
       if (queryType === 'agent_performance' && rows.length > 0) {
         const highError = rows.filter((r) => Number(r.error_rate ?? 0) > 0.1);
         if (highError.length > 0) {
-          insights.push(`${highError.length} agent(s) have error rates above 10% — consider investigation`);
+          insights.push(
+            `${highError.length} agent(s) have error rates above 10% — consider investigation`,
+          );
         }
       }
     }

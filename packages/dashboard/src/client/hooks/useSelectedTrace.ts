@@ -1,5 +1,10 @@
 import { useCallback, useState } from 'react';
-import type { OperatorContext, SessionCorrelation, PolicyStatus, SessionHookData } from '../types/organizational.js';
+import type {
+  OperatorContext,
+  PolicyStatus,
+  SessionCorrelation,
+  SessionHookData,
+} from '../types/organizational.js';
 
 export interface TraceNode {
   id: string;

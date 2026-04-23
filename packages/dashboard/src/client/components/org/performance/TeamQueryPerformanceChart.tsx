@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import type React from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useOrganizationalContext } from '../../../contexts/OrganizationalContext';
 
 // Types for performance data
@@ -85,17 +86,17 @@ export const TeamQueryPerformanceChart: React.FC<Props> = ({
   className = '',
   teamId,
   showRealTime = true,
-  onAlertTriggered
+  onAlertTriggered,
 }) => {
   const { selectedTeam, operatorContext } = useOrganizationalContext();
   const [chartType, setChartType] = useState<ChartType>('latency');
   const [timeRange, setTimeRange] = useState<TimeRange>('24h');
   const [granularity, setGranularity] = useState<Granularity>('5m');
-  const [selectedMetric, setSelectedMetric] = useState<string | null>(null);
+  const [_selectedMetric, _setSelectedMetric] = useState<string | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(showRealTime);
   const [showBenchmarks, setShowBenchmarks] = useState(true);
-  const [compareMode, setCompareMode] = useState(false);
-  const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
+  const [_compareMode, _setCompareMode] = useState(false);
+  const [_selectedTeams, _setSelectedTeams] = useState<string[]>([]);
 
   const effectiveTeamId = teamId || selectedTeam;
 
@@ -105,12 +106,14 @@ export const TeamQueryPerformanceChart: React.FC<Props> = ({
     const metrics: QueryPerformanceMetric[] = [];
 
     for (let i = 0; i < 100; i++) {
-      const timestamp = now - (i * 5 * 60 * 1000); // 5-minute intervals
+      const timestamp = now - i * 5 * 60 * 1000; // 5-minute intervals
       metrics.push({
         timestamp,
         teamId: effectiveTeamId || 'team-frontend',
         operatorId: `op-${Math.floor(Math.random() * 10)}`,
-        queryType: ['search', 'trace', 'analysis', 'correlation', 'briefing'][Math.floor(Math.random() * 5)] as any,
+        queryType: ['search', 'trace', 'analysis', 'correlation', 'briefing'][
+          Math.floor(Math.random() * 5)
+        ] as any,
         latency: Math.max(50, Math.random() * 2000 + Math.sin(i / 10) * 500),
         success: Math.random() > 0.05, // 95% success rate
         throughput: Math.max(1, Math.random() * 50 + Math.sin(i / 5) * 20),
@@ -119,8 +122,8 @@ export const TeamQueryPerformanceChart: React.FC<Props> = ({
           cpu: Math.max(10, Math.min(90, Math.random() * 60 + 30)),
           memory: Math.max(100, Math.random() * 2000 + 500),
           cache_hits: Math.floor(Math.random() * 100),
-          cache_misses: Math.floor(Math.random() * 20)
-        }
+          cache_misses: Math.floor(Math.random() * 20),
+        },
       });
     }
 
@@ -128,9 +131,9 @@ export const TeamQueryPerformanceChart: React.FC<Props> = ({
   }, [effectiveTeamId]);
 
   const mockAggregates: PerformanceAggregates = useMemo(() => {
-    const latencies = mockMetrics.map(m => m.latency);
-    const successes = mockMetrics.filter(m => m.success).length;
-    const throughputs = mockMetrics.map(m => m.throughput);
+    const latencies = mockMetrics.map((m) => m.latency);
+    const successes = mockMetrics.filter((m) => m.success).length;
+    const throughputs = mockMetrics.map((m) => m.throughput);
 
     latencies.sort((a, b) => a - b);
 
@@ -148,65 +151,79 @@ export const TeamQueryPerformanceChart: React.FC<Props> = ({
         successRate: (successes / mockMetrics.length) * 100,
         avgThroughput: throughputs.reduce((a, b) => a + b, 0) / throughputs.length,
         peakThroughput: Math.max(...throughputs),
-        errorRate: ((mockMetrics.length - successes) / mockMetrics.length) * 100
+        errorRate: ((mockMetrics.length - successes) / mockMetrics.length) * 100,
       },
       trends: {
         latencyTrend: 'stable',
         throughputTrend: 'increasing',
-        errorTrend: 'improving'
-      }
+        errorTrend: 'improving',
+      },
     };
   }, [mockMetrics, effectiveTeamId, timeRange]);
 
-  const mockAlerts: PerformanceAlert[] = useMemo(() => [
-    {
-      id: 'alert-001',
-      teamId: effectiveTeamId || 'team-frontend',
-      type: 'latency_spike',
-      severity: 'high',
-      message: 'P95 latency exceeded 1000ms threshold',
-      threshold: 1000,
-      currentValue: 1250,
-      triggeredAt: Date.now() - 300000,
-      recommendations: [
-        'Check database query optimization',
-        'Review cache hit rates',
-        'Scale horizontally if sustained'
-      ]
-    },
-    {
-      id: 'alert-002',
-      teamId: effectiveTeamId || 'team-frontend',
-      type: 'throughput_drop',
-      severity: 'medium',
-      message: 'Throughput dropped below 20 QPS',
-      threshold: 20,
-      currentValue: 15.5,
-      triggeredAt: Date.now() - 600000,
-      recommendations: [
-        'Check system resource utilization',
-        'Review concurrent query limits',
-        'Investigate potential bottlenecks'
-      ]
-    }
-  ], [effectiveTeamId]);
+  const mockAlerts: PerformanceAlert[] = useMemo(
+    () => [
+      {
+        id: 'alert-001',
+        teamId: effectiveTeamId || 'team-frontend',
+        type: 'latency_spike',
+        severity: 'high',
+        message: 'P95 latency exceeded 1000ms threshold',
+        threshold: 1000,
+        currentValue: 1250,
+        triggeredAt: Date.now() - 300000,
+        recommendations: [
+          'Check database query optimization',
+          'Review cache hit rates',
+          'Scale horizontally if sustained',
+        ],
+      },
+      {
+        id: 'alert-002',
+        teamId: effectiveTeamId || 'team-frontend',
+        type: 'throughput_drop',
+        severity: 'medium',
+        message: 'Throughput dropped below 20 QPS',
+        threshold: 20,
+        currentValue: 15.5,
+        triggeredAt: Date.now() - 600000,
+        recommendations: [
+          'Check system resource utilization',
+          'Review concurrent query limits',
+          'Investigate potential bottlenecks',
+        ],
+      },
+    ],
+    [effectiveTeamId],
+  );
 
-  const mockBenchmarks: PerformanceBenchmark[] = useMemo(() => [
-    {
-      teamId: effectiveTeamId || 'team-frontend',
-      queryType: 'search',
-      target: { p95Latency: 500, throughput: 30, successRate: 99 },
-      current: { p95Latency: mockAggregates.metrics.p95Latency, throughput: mockAggregates.metrics.avgThroughput, successRate: mockAggregates.metrics.successRate },
-      status: mockAggregates.metrics.p95Latency <= 500 ? 'meeting' : 'below'
-    },
-    {
-      teamId: effectiveTeamId || 'team-frontend',
-      queryType: 'analysis',
-      target: { p95Latency: 2000, throughput: 10, successRate: 97 },
-      current: { p95Latency: mockAggregates.metrics.p95Latency, throughput: mockAggregates.metrics.avgThroughput, successRate: mockAggregates.metrics.successRate },
-      status: 'meeting'
-    }
-  ], [effectiveTeamId, mockAggregates]);
+  const mockBenchmarks: PerformanceBenchmark[] = useMemo(
+    () => [
+      {
+        teamId: effectiveTeamId || 'team-frontend',
+        queryType: 'search',
+        target: { p95Latency: 500, throughput: 30, successRate: 99 },
+        current: {
+          p95Latency: mockAggregates.metrics.p95Latency,
+          throughput: mockAggregates.metrics.avgThroughput,
+          successRate: mockAggregates.metrics.successRate,
+        },
+        status: mockAggregates.metrics.p95Latency <= 500 ? 'meeting' : 'below',
+      },
+      {
+        teamId: effectiveTeamId || 'team-frontend',
+        queryType: 'analysis',
+        target: { p95Latency: 2000, throughput: 10, successRate: 97 },
+        current: {
+          p95Latency: mockAggregates.metrics.p95Latency,
+          throughput: mockAggregates.metrics.avgThroughput,
+          successRate: mockAggregates.metrics.successRate,
+        },
+        status: 'meeting',
+      },
+    ],
+    [effectiveTeamId, mockAggregates],
+  );
 
   // Auto-refresh effect
   useEffect(() => {
@@ -222,8 +239,9 @@ export const TeamQueryPerformanceChart: React.FC<Props> = ({
 
   // Alert monitoring effect
   useEffect(() => {
-    mockAlerts.forEach(alert => {
-      if (Date.now() - alert.triggeredAt < 60000) { // Recent alert
+    mockAlerts.forEach((alert) => {
+      if (Date.now() - alert.triggeredAt < 60000) {
+        // Recent alert
         onAlertTriggered?.(alert);
       }
     });
@@ -240,23 +258,29 @@ export const TeamQueryPerformanceChart: React.FC<Props> = ({
 
   const getSeverityColor = (severity: string): string => {
     switch (severity) {
-      case 'critical': return 'var(--org-alert-critical)';
-      case 'high': return 'var(--org-alert-high)';
-      case 'medium': return 'var(--org-alert-medium)';
-      case 'low': return 'var(--org-alert-low)';
-      default: return 'var(--org-text-muted)';
+      case 'critical':
+        return 'var(--org-alert-critical)';
+      case 'high':
+        return 'var(--org-alert-high)';
+      case 'medium':
+        return 'var(--org-alert-medium)';
+      case 'low':
+        return 'var(--org-alert-low)';
+      default:
+        return 'var(--org-text-muted)';
     }
   };
 
   const getTrendColor = (trend: string): string => {
     if (trend.includes('improving') || trend.includes('increasing')) return 'var(--org-success)';
-    if (trend.includes('degrading') || trend.includes('decreasing') || trend.includes('worsening')) return 'var(--org-alert-high)';
+    if (trend.includes('degrading') || trend.includes('decreasing') || trend.includes('worsening'))
+      return 'var(--org-alert-high)';
     return 'var(--org-info)';
   };
 
   const renderLatencyChart = () => {
     const chartData = mockMetrics.slice(-50); // Last 50 data points
-    const maxLatency = Math.max(...chartData.map(d => d.latency));
+    const maxLatency = Math.max(...chartData.map((d) => d.latency));
 
     return (
       <div className="org-chart-container">
@@ -265,15 +289,21 @@ export const TeamQueryPerformanceChart: React.FC<Props> = ({
           <div className="org-latency-percentiles">
             <div className="org-percentile-item">
               <span className="org-percentile-label">P50</span>
-              <span className="org-percentile-value">{formatLatency(mockAggregates.metrics.p50Latency)}</span>
+              <span className="org-percentile-value">
+                {formatLatency(mockAggregates.metrics.p50Latency)}
+              </span>
             </div>
             <div className="org-percentile-item">
               <span className="org-percentile-label">P95</span>
-              <span className="org-percentile-value">{formatLatency(mockAggregates.metrics.p95Latency)}</span>
+              <span className="org-percentile-value">
+                {formatLatency(mockAggregates.metrics.p95Latency)}
+              </span>
             </div>
             <div className="org-percentile-item">
               <span className="org-percentile-label">P99</span>
-              <span className="org-percentile-value">{formatLatency(mockAggregates.metrics.p99Latency)}</span>
+              <span className="org-percentile-value">
+                {formatLatency(mockAggregates.metrics.p99Latency)}
+              </span>
             </div>
           </div>
         </div>
@@ -281,7 +311,7 @@ export const TeamQueryPerformanceChart: React.FC<Props> = ({
         <div className="org-chart-area">
           <svg className="org-performance-chart" viewBox="0 0 800 300">
             {/* Grid lines */}
-            {[0, 1, 2, 3, 4].map(i => (
+            {[0, 1, 2, 3, 4].map((i) => (
               <line
                 key={`grid-${i}`}
                 x1="50"
@@ -299,29 +329,22 @@ export const TeamQueryPerformanceChart: React.FC<Props> = ({
               fill="none"
               stroke="var(--org-primary)"
               strokeWidth="2"
-              points={chartData.map((d, i) => {
-                const x = 50 + (i / (chartData.length - 1)) * 700;
-                const y = 250 - ((d.latency / maxLatency) * 200);
-                return `${x},${y}`;
-              }).join(' ')}
+              points={chartData
+                .map((d, i) => {
+                  const x = 50 + (i / (chartData.length - 1)) * 700;
+                  const y = 250 - (d.latency / maxLatency) * 200;
+                  return `${x},${y}`;
+                })
+                .join(' ')}
             />
 
             {/* Data points */}
             {chartData.map((d, i) => {
               const x = 50 + (i / (chartData.length - 1)) * 700;
-              const y = 250 - ((d.latency / maxLatency) * 200);
+              const y = 250 - (d.latency / maxLatency) * 200;
               const color = d.success ? 'var(--org-success)' : 'var(--org-alert-high)';
 
-              return (
-                <circle
-                  key={i}
-                  cx={x}
-                  cy={y}
-                  r="3"
-                  fill={color}
-                  opacity="0.7"
-                />
-              );
+              return <circle key={i} cx={x} cy={y} r="3" fill={color} opacity="0.7" />;
             })}
 
             {/* Y-axis labels */}
@@ -341,9 +364,12 @@ export const TeamQueryPerformanceChart: React.FC<Props> = ({
 
         {showBenchmarks && (
           <div className="org-benchmark-overlay">
-            <div className="org-benchmark-line" style={{
-              bottom: `${((mockBenchmarks[0]?.target.p95Latency || 500) / maxLatency) * 200}px`
-            }}>
+            <div
+              className="org-benchmark-line"
+              style={{
+                bottom: `${((mockBenchmarks[0]?.target.p95Latency || 500) / maxLatency) * 200}px`,
+              }}
+            >
               <span className="org-benchmark-label">P95 Target</span>
             </div>
           </div>
@@ -354,7 +380,7 @@ export const TeamQueryPerformanceChart: React.FC<Props> = ({
 
   const renderThroughputChart = () => {
     const chartData = mockMetrics.slice(-50);
-    const maxThroughput = Math.max(...chartData.map(d => d.throughput));
+    const maxThroughput = Math.max(...chartData.map((d) => d.throughput));
 
     return (
       <div className="org-chart-container">
@@ -363,11 +389,15 @@ export const TeamQueryPerformanceChart: React.FC<Props> = ({
           <div className="org-throughput-stats">
             <div className="org-stat-item">
               <span className="org-stat-label">Average</span>
-              <span className="org-stat-value">{formatThroughput(mockAggregates.metrics.avgThroughput)}</span>
+              <span className="org-stat-value">
+                {formatThroughput(mockAggregates.metrics.avgThroughput)}
+              </span>
             </div>
             <div className="org-stat-item">
               <span className="org-stat-label">Peak</span>
-              <span className="org-stat-value">{formatThroughput(mockAggregates.metrics.peakThroughput)}</span>
+              <span className="org-stat-value">
+                {formatThroughput(mockAggregates.metrics.peakThroughput)}
+              </span>
             </div>
           </div>
         </div>
@@ -377,7 +407,7 @@ export const TeamQueryPerformanceChart: React.FC<Props> = ({
             {/* Bar chart for throughput */}
             {chartData.map((d, i) => {
               const x = 50 + (i / chartData.length) * 700;
-              const barWidth = 700 / chartData.length * 0.8;
+              const barWidth = (700 / chartData.length) * 0.8;
               const barHeight = (d.throughput / maxThroughput) * 200;
               const y = 250 - barHeight;
 
@@ -419,11 +449,15 @@ export const TeamQueryPerformanceChart: React.FC<Props> = ({
         <div className="org-error-stats">
           <div className="org-stat-item">
             <span className="org-stat-label">Success Rate</span>
-            <span className="org-stat-value org-success">{mockAggregates.metrics.successRate.toFixed(1)}%</span>
+            <span className="org-stat-value org-success">
+              {mockAggregates.metrics.successRate.toFixed(1)}%
+            </span>
           </div>
           <div className="org-stat-item">
             <span className="org-stat-label">Error Rate</span>
-            <span className="org-stat-value org-alert-high">{mockAggregates.metrics.errorRate.toFixed(1)}%</span>
+            <span className="org-stat-value org-alert-high">
+              {mockAggregates.metrics.errorRate.toFixed(1)}%
+            </span>
           </div>
         </div>
       </div>
@@ -572,10 +606,7 @@ export const TeamQueryPerformanceChart: React.FC<Props> = ({
         <h2>Team Query Performance</h2>
         <div className="org-header-controls">
           <div className="org-time-controls">
-            <select
-              value={timeRange}
-              onChange={(e) => setTimeRange(e.target.value as TimeRange)}
-            >
+            <select value={timeRange} onChange={(e) => setTimeRange(e.target.value as TimeRange)}>
               <option value="1h">Last Hour</option>
               <option value="24h">Last 24 Hours</option>
               <option value="7d">Last 7 Days</option>
@@ -618,7 +649,7 @@ export const TeamQueryPerformanceChart: React.FC<Props> = ({
           { key: 'throughput', label: 'Throughput' },
           { key: 'errors', label: 'Errors' },
           { key: 'resources', label: 'Resources' },
-          { key: 'trends', label: 'Trends' }
+          { key: 'trends', label: 'Trends' },
         ].map((tab) => (
           <button
             key={tab.key}
@@ -683,15 +714,23 @@ export const TeamQueryPerformanceChart: React.FC<Props> = ({
                 <div className="org-benchmark-metrics">
                   <div className="org-benchmark-metric">
                     <span>P95 Latency</span>
-                    <span>{formatLatency(benchmark.current.p95Latency)} / {formatLatency(benchmark.target.p95Latency)}</span>
+                    <span>
+                      {formatLatency(benchmark.current.p95Latency)} /{' '}
+                      {formatLatency(benchmark.target.p95Latency)}
+                    </span>
                   </div>
                   <div className="org-benchmark-metric">
                     <span>Throughput</span>
-                    <span>{formatThroughput(benchmark.current.throughput)} / {formatThroughput(benchmark.target.throughput)}</span>
+                    <span>
+                      {formatThroughput(benchmark.current.throughput)} /{' '}
+                      {formatThroughput(benchmark.target.throughput)}
+                    </span>
                   </div>
                   <div className="org-benchmark-metric">
                     <span>Success Rate</span>
-                    <span>{benchmark.current.successRate.toFixed(1)}% / {benchmark.target.successRate}%</span>
+                    <span>
+                      {benchmark.current.successRate.toFixed(1)}% / {benchmark.target.successRate}%
+                    </span>
                   </div>
                 </div>
               </div>
@@ -702,9 +741,7 @@ export const TeamQueryPerformanceChart: React.FC<Props> = ({
 
       {effectiveTeamId && (
         <div className="org-context-info">
-          <div className="org-context-badge">
-            Performance data for: {effectiveTeamId}
-          </div>
+          <div className="org-context-badge">Performance data for: {effectiveTeamId}</div>
         </div>
       )}
     </div>

@@ -6,9 +6,9 @@
  *        5.8 (effectiveness measurement)
  */
 
-import type { DbPool } from '../db/pool.js';
-import type { DataAggregator, AgentAggregation } from '../synthesis/aggregator.js';
 import type { UserRole } from '../auth/types.js';
+import type { DbPool } from '../db/pool.js';
+import type { DataAggregator } from '../synthesis/aggregator.js';
 
 export interface Recommendation {
   id: string;
@@ -77,8 +77,18 @@ export class RecommendationEngine {
           description: `Agent ${agent.agentName} has a ${(agent.performance.failureRate * 100).toFixed(1)}% failure rate, significantly above the 10% threshold.`,
           confidence: Math.min(0.95, 0.6 + agent.performance.totalExecutions / 1000),
           evidence: [
-            { source: 'agentflow', metric: 'failure_rate', value: agent.performance.failureRate, context: 'Current failure rate' },
-            { source: 'agentflow', metric: 'total_executions', value: agent.performance.totalExecutions, context: 'Sample size for confidence' },
+            {
+              source: 'agentflow',
+              metric: 'failure_rate',
+              value: agent.performance.failureRate,
+              context: 'Current failure rate',
+            },
+            {
+              source: 'agentflow',
+              metric: 'total_executions',
+              value: agent.performance.totalExecutions,
+              context: 'Sample size for confidence',
+            },
           ],
           impact: {
             category: 'reliability',
@@ -100,7 +110,11 @@ export class RecommendationEngine {
       }
 
       // Cost optimization recommendation
-      if (agent.efficiency.costPerExecution && agent.efficiency.costPerExecution > 0.5 && agent.performance.successRate < 0.85) {
+      if (
+        agent.efficiency.costPerExecution &&
+        agent.efficiency.costPerExecution > 0.5 &&
+        agent.performance.successRate < 0.85
+      ) {
         recommendations.push({
           id: nextId(),
           type: 'cost',
@@ -108,12 +122,23 @@ export class RecommendationEngine {
           description: `Agent ${agent.agentName} costs $${agent.efficiency.costPerExecution.toFixed(2)}/execution with only ${(agent.performance.successRate * 100).toFixed(0)}% success rate.`,
           confidence: 0.75,
           evidence: [
-            { source: 'opsintel', metric: 'cost_per_execution', value: agent.efficiency.costPerExecution, context: 'Current cost per execution' },
-            { source: 'agentflow', metric: 'success_rate', value: agent.performance.successRate, context: 'Current success rate' },
+            {
+              source: 'opsintel',
+              metric: 'cost_per_execution',
+              value: agent.efficiency.costPerExecution,
+              context: 'Current cost per execution',
+            },
+            {
+              source: 'agentflow',
+              metric: 'success_rate',
+              value: agent.performance.successRate,
+              context: 'Current success rate',
+            },
           ],
           impact: {
             category: 'cost_reduction',
-            estimatedValue: agent.performance.totalExecutions * agent.efficiency.costPerExecution * 0.2, // 20% savings potential
+            estimatedValue:
+              agent.performance.totalExecutions * agent.efficiency.costPerExecution * 0.2, // 20% savings potential
             confidenceInterval: { low: 0.5, high: 1.5 },
             timeframe: 'next_quarter',
             riskLevel: 'low',
@@ -139,7 +164,12 @@ export class RecommendationEngine {
           description: `Agent ${agent.agentName} shows significant behavioral drift (score: ${agent.compliance.driftScore.toFixed(2)}) with ${agent.compliance.alerts.length} active alert(s).`,
           confidence: 0.85,
           evidence: [
-            { source: 'opsintel', metric: 'drift_score', value: agent.compliance.driftScore, context: 'Drift severity' },
+            {
+              source: 'opsintel',
+              metric: 'drift_score',
+              value: agent.compliance.driftScore,
+              context: 'Drift severity',
+            },
           ],
           impact: {
             category: 'compliance_risk',
@@ -182,7 +212,11 @@ export class RecommendationEngine {
         `Outcome: ${outcome.recommendationId}`,
         outcome.notes ?? '',
         JSON.stringify(outcome),
-        outcome.status === 'implemented' ? 'implemented' : outcome.status === 'rejected' ? 'rejected' : 'pending',
+        outcome.status === 'implemented'
+          ? 'implemented'
+          : outcome.status === 'rejected'
+            ? 'rejected'
+            : 'pending',
         outcome.actualOutcome ? 1.0 : 0.5,
         outcome.decidedBy,
         outcome.decidedAt,

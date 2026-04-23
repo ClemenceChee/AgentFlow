@@ -6,46 +6,46 @@
 
 // Data formatters
 export {
-  formatOperatorId,
-  formatTeamName,
-  formatSessionId,
-  formatInstanceType,
-  formatRelativeTime,
-  formatPolicyStatus,
-  formatConfidence,
-  formatRelationshipType,
-  formatDuration,
-  formatPerformanceMetric,
   formatActivityPattern,
+  formatConfidence,
+  formatDuration,
+  formatInstanceType,
+  formatOperatorId,
+  formatPerformanceMetric,
+  formatPolicyStatus,
+  formatRelationshipType,
+  formatRelativeTime,
+  formatSessionId,
+  formatTeamName,
   getOperatorContextSummary,
-  getTeamPerformanceSummary
+  getTeamPerformanceSummary,
 } from './dataFormatters.js';
 
 // Data validators
 export {
-  validateOperatorContext,
-  validatePolicyStatus,
-  validateSessionCorrelation,
-  validateTeamMembership,
-  validateOrganizationalTrace,
-  validateTeamFilterState,
+  checkOrganizationalDataCompleteness,
   hasTeamAccess,
   isTraceVisible,
   sanitizeOperatorContext,
-  checkOrganizationalDataCompleteness,
+  TypeGuards,
   validateApiResponse,
-  TypeGuards
+  validateOperatorContext,
+  validateOrganizationalTrace,
+  validatePolicyStatus,
+  validateSessionCorrelation,
+  validateTeamFilterState,
+  validateTeamMembership,
 } from './dataValidators.js';
 
 // Helper utilities
 export {
-  calculateSessionSimilarity,
-  extractOperatorPatterns,
   buildCorrelationChain,
-  categorizeActivity,
+  calculateSessionSimilarity,
   calculateTeamMetrics,
+  categorizeActivity,
+  createDisplaySummary,
+  extractOperatorPatterns,
+  filterByAccessLevel,
   generateInsights,
   sortByRelevance,
-  filterByAccessLevel,
-  createDisplaySummary
 } from './helpers.js';

@@ -1,4 +1,3 @@
-import React from 'react';
 import type { CronHealthResponse } from '../hooks/useCronHealth';
 
 interface Props {
@@ -7,12 +6,19 @@ interface Props {
 
 export function CronHealthTable({ cron }: Props) {
   if (!cron) return <div className="bi-loading">Loading cron data...</div>;
-  if (cron.jobs.length === 0) return <div className="bi-empty"><span>No cron jobs found</span></div>;
+  if (cron.jobs.length === 0)
+    return (
+      <div className="bi-empty">
+        <span>No cron jobs found</span>
+      </div>
+    );
 
   return (
     <div>
       <div style={{ display: 'flex', gap: 'var(--s4)', marginBottom: 'var(--s3)' }}>
-        <span className={`badge badge--${cron.overallSuccessRate >= 0.8 ? 'ok' : cron.overallSuccessRate >= 0.5 ? 'warn' : 'fail'}`}>
+        <span
+          className={`badge badge--${cron.overallSuccessRate >= 0.8 ? 'ok' : cron.overallSuccessRate >= 0.5 ? 'warn' : 'fail'}`}
+        >
           {(cron.overallSuccessRate * 100).toFixed(0)}% reliability
         </span>
         <span className="badge badge--neutral">{cron.totalRuns} total runs</span>
@@ -39,17 +45,28 @@ export function CronHealthTable({ cron }: Props) {
               <tr key={j.jobId}>
                 <td style={{ fontWeight: 500 }}>{j.jobId}</td>
                 <td>
-                  <span style={{
-                    fontFamily: 'var(--fm)',
-                    color: j.successRate >= 0.8 ? 'var(--ok)' : j.successRate >= 0.5 ? 'var(--warn)' : 'var(--fail)',
-                  }}>
+                  <span
+                    style={{
+                      fontFamily: 'var(--fm)',
+                      color:
+                        j.successRate >= 0.8
+                          ? 'var(--ok)'
+                          : j.successRate >= 0.5
+                            ? 'var(--warn)'
+                            : 'var(--fail)',
+                    }}
+                  >
                     {(j.successRate * 100).toFixed(0)}%
                   </span>
                 </td>
                 <td style={{ fontFamily: 'var(--fm)' }}>{j.totalRuns}</td>
                 <td style={{ fontFamily: 'var(--fm)' }}>
                   {fmtDuration(j.avgDurationMs)}
-                  {j.durationAnomaly && <span style={{ color: 'var(--warn)', marginLeft: 4 }} title="Duration anomaly">!</span>}
+                  {j.durationAnomaly && (
+                    <span style={{ color: 'var(--warn)', marginLeft: 4 }} title="Duration anomaly">
+                      !
+                    </span>
+                  )}
                 </td>
                 <td style={{ fontFamily: 'var(--fm)' }}>{fmtTokens(j.totalTokens)}</td>
                 <td>

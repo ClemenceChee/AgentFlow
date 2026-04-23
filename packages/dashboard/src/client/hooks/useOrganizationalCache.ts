@@ -5,9 +5,9 @@
  * including SWR-style data fetching with background updates.
  */
 
-import { useEffect, useState, useCallback, useRef } from 'react';
-import { organizationalCache } from '../utils/organizational-cache.js';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CacheOptions } from '../utils/organizational-cache.js';
+import { organizationalCache } from '../utils/organizational-cache.js';
 
 interface UseOrganizationalCacheOptions extends CacheOptions {
   /** Whether to fetch on mount */
@@ -47,7 +47,7 @@ type UseOrganizationalCacheReturn<T> = CachedDataState<T> & CachedDataActions;
 export function useOrganizationalCache<T = any>(
   key: string,
   fetcher: () => Promise<T>,
-  options: UseOrganizationalCacheOptions = {}
+  options: UseOrganizationalCacheOptions = {},
 ): UseOrganizationalCacheReturn<T> {
   const {
     enabled = true,
@@ -67,7 +67,7 @@ export function useOrganizationalCache<T = any>(
       isLoading: !cached && enabled,
       isValidating: false,
       isStale: false,
-      lastUpdated: cached ? Date.now() : null
+      lastUpdated: cached ? Date.now() : null,
     };
   });
 
@@ -82,75 +82,78 @@ export function useOrganizationalCache<T = any>(
   }, [state.lastUpdated, staleTime]);
 
   // Fetch data function
-  const fetchData = useCallback(async (isBackground = false): Promise<T | null> => {
-    if (!enabled) return null;
+  const fetchData = useCallback(
+    async (isBackground = false): Promise<T | null> => {
+      if (!enabled) return null;
 
-    // Prevent concurrent fetches
-    if (fetchingRef.current && !isBackground) {
-      try {
-        return await fetchingRef.current;
-      } catch {
-        return null;
+      // Prevent concurrent fetches
+      if (fetchingRef.current && !isBackground) {
+        try {
+          return await fetchingRef.current;
+        } catch {
+          return null;
+        }
       }
-    }
 
-    // Cancel previous request
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
+      // Cancel previous request
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
 
-    abortControllerRef.current = new AbortController();
+      abortControllerRef.current = new AbortController();
 
-    const fetchPromise = (async (): Promise<T> => {
+      const fetchPromise = (async (): Promise<T> => {
+        try {
+          setState((prev) => ({
+            ...prev,
+            isLoading: !prev.data || !keepPreviousData,
+            isValidating: true,
+            error: null,
+          }));
+
+          const result = await fetcher();
+
+          // Cache the result
+          organizationalCache.set(key, result, cacheOptions);
+
+          setState((prev) => ({
+            ...prev,
+            data: result,
+            error: null,
+            isLoading: false,
+            isValidating: false,
+            isStale: false,
+            lastUpdated: Date.now(),
+          }));
+
+          return result;
+        } catch (error) {
+          const err = error instanceof Error ? error : new Error(String(error));
+
+          setState((prev) => ({
+            ...prev,
+            error: err,
+            isLoading: false,
+            isValidating: false,
+          }));
+
+          throw err;
+        }
+      })();
+
+      fetchingRef.current = fetchPromise;
+
       try {
-        setState(prev => ({
-          ...prev,
-          isLoading: !prev.data || !keepPreviousData,
-          isValidating: true,
-          error: null
-        }));
-
-        const result = await fetcher();
-
-        // Cache the result
-        organizationalCache.set(key, result, cacheOptions);
-
-        setState(prev => ({
-          ...prev,
-          data: result,
-          error: null,
-          isLoading: false,
-          isValidating: false,
-          isStale: false,
-          lastUpdated: Date.now()
-        }));
-
+        const result = await fetchPromise;
         return result;
-      } catch (error) {
-        const err = error instanceof Error ? error : new Error(String(error));
-
-        setState(prev => ({
-          ...prev,
-          error: err,
-          isLoading: false,
-          isValidating: false
-        }));
-
-        throw err;
+      } finally {
+        if (fetchingRef.current === fetchPromise) {
+          fetchingRef.current = null;
+        }
       }
-    })();
-
-    fetchingRef.current = fetchPromise;
-
-    try {
-      const result = await fetchPromise;
-      return result;
-    } finally {
-      if (fetchingRef.current === fetchPromise) {
-        fetchingRef.current = null;
-      }
-    }
-  }, [key, fetcher, enabled, cacheOptions, keepPreviousData]);
+    },
+    [key, fetcher, enabled, cacheOptions, keepPreviousData],
+  );
 
   // Refetch function
   const refetch = useCallback(async (): Promise<void> => {
@@ -158,24 +161,27 @@ export function useOrganizationalCache<T = any>(
   }, [fetchData]);
 
   // Mutate function (optimistic updates)
-  const mutate = useCallback((newData: T) => {
-    organizationalCache.set(key, newData, cacheOptions);
-    setState(prev => ({
-      ...prev,
-      data: newData,
-      lastUpdated: Date.now(),
-      isStale: false
-    }));
-  }, [key, cacheOptions]);
+  const mutate = useCallback(
+    (newData: T) => {
+      organizationalCache.set(key, newData, cacheOptions);
+      setState((prev) => ({
+        ...prev,
+        data: newData,
+        lastUpdated: Date.now(),
+        isStale: false,
+      }));
+    },
+    [key, cacheOptions],
+  );
 
   // Invalidate function
   const invalidate = useCallback(() => {
     organizationalCache.delete(key);
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
       data: null,
       lastUpdated: null,
-      isStale: true
+      isStale: true,
     }));
   }, [key]);
 
@@ -247,9 +253,9 @@ export function useOrganizationalCache<T = any>(
     const checkStale = () => {
       const stale = isDataStale();
       if (stale !== state.isStale) {
-        setState(prev => ({
+        setState((prev) => ({
           ...prev,
-          isStale: stale
+          isStale: stale,
         }));
       }
     };
@@ -274,7 +280,7 @@ export function useOrganizationalCache<T = any>(
     ...state,
     refetch,
     mutate,
-    invalidate
+    invalidate,
   };
 }
 
@@ -286,7 +292,7 @@ export function useTeamData(teamId?: string, options?: UseOrganizationalCacheOpt
   const key = teamId ? `team:${teamId}` : 'teams:list';
   const fetcher = useCallback(() => {
     const url = teamId ? `/api/teams/${teamId}` : '/api/teams';
-    return fetch(url).then(r => {
+    return fetch(url).then((r) => {
       if (!r.ok) throw new Error(`Failed to fetch team data: ${r.statusText}`);
       return r.json();
     });
@@ -295,7 +301,7 @@ export function useTeamData(teamId?: string, options?: UseOrganizationalCacheOpt
   return useOrganizationalCache(key, fetcher, {
     ttl: 10 * 60 * 1000, // 10 minutes
     priority: 'high',
-    ...options
+    ...options,
   });
 }
 
@@ -303,7 +309,7 @@ export function useOperatorData(operatorId?: string, options?: UseOrganizational
   const key = operatorId ? `operator:${operatorId}` : 'operators:list';
   const fetcher = useCallback(() => {
     const url = operatorId ? `/api/operators/${operatorId}` : '/api/operators';
-    return fetch(url).then(r => {
+    return fetch(url).then((r) => {
       if (!r.ok) throw new Error(`Failed to fetch operator data: ${r.statusText}`);
       return r.json();
     });
@@ -312,14 +318,17 @@ export function useOperatorData(operatorId?: string, options?: UseOrganizational
   return useOrganizationalCache(key, fetcher, {
     ttl: 5 * 60 * 1000, // 5 minutes
     priority: 'normal',
-    ...options
+    ...options,
   });
 }
 
-export function usePerformanceData(type: string = 'overview', options?: UseOrganizationalCacheOptions) {
+export function usePerformanceData(
+  type: string = 'overview',
+  options?: UseOrganizationalCacheOptions,
+) {
   const key = `performance:${type}`;
   const fetcher = useCallback(() => {
-    return fetch(`/api/performance/${type}`).then(r => {
+    return fetch(`/api/performance/${type}`).then((r) => {
       if (!r.ok) throw new Error(`Failed to fetch performance data: ${r.statusText}`);
       return r.json();
     });
@@ -329,14 +338,17 @@ export function usePerformanceData(type: string = 'overview', options?: UseOrgan
     ttl: 1 * 60 * 1000, // 1 minute
     priority: 'normal',
     refetchInterval: 30000, // Refresh every 30 seconds
-    ...options
+    ...options,
   });
 }
 
-export function useActivityData(type: string = 'overview', options?: UseOrganizationalCacheOptions) {
+export function useActivityData(
+  type: string = 'overview',
+  options?: UseOrganizationalCacheOptions,
+) {
   const key = `activity:${type}`;
   const fetcher = useCallback(() => {
-    return fetch(`/api/activity/${type}`).then(r => {
+    return fetch(`/api/activity/${type}`).then((r) => {
       if (!r.ok) throw new Error(`Failed to fetch activity data: ${r.statusText}`);
       return r.json();
     });
@@ -345,14 +357,14 @@ export function useActivityData(type: string = 'overview', options?: UseOrganiza
   return useOrganizationalCache(key, fetcher, {
     ttl: 2 * 60 * 1000, // 2 minutes
     priority: 'normal',
-    ...options
+    ...options,
   });
 }
 
 export function usePolicyData(options?: UseOrganizationalCacheOptions) {
   const key = 'policy:status';
   const fetcher = useCallback(() => {
-    return fetch('/api/policy/status').then(r => {
+    return fetch('/api/policy/status').then((r) => {
       if (!r.ok) throw new Error(`Failed to fetch policy data: ${r.statusText}`);
       return r.json();
     });
@@ -361,7 +373,7 @@ export function usePolicyData(options?: UseOrganizationalCacheOptions) {
   return useOrganizationalCache(key, fetcher, {
     ttl: 15 * 60 * 1000, // 15 minutes
     priority: 'normal',
-    ...options
+    ...options,
   });
 }
 
@@ -369,7 +381,7 @@ export function useSessionData(sessionId?: string, options?: UseOrganizationalCa
   const key = sessionId ? `session:${sessionId}` : 'sessions:recent';
   const fetcher = useCallback(() => {
     const url = sessionId ? `/api/sessions/${sessionId}` : '/api/sessions?recent=true';
-    return fetch(url).then(r => {
+    return fetch(url).then((r) => {
       if (!r.ok) throw new Error(`Failed to fetch session data: ${r.statusText}`);
       return r.json();
     });
@@ -378,6 +390,6 @@ export function useSessionData(sessionId?: string, options?: UseOrganizationalCa
   return useOrganizationalCache(key, fetcher, {
     ttl: 3 * 60 * 1000, // 3 minutes
     priority: 'normal',
-    ...options
+    ...options,
   });
 }

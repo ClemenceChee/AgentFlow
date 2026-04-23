@@ -1,16 +1,16 @@
 import { useEffect, useState } from 'react';
 import type { FullTrace } from '../hooks/useSelectedTrace';
-import { OrganizationalContextPanel } from './org/context/OrganizationalContextPanel';
+import type { OrganizationalTrace } from '../types/organizational';
 import { AgentFlow } from './AgentFlow';
 import { DecisionReplay } from './DecisionReplay';
 import { DependencyTree } from './DependencyTree';
 import { FlameChart } from './FlameChart';
 import { GuardExplanationCard, type Violation } from './GuardExplanationCard';
 import { MetricsView } from './MetricsView';
+import { OrganizationalContextPanel } from './org/context/OrganizationalContextPanel';
 import { RunReceiptView } from './RunReceiptView';
 import { StateMachine } from './StateMachine';
 import { TranscriptView } from './TranscriptView';
-import type { OrganizationalTrace } from '../types/organizational';
 
 // Types for enhanced SOMA execution steps
 interface SOMAExecutionStep {
@@ -67,7 +67,7 @@ function useOrganizationalTrace(trace: FullTrace | null): OrganizationalTrace | 
         teamId: determineTeamFromTrace(trace),
         instanceId: trace.agentId,
         timestamp: trace.startTime,
-        userAgent: 'AgentFlow Dashboard 1.0'
+        userAgent: 'AgentFlow Dashboard 1.0',
       },
 
       sessionCorrelation: {
@@ -78,13 +78,13 @@ function useOrganizationalTrace(trace: FullTrace | null): OrganizationalTrace | 
           workflowSimilarity: 0.73,
           contextOverlap: 0.82,
           problemDomainMatch: 0.91,
-          solutionPatternMatch: 0.67
+          solutionPatternMatch: 0.67,
         },
         crossInstanceTracking: {
           instanceTransitions: [],
           handoffQuality: 0.89,
-          continuityScore: 0.92
-        }
+          continuityScore: 0.92,
+        },
       },
 
       policyStatus: {
@@ -94,22 +94,25 @@ function useOrganizationalTrace(trace: FullTrace | null): OrganizationalTrace | 
           {
             policyId: 'execution-time-limit',
             policyName: 'Execution Time Limit',
-            status: (trace.endTime - trace.startTime) > 300000 ? 'violation' : 'compliant',
+            status: trace.endTime - trace.startTime > 300000 ? 'violation' : 'compliant',
             severity: 'medium',
-            details: `Execution time: ${Math.round((trace.endTime - trace.startTime) / 1000)}s`
+            details: `Execution time: ${Math.round((trace.endTime - trace.startTime) / 1000)}s`,
           },
           {
             policyId: 'error-rate-threshold',
             policyName: 'Error Rate Threshold',
-            status: Object.values(trace.nodes).filter(n => n.status === 'failed').length > 3 ? 'violation' : 'compliant',
+            status:
+              Object.values(trace.nodes).filter((n) => n.status === 'failed').length > 3
+                ? 'violation'
+                : 'compliant',
             severity: 'high',
-            details: `Failed nodes: ${Object.values(trace.nodes).filter(n => n.status === 'failed').length}`
-          }
+            details: `Failed nodes: ${Object.values(trace.nodes).filter((n) => n.status === 'failed').length}`,
+          },
         ],
         governanceRecommendations: generateGovernanceRecommendations(trace),
         approvalWorkflow: null,
-        exemptionStatus: null
-      }
+        exemptionStatus: null,
+      },
     };
 
     setOrgTrace(convertedTrace);
@@ -120,22 +123,27 @@ function useOrganizationalTrace(trace: FullTrace | null): OrganizationalTrace | 
 
 // Helper function to determine team from trace characteristics
 function determineTeamFromTrace(trace: FullTrace): string {
-  if (trace.agentId?.toLowerCase().includes('frontend') ||
-      trace.name?.toLowerCase().includes('ui') ||
-      trace.name?.toLowerCase().includes('react')) {
+  if (
+    trace.agentId?.toLowerCase().includes('frontend') ||
+    trace.name?.toLowerCase().includes('ui') ||
+    trace.name?.toLowerCase().includes('react')
+  ) {
     return 'team-frontend';
   }
-  if (trace.agentId?.toLowerCase().includes('backend') ||
-      trace.name?.toLowerCase().includes('api') ||
-      trace.name?.toLowerCase().includes('server')) {
+  if (
+    trace.agentId?.toLowerCase().includes('backend') ||
+    trace.name?.toLowerCase().includes('api') ||
+    trace.name?.toLowerCase().includes('server')
+  ) {
     return 'team-backend';
   }
-  if (trace.agentId?.toLowerCase().includes('soma') ||
-      trace.name?.toLowerCase().includes('soma')) {
+  if (trace.agentId?.toLowerCase().includes('soma') || trace.name?.toLowerCase().includes('soma')) {
     return 'team-soma';
   }
-  if (trace.agentId?.toLowerCase().includes('infra') ||
-      trace.name?.toLowerCase().includes('deploy')) {
+  if (
+    trace.agentId?.toLowerCase().includes('infra') ||
+    trace.name?.toLowerCase().includes('deploy')
+  ) {
     return 'team-infra';
   }
   return 'team-general';
@@ -149,15 +157,15 @@ function generateMockRelatedSessions(trace: FullTrace) {
       similarity: 0.89,
       relationshipType: 'workflow_similarity' as const,
       timestamp: trace.startTime - 3600000,
-      summary: 'Similar data processing workflow with comparable node patterns'
+      summary: 'Similar data processing workflow with comparable node patterns',
     },
     {
       sessionId: `session-${Math.random().toString(36).substr(2, 9)}`,
       similarity: 0.76,
       relationshipType: 'problem_pattern' as const,
       timestamp: trace.startTime - 7200000,
-      summary: 'Encountered similar error patterns in execution flow'
-    }
+      summary: 'Encountered similar error patterns in execution flow',
+    },
   ];
 }
 
@@ -166,18 +174,19 @@ function generateGovernanceRecommendations(trace: FullTrace) {
   const recommendations = [];
 
   const duration = trace.endTime - trace.startTime;
-  if (duration > 300000) { // 5 minutes
+  if (duration > 300000) {
+    // 5 minutes
     recommendations.push({
       type: 'optimization' as const,
       priority: 'medium' as const,
       title: 'Long Execution Time Detected',
       description: `Execution took ${Math.round(duration / 1000)}s. Consider optimizing for better performance.`,
       actionable: true,
-      estimatedImpact: 'medium' as const
+      estimatedImpact: 'medium' as const,
     });
   }
 
-  const failedNodes = Object.values(trace.nodes).filter(n => n.status === 'failed');
+  const failedNodes = Object.values(trace.nodes).filter((n) => n.status === 'failed');
   if (failedNodes.length > 0) {
     recommendations.push({
       type: 'reliability' as const,
@@ -185,7 +194,7 @@ function generateGovernanceRecommendations(trace: FullTrace) {
       title: 'Error Handling Review Needed',
       description: `${failedNodes.length} nodes failed. Review error handling and retry mechanisms.`,
       actionable: true,
-      estimatedImpact: 'high' as const
+      estimatedImpact: 'high' as const,
     });
   }
 
@@ -379,20 +388,29 @@ function SOMAStepsView({ enhancedTrace }: { enhancedTrace: EnhancedSOMATrace | n
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'completed': return '#3fb950';
-      case 'failed': return '#f85149';
-      case 'running': return '#d29922';
-      default: return '#8b949e';
+      case 'completed':
+        return '#3fb950';
+      case 'failed':
+        return '#f85149';
+      case 'running':
+        return '#d29922';
+      default:
+        return '#8b949e';
     }
   };
 
   const getWorkerIcon = (worker: string) => {
     switch (worker) {
-      case 'harvester': return '🌾';
-      case 'reconciler': return '🔧';
-      case 'synthesizer': return '🧪';
-      case 'cartographer': return '🗺️';
-      default: return '⚙️';
+      case 'harvester':
+        return '🌾';
+      case 'reconciler':
+        return '🔧';
+      case 'synthesizer':
+        return '🧪';
+      case 'cartographer':
+        return '🗺️';
+      default:
+        return '⚙️';
     }
   };
 
@@ -445,7 +463,13 @@ function SOMAStepsView({ enhancedTrace }: { enhancedTrace: EnhancedSOMATrace | n
 }
 
 // Enhanced ExecutionDetail component with organizational context integration
-export function ExecutionDetailWithOrgContext({ trace, loading }: { trace: FullTrace | null; loading: boolean }) {
+export function ExecutionDetailWithOrgContext({
+  trace,
+  loading,
+}: {
+  trace: FullTrace | null;
+  loading: boolean;
+}) {
   const [tab, setTab] = useState<Tab>('flame');
   const [orgPanelCollapsed, setOrgPanelCollapsed] = useState(false);
   const enhancedSOMATrace = useEnhancedSOMATrace(trace);
@@ -483,7 +507,9 @@ export function ExecutionDetailWithOrgContext({ trace, loading }: { trace: FullT
   return (
     <div className="exec-detail-with-org-context">
       {/* Main execution detail content */}
-      <div className={`exec-detail ${orgPanelCollapsed ? 'exec-detail--full-width' : 'exec-detail--with-org-panel'}`}>
+      <div
+        className={`exec-detail ${orgPanelCollapsed ? 'exec-detail--full-width' : 'exec-detail--with-org-panel'}`}
+      >
         <div className="ed-header">
           <span className={`dot ${trace.status === 'failed' ? 'dot--fail' : 'dot--ok'}`} />
           <span className="ed-header__agent">{trace.agentId}</span>
@@ -509,7 +535,9 @@ export function ExecutionDetailWithOrgContext({ trace, loading }: { trace: FullT
             type="button"
             className={`org-panel-toggle ${orgPanelCollapsed ? 'org-panel-toggle--collapsed' : ''}`}
             onClick={() => setOrgPanelCollapsed(!orgPanelCollapsed)}
-            title={orgPanelCollapsed ? 'Show organizational context' : 'Hide organizational context'}
+            title={
+              orgPanelCollapsed ? 'Show organizational context' : 'Hide organizational context'
+            }
           >
             👥 {orgPanelCollapsed ? 'Show Context' : 'Hide Context'}
           </button>

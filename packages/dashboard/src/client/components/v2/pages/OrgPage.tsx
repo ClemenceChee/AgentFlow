@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useOrganizationalContext } from '../../../contexts/OrganizationalContext';
+import type { AgentStats, GroupedAgents } from '../../../hooks/useAgents';
 import { OrganizationalErrorBoundary } from '../../org/common/OrganizationalErrorBoundary';
 import { CacheEfficiencyVisualizer } from '../../org/performance/CacheEfficiencyVisualizer';
 import { OrganizationalIntelligenceMetrics } from '../../org/performance/OrganizationalIntelligenceMetrics';
@@ -7,7 +8,6 @@ import { TeamQueryPerformanceChart } from '../../org/performance/TeamQueryPerfor
 import { GovernanceRecommendations } from '../../org/policy/GovernanceRecommendations';
 import { PolicyConfigurationView } from '../../org/policy/PolicyConfigurationView';
 import { TeamFilterDropdown } from '../../org/team/TeamFilterDropdown';
-import type { AgentStats, GroupedAgents } from '../../../hooks/useAgents';
 import { Badge, type BadgeKind, Card, fmtMs, Kpi, Sparkline } from '../atoms';
 
 type OrgSubView = 'overview' | 'team' | 'policy' | 'performance' | 'session' | 'activity';
@@ -183,11 +183,7 @@ function OverviewSection({
                   className="num"
                   style={{
                     color:
-                      t.success < 80
-                        ? 'var(--fail)'
-                        : t.success < 95
-                          ? 'var(--warn)'
-                          : 'var(--ok)',
+                      t.success < 80 ? 'var(--fail)' : t.success < 95 ? 'var(--warn)' : 'var(--ok)',
                   }}
                 >
                   {t.success.toFixed(1)}%
@@ -399,8 +395,8 @@ export function OrgPage({
           <div className="page__eyebrow">Organizational Intelligence</div>
           <div className="page__title">Governance</div>
           <div className="page__subtitle">
-            {rows.length} teams {'·'} {operators || '—'} operators {'·'}{' '}
-            {totalTraces} traces {'·'} audit log healthy
+            {rows.length} teams {'·'} {operators || '—'} operators {'·'} {totalTraces} traces {'·'}{' '}
+            audit log healthy
           </div>
         </div>
         <div className="page__head-actions">

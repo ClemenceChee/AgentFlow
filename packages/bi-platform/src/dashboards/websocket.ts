@@ -4,7 +4,6 @@
  * Tasks: 6.4 (responsive/mobile — data layer), 6.6 (WebSocket updates), 6.10 (sharing)
  */
 
-import type { Server } from 'node:http';
 import type { Logger } from '../monitoring/logger.js';
 
 export interface WsClient {

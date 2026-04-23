@@ -5,11 +5,11 @@
  * productivity metrics comparison, and collaborative pattern analysis.
  */
 
-import { useState, useEffect } from 'react';
-import { Users, BarChart3, TrendingUp, Clock, Compare, Filter, ArrowUpDown } from 'lucide-react';
+import { ArrowUpDown, BarChart3, Compare, TrendingUp, Users } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useOrganizationalContext } from '../../../../contexts/OrganizationalContext';
 import type { SessionCorrelation } from '../../../types/organizational.js';
-import type { ActivityEvent, ProductivityMetric, OperatorTimeline } from './OperatorTimelineView.js';
+import type { ActivityEvent, OperatorTimeline } from './OperatorTimelineView.js';
 
 export interface OperatorComparison {
   readonly operatorId: string;
@@ -26,7 +26,11 @@ export interface OperatorComparison {
 export interface ComparisonMetric {
   readonly metricName: string;
   readonly unit: string;
-  readonly values: readonly { operatorId: string; value: number; trend: 'up' | 'down' | 'stable' }[];
+  readonly values: readonly {
+    operatorId: string;
+    value: number;
+    trend: 'up' | 'down' | 'stable';
+  }[];
   readonly ranking: readonly string[]; // operatorIds in rank order
   readonly benchmark: number; // Team average or target
   readonly category: 'productivity' | 'quality' | 'collaboration' | 'efficiency';
@@ -64,11 +68,16 @@ interface MultiOperatorComparisonProps {
 
 const getMetricCategoryColor = (category: ComparisonMetric['category']) => {
   switch (category) {
-    case 'productivity': return 'org-metric-productivity';
-    case 'quality': return 'org-metric-quality';
-    case 'collaboration': return 'org-metric-collaboration';
-    case 'efficiency': return 'org-metric-efficiency';
-    default: return 'org-metric-default';
+    case 'productivity':
+      return 'org-metric-productivity';
+    case 'quality':
+      return 'org-metric-quality';
+    case 'collaboration':
+      return 'org-metric-collaboration';
+    case 'efficiency':
+      return 'org-metric-efficiency';
+    default:
+      return 'org-metric-default';
   }
 };
 
@@ -81,10 +90,14 @@ const getPerformanceColor = (score: number) => {
 
 const getTrendIcon = (trend: 'up' | 'down' | 'stable') => {
   switch (trend) {
-    case 'up': return <TrendingUp className="h-3 w-3 org-text-success" />;
-    case 'down': return <TrendingUp className="h-3 w-3 org-text-error transform rotate-180" />;
-    case 'stable': return <ArrowUpDown className="h-3 w-3 org-text-muted" />;
-    default: return <ArrowUpDown className="h-3 w-3 org-text-muted" />;
+    case 'up':
+      return <TrendingUp className="h-3 w-3 org-text-success" />;
+    case 'down':
+      return <TrendingUp className="h-3 w-3 org-text-error transform rotate-180" />;
+    case 'stable':
+      return <ArrowUpDown className="h-3 w-3 org-text-muted" />;
+    default:
+      return <ArrowUpDown className="h-3 w-3 org-text-muted" />;
   }
 };
 
@@ -103,7 +116,7 @@ const TimelinesView: React.FC<{
   const [zoomLevel, setZoomLevel] = useState(1);
 
   const timeSpan = analysis.timeRange.end - analysis.timeRange.start;
-  const pixelsPerMs = (1000 * zoomLevel) / timeSpan;
+  const _pixelsPerMs = (1000 * zoomLevel) / timeSpan;
 
   return (
     <div className="org-multi-timelines">
@@ -111,13 +124,13 @@ const TimelinesView: React.FC<{
         <h4 className="org-text-lg org-font-semibold">Parallel Activity Timelines</h4>
         <div className="flex items-center space-x-2">
           <button
-            onClick={() => setZoomLevel(prev => Math.min(prev * 1.5, 4))}
+            onClick={() => setZoomLevel((prev) => Math.min(prev * 1.5, 4))}
             className="org-button org-button-ghost org-button-sm"
           >
             Zoom In
           </button>
           <button
-            onClick={() => setZoomLevel(prev => Math.max(prev / 1.5, 0.5))}
+            onClick={() => setZoomLevel((prev) => Math.max(prev / 1.5, 0.5))}
             className="org-button org-button-ghost org-button-sm"
           >
             Zoom Out
@@ -139,9 +152,11 @@ const TimelinesView: React.FC<{
                     onSelectOperator?.(operator.operatorId);
                   }}
                 >
-                  <div className={`w-8 h-8 rounded-full org-bg-primary-light flex items-center justify-center ${
-                    isSelected ? 'ring-2 ring-primary' : ''
-                  }`}>
+                  <div
+                    className={`w-8 h-8 rounded-full org-bg-primary-light flex items-center justify-center ${
+                      isSelected ? 'ring-2 ring-primary' : ''
+                    }`}
+                  >
                     <span className="org-text-primary org-font-semibold org-text-sm">
                       {operator.rank}
                     </span>
@@ -152,9 +167,7 @@ const TimelinesView: React.FC<{
                     </div>
                     <div className="org-text-sm org-text-muted">
                       Score: {Math.round(operator.performanceScore * 100)}%
-                      <span className="ml-2">
-                        {operator.timeline.events.length} events
-                      </span>
+                      <span className="ml-2">{operator.timeline.events.length} events</span>
                     </div>
                   </div>
                 </div>
@@ -197,12 +210,17 @@ const TimelinesView: React.FC<{
                     const width = Math.max((duration / timeSpan) * 100, 0.5);
 
                     const eventColor =
-                      event.category === 'coding' ? 'org-bg-blue-500' :
-                      event.category === 'debugging' ? 'org-bg-red-500' :
-                      event.category === 'review' ? 'org-bg-purple-500' :
-                      event.category === 'meeting' ? 'org-bg-orange-500' :
-                      event.category === 'research' ? 'org-bg-green-500' :
-                      'org-bg-gray-500';
+                      event.category === 'coding'
+                        ? 'org-bg-blue-500'
+                        : event.category === 'debugging'
+                          ? 'org-bg-red-500'
+                          : event.category === 'review'
+                            ? 'org-bg-purple-500'
+                            : event.category === 'meeting'
+                              ? 'org-bg-orange-500'
+                              : event.category === 'research'
+                                ? 'org-bg-green-500'
+                                : 'org-bg-gray-500';
 
                     return (
                       <div
@@ -212,14 +230,12 @@ const TimelinesView: React.FC<{
                           left: `${left}%`,
                           width: `${width}%`,
                           height: '32px',
-                          top: '16px'
+                          top: '16px',
                         }}
                         title={`${event.title} - ${event.category} (${Math.round(duration / 60000)}m)`}
                       >
                         <div className="h-full flex items-center px-1">
-                          <span className="org-text-xs text-white truncate">
-                            {event.title}
-                          </span>
+                          <span className="org-text-xs text-white truncate">{event.title}</span>
                         </div>
                       </div>
                     );
@@ -270,7 +286,7 @@ const TimelinesView: React.FC<{
             { category: 'review', color: 'org-bg-purple-500', label: 'Code Review' },
             { category: 'meeting', color: 'org-bg-orange-500', label: 'Meetings' },
             { category: 'research', color: 'org-bg-green-500', label: 'Research' },
-            { category: 'other', color: 'org-bg-gray-500', label: 'Other' }
+            { category: 'other', color: 'org-bg-gray-500', label: 'Other' },
           ].map(({ category, color, label }) => (
             <div key={category} className="flex items-center space-x-2">
               <div className={`w-4 h-4 rounded ${color}`}></div>
@@ -289,15 +305,16 @@ const MetricsView: React.FC<{
 }> = ({ analysis, focusMetrics }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
-  const filteredMetrics = selectedCategory === 'all' ?
-    analysis.metrics :
-    analysis.metrics.filter(m => m.category === selectedCategory);
+  const filteredMetrics =
+    selectedCategory === 'all'
+      ? analysis.metrics
+      : analysis.metrics.filter((m) => m.category === selectedCategory);
 
-  const displayMetrics = focusMetrics ?
-    filteredMetrics.filter(m => focusMetrics.includes(m.metricName)) :
-    filteredMetrics;
+  const displayMetrics = focusMetrics
+    ? filteredMetrics.filter((m) => focusMetrics.includes(m.metricName))
+    : filteredMetrics;
 
-  const categories = [...new Set(analysis.metrics.map(m => m.category))];
+  const categories = [...new Set(analysis.metrics.map((m) => m.category))];
 
   return (
     <div className="org-multi-metrics">
@@ -309,7 +326,7 @@ const MetricsView: React.FC<{
           className="org-select"
         >
           <option value="all">All Categories</option>
-          {categories.map(cat => (
+          {categories.map((cat) => (
             <option key={cat} value={cat} className="capitalize">
               {cat}
             </option>
@@ -341,13 +358,18 @@ const MetricsView: React.FC<{
               {metric.values
                 .sort((a, b) => b.value - a.value)
                 .map((operatorValue, index) => {
-                  const operator = analysis.operators.find(op => op.operatorId === operatorValue.operatorId);
-                  const maxValue = Math.max(...metric.values.map(v => v.value));
+                  const operator = analysis.operators.find(
+                    (op) => op.operatorId === operatorValue.operatorId,
+                  );
+                  const maxValue = Math.max(...metric.values.map((v) => v.value));
                   const percentage = maxValue > 0 ? (operatorValue.value / maxValue) * 100 : 0;
                   const isAboveBenchmark = operatorValue.value > metric.benchmark;
 
                   return (
-                    <div key={operatorValue.operatorId} className="flex items-center justify-between">
+                    <div
+                      key={operatorValue.operatorId}
+                      className="flex items-center justify-between"
+                    >
                       <div className="flex items-center space-x-3 flex-1">
                         <div className="w-6 h-6 rounded-full org-bg-primary-light flex items-center justify-center">
                           <span className="org-text-primary org-font-semibold org-text-xs">
@@ -369,9 +391,11 @@ const MetricsView: React.FC<{
                             </div>
                             <div className="flex items-center space-x-1">
                               {getTrendIcon(operatorValue.trend)}
-                              <span className={`org-text-sm ${
-                                isAboveBenchmark ? 'org-text-success' : 'org-text-warning'
-                              }`}>
+                              <span
+                                className={`org-text-sm ${
+                                  isAboveBenchmark ? 'org-text-success' : 'org-text-warning'
+                                }`}
+                              >
                                 {formatMetricValue(operatorValue.value, metric.unit)}
                               </span>
                             </div>
@@ -380,8 +404,7 @@ const MetricsView: React.FC<{
                       </div>
                     </div>
                   );
-                })
-              }
+                })}
             </div>
           </div>
         ))}
@@ -400,7 +423,9 @@ const MetricsView: React.FC<{
 const PerformanceView: React.FC<{
   analysis: ComparisonAnalysis;
 }> = ({ analysis }) => {
-  const sortedOperators = [...analysis.operators].sort((a, b) => b.performanceScore - a.performanceScore);
+  const sortedOperators = [...analysis.operators].sort(
+    (a, b) => b.performanceScore - a.performanceScore,
+  );
 
   return (
     <div className="org-multi-performance">
@@ -415,13 +440,22 @@ const PerformanceView: React.FC<{
         </div>
         <div className="org-stat-card">
           <div className="org-stat-value">
-            {Math.round(analysis.operators.reduce((sum, op) => sum + op.performanceScore, 0) / analysis.operators.length * 100)}%
+            {Math.round(
+              (analysis.operators.reduce((sum, op) => sum + op.performanceScore, 0) /
+                analysis.operators.length) *
+                100,
+            )}
+            %
           </div>
           <div className="org-stat-label">Avg Performance</div>
         </div>
         <div className="org-stat-card">
           <div className="org-stat-value">
-            {Math.round(analysis.operators.reduce((sum, op) => sum + op.collaborationIndex, 0) / analysis.operators.length * 100)}
+            {Math.round(
+              (analysis.operators.reduce((sum, op) => sum + op.collaborationIndex, 0) /
+                analysis.operators.length) *
+                100,
+            )}
           </div>
           <div className="org-stat-label">Avg Collaboration</div>
         </div>
@@ -451,7 +485,9 @@ const PerformanceView: React.FC<{
                         style={{ width: `${operator.performanceScore * 100}%` }}
                       />
                     </div>
-                    <span className={`org-font-semibold ${getPerformanceColor(operator.performanceScore)}`}>
+                    <span
+                      className={`org-font-semibold ${getPerformanceColor(operator.performanceScore)}`}
+                    >
                       {Math.round(operator.performanceScore * 100)}%
                     </span>
                   </div>
@@ -498,27 +534,35 @@ const PerformanceView: React.FC<{
 const CollaborationView: React.FC<{
   analysis: ComparisonAnalysis;
 }> = ({ analysis }) => {
-  const collaborativeEvents = analysis.operators.flatMap(op =>
-    op.timeline.events.filter(event =>
-      event.eventType === 'collaboration' || (event.collaborators && event.collaborators.length > 0)
-    )
+  const collaborativeEvents = analysis.operators.flatMap((op) =>
+    op.timeline.events.filter(
+      (event) =>
+        event.eventType === 'collaboration' ||
+        (event.collaborators && event.collaborators.length > 0),
+    ),
   );
 
-  const collaborationMatrix = analysis.operators.reduce((matrix, sourceOp) => {
-    matrix[sourceOp.operatorId] = analysis.operators.reduce((row, targetOp) => {
-      if (sourceOp.operatorId === targetOp.operatorId) {
-        row[targetOp.operatorId] = 0;
-      } else {
-        // Count collaborative events between operators
-        const collaborations = sourceOp.timeline.events.filter(event =>
-          event.collaborators?.includes(targetOp.operatorId)
-        ).length;
-        row[targetOp.operatorId] = collaborations;
-      }
-      return row;
-    }, {} as Record<string, number>);
-    return matrix;
-  }, {} as Record<string, Record<string, number>>);
+  const collaborationMatrix = analysis.operators.reduce(
+    (matrix, sourceOp) => {
+      matrix[sourceOp.operatorId] = analysis.operators.reduce(
+        (row, targetOp) => {
+          if (sourceOp.operatorId === targetOp.operatorId) {
+            row[targetOp.operatorId] = 0;
+          } else {
+            // Count collaborative events between operators
+            const collaborations = sourceOp.timeline.events.filter((event) =>
+              event.collaborators?.includes(targetOp.operatorId),
+            ).length;
+            row[targetOp.operatorId] = collaborations;
+          }
+          return row;
+        },
+        {} as Record<string, number>,
+      );
+      return matrix;
+    },
+    {} as Record<string, Record<string, number>>,
+  );
 
   return (
     <div className="org-multi-collaboration">
@@ -530,15 +574,17 @@ const CollaborationView: React.FC<{
         <div className="org-stat-card">
           <div className="org-stat-value">
             {Math.round(
-              analysis.operators.reduce((sum, op) => sum + op.collaborationIndex, 0) /
-              analysis.operators.length * 100
-            )}%
+              (analysis.operators.reduce((sum, op) => sum + op.collaborationIndex, 0) /
+                analysis.operators.length) *
+                100,
+            )}
+            %
           </div>
           <div className="org-stat-label">Avg Collaboration</div>
         </div>
         <div className="org-stat-card">
           <div className="org-stat-value">
-            {new Set(collaborativeEvents.flatMap(e => e.collaborators || [])).size}
+            {new Set(collaborativeEvents.flatMap((e) => e.collaborators || [])).size}
           </div>
           <div className="org-stat-label">Active Pairs</div>
         </div>
@@ -551,7 +597,7 @@ const CollaborationView: React.FC<{
             <thead>
               <tr>
                 <th className="org-text-left"></th>
-                {analysis.operators.map(op => (
+                {analysis.operators.map((op) => (
                   <th key={op.operatorId} className="org-text-center org-text-xs">
                     {op.operatorId.slice(-6)}
                   </th>
@@ -559,15 +605,13 @@ const CollaborationView: React.FC<{
               </tr>
             </thead>
             <tbody>
-              {analysis.operators.map(sourceOp => (
+              {analysis.operators.map((sourceOp) => (
                 <tr key={sourceOp.operatorId}>
-                  <td className="org-font-medium org-text-sm">
-                    {sourceOp.operatorId.slice(-6)}
-                  </td>
-                  {analysis.operators.map(targetOp => {
+                  <td className="org-font-medium org-text-sm">{sourceOp.operatorId.slice(-6)}</td>
+                  {analysis.operators.map((targetOp) => {
                     const count = collaborationMatrix[sourceOp.operatorId][targetOp.operatorId];
                     const maxCount = Math.max(
-                      ...Object.values(collaborationMatrix).flatMap(row => Object.values(row))
+                      ...Object.values(collaborationMatrix).flatMap((row) => Object.values(row)),
                     );
                     const intensity = maxCount > 0 ? count / maxCount : 0;
 
@@ -576,12 +620,15 @@ const CollaborationView: React.FC<{
                         key={targetOp.operatorId}
                         className="org-text-center"
                         style={{
-                          backgroundColor: count > 0 ?
-                            `rgba(59, 130, 246, ${0.2 + intensity * 0.6})` :
-                            'transparent'
+                          backgroundColor:
+                            count > 0
+                              ? `rgba(59, 130, 246, ${0.2 + intensity * 0.6})`
+                              : 'transparent',
                         }}
                       >
-                        <span className={`org-text-xs ${count > 0 ? 'org-text-primary-dark' : 'org-text-muted'}`}>
+                        <span
+                          className={`org-text-xs ${count > 0 ? 'org-text-primary-dark' : 'org-text-muted'}`}
+                        >
                           {count}
                         </span>
                       </td>
@@ -600,8 +647,9 @@ const CollaborationView: React.FC<{
           .sort((a, b) => b.collaborationIndex - a.collaborationIndex)
           .slice(0, 5)
           .map((operator, index) => {
-            const operatorCollaborations = operator.timeline.events.filter(e =>
-              e.eventType === 'collaboration' || (e.collaborators && e.collaborators.length > 0)
+            const operatorCollaborations = operator.timeline.events.filter(
+              (e) =>
+                e.eventType === 'collaboration' || (e.collaborators && e.collaborators.length > 0),
             );
 
             return (
@@ -638,17 +686,18 @@ const CollaborationView: React.FC<{
                       .sort(([, a], [, b]) => b - a)
                       .slice(0, 3)
                       .map(([collaboratorId]) => (
-                        <span key={collaboratorId} className="org-badge org-badge-info org-badge-xs">
+                        <span
+                          key={collaboratorId}
+                          className="org-badge org-badge-info org-badge-xs"
+                        >
                           {collaboratorId.slice(-6)}
                         </span>
-                      ))
-                    }
+                      ))}
                   </div>
                 </div>
               </div>
             );
-          })
-        }
+          })}
       </div>
     </div>
   );
@@ -662,7 +711,7 @@ export const MultiOperatorComparison: React.FC<MultiOperatorComparisonProps> = (
   focusMetrics,
   realTime = false,
   onSelectOperator,
-  className = ''
+  className = '',
 }) => {
   const { teamFilter } = useOrganizationalContext();
   const [analysis, setAnalysis] = useState<ComparisonAnalysis | null>(null);
@@ -679,7 +728,7 @@ export const MultiOperatorComparison: React.FC<MultiOperatorComparisonProps> = (
           day: 86400000,
           week: 604800000,
           month: 2592000000,
-          quarter: 7776000000
+          quarter: 7776000000,
         }[timeRange];
 
         const endTime = Date.now();
@@ -688,23 +737,33 @@ export const MultiOperatorComparison: React.FC<MultiOperatorComparisonProps> = (
         // Generate mock comparison data
         const operators: OperatorComparison[] = operatorIds.map((operatorId, index) => {
           // Generate mock timeline for each operator
-          const events: ActivityEvent[] = Array.from({ length: 15 + Math.random() * 20 }, (_, i) => ({
-            id: `${operatorId}-event-${i}`,
-            operatorId,
-            timestamp: startTime + (Math.random() * timeRangeMs),
-            eventType: ['task-start', 'task-complete', 'collaboration', 'problem-solving', 'review'][
-              Math.floor(Math.random() * 5)
-            ] as ActivityEvent['eventType'],
-            title: `Task ${i + 1}`,
-            duration: 300000 + Math.random() * 3600000,
-            outcome: Math.random() > 0.2 ? 'success' : 'failure',
-            category: ['coding', 'debugging', 'review', 'research', 'meeting'][
-              Math.floor(Math.random() * 5)
-            ] as ActivityEvent['category'],
-            collaborators: Math.random() > 0.7 ?
-              operatorIds.filter(id => id !== operatorId).slice(0, Math.floor(Math.random() * 2) + 1) :
-              undefined
-          }));
+          const events: ActivityEvent[] = Array.from(
+            { length: 15 + Math.random() * 20 },
+            (_, i) => ({
+              id: `${operatorId}-event-${i}`,
+              operatorId,
+              timestamp: startTime + Math.random() * timeRangeMs,
+              eventType: [
+                'task-start',
+                'task-complete',
+                'collaboration',
+                'problem-solving',
+                'review',
+              ][Math.floor(Math.random() * 5)] as ActivityEvent['eventType'],
+              title: `Task ${i + 1}`,
+              duration: 300000 + Math.random() * 3600000,
+              outcome: Math.random() > 0.2 ? 'success' : 'failure',
+              category: ['coding', 'debugging', 'review', 'research', 'meeting'][
+                Math.floor(Math.random() * 5)
+              ] as ActivityEvent['category'],
+              collaborators:
+                Math.random() > 0.7
+                  ? operatorIds
+                      .filter((id) => id !== operatorId)
+                      .slice(0, Math.floor(Math.random() * 2) + 1)
+                  : undefined,
+            }),
+          );
 
           const totalActiveTime = events.reduce((sum, e) => sum + (e.duration || 0), 0);
           const performanceScore = 0.4 + Math.random() * 0.6;
@@ -717,10 +776,11 @@ export const MultiOperatorComparison: React.FC<MultiOperatorComparisonProps> = (
             productivityMetrics: [],
             workingSessions: Math.floor(totalActiveTime / 3600000) + 1,
             totalActiveTime,
-            avgSessionDuration: totalActiveTime / Math.max(Math.floor(totalActiveTime / 3600000), 1),
+            avgSessionDuration:
+              totalActiveTime / Math.max(Math.floor(totalActiveTime / 3600000), 1),
             peakProductivityHours: [9, 10, 14, 15],
             patternScore: Math.random(),
-            generatedAt: Date.now()
+            generatedAt: Date.now(),
           };
 
           return {
@@ -730,16 +790,28 @@ export const MultiOperatorComparison: React.FC<MultiOperatorComparisonProps> = (
             timeline,
             performanceScore,
             rank: index + 1, // Will be recalculated below
-            strengthAreas: ['productivity', 'collaboration', 'code-quality', 'problem-solving'].slice(0, 2 + index % 3),
-            improvementAreas: ['time-management', 'documentation', 'testing', 'communication'].slice(0, 1 + index % 2),
-            collaborationIndex: 0.3 + Math.random() * 0.7
+            strengthAreas: [
+              'productivity',
+              'collaboration',
+              'code-quality',
+              'problem-solving',
+            ].slice(0, 2 + (index % 3)),
+            improvementAreas: [
+              'time-management',
+              'documentation',
+              'testing',
+              'communication',
+            ].slice(0, 1 + (index % 2)),
+            collaborationIndex: 0.3 + Math.random() * 0.7,
           };
         });
 
         // Recalculate ranks based on performance scores
-        const sortedByPerformance = [...operators].sort((a, b) => b.performanceScore - a.performanceScore);
+        const sortedByPerformance = [...operators].sort(
+          (a, b) => b.performanceScore - a.performanceScore,
+        );
         sortedByPerformance.forEach((op, index) => {
-          const operatorIndex = operators.findIndex(o => o.operatorId === op.operatorId);
+          const operatorIndex = operators.findIndex((o) => o.operatorId === op.operatorId);
           if (operatorIndex >= 0) {
             operators[operatorIndex] = { ...operators[operatorIndex], rank: index + 1 };
           }
@@ -749,48 +821,53 @@ export const MultiOperatorComparison: React.FC<MultiOperatorComparisonProps> = (
           {
             metricName: 'tasks-completed',
             unit: 'count',
-            values: operators.map(op => ({
+            values: operators.map((op) => ({
               operatorId: op.operatorId,
-              value: op.timeline.events.filter(e => e.outcome === 'success').length,
-              trend: 'up'
+              value: op.timeline.events.filter((e) => e.outcome === 'success').length,
+              trend: 'up',
             })),
-            ranking: operators.sort((a, b) =>
-              b.timeline.events.filter(e => e.outcome === 'success').length -
-              a.timeline.events.filter(e => e.outcome === 'success').length
-            ).map(op => op.operatorId),
+            ranking: operators
+              .sort(
+                (a, b) =>
+                  b.timeline.events.filter((e) => e.outcome === 'success').length -
+                  a.timeline.events.filter((e) => e.outcome === 'success').length,
+              )
+              .map((op) => op.operatorId),
             benchmark: 8,
-            category: 'productivity'
+            category: 'productivity',
           },
           {
             metricName: 'success-rate',
             unit: '%',
-            values: operators.map(op => {
-              const successful = op.timeline.events.filter(e => e.outcome === 'success').length;
+            values: operators.map((op) => {
+              const successful = op.timeline.events.filter((e) => e.outcome === 'success').length;
               const total = op.timeline.events.length;
               return {
                 operatorId: op.operatorId,
                 value: total > 0 ? successful / total : 0,
-                trend: Math.random() > 0.5 ? 'up' : 'stable'
+                trend: Math.random() > 0.5 ? 'up' : 'stable',
               };
             }),
             ranking: [],
             benchmark: 0.75,
-            category: 'quality'
+            category: 'quality',
           },
           {
             metricName: 'collaboration-events',
             unit: 'count',
-            values: operators.map(op => ({
+            values: operators.map((op) => ({
               operatorId: op.operatorId,
-              value: op.timeline.events.filter(e =>
-                e.eventType === 'collaboration' || (e.collaborators && e.collaborators.length > 0)
+              value: op.timeline.events.filter(
+                (e) =>
+                  e.eventType === 'collaboration' ||
+                  (e.collaborators && e.collaborators.length > 0),
               ).length,
-              trend: 'stable'
+              trend: 'stable',
             })),
             ranking: [],
             benchmark: 5,
-            category: 'collaboration'
-          }
+            category: 'collaboration',
+          },
         ];
 
         const totalEvents = operators.reduce((sum, op) => sum + op.timeline.events.length, 0);
@@ -801,20 +878,22 @@ export const MultiOperatorComparison: React.FC<MultiOperatorComparisonProps> = (
           timeRange: { start: startTime, end: endTime },
           totalEvents,
           teamAverages: {
-            performanceScore: operators.reduce((sum, op) => sum + op.performanceScore, 0) / operators.length,
-            collaborationIndex: operators.reduce((sum, op) => sum + op.collaborationIndex, 0) / operators.length
+            performanceScore:
+              operators.reduce((sum, op) => sum + op.performanceScore, 0) / operators.length,
+            collaborationIndex:
+              operators.reduce((sum, op) => sum + op.collaborationIndex, 0) / operators.length,
           },
           insights: [
             `${operators[0].displayName} leads in overall performance`,
             `Collaboration is strongest between operators ${operators[0].operatorId.slice(-4)} and ${operators[1].operatorId.slice(-4)}`,
-            'Peak productivity hours are consistently 9-11 AM across all operators'
+            'Peak productivity hours are consistently 9-11 AM across all operators',
           ],
           recommendations: [
             'Consider pairing high-performers with those needing improvement',
             'Schedule collaborative sessions during peak hours',
-            'Implement knowledge sharing sessions for best practices'
+            'Implement knowledge sharing sessions for best practices',
           ],
-          analyzedAt: Date.now()
+          analyzedAt: Date.now(),
         });
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load comparison analysis');
@@ -831,7 +910,7 @@ export const MultiOperatorComparison: React.FC<MultiOperatorComparisonProps> = (
     if (!realTime || !analysis) return;
 
     const interval = setInterval(() => {
-      setAnalysis(prev => prev ? { ...prev, analyzedAt: Date.now() } : prev);
+      setAnalysis((prev) => (prev ? { ...prev, analyzedAt: Date.now() } : prev));
     }, 30000); // Update every 30 seconds
 
     return () => clearInterval(interval);
@@ -890,9 +969,7 @@ export const MultiOperatorComparison: React.FC<MultiOperatorComparisonProps> = (
       {mode === 'timelines' && (
         <TimelinesView analysis={analysis} onSelectOperator={onSelectOperator} />
       )}
-      {mode === 'metrics' && (
-        <MetricsView analysis={analysis} focusMetrics={focusMetrics} />
-      )}
+      {mode === 'metrics' && <MetricsView analysis={analysis} focusMetrics={focusMetrics} />}
       {mode === 'performance' && <PerformanceView analysis={analysis} />}
       {mode === 'collaboration' && <CollaborationView analysis={analysis} />}
 

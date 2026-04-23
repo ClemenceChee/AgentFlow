@@ -4,36 +4,33 @@
  * Centralized export for all organizational React hooks and utilities.
  */
 
-// Core organizational hooks
-export {
-  useOrganizationalContext,
-  useTeamFilter,
-  useOrganizationalIntelligence,
-  useOperatorActivity,
-  useSessionCorrelation,
-  useTeamPerformance,
-  useOrganizationalTraceFilter
-} from './useOrganizationalData.js';
-
-// Main organizational data hook (combines all functionality)
-export { useOrganizationalData } from './useOrganizationalData.js';
-
 // Re-export context types for convenience
 export type {
+  OrganizationalContextInterface,
   OrganizationalContextState,
-  OrganizationalContextInterface
 } from '../../contexts/OrganizationalContext.js';
-
 // Re-export organizational types
 export type {
-  OperatorContext,
-  TeamMembership,
-  SessionCorrelation,
-  PolicyStatus,
-  SessionHookData,
   OperatorActivityPattern,
-  TeamPerformanceMetrics,
+  OperatorContext,
+  OrganizationalIntelligence,
   OrganizationalTrace,
+  PolicyStatus,
+  SessionCorrelation,
+  SessionHookData,
   TeamFilterState,
-  OrganizationalIntelligence
+  TeamMembership,
+  TeamPerformanceMetrics,
 } from '../../types/organizational.js';
+// Core organizational hooks
+// Main organizational data hook (combines all functionality)
+export {
+  useOperatorActivity,
+  useOrganizationalContext,
+  useOrganizationalData,
+  useOrganizationalIntelligence,
+  useOrganizationalTraceFilter,
+  useSessionCorrelation,
+  useTeamFilter,
+  useTeamPerformance,
+} from './useOrganizationalData.js';

@@ -108,7 +108,9 @@
   background: var(--color-bg-primary, #ffffff);
   color: var(--color-fg-default, #24292f);
   font-size: 13px;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .org-search-input:focus {
@@ -299,7 +301,7 @@
 }
 
 .org-navigation-subitem::before {
-  content: '';
+  content: "";
   position: absolute;
   left: 28px;
   top: 50%;

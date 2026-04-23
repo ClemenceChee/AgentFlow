@@ -33,7 +33,7 @@ export function createLogger(options?: {
     };
 
     const out = level === 'error' ? process.stderr : process.stdout;
-    out.write(JSON.stringify(entry) + '\n');
+    out.write(`${JSON.stringify(entry)}\n`);
   }
 
   const logger: Logger = {

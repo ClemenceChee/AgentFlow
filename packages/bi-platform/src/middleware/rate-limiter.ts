@@ -37,9 +37,10 @@ export function createRateLimiter(config: RateLimitConfig): Middleware {
     config.keyFn ??
     ((ctx: RouteContext) => {
       const forwarded = ctx.req.headers['x-forwarded-for'];
-      const ip = typeof forwarded === 'string'
-        ? forwarded.split(',')[0].trim()
-        : ctx.req.socket.remoteAddress ?? 'unknown';
+      const ip =
+        typeof forwarded === 'string'
+          ? forwarded.split(',')[0].trim()
+          : (ctx.req.socket.remoteAddress ?? 'unknown');
       return ip;
     });
 

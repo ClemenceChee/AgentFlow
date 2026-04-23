@@ -166,18 +166,34 @@ export class IntegrationManager {
   async pushData(connectorName: string, payload: ExportPayload): Promise<ExportResult> {
     const connector = this.connectors.get(connectorName);
     if (!connector) {
-      return { success: false, recordsExported: 0, errors: [`Unknown connector: ${connectorName}`], timestamp: new Date().toISOString() };
+      return {
+        success: false,
+        recordsExported: 0,
+        errors: [`Unknown connector: ${connectorName}`],
+        timestamp: new Date().toISOString(),
+      };
     }
 
     const start = Date.now();
     try {
       const result = await connector.pushData(payload);
-      this.logEvent(connectorName, 'push', result.success, result.recordsExported, Date.now() - start);
+      this.logEvent(
+        connectorName,
+        'push',
+        result.success,
+        result.recordsExported,
+        Date.now() - start,
+      );
       return result;
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : String(err);
       this.logEvent(connectorName, 'push', false, 0, Date.now() - start, errMsg);
-      return { success: false, recordsExported: 0, errors: [errMsg], timestamp: new Date().toISOString() };
+      return {
+        success: false,
+        recordsExported: 0,
+        errors: [errMsg],
+        timestamp: new Date().toISOString(),
+      };
     }
   }
 
@@ -185,18 +201,36 @@ export class IntegrationManager {
   async pullData(connectorName: string, query: ImportQuery): Promise<ImportResult> {
     const connector = this.connectors.get(connectorName);
     if (!connector || !connector.pullData) {
-      return { success: false, recordsImported: 0, data: [], errors: [`Connector ${connectorName} does not support pull`], timestamp: new Date().toISOString() };
+      return {
+        success: false,
+        recordsImported: 0,
+        data: [],
+        errors: [`Connector ${connectorName} does not support pull`],
+        timestamp: new Date().toISOString(),
+      };
     }
 
     const start = Date.now();
     try {
       const result = await connector.pullData(query);
-      this.logEvent(connectorName, 'pull', result.success, result.recordsImported, Date.now() - start);
+      this.logEvent(
+        connectorName,
+        'pull',
+        result.success,
+        result.recordsImported,
+        Date.now() - start,
+      );
       return result;
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : String(err);
       this.logEvent(connectorName, 'pull', false, 0, Date.now() - start, errMsg);
-      return { success: false, recordsImported: 0, data: [], errors: [errMsg], timestamp: new Date().toISOString() };
+      return {
+        success: false,
+        recordsImported: 0,
+        data: [],
+        errors: [errMsg],
+        timestamp: new Date().toISOString(),
+      };
     }
   }
 
@@ -227,7 +261,14 @@ export class IntegrationManager {
     return this.eventLog.filter((e) => !e.success).slice(-limit);
   }
 
-  private logEvent(connector: string, type: IntegrationEvent['type'], success: boolean, recordCount: number, durationMs: number, error?: string): void {
+  private logEvent(
+    connector: string,
+    type: IntegrationEvent['type'],
+    success: boolean,
+    recordCount: number,
+    durationMs: number,
+    error?: string,
+  ): void {
     const event: IntegrationEvent = {
       connector,
       type,
@@ -294,7 +335,7 @@ export class GenericRestConnector implements ExternalConnector {
   }
 
   async pushData(payload: ExportPayload): Promise<ExportResult> {
-    const start = Date.now();
+    const _start = Date.now();
     try {
       const res = await fetch(`${this.config.baseUrl}/data`, {
         method: 'POST',
@@ -333,7 +374,7 @@ export class GenericRestConnector implements ExternalConnector {
       });
 
       const body = await res.json().catch(() => []);
-      const data = Array.isArray(body) ? body : (body as any).data ?? [];
+      const data = Array.isArray(body) ? body : ((body as any).data ?? []);
 
       return {
         success: res.ok,

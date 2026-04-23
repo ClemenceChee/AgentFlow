@@ -8,18 +8,18 @@
 /* === ORGANIZATIONAL DESIGN TOKENS === */
 :root {
   /* Organizational colors */
-  --org-primary: #7c3aed;      /* Team context purple */
-  --org-secondary: #0ea5e9;    /* Session correlation blue */
-  --org-accent: #06b6d4;       /* Policy bridge cyan */
-  --org-success: #10b981;      /* Compliance success green */
-  --org-warning: #f59e0b;      /* Policy warning amber */
-  --org-error: #ef4444;        /* Policy violation red */
-  --org-neutral: #64748b;      /* Neutral organizational elements */
+  --org-primary: #7c3aed; /* Team context purple */
+  --org-secondary: #0ea5e9; /* Session correlation blue */
+  --org-accent: #06b6d4; /* Policy bridge cyan */
+  --org-success: #10b981; /* Compliance success green */
+  --org-warning: #f59e0b; /* Policy warning amber */
+  --org-error: #ef4444; /* Policy violation red */
+  --org-neutral: #64748b; /* Neutral organizational elements */
 
   /* Organizational backgrounds */
-  --org-bg-subtle: rgba(124, 58, 237, 0.1);     /* Subtle org background */
-  --org-bg-muted: rgba(124, 58, 237, 0.2);      /* Muted org background */
-  --org-bg-emphasis: rgba(124, 58, 237, 0.3);   /* Emphasis org background */
+  --org-bg-subtle: rgba(124, 58, 237, 0.1); /* Subtle org background */
+  --org-bg-muted: rgba(124, 58, 237, 0.2); /* Muted org background */
+  --org-bg-emphasis: rgba(124, 58, 237, 0.3); /* Emphasis org background */
 
   /* Organizational borders */
   --org-border-subtle: rgba(124, 58, 237, 0.2); /* Subtle org border */
@@ -27,22 +27,22 @@
   --org-border-emphasis: rgba(124, 58, 237, 0.6); /* Emphasis org border */
 
   /* Team specific colors */
-  --team-alpha: #3b82f6;       /* Team Alpha blue */
-  --team-beta: #10b981;        /* Team Beta green */
-  --team-gamma: #f59e0b;       /* Team Gamma amber */
-  --team-delta: #ef4444;       /* Team Delta red */
-  --team-epsilon: #8b5cf6;     /* Team Epsilon purple */
+  --team-alpha: #3b82f6; /* Team Alpha blue */
+  --team-beta: #10b981; /* Team Beta green */
+  --team-gamma: #f59e0b; /* Team Gamma amber */
+  --team-delta: #ef4444; /* Team Delta red */
+  --team-epsilon: #8b5cf6; /* Team Epsilon purple */
 
   /* Policy status colors */
-  --policy-compliant: var(--ok);    /* Reuse existing success color */
-  --policy-warning: var(--warn);    /* Reuse existing warning color */
-  --policy-violation: var(--fail);  /* Reuse existing fail color */
-  --policy-pending: var(--info);    /* Reuse existing info color */
+  --policy-compliant: var(--ok); /* Reuse existing success color */
+  --policy-warning: var(--warn); /* Reuse existing warning color */
+  --policy-violation: var(--fail); /* Reuse existing fail color */
+  --policy-pending: var(--info); /* Reuse existing info color */
 
   /* Component sizing */
-  --org-panel-width: 320px;    /* Standard org panel width */
-  --org-sidebar-width: 280px;  /* Org sidebar width */
-  --org-card-height: 120px;    /* Standard org card height */
+  --org-panel-width: 320px; /* Standard org panel width */
+  --org-sidebar-width: 280px; /* Org sidebar width */
+  --org-card-height: 120px; /* Standard org card height */
 
   /* Loading component sizing */
   --org-loading-spinner-size: 32px;
@@ -194,11 +194,21 @@
   font-weight: 500;
 }
 
-.team-badge--alpha { background: var(--team-alpha); }
-.team-badge--beta { background: var(--team-beta); }
-.team-badge--gamma { background: var(--team-gamma); }
-.team-badge--delta { background: var(--team-delta); }
-.team-badge--epsilon { background: var(--team-epsilon); }
+.team-badge--alpha {
+  background: var(--team-alpha);
+}
+.team-badge--beta {
+  background: var(--team-beta);
+}
+.team-badge--gamma {
+  background: var(--team-gamma);
+}
+.team-badge--delta {
+  background: var(--team-delta);
+}
+.team-badge--epsilon {
+  background: var(--team-epsilon);
+}
 
 .team-badge__icon {
   width: 12px;
@@ -438,7 +448,7 @@
 }
 
 .activity-timeline::before {
-  content: '';
+  content: "";
   position: absolute;
   left: 20px;
   top: 0;
@@ -624,8 +634,12 @@
 }
 
 @keyframes org-spinner-rotate {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .org-component-loading p {

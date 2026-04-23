@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 export interface DelegationRoiResponse {
   analysis: {
@@ -30,7 +30,9 @@ export function useDecisionRoi(): DelegationRoiResponse | null {
     try {
       const res = await fetch('/api/v1/decisions/roi-analysis');
       if (res.ok) setData(await res.json());
-    } catch { /* retry */ }
+    } catch {
+      /* retry */
+    }
   }, []);
 
   useEffect(() => {

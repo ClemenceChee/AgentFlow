@@ -43,15 +43,15 @@ interface CacheConfig {
 
 // Default cache expiration times for different data types
 const DEFAULT_CACHE_TTL = {
-  teams: 10 * 60 * 1000,          // 10 minutes
-  operators: 5 * 60 * 1000,       // 5 minutes
-  sessions: 3 * 60 * 1000,        // 3 minutes
-  performance: 1 * 60 * 1000,     // 1 minute
-  realtime: 30 * 1000,            // 30 seconds
-  policies: 15 * 60 * 1000,       // 15 minutes
-  activity: 2 * 60 * 1000,        // 2 minutes
-  correlation: 5 * 60 * 1000,     // 5 minutes
-  default: 5 * 60 * 1000          // Default 5 minutes
+  teams: 10 * 60 * 1000, // 10 minutes
+  operators: 5 * 60 * 1000, // 5 minutes
+  sessions: 3 * 60 * 1000, // 3 minutes
+  performance: 1 * 60 * 1000, // 1 minute
+  realtime: 30 * 1000, // 30 seconds
+  policies: 15 * 60 * 1000, // 15 minutes
+  activity: 2 * 60 * 1000, // 2 minutes
+  correlation: 5 * 60 * 1000, // 5 minutes
+  default: 5 * 60 * 1000, // Default 5 minutes
 };
 
 class OrganizationalCache {
@@ -64,7 +64,7 @@ class OrganizationalCache {
     hitRate: 0,
     oldestEntry: 0,
     newestEntry: 0,
-    totalRequests: 0
+    totalRequests: 0,
   };
   private config: CacheConfig;
   private cleanupTimer: NodeJS.Timeout | null = null;
@@ -72,11 +72,11 @@ class OrganizationalCache {
 
   constructor(config: Partial<CacheConfig> = {}) {
     this.config = {
-      maxMemory: 50 * 1024 * 1024,    // 50MB
+      maxMemory: 50 * 1024 * 1024, // 50MB
       maxEntries: 1000,
-      cleanupInterval: 5 * 60 * 1000,  // 5 minutes
-      compressionThreshold: 1024,      // 1KB
-      ...config
+      cleanupInterval: 5 * 60 * 1000, // 5 minutes
+      compressionThreshold: 1024, // 1KB
+      ...config,
     };
 
     this.startCleanupTimer();
@@ -121,7 +121,7 @@ class OrganizationalCache {
       ttl = this.getDefaultTTL(key),
       priority = 'normal',
       dependencies = [],
-      maxSize = Infinity
+      maxSize = Infinity,
     } = options;
 
     const dataSize = this.estimateSize(data);
@@ -143,7 +143,7 @@ class OrganizationalCache {
       expiry: Date.now() + ttl,
       size: dataSize,
       priority,
-      dependencies
+      dependencies,
     };
 
     this.cache.set(key, entry);
@@ -193,7 +193,7 @@ class OrganizationalCache {
    */
   getMultiple<T>(keys: string[]): Map<string, T | null> {
     const results = new Map<string, T | null>();
-    keys.forEach(key => {
+    keys.forEach((key) => {
       results.set(key, this.get<T>(key));
     });
     return results;
@@ -264,7 +264,7 @@ class OrganizationalCache {
       { key: 'teams:list', url: '/api/teams' },
       { key: 'operators:recent', url: '/api/operators?recent=true' },
       { key: 'performance:overview', url: '/api/performance/overview' },
-      { key: 'policy:status', url: '/api/policy/status' }
+      { key: 'policy:status', url: '/api/policy/status' },
     ];
 
     const warmupPromises = warmupEntries.map(async ({ key, url }) => {
@@ -292,10 +292,10 @@ class OrganizationalCache {
       cache: Array.from(this.cache.entries()).map(([key, entry]) => ({
         key,
         ...entry,
-        data: this.serializeData(entry.data)
+        data: this.serializeData(entry.data),
       })),
       stats: this.stats,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
 
     return JSON.stringify(exportData);
@@ -314,7 +314,7 @@ class OrganizationalCache {
         if (entry.expiry > now) {
           this.cache.set(key, {
             ...entry,
-            data: this.deserializeData(data)
+            data: this.deserializeData(data),
           });
         }
       });
@@ -345,17 +345,18 @@ class OrganizationalCache {
   }
 
   private updateHitRate(): void {
-    this.stats.hitRate = this.stats.totalRequests > 0
-      ? this.stats.hits / this.stats.totalRequests
-      : 0;
+    this.stats.hitRate =
+      this.stats.totalRequests > 0 ? this.stats.hits / this.stats.totalRequests : 0;
   }
 
   private updateStats(): void {
     this.stats.entries = this.cache.size;
-    this.stats.memoryUsage = Array.from(this.cache.values())
-      .reduce((total, entry) => total + entry.size, 0);
+    this.stats.memoryUsage = Array.from(this.cache.values()).reduce(
+      (total, entry) => total + entry.size,
+      0,
+    );
 
-    const timestamps = Array.from(this.cache.values()).map(e => e.timestamp);
+    const timestamps = Array.from(this.cache.values()).map((e) => e.timestamp);
     this.stats.oldestEntry = timestamps.length > 0 ? Math.min(...timestamps) : 0;
     this.stats.newestEntry = timestamps.length > 0 ? Math.max(...timestamps) : 0;
   }
@@ -369,7 +370,7 @@ class OrganizationalCache {
       hitRate: 0,
       oldestEntry: 0,
       newestEntry: 0,
-      totalRequests: 0
+      totalRequests: 0,
     };
   }
 
@@ -380,7 +381,7 @@ class OrganizationalCache {
     // Check if we need to remove entries to fit new data
     while (
       (this.stats.memoryUsage + newEntrySize > this.config.maxMemory ||
-       this.stats.entries >= this.config.maxEntries) &&
+        this.stats.entries >= this.config.maxEntries) &&
       this.cache.size > 0
     ) {
       this.evictLeastUseful();
@@ -398,8 +399,9 @@ class OrganizationalCache {
       const priorityWeight = entry.priority === 'high' ? 0.5 : entry.priority === 'normal' ? 1 : 2;
 
       // Lower score = less useful
-      const score = (entry.accessCount + 1) /
-                   ((age / 1000 + 1) * (timeSinceAccess / 1000 + 1) * priorityWeight);
+      const score =
+        (entry.accessCount + 1) /
+        ((age / 1000 + 1) * (timeSinceAccess / 1000 + 1) * priorityWeight);
 
       if (score < lowestScore) {
         lowestScore = score;
@@ -430,7 +432,7 @@ class OrganizationalCache {
       }
     }
 
-    expiredKeys.forEach(key => this.delete(key));
+    expiredKeys.forEach((key) => this.delete(key));
   }
 
   private startCleanupTimer(): void {
@@ -452,7 +454,7 @@ class OrganizationalCache {
     }
   }
 
-  private scheduleCompression(key: string): void {
+  private scheduleCompression(_key: string): void {
     // Placeholder for compression scheduling
     // In a real implementation, this would compress large cache entries
   }
@@ -518,5 +520,5 @@ if (typeof window !== 'undefined') {
   }
 }
 
+export type { CacheConfig, CacheOptions, CacheStats };
 export { OrganizationalCache, organizationalCache };
-export type { CacheOptions, CacheStats, CacheConfig };

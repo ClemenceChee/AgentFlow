@@ -6,12 +6,8 @@
  * the dashboard application.
  */
 
-import React, { createContext, useContext, useReducer, useCallback, ReactNode } from 'react';
-import type {
-  TeamFilterState,
-  OperatorContext,
-  OrganizationalIntelligence
-} from '../types/organizational.js';
+import { createContext, type ReactNode, useCallback, useContext, useReducer } from 'react';
+import type { OrganizationalIntelligence, TeamFilterState } from '../types/organizational.js';
 
 // Context State Interface
 interface OrganizationalContextState {
@@ -47,8 +43,14 @@ type OrganizationalContextAction =
   | { type: 'SET_AVAILABLE_TEAMS'; payload: TeamFilterState['availableTeams'] }
   | { type: 'SET_CURRENT_OPERATOR'; payload: OrganizationalContextState['currentOperator'] }
   | { type: 'SET_INTELLIGENCE'; payload: OrganizationalIntelligence }
-  | { type: 'SET_LOADING'; payload: { key: keyof OrganizationalContextState['loading']; value: boolean } }
-  | { type: 'SET_ERROR'; payload: { key: keyof OrganizationalContextState['errors']; value?: string } }
+  | {
+      type: 'SET_LOADING';
+      payload: { key: keyof OrganizationalContextState['loading']; value: boolean };
+    }
+  | {
+      type: 'SET_ERROR';
+      payload: { key: keyof OrganizationalContextState['errors']; value?: string };
+    }
   | { type: 'CLEAR_FILTER' }
   | { type: 'RESET_STATE' };
 
@@ -69,7 +71,7 @@ const initialState: OrganizationalContextState = {
 // Reducer
 function organizationalContextReducer(
   state: OrganizationalContextState,
-  action: OrganizationalContextAction
+  action: OrganizationalContextAction,
 ): OrganizationalContextState {
   switch (action.type) {
     case 'SET_TEAM_FILTER':
@@ -218,7 +220,8 @@ export function OrganizationalContextProvider({ children }: OrganizationalContex
         dispatch({ type: 'SET_INTELLIGENCE', payload: data.organizationalIntelligence });
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to load organizational intelligence';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to load organizational intelligence';
       dispatch({ type: 'SET_ERROR', payload: { key: 'intelligence', value: errorMessage } });
     } finally {
       dispatch({ type: 'SET_LOADING', payload: { key: 'intelligence', value: false } });
@@ -226,11 +229,14 @@ export function OrganizationalContextProvider({ children }: OrganizationalContex
   }, []);
 
   // Check if team is accessible to current operator
-  const isTeamAccessible = useCallback((teamId: string): boolean => {
-    if (!state.currentOperator) return true; // No restrictions if no operator context
-    if (state.currentOperator.isSuperUser) return true; // Super users can access all teams
-    return state.currentOperator.allowedTeams.includes(teamId);
-  }, [state.currentOperator]);
+  const isTeamAccessible = useCallback(
+    (teamId: string): boolean => {
+      if (!state.currentOperator) return true; // No restrictions if no operator context
+      if (state.currentOperator.isSuperUser) return true; // Super users can access all teams
+      return state.currentOperator.allowedTeams.includes(teamId);
+    },
+    [state.currentOperator],
+  );
 
   // Get current team context
   const getCurrentTeamContext = useCallback((): { teamId?: string; teamName?: string } | null => {
@@ -239,13 +245,15 @@ export function OrganizationalContextProvider({ children }: OrganizationalContex
     }
 
     const selectedTeam = state.teamFilter.availableTeams.find(
-      team => team.teamId === state.teamFilter.selectedTeamId
+      (team) => team.teamId === state.teamFilter.selectedTeamId,
     );
 
-    return selectedTeam ? {
-      teamId: selectedTeam.teamId,
-      teamName: selectedTeam.teamName
-    } : null;
+    return selectedTeam
+      ? {
+          teamId: selectedTeam.teamId,
+          teamName: selectedTeam.teamName,
+        }
+      : null;
   }, [state.teamFilter]);
 
   // Reset all state
@@ -265,9 +273,7 @@ export function OrganizationalContextProvider({ children }: OrganizationalContex
   };
 
   return (
-    <OrganizationalContext.Provider value={contextValue}>
-      {children}
-    </OrganizationalContext.Provider>
+    <OrganizationalContext.Provider value={contextValue}>{children}</OrganizationalContext.Provider>
   );
 }
 
@@ -275,10 +281,12 @@ export function OrganizationalContextProvider({ children }: OrganizationalContex
 export function useOrganizationalContext(): OrganizationalContextInterface {
   const context = useContext(OrganizationalContext);
   if (!context) {
-    throw new Error('useOrganizationalContext must be used within an OrganizationalContextProvider');
+    throw new Error(
+      'useOrganizationalContext must be used within an OrganizationalContextProvider',
+    );
   }
   return context;
 }
 
 // Export types for external use
-export type { OrganizationalContextState, OrganizationalContextInterface };
+export type { OrganizationalContextInterface, OrganizationalContextState };

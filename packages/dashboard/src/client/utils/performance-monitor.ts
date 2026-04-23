@@ -81,7 +81,8 @@ class OrganizationalPerformanceMonitor {
   private componentMetrics = new Map<string, ComponentMetrics>();
   private apiMetrics = new Map<string, APIMetrics>();
   private interactionMetrics = new Map<string, UserInteractionMetrics>();
-  private isEnabled = process.env.NODE_ENV === 'development' || localStorage.getItem('org-perf-monitor') === 'true';
+  private isEnabled =
+    process.env.NODE_ENV === 'development' || localStorage.getItem('org-perf-monitor') === 'true';
   private maxMetrics = 1000; // Prevent memory overflow
   private reportInterval: NodeJS.Timeout | null = null;
   private observer: PerformanceObserver | null = null;
@@ -102,7 +103,7 @@ class OrganizationalPerformanceMonitor {
 
     const fullMetric: PerformanceMetric = {
       ...metric,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
 
     this.metrics.push(fullMetric);
@@ -121,7 +122,11 @@ class OrganizationalPerformanceMonitor {
   /**
    * Record component render metrics
    */
-  recordComponentRender(componentName: string, renderTime: number, propsChanged: boolean = false): void {
+  recordComponentRender(
+    componentName: string,
+    renderTime: number,
+    propsChanged: boolean = false,
+  ): void {
     if (!this.isEnabled) return;
 
     let componentMetric = this.componentMetrics.get(componentName);
@@ -133,17 +138,16 @@ class OrganizationalPerformanceMonitor {
         averageRenderTime: 0,
         lastRenderTime: 0,
         propsChangeCount: 0,
-        memoryUsage: 0
+        memoryUsage: 0,
       };
       this.componentMetrics.set(componentName, componentMetric);
     }
 
     componentMetric.renderCount++;
     componentMetric.lastRenderTime = renderTime;
-    componentMetric.averageRenderTime = (
+    componentMetric.averageRenderTime =
       (componentMetric.averageRenderTime * (componentMetric.renderCount - 1) + renderTime) /
-      componentMetric.renderCount
-    );
+      componentMetric.renderCount;
 
     if (propsChanged) {
       componentMetric.propsChangeCount++;
@@ -154,7 +158,7 @@ class OrganizationalPerformanceMonitor {
       value: renderTime,
       unit: 'ms',
       category: 'render',
-      metadata: { propsChanged, renderCount: componentMetric.renderCount }
+      metadata: { propsChanged, renderCount: componentMetric.renderCount },
     });
   }
 
@@ -167,7 +171,7 @@ class OrganizationalPerformanceMonitor {
     responseTime: number,
     success: boolean,
     cacheHit: boolean = false,
-    batchSize?: number
+    batchSize?: number,
   ): void {
     if (!this.isEnabled) return;
 
@@ -181,27 +185,24 @@ class OrganizationalPerformanceMonitor {
         requestCount: 0,
         errorCount: 0,
         cacheHitRate: 0,
-        lastRequestTime: 0
+        lastRequestTime: 0,
       };
       this.apiMetrics.set(key, apiMetric);
     }
 
     apiMetric.requestCount++;
     apiMetric.lastRequestTime = responseTime;
-    apiMetric.averageResponseTime = (
+    apiMetric.averageResponseTime =
       (apiMetric.averageResponseTime * (apiMetric.requestCount - 1) + responseTime) /
-      apiMetric.requestCount
-    );
+      apiMetric.requestCount;
 
     if (!success) {
       apiMetric.errorCount++;
     }
 
     if (cacheHit) {
-      apiMetric.cacheHitRate = (
-        (apiMetric.cacheHitRate * (apiMetric.requestCount - 1) + 1) /
-        apiMetric.requestCount
-      );
+      apiMetric.cacheHitRate =
+        (apiMetric.cacheHitRate * (apiMetric.requestCount - 1) + 1) / apiMetric.requestCount;
     }
 
     if (batchSize) {
@@ -213,14 +214,19 @@ class OrganizationalPerformanceMonitor {
       value: responseTime,
       unit: 'ms',
       category: 'api',
-      metadata: { method, success, cacheHit, batchSize }
+      metadata: { method, success, cacheHit, batchSize },
     });
   }
 
   /**
    * Record user interaction metrics
    */
-  recordUserInteraction(action: string, component: string, duration: number, success: boolean = true): void {
+  recordUserInteraction(
+    action: string,
+    component: string,
+    duration: number,
+    success: boolean = true,
+  ): void {
     if (!this.isEnabled) return;
 
     const key = `${component}:${action}`;
@@ -231,22 +237,20 @@ class OrganizationalPerformanceMonitor {
         component,
         duration: 0,
         frequency: 0,
-        errorRate: 0
+        errorRate: 0,
       };
       this.interactionMetrics.set(key, interactionMetric);
     }
 
     interactionMetric.frequency++;
-    interactionMetric.duration = (
+    interactionMetric.duration =
       (interactionMetric.duration * (interactionMetric.frequency - 1) + duration) /
-      interactionMetric.frequency
-    );
+      interactionMetric.frequency;
 
     if (!success) {
-      interactionMetric.errorRate = (
+      interactionMetric.errorRate =
         (interactionMetric.errorRate * (interactionMetric.frequency - 1) + 1) /
-        interactionMetric.frequency
-      );
+        interactionMetric.frequency;
     }
 
     this.recordMetric({
@@ -254,14 +258,18 @@ class OrganizationalPerformanceMonitor {
       value: duration,
       unit: 'ms',
       category: 'user-interaction',
-      metadata: { component, success }
+      metadata: { component, success },
     });
   }
 
   /**
    * Record cache operation metrics
    */
-  recordCacheOperation(operation: 'hit' | 'miss' | 'set' | 'eviction', key: string, size?: number): void {
+  recordCacheOperation(
+    operation: 'hit' | 'miss' | 'set' | 'eviction',
+    key: string,
+    size?: number,
+  ): void {
     if (!this.isEnabled) return;
 
     this.recordMetric({
@@ -269,7 +277,7 @@ class OrganizationalPerformanceMonitor {
       value: size || 1,
       unit: size ? 'bytes' : 'count',
       category: 'cache',
-      metadata: { key, operation }
+      metadata: { key, operation },
     });
   }
 
@@ -282,14 +290,14 @@ class OrganizationalPerformanceMonitor {
 
     // Analyze component performance
     const components = Array.from(this.componentMetrics.values());
-    components.forEach(component => {
+    components.forEach((component) => {
       if (component.averageRenderTime > 16) {
         warnings.push({
           type: 'slow-render',
           message: `${component.componentName} has slow average render time: ${component.averageRenderTime.toFixed(2)}ms`,
           component: component.componentName,
           severity: component.averageRenderTime > 50 ? 'high' : 'medium',
-          recommendation: 'Consider optimizing with React.memo or useMemo'
+          recommendation: 'Consider optimizing with React.memo or useMemo',
         });
       }
 
@@ -299,21 +307,21 @@ class OrganizationalPerformanceMonitor {
           message: `${component.componentName} may have unnecessary re-renders`,
           component: component.componentName,
           severity: 'medium',
-          recommendation: 'Check prop stability and memoization'
+          recommendation: 'Check prop stability and memoization',
         });
       }
     });
 
     // Analyze API performance
     const apis = Array.from(this.apiMetrics.values());
-    apis.forEach(api => {
+    apis.forEach((api) => {
       const errorRate = api.errorCount / api.requestCount;
       if (errorRate > 0.1) {
         warnings.push({
           type: 'api-error',
           message: `High error rate for ${api.endpoint}: ${(errorRate * 100).toFixed(1)}%`,
           severity: 'high',
-          recommendation: 'Check API reliability and error handling'
+          recommendation: 'Check API reliability and error handling',
         });
       }
 
@@ -322,7 +330,7 @@ class OrganizationalPerformanceMonitor {
           type: 'cache-miss',
           message: `Low cache hit rate for ${api.endpoint}: ${(api.cacheHitRate * 100).toFixed(1)}%`,
           severity: 'medium',
-          recommendation: 'Review caching strategy and TTL settings'
+          recommendation: 'Review caching strategy and TTL settings',
         });
       }
     });
@@ -340,7 +348,7 @@ class OrganizationalPerformanceMonitor {
       interactions: Array.from(this.interactionMetrics.values()),
       cache: cacheMetrics,
       system: systemMetrics,
-      warnings
+      warnings,
     };
   }
 
@@ -349,7 +357,7 @@ class OrganizationalPerformanceMonitor {
    */
   getMetricsInTimeRange(startTime: number, endTime: number): PerformanceMetric[] {
     return this.metrics.filter(
-      metric => metric.timestamp >= startTime && metric.timestamp <= endTime
+      (metric) => metric.timestamp >= startTime && metric.timestamp <= endTime,
     );
   }
 
@@ -402,31 +410,32 @@ class OrganizationalPerformanceMonitor {
 
     this.observer = new PerformanceObserver((list) => {
       const entries = list.getEntries();
-      entries.forEach(entry => {
+      entries.forEach((entry) => {
         switch (entry.entryType) {
           case 'measure':
             this.recordMetric({
               name: entry.name,
               value: entry.duration,
               unit: 'ms',
-              category: entry.name.includes('render') ? 'render' : 'api'
+              category: entry.name.includes('render') ? 'render' : 'api',
             });
             break;
-          case 'navigation':
+          case 'navigation': {
             const nav = entry as PerformanceNavigationTiming;
             this.recordMetric({
               name: 'page_load',
               value: nav.loadEventEnd - nav.fetchStart,
               unit: 'ms',
-              category: 'network'
+              category: 'network',
             });
             break;
+          }
           case 'paint':
             this.recordMetric({
               name: entry.name.replace('-', '_'),
               value: entry.startTime,
               unit: 'ms',
-              category: 'render'
+              category: 'render',
             });
             break;
         }
@@ -465,8 +474,8 @@ class OrganizationalPerformanceMonitor {
           category: 'memory',
           metadata: {
             totalJSHeapSize: memory.totalJSHeapSize,
-            jsHeapSizeLimit: memory.jsHeapSizeLimit
-          }
+            jsHeapSizeLimit: memory.jsHeapSizeLimit,
+          },
         });
       }, 5000);
     }
@@ -477,48 +486,51 @@ class OrganizationalPerformanceMonitor {
   }
 
   private calculateCacheMetrics(): CacheMetrics {
-    const cacheOps = this.metrics.filter(m => m.category === 'cache');
-    const hits = cacheOps.filter(m => m.name === 'cache_hit').length;
-    const misses = cacheOps.filter(m => m.name === 'cache_miss').length;
+    const cacheOps = this.metrics.filter((m) => m.category === 'cache');
+    const hits = cacheOps.filter((m) => m.name === 'cache_hit').length;
+    const misses = cacheOps.filter((m) => m.name === 'cache_miss').length;
     const total = hits + misses;
 
     return {
       hitRate: total > 0 ? hits / total : 0,
       missRate: total > 0 ? misses / total : 0,
       totalSize: cacheOps
-        .filter(m => m.name === 'cache_set')
+        .filter((m) => m.name === 'cache_set')
         .reduce((sum, m) => sum + m.value, 0),
-      entryCount: cacheOps.filter(m => m.name === 'cache_set').length,
-      averageEntrySize: total > 0 ?
-        cacheOps.filter(m => m.name === 'cache_set').reduce((sum, m) => sum + m.value, 0) / total : 0,
-      evictionCount: cacheOps.filter(m => m.name === 'cache_eviction').length,
-      memoryPressure: 0.5 // Placeholder - would need actual memory pressure calculation
+      entryCount: cacheOps.filter((m) => m.name === 'cache_set').length,
+      averageEntrySize:
+        total > 0
+          ? cacheOps.filter((m) => m.name === 'cache_set').reduce((sum, m) => sum + m.value, 0) /
+            total
+          : 0,
+      evictionCount: cacheOps.filter((m) => m.name === 'cache_eviction').length,
+      memoryPressure: 0.5, // Placeholder - would need actual memory pressure calculation
     };
   }
 
   private getSystemMetrics(): PerformanceReport['system'] {
-    const memoryMetrics = this.metrics
-      .filter(m => m.name === 'memory_usage')
-      .slice(-1)[0];
+    const memoryMetrics = this.metrics.filter((m) => m.name === 'memory_usage').slice(-1)[0];
 
     return {
       memoryUsage: memoryMetrics?.value || 0,
       frameRate: this.calculateFrameRate(),
-      networkLatency: this.calculateNetworkLatency()
+      networkLatency: this.calculateNetworkLatency(),
     };
   }
 
   private calculateFrameRate(): number {
     // Simple frame rate calculation based on render metrics
-    const renderMetrics = this.metrics
-      .filter(m => m.category === 'render' && m.timestamp > Date.now() - 1000);
+    const renderMetrics = this.metrics.filter(
+      (m) => m.category === 'render' && m.timestamp > Date.now() - 1000,
+    );
 
     return renderMetrics.length > 0 ? 60 : 0; // Simplified
   }
 
   private calculateNetworkLatency(): number {
-    const apiMetrics = this.metrics
-      .filter(m => m.category === 'api' && m.timestamp > Date.now() - 10000);
+    const apiMetrics = this.metrics.filter(
+      (m) => m.category === 'api' && m.timestamp > Date.now() - 10000,
+    );
 
     if (apiMetrics.length === 0) return 0;
 
@@ -546,17 +558,27 @@ export function usePerformanceMonitoring(componentName: string) {
 
   return {
     recordInteraction: (action: string, duration: number, success?: boolean) => {
-      organizationalPerformanceMonitor.recordUserInteraction(action, componentName, duration, success);
+      organizationalPerformanceMonitor.recordUserInteraction(
+        action,
+        componentName,
+        duration,
+        success,
+      );
     },
-    recordMetric: (name: string, value: number, unit: PerformanceMetric['unit'], metadata?: any) => {
+    recordMetric: (
+      name: string,
+      value: number,
+      unit: PerformanceMetric['unit'],
+      metadata?: any,
+    ) => {
       organizationalPerformanceMonitor.recordMetric({
         name,
         value,
         unit,
         category: 'user-interaction',
-        metadata
+        metadata,
       });
-    }
+    },
   };
 }
 
@@ -564,7 +586,7 @@ export function usePerformanceMonitoring(componentName: string) {
 export function withAPIMonitoring<T extends (...args: any[]) => Promise<any>>(
   fn: T,
   endpoint: string,
-  method: string = 'GET'
+  method: string = 'GET',
 ): T {
   return (async (...args: Parameters<T>): Promise<Awaited<ReturnType<T>>> => {
     const startTime = performance.now();
@@ -582,17 +604,23 @@ export function withAPIMonitoring<T extends (...args: any[]) => Promise<any>>(
       throw error;
     } finally {
       const responseTime = performance.now() - startTime;
-      organizationalPerformanceMonitor.recordAPICall(endpoint, method, responseTime, success, cacheHit);
+      organizationalPerformanceMonitor.recordAPICall(
+        endpoint,
+        method,
+        responseTime,
+        success,
+        cacheHit,
+      );
     }
   }) as T;
 }
 
-export { organizationalPerformanceMonitor };
 export type {
-  PerformanceMetric,
-  ComponentMetrics,
   APIMetrics,
-  UserInteractionMetrics,
   CacheMetrics,
-  PerformanceReport
+  ComponentMetrics,
+  PerformanceMetric,
+  PerformanceReport,
+  UserInteractionMetrics,
 };
+export { organizationalPerformanceMonitor };

@@ -5,8 +5,8 @@
  * relationship mapping, confidence indicators, and navigation controls.
  */
 
-import { useState, useEffect, useRef } from 'react';
-import { GitBranch, Users, Clock, TrendingUp, ExternalLink, ZoomIn, ZoomOut, RotateCcw, Filter } from 'lucide-react';
+import { ExternalLink, GitBranch, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { useOrganizationalContext } from '../../../../contexts/OrganizationalContext';
 import type { SessionCorrelation } from '../../../types/organizational.js';
 
@@ -57,33 +57,50 @@ interface SessionCorrelationChainProps {
 
 const getNodeStatusColor = (status: SessionNode['status']) => {
   switch (status) {
-    case 'active': return 'org-node-active';
-    case 'completed': return 'org-node-success';
-    case 'failed': return 'org-node-error';
-    case 'timeout': return 'org-node-warning';
-    default: return 'org-node-muted';
+    case 'active':
+      return 'org-node-active';
+    case 'completed':
+      return 'org-node-success';
+    case 'failed':
+      return 'org-node-error';
+    case 'timeout':
+      return 'org-node-warning';
+    default:
+      return 'org-node-muted';
   }
 };
 
 const getRelationshipColor = (type: SessionRelationship['type']) => {
   switch (type) {
-    case 'parent-child': return 'org-edge-primary';
-    case 'continuation': return 'org-edge-info';
-    case 'parallel': return 'org-edge-success';
-    case 'knowledge-share': return 'org-edge-warning';
-    case 'collaboration': return 'org-edge-secondary';
-    default: return 'org-edge-muted';
+    case 'parent-child':
+      return 'org-edge-primary';
+    case 'continuation':
+      return 'org-edge-info';
+    case 'parallel':
+      return 'org-edge-success';
+    case 'knowledge-share':
+      return 'org-edge-warning';
+    case 'collaboration':
+      return 'org-edge-secondary';
+    default:
+      return 'org-edge-muted';
   }
 };
 
 const getRelationshipLabel = (type: SessionRelationship['type']) => {
   switch (type) {
-    case 'parent-child': return 'Spawned';
-    case 'continuation': return 'Continued';
-    case 'parallel': return 'Parallel';
-    case 'knowledge-share': return 'Shared';
-    case 'collaboration': return 'Collaborated';
-    default: return 'Related';
+    case 'parent-child':
+      return 'Spawned';
+    case 'continuation':
+      return 'Continued';
+    case 'parallel':
+      return 'Parallel';
+    case 'knowledge-share':
+      return 'Shared';
+    case 'collaboration':
+      return 'Collaborated';
+    default:
+      return 'Related';
   }
 };
 
@@ -95,11 +112,11 @@ const TreeChainView: React.FC<{
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
 
   const buildTree = (rootId: string): SessionNode & { children: any[] } => {
-    const root = chainData.nodes.find(n => n.id === rootId);
+    const root = chainData.nodes.find((n) => n.id === rootId);
     if (!root) throw new Error(`Root node ${rootId} not found`);
 
-    const childRelationships = chainData.relationships.filter(r => r.sourceId === rootId);
-    const children = childRelationships.map(rel => {
+    const childRelationships = chainData.relationships.filter((r) => r.sourceId === rootId);
+    const children = childRelationships.map((rel) => {
       return buildTree(rel.targetId);
     });
 
@@ -119,18 +136,14 @@ const TreeChainView: React.FC<{
         <div className="flex items-center space-x-2">
           <div className="org-node-indicator" />
           <div className="flex-1">
-            <div className="org-node-title">
-              {node.title || `Session ${node.id.slice(-8)}`}
-            </div>
+            <div className="org-node-title">{node.title || `Session ${node.id.slice(-8)}`}</div>
             <div className="org-node-meta">
               <span>Operator: {node.operatorId.slice(-8)}</span>
               {node.teamId && <span>Team: {node.teamId}</span>}
               <span>Confidence: {Math.round(node.confidence * 100)}%</span>
             </div>
           </div>
-          {onNavigateToSession && (
-            <ExternalLink className="h-4 w-4 org-text-muted" />
-          )}
+          {onNavigateToSession && <ExternalLink className="h-4 w-4 org-text-muted" />}
         </div>
 
         {showDetails && hoveredNode === node.id && node.summary && (
@@ -142,7 +155,7 @@ const TreeChainView: React.FC<{
 
       {node.children.length > 0 && (
         <div className="org-tree-children">
-          {node.children.map(child => renderNode(child, depth + 1))}
+          {node.children.map((child) => renderNode(child, depth + 1))}
         </div>
       )}
     </div>
@@ -150,11 +163,7 @@ const TreeChainView: React.FC<{
 
   const tree = buildTree(chainData.rootSessionId);
 
-  return (
-    <div className="org-chain-tree">
-      {renderNode(tree)}
-    </div>
-  );
+  return <div className="org-chain-tree">{renderNode(tree)}</div>;
 };
 
 const NetworkChainView: React.FC<{
@@ -163,7 +172,7 @@ const NetworkChainView: React.FC<{
   showDetails: boolean;
 }> = ({ chainData, onNavigateToSession, showDetails }) => {
   const svgRef = useRef<SVGSVGElement>(null);
-  const [viewBox, setViewBox] = useState({ x: 0, y: 0, width: 800, height: 600 });
+  const [viewBox, _setViewBox] = useState({ x: 0, y: 0, width: 800, height: 600 });
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
 
   // Simple force-directed layout
@@ -171,13 +180,13 @@ const NetworkChainView: React.FC<{
     const nodePositions = new Map<string, { x: number; y: number }>();
 
     // Place root node at center
-    const rootNode = chainData.nodes.find(n => n.id === chainData.rootSessionId);
+    const rootNode = chainData.nodes.find((n) => n.id === chainData.rootSessionId);
     if (rootNode) {
       nodePositions.set(rootNode.id, { x: 400, y: 300 });
     }
 
     // Place other nodes in concentric circles
-    const otherNodes = chainData.nodes.filter(n => n.id !== chainData.rootSessionId);
+    const otherNodes = chainData.nodes.filter((n) => n.id !== chainData.rootSessionId);
     const angleStep = (2 * Math.PI) / Math.max(otherNodes.length, 1);
 
     otherNodes.forEach((node, index) => {
@@ -185,7 +194,7 @@ const NetworkChainView: React.FC<{
       const radius = 150;
       nodePositions.set(node.id, {
         x: 400 + Math.cos(angle) * radius,
-        y: 300 + Math.sin(angle) * radius
+        y: 300 + Math.sin(angle) * radius,
       });
     });
 
@@ -279,12 +288,7 @@ const NetworkChainView: React.FC<{
               </text>
 
               {showDetails && isSelected && (
-                <foreignObject
-                  x={pos.x + radius + 10}
-                  y={pos.y - 40}
-                  width="200"
-                  height="80"
-                >
+                <foreignObject x={pos.x + radius + 10} y={pos.y - 40} width="200" height="80">
                   <div className="org-node-details">
                     <div className="org-text-sm org-font-medium">
                       {node.title || `Session ${node.id.slice(-8)}`}
@@ -311,10 +315,7 @@ const NetworkChainView: React.FC<{
             refY="3.5"
             orient="auto"
           >
-            <polygon
-              points="0 0, 10 3.5, 0 7"
-              className="org-arrow"
-            />
+            <polygon points="0 0, 10 3.5, 0 7" className="org-arrow" />
           </marker>
         </defs>
       </svg>
@@ -323,16 +324,32 @@ const NetworkChainView: React.FC<{
         <div className="mt-4 org-card-inner">
           <h5 className="org-font-semibold mb-2">Session Details</h5>
           {(() => {
-            const node = chainData.nodes.find(n => n.id === selectedNode);
+            const node = chainData.nodes.find((n) => n.id === selectedNode);
             if (!node) return null;
             return (
               <div className="org-text-sm space-y-1">
-                <div><strong>Session ID:</strong> {node.id}</div>
-                <div><strong>Operator:</strong> {node.operatorId}</div>
-                {node.teamId && <div><strong>Team:</strong> {node.teamId}</div>}
-                <div><strong>Status:</strong> {node.status}</div>
-                <div><strong>Confidence:</strong> {Math.round(node.confidence * 100)}%</div>
-                {node.summary && <div><strong>Summary:</strong> {node.summary}</div>}
+                <div>
+                  <strong>Session ID:</strong> {node.id}
+                </div>
+                <div>
+                  <strong>Operator:</strong> {node.operatorId}
+                </div>
+                {node.teamId && (
+                  <div>
+                    <strong>Team:</strong> {node.teamId}
+                  </div>
+                )}
+                <div>
+                  <strong>Status:</strong> {node.status}
+                </div>
+                <div>
+                  <strong>Confidence:</strong> {Math.round(node.confidence * 100)}%
+                </div>
+                {node.summary && (
+                  <div>
+                    <strong>Summary:</strong> {node.summary}
+                  </div>
+                )}
               </div>
             );
           })()}
@@ -348,8 +365,8 @@ const TimelineChainView: React.FC<{
   showDetails: boolean;
 }> = ({ chainData, onNavigateToSession, showDetails }) => {
   const sortedNodes = [...chainData.nodes].sort((a, b) => a.timestamp - b.timestamp);
-  const startTime = Math.min(...sortedNodes.map(n => n.timestamp));
-  const endTime = Math.max(...sortedNodes.map(n => n.timestamp + (n.duration || 0)));
+  const startTime = Math.min(...sortedNodes.map((n) => n.timestamp));
+  const endTime = Math.max(...sortedNodes.map((n) => n.timestamp + (n.duration || 0)));
   const timeSpan = endTime - startTime;
 
   return (
@@ -358,8 +375,9 @@ const TimelineChainView: React.FC<{
         <div className="absolute left-4 top-0 bottom-0 w-px org-border-muted"></div>
 
         <div className="space-y-4">
-          {sortedNodes.map((node, index) => {
-            const relativeStart = timeSpan > 0 ? ((node.timestamp - startTime) / timeSpan) * 100 : 0;
+          {sortedNodes.map((node, _index) => {
+            const _relativeStart =
+              timeSpan > 0 ? ((node.timestamp - startTime) / timeSpan) * 100 : 0;
             const duration = node.duration || 0;
             const relativeWidth = timeSpan > 0 ? (duration / timeSpan) * 100 : 0;
 
@@ -415,8 +433,8 @@ const TimelineChainView: React.FC<{
         <h5 className="org-font-semibold mb-3">Session Relationships</h5>
         <div className="space-y-2">
           {chainData.relationships.map((rel) => {
-            const source = chainData.nodes.find(n => n.id === rel.sourceId);
-            const target = chainData.nodes.find(n => n.id === rel.targetId);
+            const source = chainData.nodes.find((n) => n.id === rel.sourceId);
+            const target = chainData.nodes.find((n) => n.id === rel.targetId);
 
             return (
               <div key={rel.id} className="flex items-center space-x-2 org-text-sm">
@@ -464,13 +482,9 @@ const CompactChainView: React.FC<{
             title={`${node.title || node.id} - ${node.status}`}
             onClick={() => onNavigateToSession?.(node.id)}
           >
-            <span className="org-text-xs org-font-mono">
-              {node.id.slice(-2)}
-            </span>
+            <span className="org-text-xs org-font-mono">{node.id.slice(-2)}</span>
           </div>
-          {index < chainData.nodes.length - 1 && (
-            <GitBranch className="h-3 w-3 org-text-muted" />
-          )}
+          {index < chainData.nodes.length - 1 && <GitBranch className="h-3 w-3 org-text-muted" />}
         </div>
       ))}
     </div>
@@ -486,7 +500,7 @@ export const SessionCorrelationChain: React.FC<SessionCorrelationChainProps> = (
   mode = 'network',
   showDetails = true,
   onNavigateToSession,
-  className = ''
+  className = '',
 }) => {
   const { teamFilter } = useOrganizationalContext();
   const [chainData, setChainData] = useState<SessionCorrelationChainData | null>(null);
@@ -510,7 +524,7 @@ export const SessionCorrelationChain: React.FC<SessionCorrelationChainProps> = (
             status: 'active',
             sessionType: 'primary',
             title: 'Current Session',
-            confidence: sessionCorrelation.confidence
+            confidence: sessionCorrelation.confidence,
           },
           ...sessionCorrelation.relatedSessions.slice(0, 5).map((relatedId, index) => ({
             id: relatedId,
@@ -522,26 +536,28 @@ export const SessionCorrelationChain: React.FC<SessionCorrelationChainProps> = (
             sessionType: 'related' as const,
             title: `Related Session ${index + 1}`,
             summary: `Session focusing on similar organizational patterns and team dynamics.`,
-            confidence: 0.7 + Math.random() * 0.3
-          }))
+            confidence: 0.7 + Math.random() * 0.3,
+          })),
         ];
 
-        const relationships: SessionRelationship[] = sessionCorrelation.relatedSessions.slice(0, 5).map((relatedId, index) => ({
-          id: `rel-${index}`,
-          sourceId: sessionCorrelation.sessionId,
-          targetId: relatedId,
-          type: index === 0 ? 'continuation' : index === 1 ? 'parallel' : 'knowledge-share',
-          strength: 0.6 + Math.random() * 0.4,
-          confidence: 0.7 + Math.random() * 0.3,
-          timestamp: sessionCorrelation.timestamp - index * 1800000
-        }));
+        const relationships: SessionRelationship[] = sessionCorrelation.relatedSessions
+          .slice(0, 5)
+          .map((relatedId, index) => ({
+            id: `rel-${index}`,
+            sourceId: sessionCorrelation.sessionId,
+            targetId: relatedId,
+            type: index === 0 ? 'continuation' : index === 1 ? 'parallel' : 'knowledge-share',
+            strength: 0.6 + Math.random() * 0.4,
+            confidence: 0.7 + Math.random() * 0.3,
+            timestamp: sessionCorrelation.timestamp - index * 1800000,
+          }));
 
         setChainData({
           nodes,
           relationships,
           rootSessionId: sessionCorrelation.sessionId,
           totalConfidence: sessionCorrelation.confidence,
-          generatedAt: Date.now()
+          generatedAt: Date.now(),
         });
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load chain data');
@@ -586,10 +602,13 @@ export const SessionCorrelationChain: React.FC<SessionCorrelationChainProps> = (
     );
   }
 
-  const filteredData = filterType === 'all' ? chainData : {
-    ...chainData,
-    relationships: chainData.relationships.filter(rel => rel.type === filterType)
-  };
+  const filteredData =
+    filterType === 'all'
+      ? chainData
+      : {
+          ...chainData,
+          relationships: chainData.relationships.filter((rel) => rel.type === filterType),
+        };
 
   return (
     <div className={`org-chain-display org-chain-${mode} ${className}`}>
@@ -635,10 +654,7 @@ export const SessionCorrelationChain: React.FC<SessionCorrelationChainProps> = (
         />
       )}
       {mode === 'compact' && (
-        <CompactChainView
-          chainData={filteredData}
-          onNavigateToSession={onNavigateToSession}
-        />
+        <CompactChainView chainData={filteredData} onNavigateToSession={onNavigateToSession} />
       )}
     </div>
   );

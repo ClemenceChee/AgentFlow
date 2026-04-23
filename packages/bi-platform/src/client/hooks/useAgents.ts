@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 export interface AgentSummary {
   agentId: string;
@@ -24,7 +24,9 @@ export function useAgents(): AgentsResponse | null {
     try {
       const res = await fetch('/api/v1/agents');
       if (res.ok) setData(await res.json());
-    } catch { /* retry */ }
+    } catch {
+      /* retry */
+    }
   }, []);
 
   useEffect(() => {

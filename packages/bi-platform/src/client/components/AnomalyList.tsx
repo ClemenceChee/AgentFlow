@@ -1,4 +1,3 @@
-import React from 'react';
 import type { Anomaly } from '../hooks/useAnomalies';
 
 interface Props {
@@ -9,7 +8,11 @@ const sevIcon: Record<string, string> = { critical: '!!', high: '!', medium: '~'
 
 export function AnomalyList({ anomalies }: Props) {
   if (anomalies.length === 0) {
-    return <div className="bi-empty"><span>No anomalies detected</span></div>;
+    return (
+      <div className="bi-empty">
+        <span>No anomalies detected</span>
+      </div>
+    );
   }
 
   return (
@@ -23,10 +26,14 @@ export function AnomalyList({ anomalies }: Props) {
             <div className="bi-anomaly__title">{a.description}</div>
             <div className="bi-anomaly__desc">
               {a.source_system} &middot; {a.metric_name} &middot;{' '}
-              <span className="bi-anomaly__deviation" style={{ color: deviationColor(a.deviation_pct) }}>
-                {a.deviation_pct > 0 ? '+' : ''}{a.deviation_pct.toFixed(1)}%
-              </span>
-              {' '}&middot; {fmtAgo(a.detected_at)}
+              <span
+                className="bi-anomaly__deviation"
+                style={{ color: deviationColor(a.deviation_pct) }}
+              >
+                {a.deviation_pct > 0 ? '+' : ''}
+                {a.deviation_pct.toFixed(1)}%
+              </span>{' '}
+              &middot; {fmtAgo(a.detected_at)}
             </div>
             {a.business_impact && (
               <div className="bi-anomaly__desc" style={{ marginTop: 2 }}>

@@ -6,7 +6,7 @@
  * and policy status in a collapsible, user-friendly interface.
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useOrganizationalContext } from '../../../contexts/OrganizationalContext.js';
 import type { OrganizationalTrace } from '../../../types/organizational.js';
 
@@ -44,7 +44,7 @@ export function OrganizationalContextPanel({
   onCollapseChange,
   showEmpty = false,
   className = '',
-  compact = false
+  compact = false,
 }: OrganizationalContextPanelProps) {
   const [isCollapsed, setIsCollapsed] = useState(defaultCollapsed);
   const { state } = useOrganizationalContext();
@@ -64,7 +64,7 @@ export function OrganizationalContextPanel({
         hasTeamContext: false,
         hasPolicyStatus: false,
         hasSessionCorrelation: false,
-        completeness: 0
+        completeness: 0,
       };
     }
 
@@ -74,15 +74,16 @@ export function OrganizationalContextPanel({
     const hasPolicyStatus = !!trace.policyStatus;
     const hasSessionCorrelation = !!trace.sessionCorrelation;
 
-    const completeness = [hasOperatorContext, hasTeamContext, hasPolicyStatus, hasSessionCorrelation]
-      .filter(Boolean).length / 4;
+    const completeness =
+      [hasOperatorContext, hasTeamContext, hasPolicyStatus, hasSessionCorrelation].filter(Boolean)
+        .length / 4;
 
     return {
       hasOperatorContext,
       hasTeamContext,
       hasPolicyStatus,
       hasSessionCorrelation,
-      completeness
+      completeness,
     };
   }, [trace]);
 
@@ -103,13 +104,18 @@ export function OrganizationalContextPanel({
     `org-context-panel--${position}`,
     isCollapsed ? 'collapsed' : 'expanded',
     compact ? 'compact' : '',
-    className
-  ].filter(Boolean).join(' ');
+    className,
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
     <div className={panelClasses}>
       {/* Panel Header */}
-      <div className="org-context-panel__header" style={{ padding: '12px', borderBottom: '1px solid #e1e4e8' }}>
+      <div
+        className="org-context-panel__header"
+        style={{ padding: '12px', borderBottom: '1px solid #e1e4e8' }}
+      >
         <div className="org-context-panel__title" style={{ display: 'flex', alignItems: 'center' }}>
           <span style={{ fontWeight: 'bold' }}>Organizational Context</span>
           {dataAnalysis.completeness > 0 && (
@@ -124,7 +130,7 @@ export function OrganizationalContextPanel({
                 borderRadius: '2px',
                 marginLeft: '8px',
                 position: 'relative',
-                overflow: 'hidden'
+                overflow: 'hidden',
               }}
             >
               <div
@@ -136,7 +142,7 @@ export function OrganizationalContextPanel({
                   width: `${dataAnalysis.completeness * 100}%`,
                   background: '#28a745',
                   borderRadius: '2px',
-                  transition: 'width 0.3s ease'
+                  transition: 'width 0.3s ease',
                 }}
               />
             </div>
@@ -174,22 +180,38 @@ export function OrganizationalContextPanel({
         <div className="org-context-panel__collapsed-indicator" style={{ padding: '8px 12px' }}>
           <div className="org-context-panel__collapsed-badges">
             {dataAnalysis.hasOperatorContext && (
-              <span className="org-collapsed-badge" title="Operator Context Available" style={{ margin: '0 4px' }}>
+              <span
+                className="org-collapsed-badge"
+                title="Operator Context Available"
+                style={{ margin: '0 4px' }}
+              >
                 👤
               </span>
             )}
             {dataAnalysis.hasTeamContext && (
-              <span className="org-collapsed-badge" title="Team Context Available" style={{ margin: '0 4px' }}>
+              <span
+                className="org-collapsed-badge"
+                title="Team Context Available"
+                style={{ margin: '0 4px' }}
+              >
                 👥
               </span>
             )}
             {dataAnalysis.hasPolicyStatus && (
-              <span className="org-collapsed-badge" title="Policy Status Available" style={{ margin: '0 4px' }}>
+              <span
+                className="org-collapsed-badge"
+                title="Policy Status Available"
+                style={{ margin: '0 4px' }}
+              >
                 🛡️
               </span>
             )}
             {dataAnalysis.hasSessionCorrelation && (
-              <span className="org-collapsed-badge" title="Session Correlation Available" style={{ margin: '0 4px' }}>
+              <span
+                className="org-collapsed-badge"
+                title="Session Correlation Available"
+                style={{ margin: '0 4px' }}
+              >
                 🔗
               </span>
             )}
@@ -206,7 +228,7 @@ export function OrganizationalContextPanel({
 function OrganizationalContextContent({
   trace,
   compact,
-  dataAnalysis
+  dataAnalysis,
 }: {
   trace: OrganizationalTrace;
   compact: boolean;
@@ -216,7 +238,7 @@ function OrganizationalContextContent({
     border: '1px solid #e1e4e8',
     borderRadius: '6px',
     marginBottom: '12px',
-    padding: '12px'
+    padding: '12px',
   };
 
   return (
@@ -226,13 +248,24 @@ function OrganizationalContextContent({
         <div style={cardStyle}>
           <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>👤 Operator Context</div>
           <div style={{ fontSize: '14px', lineHeight: '1.4' }}>
-            <div><strong>Operator ID:</strong> {trace.operatorContext.operatorId}</div>
-            <div><strong>Session ID:</strong> {trace.operatorContext.sessionId}</div>
+            <div>
+              <strong>Operator ID:</strong> {trace.operatorContext.operatorId}
+            </div>
+            <div>
+              <strong>Session ID:</strong> {trace.operatorContext.sessionId}
+            </div>
             {trace.operatorContext.teamId && (
-              <div><strong>Team ID:</strong> {trace.operatorContext.teamId}</div>
+              <div>
+                <strong>Team ID:</strong> {trace.operatorContext.teamId}
+              </div>
             )}
-            <div><strong>Instance:</strong> {trace.operatorContext.instanceId}</div>
-            <div><strong>Timestamp:</strong> {new Date(trace.operatorContext.timestamp).toLocaleString()}</div>
+            <div>
+              <strong>Instance:</strong> {trace.operatorContext.instanceId}
+            </div>
+            <div>
+              <strong>Timestamp:</strong>{' '}
+              {new Date(trace.operatorContext.timestamp).toLocaleString()}
+            </div>
           </div>
         </div>
       )}
@@ -242,11 +275,21 @@ function OrganizationalContextContent({
         <div style={cardStyle}>
           <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>🔗 Session Correlation</div>
           <div style={{ fontSize: '14px', lineHeight: '1.4' }}>
-            <div><strong>Correlation ID:</strong> {trace.sessionCorrelation.correlationId}</div>
-            <div><strong>Confidence:</strong> {Math.round(trace.sessionCorrelation.confidenceScore * 100)}%</div>
-            <div><strong>Related Sessions:</strong> {trace.sessionCorrelation.relatedSessions.length}</div>
+            <div>
+              <strong>Correlation ID:</strong> {trace.sessionCorrelation.correlationId}
+            </div>
+            <div>
+              <strong>Confidence:</strong>{' '}
+              {Math.round(trace.sessionCorrelation.confidenceScore * 100)}%
+            </div>
+            <div>
+              <strong>Related Sessions:</strong> {trace.sessionCorrelation.relatedSessions.length}
+            </div>
             {trace.sessionCorrelation.crossInstanceTracking && (
-              <div><strong>Continuity Score:</strong> {Math.round(trace.sessionCorrelation.crossInstanceTracking.continuityScore * 100)}%</div>
+              <div>
+                <strong>Continuity Score:</strong>{' '}
+                {Math.round(trace.sessionCorrelation.crossInstanceTracking.continuityScore * 100)}%
+              </div>
             )}
           </div>
         </div>
@@ -257,24 +300,39 @@ function OrganizationalContextContent({
         <div style={cardStyle}>
           <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>🛡️ Policy Status</div>
           <div style={{ fontSize: '14px', lineHeight: '1.4' }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              marginBottom: '8px',
-              color: trace.policyStatus.complianceStatus === 'compliant' ? '#28a745' :
-                    trace.policyStatus.complianceStatus === 'violation' ? '#dc3545' : '#ffc107'
-            }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                marginBottom: '8px',
+                color:
+                  trace.policyStatus.complianceStatus === 'compliant'
+                    ? '#28a745'
+                    : trace.policyStatus.complianceStatus === 'violation'
+                      ? '#dc3545'
+                      : '#ffc107',
+              }}
+            >
               <span style={{ marginRight: '8px' }}>
                 {trace.policyStatus.complianceStatus === 'compliant' && '✓'}
                 {trace.policyStatus.complianceStatus === 'violation' && '✗'}
                 {trace.policyStatus.complianceStatus === 'warning' && '⚠️'}
               </span>
-              <span style={{ textTransform: 'capitalize' }}>{trace.policyStatus.complianceStatus}</span>
+              <span style={{ textTransform: 'capitalize' }}>
+                {trace.policyStatus.complianceStatus}
+              </span>
             </div>
-            <div><strong>Evaluation ID:</strong> {trace.policyStatus.evaluationId}</div>
-            <div><strong>Policies Evaluated:</strong> {trace.policyStatus.policiesEvaluated.length}</div>
+            <div>
+              <strong>Evaluation ID:</strong> {trace.policyStatus.evaluationId}
+            </div>
+            <div>
+              <strong>Policies Evaluated:</strong> {trace.policyStatus.policiesEvaluated.length}
+            </div>
             {trace.policyStatus.governanceRecommendations.length > 0 && (
-              <div><strong>Recommendations:</strong> {trace.policyStatus.governanceRecommendations.length}</div>
+              <div>
+                <strong>Recommendations:</strong>{' '}
+                {trace.policyStatus.governanceRecommendations.length}
+              </div>
             )}
           </div>
         </div>
@@ -282,7 +340,9 @@ function OrganizationalContextContent({
 
       {/* Data Completeness Debug Info */}
       <div style={{ ...cardStyle, opacity: 0.7, borderStyle: 'dashed' }}>
-        <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '12px' }}>🔍 Debug Info</div>
+        <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '12px' }}>
+          🔍 Debug Info
+        </div>
         <div style={{ fontSize: '12px', lineHeight: '1.4' }}>
           <div>Completeness: {Math.round(dataAnalysis.completeness * 100)}%</div>
           <div>Operator Context: {dataAnalysis.hasOperatorContext ? '✓' : '✗'}</div>
@@ -301,18 +361,16 @@ function OrganizationalContextContent({
 function OrganizationalContextEmpty() {
   return (
     <div className="org-context-panel__empty">
-      <div style={{
-        textAlign: 'center',
-        padding: '24px',
-        color: '#6a737d',
-        fontSize: '14px'
-      }}>
-        <div style={{ marginBottom: '12px', fontSize: '24px' }}>
-          📋
-        </div>
-        <div style={{ marginBottom: '8px' }}>
-          No organizational context available
-        </div>
+      <div
+        style={{
+          textAlign: 'center',
+          padding: '24px',
+          color: '#6a737d',
+          fontSize: '14px',
+        }}
+      >
+        <div style={{ marginBottom: '12px', fontSize: '24px' }}>📋</div>
+        <div style={{ marginBottom: '8px' }}>No organizational context available</div>
         <div style={{ fontSize: '12px', opacity: 0.7 }}>
           This trace was created before organizational features were enabled
         </div>

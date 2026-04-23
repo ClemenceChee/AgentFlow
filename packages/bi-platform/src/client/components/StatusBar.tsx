@@ -1,6 +1,5 @@
-import React from 'react';
-import type { FreshnessResponse } from '../hooks/useFreshness';
 import type { AgentsResponse } from '../hooks/useAgents';
+import type { FreshnessResponse } from '../hooks/useFreshness';
 
 interface Props {
   freshness: FreshnessResponse | null;

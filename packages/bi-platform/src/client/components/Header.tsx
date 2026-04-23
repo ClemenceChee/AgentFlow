@@ -1,4 +1,3 @@
-import React from 'react';
 import type { Page } from '../App';
 
 interface Props {
@@ -37,7 +36,9 @@ export function Header({ page, onPageChange, version, onHelp }: Props) {
         <span className="bi-header__live-dot" />
         Live
       </div>
-      <button className="bi-btn bi-btn--sm" onClick={onHelp} title="Help (?)">?</button>
+      <button className="bi-btn bi-btn--sm" onClick={onHelp} title="Help (?)">
+        ?
+      </button>
       <span className="bi-header__version">v{version}</span>
     </header>
   );

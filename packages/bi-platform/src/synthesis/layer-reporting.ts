@@ -5,13 +5,13 @@
  * Tasks: 8.1-8.10
  */
 
-import type { DbPool } from '../db/pool.js';
 import type { CacheClient } from '../cache/cache.js';
-import type { Logger } from '../monitoring/logger.js';
-import type { SomaAdapter } from '../integrations/soma-adapter.js';
+import type { DbPool } from '../db/pool.js';
 import type { AgentFlowAdapter } from '../integrations/agentflow-adapter.js';
 import type { OpsIntelAdapter } from '../integrations/opsintel-adapter.js';
-import type { DataAggregator, AggregatedMetrics } from './aggregator.js';
+import type { SomaAdapter } from '../integrations/soma-adapter.js';
+import type { Logger } from '../monitoring/logger.js';
+import type { AggregatedMetrics, DataAggregator } from './aggregator.js';
 import type { MaterializedViewManager } from './materialized-views.js';
 
 /**
@@ -51,7 +51,12 @@ export interface GovernanceSummary {
  * 8.2 — Real-time BI data feed subscription
  */
 export interface BiFeedEvent {
-  type: 'kpi_update' | 'anomaly_detected' | 'compliance_change' | 'agent_status_change' | 'governance_update';
+  type:
+    | 'kpi_update'
+    | 'anomaly_detected'
+    | 'compliance_change'
+    | 'agent_status_change'
+    | 'governance_update';
   data: unknown;
   timestamp: string;
 }
@@ -82,7 +87,8 @@ export interface OptimizationFlags {
 export function loadOptimizationFlags(): OptimizationFlags {
   return {
     useMaterializedViews: process.env.BI_USE_MATERIALIZED_VIEWS !== 'false',
-    cacheStrategy: (process.env.BI_CACHE_STRATEGY as OptimizationFlags['cacheStrategy']) || 'moderate',
+    cacheStrategy:
+      (process.env.BI_CACHE_STRATEGY as OptimizationFlags['cacheStrategy']) || 'moderate',
     refreshIntervalMs: Number(process.env.BI_REFRESH_INTERVAL_MS ?? 15_000),
     streamingEnabled: process.env.BI_STREAMING_ENABLED !== 'false',
   };
@@ -95,10 +101,10 @@ export class LayerReportingService {
 
   constructor(
     private soma: SomaAdapter,
-    private agentflow: AgentFlowAdapter,
+    _agentflow: AgentFlowAdapter,
     private opsintel: OpsIntelAdapter,
     private aggregator: DataAggregator,
-    private viewManager: MaterializedViewManager,
+    _viewManager: MaterializedViewManager,
     private db: DbPool,
     private cache: CacheClient,
     private logger: Logger,
@@ -126,11 +132,14 @@ export class LayerReportingService {
       layer,
       entityCount: count,
       businessContext: layerBusinessContext(layer),
-      freshness: health.status === 'healthy' ? 'current' : health.status === 'degraded' ? 'aging' : 'stale',
+      freshness:
+        health.status === 'healthy' ? 'current' : health.status === 'degraded' ? 'aging' : 'stale',
     }));
 
     const highConfidence = insights.filter((i) => (i.confidenceScore ?? 0) >= 0.8).length;
-    const pendingProposals = insights.filter((i) => i.status === 'proposed' || i.status === 'pending').length;
+    const pendingProposals = insights.filter(
+      (i) => i.status === 'proposed' || i.status === 'pending',
+    ).length;
 
     // Build enforcement breakdown
     const enforcementBreakdown: Record<string, number> = {};
@@ -155,7 +164,12 @@ export class LayerReportingService {
         policyCount: policies.length,
         enforcementBreakdown,
         lastSyncAt: health.lastSyncAt,
-        syncStatus: health.status === 'healthy' ? 'synced' : health.status === 'degraded' ? 'behind' : 'disconnected',
+        syncStatus:
+          health.status === 'healthy'
+            ? 'synced'
+            : health.status === 'degraded'
+              ? 'behind'
+              : 'disconnected',
         driftingAgents,
       },
       timestamp: new Date().toISOString(),
@@ -194,7 +208,10 @@ export class LayerReportingService {
   /**
    * 8.4 — Business-optimized materialized view queries.
    */
-  async getBusinessMetricView(viewName: string, filters?: Record<string, string>): Promise<unknown[]> {
+  async getBusinessMetricView(
+    viewName: string,
+    filters?: Record<string, string>,
+  ): Promise<unknown[]> {
     if (!this.flags.useMaterializedViews) {
       this.logger.info('Materialized views disabled, using direct query');
       return [];
@@ -226,7 +243,11 @@ export class LayerReportingService {
   /**
    * 8.5 — Intelligent caching for business queries.
    */
-  async getCachedOrCompute<T>(key: string, computeFn: () => Promise<T>, ttlOverride?: number): Promise<T> {
+  async getCachedOrCompute<T>(
+    key: string,
+    computeFn: () => Promise<T>,
+    ttlOverride?: number,
+  ): Promise<T> {
     if (this.flags.cacheStrategy !== 'none') {
       const cached = await this.cache.get<T>(key);
       if (cached) return cached;
@@ -249,15 +270,17 @@ export class LayerReportingService {
     const cacheStats = this.cache.getStats();
 
     // Query performance from api_usage table
-    const { rows: perfRows } = await this.db.query<{ avg_ms: string; p95_ms: string; total: string }>(
-      `SELECT
+    const { rows: perfRows } = await this.db
+      .query<{ avg_ms: string; p95_ms: string; total: string }>(
+        `SELECT
         ROUND(AVG(response_time_ms)) AS avg_ms,
         ROUND(PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY response_time_ms)) AS p95_ms,
         COUNT(*) AS total
        FROM api_usage
        WHERE request_at > NOW() - INTERVAL '1 hour'
          AND endpoint LIKE '/api/v1/%'`,
-    ).catch(() => ({ rows: [{ avg_ms: '0', p95_ms: '0', total: '0' }] }));
+      )
+      .catch(() => ({ rows: [{ avg_ms: '0', p95_ms: '0', total: '0' }] }));
 
     const perf = perfRows[0] ?? { avg_ms: '0', p95_ms: '0', total: '0' };
 
@@ -311,8 +334,12 @@ export class LayerReportingService {
       this.soma.getPolicies(),
     ]);
 
-    const agentInsights = insights.filter((i) => i.title.toLowerCase().includes(agentId.toLowerCase()));
-    const appliedPolicies = policies.filter((p) => p.scope === 'all' || p.scope.includes(agentId)).map((p) => p.name);
+    const agentInsights = insights.filter((i) =>
+      i.title.toLowerCase().includes(agentId.toLowerCase()),
+    );
+    const appliedPolicies = policies
+      .filter((p) => p.scope === 'all' || p.scope.includes(agentId))
+      .map((p) => p.name);
 
     let recommendation = 'No specific recommendations';
     if (agentInsights.length === 0) {
@@ -343,11 +370,19 @@ export class LayerReportingService {
         this.lastAggregation = latest;
 
         // Detect changes and emit events
-        this.emitFeedEvent({ type: 'kpi_update', data: { agents: latest.agents.length, health: latest.systemHealth }, timestamp: latest.timestamp });
+        this.emitFeedEvent({
+          type: 'kpi_update',
+          data: { agents: latest.agents.length, health: latest.systemHealth },
+          timestamp: latest.timestamp,
+        });
 
         // Check for new anomalies
         if (latest.crossSystemCorrelations.length > (prev?.crossSystemCorrelations.length ?? 0)) {
-          this.emitFeedEvent({ type: 'anomaly_detected', data: { correlations: latest.crossSystemCorrelations }, timestamp: latest.timestamp });
+          this.emitFeedEvent({
+            type: 'anomaly_detected',
+            data: { correlations: latest.crossSystemCorrelations },
+            timestamp: latest.timestamp,
+          });
         }
 
         // Check for agent status changes
@@ -355,7 +390,11 @@ export class LayerReportingService {
           for (const agent of latest.agents) {
             const prevAgent = prev.agents.find((a) => a.agentId === agent.agentId);
             if (prevAgent && prevAgent.compliance.drifted !== agent.compliance.drifted) {
-              this.emitFeedEvent({ type: 'agent_status_change', data: { agentId: agent.agentId, drifted: agent.compliance.drifted }, timestamp: latest.timestamp });
+              this.emitFeedEvent({
+                type: 'agent_status_change',
+                data: { agentId: agent.agentId, drifted: agent.compliance.drifted },
+                timestamp: latest.timestamp,
+              });
             }
           }
         }

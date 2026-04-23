@@ -1,5 +1,12 @@
-import { describe, it, expect, vi } from 'vitest';
-import { loadFeatureFlags, isEnabled, getResourceUsage, getPerformanceRecommendations, loadScalingConfig, loadOnboardingConfig } from '../deployment.js';
+import { describe, expect, it } from 'vitest';
+import {
+  getPerformanceRecommendations,
+  getResourceUsage,
+  isEnabled,
+  loadFeatureFlags,
+  loadOnboardingConfig,
+  loadScalingConfig,
+} from '../deployment.js';
 
 describe('Feature Flags', () => {
   it('loads default flags', () => {
@@ -34,18 +41,28 @@ describe('Resource Usage', () => {
 describe('Performance Recommendations', () => {
   it('returns no recommendations for healthy resources', () => {
     const recs = getPerformanceRecommendations({
-      memoryUsedMb: 100, memoryTotalMb: 1000, memoryPct: 10,
-      cpuPct: 5, heapUsedMb: 50, heapTotalMb: 512,
-      activeConnections: 10, eventLoopDelayMs: 1,
+      memoryUsedMb: 100,
+      memoryTotalMb: 1000,
+      memoryPct: 10,
+      cpuPct: 5,
+      heapUsedMb: 50,
+      heapTotalMb: 512,
+      activeConnections: 10,
+      eventLoopDelayMs: 1,
     });
     expect(recs).toEqual([]);
   });
 
   it('recommends memory optimization for high usage', () => {
     const recs = getPerformanceRecommendations({
-      memoryUsedMb: 900, memoryTotalMb: 1000, memoryPct: 90,
-      cpuPct: 5, heapUsedMb: 600, heapTotalMb: 700,
-      activeConnections: 10, eventLoopDelayMs: 1,
+      memoryUsedMb: 900,
+      memoryTotalMb: 1000,
+      memoryPct: 90,
+      cpuPct: 5,
+      heapUsedMb: 600,
+      heapTotalMb: 700,
+      activeConnections: 10,
+      eventLoopDelayMs: 1,
     });
     expect(recs.length).toBeGreaterThan(0);
     expect(recs.some((r) => r.area === 'Memory')).toBe(true);

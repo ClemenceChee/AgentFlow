@@ -5,8 +5,18 @@
  * temporal analysis, and workload distribution insights.
  */
 
-import { useState, useEffect } from 'react';
-import { Calendar, Clock, TrendingUp, BarChart3, Filter, ZoomIn, ZoomOut, Play, Pause } from 'lucide-react';
+import {
+  BarChart3,
+  Calendar,
+  Clock,
+  Filter,
+  Pause,
+  Play,
+  TrendingUp,
+  ZoomIn,
+  ZoomOut,
+} from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useOrganizationalContext } from '../../../../contexts/OrganizationalContext';
 import type { SessionCorrelation } from '../../../types/organizational.js';
 
@@ -17,7 +27,12 @@ export interface TemporalCluster {
   readonly sessions: readonly string[];
   readonly operatorIds: readonly string[];
   readonly teamIds: readonly string[];
-  readonly clusterType: 'burst' | 'steady-state' | 'collaborative' | 'maintenance' | 'crisis-response';
+  readonly clusterType:
+    | 'burst'
+    | 'steady-state'
+    | 'collaborative'
+    | 'maintenance'
+    | 'crisis-response';
   readonly intensity: number; // Sessions per hour during the cluster
   readonly diversity: number; // How many different operators/teams involved
   readonly patterns: readonly string[];
@@ -37,7 +52,12 @@ export interface TimeWindow {
 
 export interface TemporalPattern {
   readonly id: string;
-  readonly patternType: 'daily-peak' | 'weekly-cycle' | 'seasonal-burst' | 'crisis-response' | 'collaborative-session';
+  readonly patternType:
+    | 'daily-peak'
+    | 'weekly-cycle'
+    | 'seasonal-burst'
+    | 'crisis-response'
+    | 'collaborative-session';
   readonly description: string;
   readonly frequency: 'high' | 'medium' | 'low';
   readonly predictability: number; // 0-1 score
@@ -77,34 +97,52 @@ interface TemporalSessionClusteringProps {
 
 const getClusterTypeColor = (type: TemporalCluster['clusterType']) => {
   switch (type) {
-    case 'burst': return 'org-cluster-burst';
-    case 'steady-state': return 'org-cluster-steady';
-    case 'collaborative': return 'org-cluster-collaborative';
-    case 'maintenance': return 'org-cluster-maintenance';
-    case 'crisis-response': return 'org-cluster-crisis';
-    default: return 'org-cluster-default';
+    case 'burst':
+      return 'org-cluster-burst';
+    case 'steady-state':
+      return 'org-cluster-steady';
+    case 'collaborative':
+      return 'org-cluster-collaborative';
+    case 'maintenance':
+      return 'org-cluster-maintenance';
+    case 'crisis-response':
+      return 'org-cluster-crisis';
+    default:
+      return 'org-cluster-default';
   }
 };
 
 const getClusterTypeLabel = (type: TemporalCluster['clusterType']) => {
   switch (type) {
-    case 'burst': return 'Activity Burst';
-    case 'steady-state': return 'Steady State';
-    case 'collaborative': return 'Collaborative';
-    case 'maintenance': return 'Maintenance';
-    case 'crisis-response': return 'Crisis Response';
-    default: return 'Unknown';
+    case 'burst':
+      return 'Activity Burst';
+    case 'steady-state':
+      return 'Steady State';
+    case 'collaborative':
+      return 'Collaborative';
+    case 'maintenance':
+      return 'Maintenance';
+    case 'crisis-response':
+      return 'Crisis Response';
+    default:
+      return 'Unknown';
   }
 };
 
 const getPatternIcon = (type: TemporalPattern['patternType']) => {
   switch (type) {
-    case 'daily-peak': return <Clock className="h-4 w-4" />;
-    case 'weekly-cycle': return <Calendar className="h-4 w-4" />;
-    case 'seasonal-burst': return <TrendingUp className="h-4 w-4" />;
-    case 'crisis-response': return <BarChart3 className="h-4 w-4" />;
-    case 'collaborative-session': return <Filter className="h-4 w-4" />;
-    default: return <Clock className="h-4 w-4" />;
+    case 'daily-peak':
+      return <Clock className="h-4 w-4" />;
+    case 'weekly-cycle':
+      return <Calendar className="h-4 w-4" />;
+    case 'seasonal-burst':
+      return <TrendingUp className="h-4 w-4" />;
+    case 'crisis-response':
+      return <BarChart3 className="h-4 w-4" />;
+    case 'collaborative-session':
+      return <Filter className="h-4 w-4" />;
+    default:
+      return <Clock className="h-4 w-4" />;
   }
 };
 
@@ -131,7 +169,7 @@ const TimelineView: React.FC<{
   const [zoomLevel, setZoomLevel] = useState(1);
 
   const timeSpan = analysis.timeRange.end - analysis.timeRange.start;
-  const pixelsPerMs = (800 * zoomLevel) / timeSpan; // Base width 800px
+  const _pixelsPerMs = (800 * zoomLevel) / timeSpan; // Base width 800px
 
   return (
     <div className="org-temporal-timeline">
@@ -139,20 +177,18 @@ const TimelineView: React.FC<{
         <h4 className="org-text-lg org-font-semibold">Temporal Session Clusters</h4>
         <div className="flex items-center space-x-2">
           <button
-            onClick={() => setZoomLevel(prev => Math.min(prev * 2, 8))}
+            onClick={() => setZoomLevel((prev) => Math.min(prev * 2, 8))}
             className="org-button org-button-ghost org-button-sm"
           >
             <ZoomIn className="h-4 w-4" />
           </button>
           <button
-            onClick={() => setZoomLevel(prev => Math.max(prev / 2, 0.25))}
+            onClick={() => setZoomLevel((prev) => Math.max(prev / 2, 0.25))}
             className="org-button org-button-ghost org-button-sm"
           >
             <ZoomOut className="h-4 w-4" />
           </button>
-          <span className="org-text-sm org-text-muted">
-            {analysis.clusters.length} clusters
-          </span>
+          <span className="org-text-sm org-text-muted">{analysis.clusters.length} clusters</span>
         </div>
       </div>
 
@@ -182,7 +218,7 @@ const TimelineView: React.FC<{
                     left: `${left}%`,
                     width: `${Math.max(width, 0.5)}%`,
                     height: `${height}px`,
-                    top: `${top}px`
+                    top: `${top}px`,
                   }}
                   title={`${getClusterTypeLabel(cluster.clusterType)}: ${cluster.sessions.length} sessions`}
                   onClick={() => {
@@ -211,7 +247,7 @@ const TimelineView: React.FC<{
                   className={`absolute h-full ${getIntensityColor(intensity)}`}
                   style={{
                     left: `${left}%`,
-                    width: `${Math.max(width, 0.1)}%`
+                    width: `${Math.max(width, 0.1)}%`,
                   }}
                   title={`${window.sessionCount} sessions in ${formatDuration(window.end - window.start)}`}
                 />
@@ -225,7 +261,7 @@ const TimelineView: React.FC<{
         <div className="mt-4 org-card-inner">
           <h5 className="org-font-semibold mb-2">Cluster Details</h5>
           {(() => {
-            const cluster = analysis.clusters.find(c => c.id === selectedCluster);
+            const cluster = analysis.clusters.find((c) => c.id === selectedCluster);
             if (!cluster) return null;
 
             return (
@@ -271,15 +307,17 @@ const HeatmapView: React.FC<{
 
   // Generate hourly activity data
   const hourlyData = Array.from({ length: 24 }, (_, hour) => {
-    const sessionsInHour = analysis.clusters.filter(cluster => {
-      const clusterHour = new Date(cluster.peakTime).getHours();
-      return clusterHour === hour;
-    }).reduce((sum, cluster) => sum + cluster.sessions.length, 0);
+    const sessionsInHour = analysis.clusters
+      .filter((cluster) => {
+        const clusterHour = new Date(cluster.peakTime).getHours();
+        return clusterHour === hour;
+      })
+      .reduce((sum, cluster) => sum + cluster.sessions.length, 0);
 
     return {
       hour,
       sessions: sessionsInHour,
-      intensity: sessionsInHour / 60 // sessions per minute
+      intensity: sessionsInHour / 60, // sessions per minute
     };
   });
 
@@ -291,12 +329,12 @@ const HeatmapView: React.FC<{
         day,
         hour,
         sessions: sessionCount,
-        intensity: sessionCount / 60
+        intensity: sessionCount / 60,
       };
     });
   }).flat();
 
-  const maxIntensity = Math.max(...hourlyData.map(d => d.intensity));
+  const maxIntensity = Math.max(...hourlyData.map((d) => d.intensity));
   const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   return (
@@ -304,7 +342,7 @@ const HeatmapView: React.FC<{
       <div className="flex items-center justify-between mb-4">
         <h4 className="org-text-lg org-font-semibold">Activity Heatmap</h4>
         <div className="org-text-sm org-text-muted">
-          Peak hours: {analysis.peakHours.map(h => `${h}:00`).join(', ')}
+          Peak hours: {analysis.peakHours.map((h) => `${h}:00`).join(', ')}
         </div>
       </div>
 
@@ -318,9 +356,10 @@ const HeatmapView: React.FC<{
                 selectedHour === data.hour ? 'ring-2 ring-primary' : ''
               }`}
               style={{
-                backgroundColor: data.intensity > 0 ?
-                  `rgba(59, 130, 246, ${0.2 + (data.intensity / maxIntensity) * 0.8})` :
-                  'rgba(156, 163, 175, 0.1)'
+                backgroundColor:
+                  data.intensity > 0
+                    ? `rgba(59, 130, 246, ${0.2 + (data.intensity / maxIntensity) * 0.8})`
+                    : 'rgba(156, 163, 175, 0.1)',
               }}
               title={`${data.hour}:00 - ${data.sessions} sessions`}
               onClick={() => setSelectedHour(data.hour === selectedHour ? null : data.hour)}
@@ -341,18 +380,21 @@ const HeatmapView: React.FC<{
               <React.Fragment key={day}>
                 <div className="org-text-xs org-text-muted flex items-center">{day}</div>
                 {Array.from({ length: 24 }, (_, hourIndex) => {
-                  const cellData = dailyData.find(d => d.day === dayIndex && d.hour === hourIndex);
+                  const cellData = dailyData.find(
+                    (d) => d.day === dayIndex && d.hour === hourIndex,
+                  );
                   const intensity = cellData ? cellData.intensity : 0;
-                  const maxDailyIntensity = Math.max(...dailyData.map(d => d.intensity));
+                  const maxDailyIntensity = Math.max(...dailyData.map((d) => d.intensity));
 
                   return (
                     <div
                       key={`${dayIndex}-${hourIndex}`}
                       className="org-heatmap-cell h-6 rounded cursor-pointer"
                       style={{
-                        backgroundColor: intensity > 0 ?
-                          `rgba(59, 130, 246, ${0.2 + (intensity / maxDailyIntensity) * 0.8})` :
-                          'rgba(156, 163, 175, 0.1)'
+                        backgroundColor:
+                          intensity > 0
+                            ? `rgba(59, 130, 246, ${0.2 + (intensity / maxDailyIntensity) * 0.8})`
+                            : 'rgba(156, 163, 175, 0.1)',
                       }}
                       title={`${day} ${hourIndex}:00 - ${cellData?.sessions || 0} sessions`}
                     />
@@ -368,19 +410,31 @@ const HeatmapView: React.FC<{
       <div className="flex items-center space-x-4 org-text-sm">
         <span className="org-text-muted">Activity Level:</span>
         <div className="flex items-center space-x-1">
-          <div className="w-4 h-4 rounded" style={{ backgroundColor: 'rgba(156, 163, 175, 0.1)' }}></div>
+          <div
+            className="w-4 h-4 rounded"
+            style={{ backgroundColor: 'rgba(156, 163, 175, 0.1)' }}
+          ></div>
           <span className="org-text-xs">None</span>
         </div>
         <div className="flex items-center space-x-1">
-          <div className="w-4 h-4 rounded" style={{ backgroundColor: 'rgba(59, 130, 246, 0.4)' }}></div>
+          <div
+            className="w-4 h-4 rounded"
+            style={{ backgroundColor: 'rgba(59, 130, 246, 0.4)' }}
+          ></div>
           <span className="org-text-xs">Low</span>
         </div>
         <div className="flex items-center space-x-1">
-          <div className="w-4 h-4 rounded" style={{ backgroundColor: 'rgba(59, 130, 246, 0.7)' }}></div>
+          <div
+            className="w-4 h-4 rounded"
+            style={{ backgroundColor: 'rgba(59, 130, 246, 0.7)' }}
+          ></div>
           <span className="org-text-xs">Medium</span>
         </div>
         <div className="flex items-center space-x-1">
-          <div className="w-4 h-4 rounded" style={{ backgroundColor: 'rgba(59, 130, 246, 1)' }}></div>
+          <div
+            className="w-4 h-4 rounded"
+            style={{ backgroundColor: 'rgba(59, 130, 246, 1)' }}
+          ></div>
           <span className="org-text-xs">High</span>
         </div>
       </div>
@@ -390,7 +444,9 @@ const HeatmapView: React.FC<{
           <h5 className="org-font-semibold mb-2">{selectedHour}:00 Activity Details</h5>
           <div className="org-text-sm">
             <div>Sessions: {hourlyData[selectedHour].sessions}</div>
-            <div>Average intensity: {hourlyData[selectedHour].intensity.toFixed(2)} sessions/min</div>
+            <div>
+              Average intensity: {hourlyData[selectedHour].intensity.toFixed(2)} sessions/min
+            </div>
           </div>
         </div>
       )}
@@ -404,12 +460,11 @@ const PatternsView: React.FC<{
 }> = ({ patterns, clusteringScore }) => {
   const [selectedType, setSelectedType] = useState<string>('all');
 
-  const filteredPatterns = selectedType === 'all' ?
-    patterns :
-    patterns.filter(p => p.patternType === selectedType);
+  const filteredPatterns =
+    selectedType === 'all' ? patterns : patterns.filter((p) => p.patternType === selectedType);
 
   const sortedPatterns = [...filteredPatterns].sort((a, b) => b.confidence - a.confidence);
-  const patternTypes = [...new Set(patterns.map(p => p.patternType))];
+  const patternTypes = [...new Set(patterns.map((p) => p.patternType))];
 
   return (
     <div className="org-temporal-patterns">
@@ -422,7 +477,7 @@ const PatternsView: React.FC<{
             className="org-select org-select-sm"
           >
             <option value="all">All Types</option>
-            {patternTypes.map(type => (
+            {patternTypes.map((type) => (
               <option key={type} value={type}>
                 {type.replace('-', ' ')}
               </option>
@@ -439,19 +494,21 @@ const PatternsView: React.FC<{
           <div key={pattern.id} className="org-card-inner">
             <div className="flex items-start justify-between mb-3">
               <div className="flex items-start space-x-3">
-                <div className="org-text-primary">
-                  {getPatternIcon(pattern.patternType)}
-                </div>
+                <div className="org-text-primary">{getPatternIcon(pattern.patternType)}</div>
                 <div className="flex-1">
                   <div className="flex items-center space-x-2 mb-1">
                     <span className="org-font-semibold capitalize">
                       {pattern.patternType.replace('-', ' ')}
                     </span>
-                    <span className={`org-badge org-badge-xs ${
-                      pattern.frequency === 'high' ? 'org-badge-success' :
-                      pattern.frequency === 'medium' ? 'org-badge-info' :
-                      'org-badge-secondary'
-                    }`}>
+                    <span
+                      className={`org-badge org-badge-xs ${
+                        pattern.frequency === 'high'
+                          ? 'org-badge-success'
+                          : pattern.frequency === 'medium'
+                            ? 'org-badge-info'
+                            : 'org-badge-secondary'
+                      }`}
+                    >
                       {pattern.frequency} frequency
                     </span>
                   </div>
@@ -487,10 +544,15 @@ const PatternsView: React.FC<{
                 <div className="space-y-1">
                   {pattern.timeRanges.slice(0, 3).map((range, index) => (
                     <div key={index} className="org-text-sm org-text-muted">
-                      {new Date(range.start).toLocaleTimeString()} - {new Date(range.end).toLocaleTimeString()}
+                      {new Date(range.start).toLocaleTimeString()} -{' '}
+                      {new Date(range.end).toLocaleTimeString()}
                       {range.days.length > 0 && (
                         <span className="ml-2">
-                          ({range.days.map(d => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d]).join(', ')})
+                          (
+                          {range.days
+                            .map((d) => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d])
+                            .join(', ')}
+                          )
                         </span>
                       )}
                     </div>
@@ -562,8 +624,7 @@ const DistributionView: React.FC<{
                   <span className="org-text-sm org-text-muted">{sessionCount}</span>
                 </div>
               );
-            })
-          }
+            })}
         </div>
       </div>
 
@@ -573,7 +634,7 @@ const DistributionView: React.FC<{
           <div>
             <div className="org-text-sm org-font-medium mb-1">Peak Hours</div>
             <div className="flex flex-wrap gap-1">
-              {analysis.peakHours.map(hour => (
+              {analysis.peakHours.map((hour) => (
                 <span key={hour} className="org-badge org-badge-success org-badge-xs">
                   {hour}:00
                 </span>
@@ -583,7 +644,7 @@ const DistributionView: React.FC<{
           <div>
             <div className="org-text-sm org-font-medium mb-1">Quiet Hours</div>
             <div className="flex flex-wrap gap-1">
-              {analysis.quietHours.map(hour => (
+              {analysis.quietHours.map((hour) => (
                 <span key={hour} className="org-badge org-badge-secondary org-badge-xs">
                   {hour}:00
                 </span>
@@ -597,13 +658,18 @@ const DistributionView: React.FC<{
     <div className="mt-6 org-card-inner">
       <h4 className="org-font-semibold mb-3">Cluster Types Distribution</h4>
       <div className="grid grid-cols-5 gap-4 org-text-sm">
-        {(['burst', 'steady-state', 'collaborative', 'maintenance', 'crisis-response'] as const).map(type => {
-          const count = analysis.clusters.filter(c => c.clusterType === type).length;
-          const percentage = analysis.clusters.length > 0 ? (count / analysis.clusters.length) * 100 : 0;
+        {(
+          ['burst', 'steady-state', 'collaborative', 'maintenance', 'crisis-response'] as const
+        ).map((type) => {
+          const count = analysis.clusters.filter((c) => c.clusterType === type).length;
+          const percentage =
+            analysis.clusters.length > 0 ? (count / analysis.clusters.length) * 100 : 0;
 
           return (
             <div key={type} className="text-center">
-              <div className={`w-12 h-12 rounded-full mx-auto mb-2 flex items-center justify-center ${getClusterTypeColor(type)}`}>
+              <div
+                className={`w-12 h-12 rounded-full mx-auto mb-2 flex items-center justify-center ${getClusterTypeColor(type)}`}
+              >
                 <span className="org-font-semibold text-white">{count}</span>
               </div>
               <div className="org-text-xs org-font-medium capitalize">{type.replace('-', ' ')}</div>
@@ -622,7 +688,7 @@ export const TemporalSessionClustering: React.FC<TemporalSessionClusteringProps>
   timeRange = 'week',
   realTime = false,
   onSelectCluster,
-  className = ''
+  className = '',
 }) => {
   const { teamFilter } = useOrganizationalContext();
   const [analysis, setAnalysis] = useState<ClusteringAnalysis | null>(null);
@@ -640,7 +706,7 @@ export const TemporalSessionClustering: React.FC<TemporalSessionClusteringProps>
           day: 86400000,
           week: 604800000,
           month: 2592000000,
-          quarter: 7776000000
+          quarter: 7776000000,
         }[timeRange];
 
         const endTime = Date.now();
@@ -648,7 +714,8 @@ export const TemporalSessionClustering: React.FC<TemporalSessionClusteringProps>
 
         // Generate mock clustering analysis
         const clusters: TemporalCluster[] = Array.from({ length: 8 }, (_, i) => {
-          const clusterStart = startTime + (i * timeRangeMs / 8) + Math.random() * (timeRangeMs / 16);
+          const clusterStart =
+            startTime + (i * timeRangeMs) / 8 + Math.random() * (timeRangeMs / 16);
           const duration = 1800000 + Math.random() * 7200000; // 30min - 2h
           const sessionCount = Math.floor(3 + Math.random() * 12);
 
@@ -657,16 +724,26 @@ export const TemporalSessionClustering: React.FC<TemporalSessionClusteringProps>
             startTime: clusterStart,
             endTime: clusterStart + duration,
             sessions: Array.from({ length: sessionCount }, (_, j) => `session-${i}-${j}`),
-            operatorIds: Array.from({ length: Math.floor(1 + Math.random() * 4) }, () =>
-              `op-${Math.random().toString(36).slice(2, 8)}`
+            operatorIds: Array.from(
+              { length: Math.floor(1 + Math.random() * 4) },
+              () => `op-${Math.random().toString(36).slice(2, 8)}`,
             ),
             teamIds: [sessionCorrelation.teamId || 'default-team'],
-            clusterType: ['burst', 'steady-state', 'collaborative', 'maintenance', 'crisis-response'][i % 5] as TemporalCluster['clusterType'],
+            clusterType: [
+              'burst',
+              'steady-state',
+              'collaborative',
+              'maintenance',
+              'crisis-response',
+            ][i % 5] as TemporalCluster['clusterType'],
             intensity: sessionCount / (duration / 3600000), // sessions per hour
             diversity: Math.random(),
-            patterns: ['frequent-updates', 'collaborative-review', 'debugging-session'].slice(0, 1 + i % 3),
+            patterns: ['frequent-updates', 'collaborative-review', 'debugging-session'].slice(
+              0,
+              1 + (i % 3),
+            ),
             peakTime: clusterStart + duration / 2,
-            confidence: 0.7 + Math.random() * 0.3
+            confidence: 0.7 + Math.random() * 0.3,
           };
         });
 
@@ -677,48 +754,56 @@ export const TemporalSessionClustering: React.FC<TemporalSessionClusteringProps>
             description: 'Consistent peak activity between 9-11 AM across weekdays',
             frequency: 'high',
             predictability: 0.89,
-            timeRanges: [{ start: startTime + 32400000, end: startTime + 39600000, days: [1, 2, 3, 4, 5] }],
-            associatedOperators: clusters.flatMap(c => c.operatorIds).slice(0, 5),
+            timeRanges: [
+              { start: startTime + 32400000, end: startTime + 39600000, days: [1, 2, 3, 4, 5] },
+            ],
+            associatedOperators: clusters.flatMap((c) => c.operatorIds).slice(0, 5),
             historicalOccurrences: 23,
-            confidence: 0.91
+            confidence: 0.91,
           },
           {
             id: 'pattern-2',
             patternType: 'collaborative-session',
-            description: 'Team collaboration sessions typically occur on Tuesday and Thursday afternoons',
+            description:
+              'Team collaboration sessions typically occur on Tuesday and Thursday afternoons',
             frequency: 'medium',
             predictability: 0.73,
             timeRanges: [{ start: startTime + 50400000, end: startTime + 57600000, days: [2, 4] }],
-            associatedOperators: clusters.flatMap(c => c.operatorIds).slice(3, 8),
+            associatedOperators: clusters.flatMap((c) => c.operatorIds).slice(3, 8),
             historicalOccurrences: 12,
-            confidence: 0.78
-          }
+            confidence: 0.78,
+          },
         ];
 
-        const workloadDistribution = clusters.reduce((acc, cluster) => {
-          cluster.operatorIds.forEach(opId => {
-            acc[opId] = (acc[opId] || 0) + cluster.sessions.length;
-          });
-          return acc;
-        }, {} as Record<string, number>);
+        const workloadDistribution = clusters.reduce(
+          (acc, cluster) => {
+            cluster.operatorIds.forEach((opId) => {
+              acc[opId] = (acc[opId] || 0) + cluster.sessions.length;
+            });
+            return acc;
+          },
+          {} as Record<string, number>,
+        );
 
         const timeWindows: TimeWindow[] = Array.from({ length: 24 }, (_, i) => {
-          const windowStart = startTime + (i * 3600000);
+          const windowStart = startTime + i * 3600000;
           const windowEnd = windowStart + 3600000;
-          const sessionsInWindow = clusters.filter(c =>
-            c.startTime >= windowStart && c.startTime < windowEnd
-          ).reduce((sum, c) => sum + c.sessions.length, 0);
+          const sessionsInWindow = clusters
+            .filter((c) => c.startTime >= windowStart && c.startTime < windowEnd)
+            .reduce((sum, c) => sum + c.sessions.length, 0);
 
           return {
             start: windowStart,
             end: windowEnd,
             granularity: 'hour',
             sessionCount: sessionsInWindow,
-            operatorCount: new Set(clusters.filter(c =>
-              c.startTime >= windowStart && c.startTime < windowEnd
-            ).flatMap(c => c.operatorIds)).size,
+            operatorCount: new Set(
+              clusters
+                .filter((c) => c.startTime >= windowStart && c.startTime < windowEnd)
+                .flatMap((c) => c.operatorIds),
+            ).size,
             teamCount: 1,
-            averageSessionDuration: 1800000
+            averageSessionDuration: 1800000,
           };
         });
 
@@ -732,7 +817,7 @@ export const TemporalSessionClustering: React.FC<TemporalSessionClusteringProps>
           quietHours: [0, 1, 2, 22, 23],
           clusteringScore: 0.82,
           totalSessions: clusters.reduce((sum, c) => sum + c.sessions.length, 0),
-          analyzedAt: Date.now()
+          analyzedAt: Date.now(),
         });
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to analyze temporal clustering');
@@ -749,11 +834,11 @@ export const TemporalSessionClustering: React.FC<TemporalSessionClusteringProps>
     if (!isPlaying || !analysis) return;
 
     const interval = setInterval(() => {
-      setAnalysis(prev => {
+      setAnalysis((prev) => {
         if (!prev) return prev;
         return {
           ...prev,
-          analyzedAt: Date.now()
+          analyzedAt: Date.now(),
         };
       });
     }, 5000); // Update every 5 seconds
@@ -809,7 +894,8 @@ export const TemporalSessionClustering: React.FC<TemporalSessionClusteringProps>
               </button>
             )}
             <div className="org-text-sm org-text-muted">
-              {analysis.clusters.length} clusters, {Math.round(analysis.clusteringScore * 100)}% quality
+              {analysis.clusters.length} clusters, {Math.round(analysis.clusteringScore * 100)}%
+              quality
             </div>
           </div>
         </div>
@@ -818,9 +904,7 @@ export const TemporalSessionClustering: React.FC<TemporalSessionClusteringProps>
       {mode === 'timeline' && (
         <TimelineView analysis={analysis} onSelectCluster={onSelectCluster} />
       )}
-      {mode === 'heatmap' && (
-        <HeatmapView analysis={analysis} timeRange={timeRange} />
-      )}
+      {mode === 'heatmap' && <HeatmapView analysis={analysis} timeRange={timeRange} />}
       {mode === 'patterns' && (
         <PatternsView patterns={analysis.patterns} clusteringScore={analysis.clusteringScore} />
       )}

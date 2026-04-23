@@ -5,8 +5,15 @@
  * and actionable recommendations for operators and teams.
  */
 
-import { useState, useEffect } from 'react';
-import { Brain, Users, TrendingUp, AlertTriangle, Lightbulb, ChevronDown, ChevronRight, ExternalLink } from 'lucide-react';
+import {
+  AlertTriangle,
+  Brain,
+  ChevronDown,
+  ChevronRight,
+  Lightbulb,
+  TrendingUp,
+} from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useOrganizationalContext } from '../../../../contexts/OrganizationalContext';
 import type { SessionCorrelation } from '../../../types/organizational.js';
 
@@ -64,43 +71,65 @@ interface OrganizationalBriefingDisplayProps {
 
 const getInsightIcon = (type: BriefingInsight['type']) => {
   switch (type) {
-    case 'pattern': return <TrendingUp className="h-4 w-4" />;
-    case 'anomaly': return <AlertTriangle className="h-4 w-4" />;
-    case 'opportunity': return <Lightbulb className="h-4 w-4" />;
-    case 'risk': return <AlertTriangle className="h-4 w-4" />;
-    case 'knowledge': return <Brain className="h-4 w-4" />;
-    default: return <Brain className="h-4 w-4" />;
+    case 'pattern':
+      return <TrendingUp className="h-4 w-4" />;
+    case 'anomaly':
+      return <AlertTriangle className="h-4 w-4" />;
+    case 'opportunity':
+      return <Lightbulb className="h-4 w-4" />;
+    case 'risk':
+      return <AlertTriangle className="h-4 w-4" />;
+    case 'knowledge':
+      return <Brain className="h-4 w-4" />;
+    default:
+      return <Brain className="h-4 w-4" />;
   }
 };
 
 const getInsightColor = (type: BriefingInsight['type']) => {
   switch (type) {
-    case 'pattern': return 'org-text-info';
-    case 'anomaly': return 'org-text-warning';
-    case 'opportunity': return 'org-text-success';
-    case 'risk': return 'org-text-error';
-    case 'knowledge': return 'org-text-primary';
-    default: return 'org-text-muted';
+    case 'pattern':
+      return 'org-text-info';
+    case 'anomaly':
+      return 'org-text-warning';
+    case 'opportunity':
+      return 'org-text-success';
+    case 'risk':
+      return 'org-text-error';
+    case 'knowledge':
+      return 'org-text-primary';
+    default:
+      return 'org-text-muted';
   }
 };
 
 const getImpactColor = (impact: BriefingInsight['impact']) => {
   switch (impact) {
-    case 'critical': return 'org-badge-error';
-    case 'high': return 'org-badge-warning';
-    case 'medium': return 'org-badge-info';
-    case 'low': return 'org-badge-secondary';
-    default: return 'org-badge-secondary';
+    case 'critical':
+      return 'org-badge-error';
+    case 'high':
+      return 'org-badge-warning';
+    case 'medium':
+      return 'org-badge-info';
+    case 'low':
+      return 'org-badge-secondary';
+    default:
+      return 'org-badge-secondary';
   }
 };
 
 const getPriorityColor = (priority: BriefingRecommendation['priority']) => {
   switch (priority) {
-    case 'urgent': return 'org-badge-error';
-    case 'high': return 'org-badge-warning';
-    case 'medium': return 'org-badge-info';
-    case 'low': return 'org-badge-secondary';
-    default: return 'org-badge-secondary';
+    case 'urgent':
+      return 'org-badge-error';
+    case 'high':
+      return 'org-badge-warning';
+    case 'medium':
+      return 'org-badge-info';
+    case 'low':
+      return 'org-badge-secondary';
+    default:
+      return 'org-badge-secondary';
   }
 };
 
@@ -126,9 +155,7 @@ const BriefingSummaryView: React.FC<{ briefing: OrganizationalBriefing }> = ({ b
         <h4 className="org-text-sm org-font-semibold">Key Insights</h4>
         {briefing.insights.slice(0, 3).map((insight) => (
           <div key={insight.id} className="flex items-center space-x-2 org-text-sm">
-            <div className={getInsightColor(insight.type)}>
-              {getInsightIcon(insight.type)}
-            </div>
+            <div className={getInsightColor(insight.type)}>{getInsightIcon(insight.type)}</div>
             <span className="flex-1 truncate">{insight.title}</span>
             <span className={`org-badge org-badge-xs ${getImpactColor(insight.impact)}`}>
               {insight.impact}
@@ -150,7 +177,7 @@ const DetailedBriefingView: React.FC<{ briefing: OrganizationalBriefing }> = ({ 
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
   const toggleInsight = (insightId: string) => {
-    setExpandedInsights(prev => {
+    setExpandedInsights((prev) => {
       const next = new Set(prev);
       if (next.has(insightId)) {
         next.delete(insightId);
@@ -161,11 +188,12 @@ const DetailedBriefingView: React.FC<{ briefing: OrganizationalBriefing }> = ({ 
     });
   };
 
-  const filteredInsights = selectedCategory === 'all' ?
-    briefing.insights :
-    briefing.insights.filter(insight => insight.category === selectedCategory);
+  const filteredInsights =
+    selectedCategory === 'all'
+      ? briefing.insights
+      : briefing.insights.filter((insight) => insight.category === selectedCategory);
 
-  const categories = [...new Set(briefing.insights.map(i => i.category))];
+  const categories = [...new Set(briefing.insights.map((i) => i.category))];
 
   return (
     <div className="org-briefing-detailed">
@@ -207,7 +235,7 @@ const DetailedBriefingView: React.FC<{ briefing: OrganizationalBriefing }> = ({ 
             className="org-select org-select-sm"
           >
             <option value="all">All Categories</option>
-            {categories.map(cat => (
+            {categories.map((cat) => (
               <option key={cat} value={cat}>
                 {cat.charAt(0).toUpperCase() + cat.slice(1)}
               </option>
@@ -231,7 +259,9 @@ const DetailedBriefingView: React.FC<{ briefing: OrganizationalBriefing }> = ({ 
                     <div>
                       <div className="org-font-medium">{insight.title}</div>
                       <div className="flex items-center space-x-2 mt-1">
-                        <span className={`org-badge org-badge-xs ${getImpactColor(insight.impact)}`}>
+                        <span
+                          className={`org-badge org-badge-xs ${getImpactColor(insight.impact)}`}
+                        >
                           {insight.impact} impact
                         </span>
                         <span className="org-text-xs org-text-muted">
@@ -243,10 +273,11 @@ const DetailedBriefingView: React.FC<{ briefing: OrganizationalBriefing }> = ({ 
                       </div>
                     </div>
                   </div>
-                  {isExpanded ?
-                    <ChevronDown className="h-4 w-4 org-text-muted" /> :
+                  {isExpanded ? (
+                    <ChevronDown className="h-4 w-4 org-text-muted" />
+                  ) : (
                     <ChevronRight className="h-4 w-4 org-text-muted" />
-                  }
+                  )}
                 </div>
 
                 {isExpanded && (
@@ -256,8 +287,11 @@ const DetailedBriefingView: React.FC<{ briefing: OrganizationalBriefing }> = ({ 
                       <div>
                         <div className="org-text-sm org-font-medium mb-2">Related Sessions</div>
                         <div className="flex flex-wrap gap-1">
-                          {insight.relatedSessions.map(sessionId => (
-                            <span key={sessionId} className="org-badge org-badge-secondary org-badge-xs">
+                          {insight.relatedSessions.map((sessionId) => (
+                            <span
+                              key={sessionId}
+                              className="org-badge org-badge-secondary org-badge-xs"
+                            >
                               {sessionId.slice(-8)}
                             </span>
                           ))}
@@ -285,11 +319,11 @@ const RecommendationsView: React.FC<{
   const handleAction = async (recommendationId: string, action: string) => {
     if (!onActionRecommendation) return;
 
-    setActingRecommendations(prev => new Set([...prev, recommendationId]));
+    setActingRecommendations((prev) => new Set([...prev, recommendationId]));
     try {
       await onActionRecommendation(recommendationId, action);
     } finally {
-      setActingRecommendations(prev => {
+      setActingRecommendations((prev) => {
         const next = new Set(prev);
         next.delete(recommendationId);
         return next;
@@ -297,13 +331,14 @@ const RecommendationsView: React.FC<{
     }
   };
 
-  const filteredRecommendations = filterPriority === 'all' ?
-    briefing.recommendations :
-    briefing.recommendations.filter(rec => rec.priority === filterPriority);
+  const filteredRecommendations =
+    filterPriority === 'all'
+      ? briefing.recommendations
+      : briefing.recommendations.filter((rec) => rec.priority === filterPriority);
 
   const priorityOrder = ['urgent', 'high', 'medium', 'low'];
-  const sortedRecommendations = filteredRecommendations.sort((a, b) =>
-    priorityOrder.indexOf(a.priority) - priorityOrder.indexOf(b.priority)
+  const sortedRecommendations = filteredRecommendations.sort(
+    (a, b) => priorityOrder.indexOf(a.priority) - priorityOrder.indexOf(b.priority),
   );
 
   return (
@@ -332,7 +367,9 @@ const RecommendationsView: React.FC<{
                 <div className="flex-1">
                   <div className="flex items-center space-x-2 mb-1">
                     <h5 className="org-font-semibold">{recommendation.title}</h5>
-                    <span className={`org-badge org-badge-xs ${getPriorityColor(recommendation.priority)}`}>
+                    <span
+                      className={`org-badge org-badge-xs ${getPriorityColor(recommendation.priority)}`}
+                    >
                       {recommendation.priority}
                     </span>
                   </div>
@@ -408,7 +445,7 @@ export const OrganizationalBriefingDisplay: React.FC<OrganizationalBriefingDispl
   mode = 'detailed',
   realTime = false,
   onActionRecommendation,
-  className = ''
+  className = '',
 }) => {
   const { teamFilter } = useOrganizationalContext();
   const [briefing, setBriefing] = useState<OrganizationalBriefing | null>(null);
@@ -433,54 +470,58 @@ export const OrganizationalBriefingDisplay: React.FC<OrganizationalBriefingDispl
               id: 'insight-1',
               type: 'pattern',
               title: 'Recurring collaboration pattern detected',
-              description: 'Team members frequently collaborate on similar technical challenges, indicating opportunity for knowledge sharing automation.',
+              description:
+                'Team members frequently collaborate on similar technical challenges, indicating opportunity for knowledge sharing automation.',
               confidence: 0.85,
               impact: 'medium',
               category: 'collaboration',
               timestamp: Date.now() - 3600000,
               evidenceCount: 12,
-              relatedSessions: sessionCorrelation.relatedSessions.slice(0, 3)
+              relatedSessions: sessionCorrelation.relatedSessions.slice(0, 3),
             },
             {
               id: 'insight-2',
               type: 'opportunity',
               title: 'Performance optimization potential',
-              description: 'Analysis reveals consistent performance bottlenecks that could be addressed through configuration tuning.',
+              description:
+                'Analysis reveals consistent performance bottlenecks that could be addressed through configuration tuning.',
               confidence: 0.78,
               impact: 'high',
               category: 'performance',
               timestamp: Date.now() - 7200000,
               evidenceCount: 8,
-              relatedSessions: sessionCorrelation.relatedSessions.slice(1, 4)
-            }
+              relatedSessions: sessionCorrelation.relatedSessions.slice(1, 4),
+            },
           ],
           recommendations: [
             {
               id: 'rec-1',
               title: 'Implement automated knowledge sharing',
-              description: 'Deploy SOMA briefing automation to share successful solution patterns across team members.',
+              description:
+                'Deploy SOMA briefing automation to share successful solution patterns across team members.',
               actionType: 'planned',
               priority: 'medium',
               estimatedEffort: 'days',
               potentialImpact: 'Reduce problem resolution time by 25-30% through pattern reuse',
               prerequisites: ['Team lead approval', 'SOMA configuration access'],
               relatedInsights: ['insight-1'],
-              assignedTeam: sessionCorrelation.teamId
+              assignedTeam: sessionCorrelation.teamId,
             },
             {
               id: 'rec-2',
               title: 'Optimize system configuration',
-              description: 'Apply performance tuning recommendations based on identified bottleneck patterns.',
+              description:
+                'Apply performance tuning recommendations based on identified bottleneck patterns.',
               actionType: 'immediate',
               priority: 'high',
               estimatedEffort: 'hours',
               potentialImpact: 'Improve system response times by 15-20%',
-              relatedInsights: ['insight-2']
-            }
+              relatedInsights: ['insight-2'],
+            },
           ],
           correlatedSessions: sessionCorrelation.relatedSessions,
           confidenceScore: sessionCorrelation.confidence,
-          lastUpdated: Date.now()
+          lastUpdated: Date.now(),
         };
 
         setBriefing(mockBriefing);
@@ -499,12 +540,12 @@ export const OrganizationalBriefingDisplay: React.FC<OrganizationalBriefingDispl
     if (!realTime || !briefing) return;
 
     const interval = setInterval(() => {
-      setBriefing(prev => {
+      setBriefing((prev) => {
         if (!prev) return prev;
         return {
           ...prev,
           lastUpdated: Date.now(),
-          confidenceScore: Math.min(prev.confidenceScore + 0.01, 1.0)
+          confidenceScore: Math.min(prev.confidenceScore + 0.01, 1.0),
         };
       });
     }, 30000); // Update every 30 seconds
@@ -550,10 +591,7 @@ export const OrganizationalBriefingDisplay: React.FC<OrganizationalBriefingDispl
       {mode === 'summary' && <BriefingSummaryView briefing={briefing} />}
       {mode === 'detailed' && <DetailedBriefingView briefing={briefing} />}
       {mode === 'recommendations' && (
-        <RecommendationsView
-          briefing={briefing}
-          onActionRecommendation={onActionRecommendation}
-        />
+        <RecommendationsView briefing={briefing} onActionRecommendation={onActionRecommendation} />
       )}
     </div>
   );

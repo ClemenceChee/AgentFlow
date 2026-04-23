@@ -99,12 +99,12 @@ export interface DecisionTraceData {
 /** The complete execution graph for one agent run. */
 /** Operator context for organizational tracking across AgentFlow and SOMA */
 export interface OperatorContext {
-  readonly operatorId: string;         // UUID of the human operator - REQUIRED
-  readonly sessionId: string;          // Claude Code session ID - REQUIRED
-  readonly teamId?: string;            // Team membership - OPTIONAL
-  readonly instanceId?: string;        // Specific tool invocation ID - OPTIONAL
-  readonly timestamp?: number;         // When the operator action occurred - OPTIONAL
-  readonly userAgent?: string;         // Client/tool information - OPTIONAL
+  readonly operatorId: string; // UUID of the human operator - REQUIRED
+  readonly sessionId: string; // Claude Code session ID - REQUIRED
+  readonly teamId?: string; // Team membership - OPTIONAL
+  readonly instanceId?: string; // Specific tool invocation ID - OPTIONAL
+  readonly timestamp?: number; // When the operator action occurred - OPTIONAL
+  readonly userAgent?: string; // Client/tool information - OPTIONAL
 }
 
 export interface ExecutionGraph {
@@ -190,15 +190,17 @@ export interface AgentFlowConfig {
       insights?: readonly unknown[];
       warnings?: readonly string[];
       recommendations?: readonly string[];
-    }) => Promise<{
-      shouldProceed: boolean;
-      briefing?: string;
-      warnings?: string[];
-    }> | {
-      shouldProceed: boolean;
-      briefing?: string;
-      warnings?: string[];
-    };
+    }) =>
+      | Promise<{
+          shouldProceed: boolean;
+          briefing?: string;
+          warnings?: string[];
+        }>
+      | {
+          shouldProceed: boolean;
+          briefing?: string;
+          warnings?: string[];
+        };
     /** Called after graph construction but before execution. */
     readonly onSessionInitialized?: (context: {
       operatorId?: string;
@@ -724,7 +726,11 @@ export interface ExecutionEvent {
   /** Error message if the execution failed. */
   readonly error?: string;
   /** Token usage from LLM calls. */
-  readonly usage?: { readonly input_tokens?: number; readonly output_tokens?: number; readonly total_tokens?: number };
+  readonly usage?: {
+    readonly input_tokens?: number;
+    readonly output_tokens?: number;
+    readonly total_tokens?: number;
+  };
   /** Model used for the execution. */
   readonly model?: string;
   /** UUID of the operator who initiated this execution. */

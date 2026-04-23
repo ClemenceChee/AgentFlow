@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AnomalyDetector } from '../anomaly-detector.js';
 
 function createMockDb() {
@@ -28,10 +28,7 @@ describe('AnomalyDetector', () => {
   });
 
   it('detects no anomalies with normal data', async () => {
-    const agents = [
-      makeAgent('a1', 100, 0.95, 150, 0.05),
-      makeAgent('a2', 120, 0.92, 180, 0.08),
-    ];
+    const agents = [makeAgent('a1', 100, 0.95, 150, 0.05), makeAgent('a2', 120, 0.92, 180, 0.08)];
 
     const anomalies = await detector.detectAnomalies(agents);
     // With only 2 data points, hard to detect anomalies
@@ -41,9 +38,9 @@ describe('AnomalyDetector', () => {
   it('detects failure rate anomaly', async () => {
     const agents = [
       makeAgent('a1', 100, 0.95, 150, 0.05),
-      makeAgent('a2', 100, 0.90, 150, 0.10),
+      makeAgent('a2', 100, 0.9, 150, 0.1),
       makeAgent('a3', 100, 0.85, 150, 0.15),
-      makeAgent('a4', 100, 0.30, 150, 0.70), // Outlier
+      makeAgent('a4', 100, 0.3, 150, 0.7), // Outlier
     ];
 
     const anomalies = await detector.detectAnomalies(agents);
@@ -82,7 +79,13 @@ describe('AnomalyDetector', () => {
   });
 });
 
-function makeAgent(id: string, execs: number, successRate: number, avgMs: number, failureRate: number) {
+function makeAgent(
+  id: string,
+  execs: number,
+  successRate: number,
+  avgMs: number,
+  failureRate: number,
+) {
   return {
     agentId: id,
     agentName: id,

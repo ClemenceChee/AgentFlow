@@ -218,7 +218,7 @@ export class OpenClawAdapter implements TraceAdapter {
           }
         }
 
-        nodes['root'] = {
+        nodes.root = {
           id: 'root',
           type: 'cron-job',
           name: jobName,

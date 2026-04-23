@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { OpenClawSessionAdapter } from '../openclaw-session-adapter.js';
 
 // Mock fs operations
@@ -25,7 +25,7 @@ describe('OpenClawSessionAdapter', () => {
   });
 
   it('discovers agents from directory listing', async () => {
-    (readdir as any).mockImplementation(async (path: string, opts?: any) => {
+    (readdir as any).mockImplementation(async (path: string, _opts?: any) => {
       if (path === '/mock/agents') {
         return [
           { name: 'main', isDirectory: () => true, isSymbolicLink: () => false },
@@ -45,7 +45,7 @@ describe('OpenClawSessionAdapter', () => {
   });
 
   it('deduplicates symlinks', async () => {
-    (readdir as any).mockImplementation(async (path: string, opts?: any) => {
+    (readdir as any).mockImplementation(async (path: string, _opts?: any) => {
       if (path === '/mock/agents') {
         return [
           { name: 'soma-harvester', isDirectory: () => true, isSymbolicLink: () => false },
@@ -55,7 +55,8 @@ describe('OpenClawSessionAdapter', () => {
       return [];
     });
     (lstat as any).mockImplementation(async (path: string) => {
-      if (path.includes('vault-curator')) return { isSymbolicLink: () => true, isDirectory: () => false };
+      if (path.includes('vault-curator'))
+        return { isSymbolicLink: () => true, isDirectory: () => false };
       return { isSymbolicLink: () => false, isDirectory: () => true };
     });
     (readlink as any).mockResolvedValue('soma-harvester');
@@ -76,8 +77,9 @@ describe('OpenClawSessionAdapter', () => {
       '{"type":"message","usage":{"input":500,"output":100,"totalTokens":600,"cost":{"total":0.02}}}',
     ].join('\n');
 
-    (readdir as any).mockImplementation(async (path: string, opts?: any) => {
-      if (path === '/mock/agents') return [{ name: 'main', isDirectory: () => true, isSymbolicLink: () => false }];
+    (readdir as any).mockImplementation(async (path: string, _opts?: any) => {
+      if (path === '/mock/agents')
+        return [{ name: 'main', isDirectory: () => true, isSymbolicLink: () => false }];
       if (path.includes('sessions')) return ['test.jsonl'];
       return [];
     });
@@ -97,8 +99,9 @@ describe('OpenClawSessionAdapter', () => {
   });
 
   it('derives healthy status for recent activity', async () => {
-    (readdir as any).mockImplementation(async (path: string, opts?: any) => {
-      if (path === '/mock/agents') return [{ name: 'main', isDirectory: () => true, isSymbolicLink: () => false }];
+    (readdir as any).mockImplementation(async (path: string, _opts?: any) => {
+      if (path === '/mock/agents')
+        return [{ name: 'main', isDirectory: () => true, isSymbolicLink: () => false }];
       return [];
     });
     (lstat as any).mockResolvedValue({ isSymbolicLink: () => false, isDirectory: () => true });
@@ -116,8 +119,9 @@ describe('OpenClawSessionAdapter', () => {
   });
 
   it('derives critical status for old activity', async () => {
-    (readdir as any).mockImplementation(async (path: string, opts?: any) => {
-      if (path === '/mock/agents') return [{ name: 'old', isDirectory: () => true, isSymbolicLink: () => false }];
+    (readdir as any).mockImplementation(async (path: string, _opts?: any) => {
+      if (path === '/mock/agents')
+        return [{ name: 'old', isDirectory: () => true, isSymbolicLink: () => false }];
       return [];
     });
     (lstat as any).mockResolvedValue({ isSymbolicLink: () => false, isDirectory: () => true });
@@ -136,8 +140,9 @@ describe('OpenClawSessionAdapter', () => {
 
   it('health() returns healthy when agents exist', async () => {
     (stat as any).mockResolvedValue({ size: 100, mtime: new Date() });
-    (readdir as any).mockImplementation(async (path: string, opts?: any) => {
-      if (path === '/mock/agents') return [{ name: 'main', isDirectory: () => true, isSymbolicLink: () => false }];
+    (readdir as any).mockImplementation(async (path: string, _opts?: any) => {
+      if (path === '/mock/agents')
+        return [{ name: 'main', isDirectory: () => true, isSymbolicLink: () => false }];
       return [];
     });
     (lstat as any).mockResolvedValue({ isSymbolicLink: () => false, isDirectory: () => true });

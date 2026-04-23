@@ -52,8 +52,7 @@ export function ExecSidebar({
     const deduped: typeof sorted = [];
     for (const t of sorted) {
       const nearIdx = deduped.findIndex(
-        (o) =>
-          Math.abs(o.timestamp - t.timestamp) < DEDUP_WINDOW_MS && o.nodeCount === t.nodeCount,
+        (o) => Math.abs(o.timestamp - t.timestamp) < DEDUP_WINDOW_MS && o.nodeCount === t.nodeCount,
       );
       if (nearIdx === -1) {
         deduped.push(t);

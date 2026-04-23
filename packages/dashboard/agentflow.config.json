@@ -12,10 +12,7 @@
     "surveyor.log",
     "soma.log"
   ],
-  "skipDirectories": [
-    "archive",
-    "knowledge"
-  ],
+  "skipDirectories": ["archive", "knowledge"],
   "discoveryPaths": [
     "~/.openclaw/workspace/traces",
     "~/.openclaw/cron/runs",

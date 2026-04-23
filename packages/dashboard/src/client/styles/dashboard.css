@@ -3128,14 +3128,18 @@ body {
   border-left: 3px solid var(--info);
   border-radius: var(--r);
 }
-.aicp-intelligence { font-size: var(--xs); }
+.aicp-intelligence {
+  font-size: var(--xs);
+}
 .aicp-intelligence--loading,
 .aicp-intelligence--error {
   padding: var(--s3);
   color: var(--t2);
   font-style: italic;
 }
-.aicp-intelligence__section { margin-bottom: var(--s4); }
+.aicp-intelligence__section {
+  margin-bottom: var(--s4);
+}
 .aicp-intelligence__section-title {
   font-size: 11px;
   text-transform: uppercase;
@@ -3143,7 +3147,9 @@ body {
   color: var(--t2);
   margin: 0 0 var(--s2);
 }
-.aicp-intelligence__group { margin-bottom: var(--s3); }
+.aicp-intelligence__group {
+  margin-bottom: var(--s3);
+}
 .aicp-intelligence__group-header {
   display: flex;
   align-items: center;
