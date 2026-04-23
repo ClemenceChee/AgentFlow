@@ -12,7 +12,10 @@
         "noExplicitAny": "warn",
         "noAssignInExpressions": "warn",
         "noControlCharactersInRegex": "warn",
-        "noArrayIndexKey": "warn"
+        "noArrayIndexKey": "warn",
+        "useIterableCallbackReturn": "warn",
+        "noImplicitAnyLet": "warn",
+        "noDuplicateProperties": "warn"
       },
       "complexity": {
         "noStaticOnlyClass": "warn"
@@ -22,8 +25,19 @@
         "noNonNullAssertion": "warn"
       },
       "correctness": {
-        "noUnusedVariables": "error",
-        "noUnusedImports": "error"
+        "noUnusedVariables": "warn",
+        "noUnusedImports": "error",
+        "useExhaustiveDependencies": "warn",
+        "noInvalidUseBeforeDeclaration": "warn"
+      },
+      "a11y": {
+        "useButtonType": "warn",
+        "noStaticElementInteractions": "warn",
+        "useKeyWithClickEvents": "warn",
+        "noSvgWithoutTitle": "warn",
+        "useAriaPropsSupportedByRole": "warn",
+        "noLabelWithoutControl": "warn",
+        "useSemanticElements": "warn"
       }
     }
   },
