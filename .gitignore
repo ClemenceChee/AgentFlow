@@ -56,14 +56,12 @@ tests/soma/
 .agentflow/
 traces/
 
-<<<<<<< HEAD
 # Local agentflow runtime config (contains environment-specific paths)
 packages/dashboard/agentflow.config.json
-=======
+
 # SOMA source (proprietary — lives in private ClemenceChee/soma repo).
 # AgentFlow consumes SOMA only via filesystem handoff; source must never
 # be re-introduced here. See openspec change clean-soma-from-agentflow-repo.
 packages/soma/
 .soma/
 **/.soma/
->>>>>>> origin/master
