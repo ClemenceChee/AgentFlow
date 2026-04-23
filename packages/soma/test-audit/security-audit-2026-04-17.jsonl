@@ -1,1 +1,0 @@
-{"id":"audit_1776468340884_1_vr0qcpdae","timestamp":1776468340884,"eventType":"governance_decision","severity":"info","operatorId":"test-operator","teamId":"test-team","action":"test_governance","resource":"test_resource","result":"success","details":{"message":"Test organizational intelligence audit"}}
