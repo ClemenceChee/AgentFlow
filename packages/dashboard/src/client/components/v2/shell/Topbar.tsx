@@ -1,6 +1,6 @@
 import type { Theme, Tier, Variant } from './useTweaks';
 
-export type PageId = 'overview' | 'agents' | 'mining' | 'guards' | 'soma' | 'org';
+export type PageId = 'overview' | 'agents' | 'mining' | 'guards' | 'soma' | 'org' | 'aicp';
 
 interface TabDef {
   id: PageId;
@@ -17,6 +17,7 @@ const TABS: TabDef[] = [
   { id: 'guards', label: 'Guards', kbd: '4' },
   { id: 'soma', label: 'SOMA', kbd: '5', premium: true, requiredTier: 'pro' },
   { id: 'org', label: 'Org', kbd: '6', premium: true, requiredTier: 'enterprise' },
+  { id: 'aicp', label: 'AICP', kbd: '7' },
 ];
 
 function isLocked(tab: TabDef, tier: Tier): boolean {
