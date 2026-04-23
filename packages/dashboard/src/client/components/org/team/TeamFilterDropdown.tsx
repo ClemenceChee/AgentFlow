@@ -6,7 +6,7 @@
  */
 
 import React, { useState, useEffect, useMemo, useRef, memo, useCallback } from 'react';
-import { useOrganizationalContext } from '../../../../../contexts/OrganizationalContext';
+import { useOrganizationalContext } from '../../../contexts/OrganizationalContext';
 import { useOrganizationalData } from '../../../hooks/organizational/index.js';
 import { useHoverPrefetch } from '../../../hooks/usePrefetch.js';
 import { useTeamData } from '../../../hooks/useOrganizationalCache.js';
