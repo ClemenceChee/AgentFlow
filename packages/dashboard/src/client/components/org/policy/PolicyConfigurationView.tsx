@@ -6,8 +6,8 @@
  * status updates and administrative capabilities.
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
-import type { PolicyComplianceLevel, TeamAccessLevel } from '../../../types/organizational.js';
+import { useEffect, useMemo, useState } from 'react';
+import type { TeamAccessLevel } from '../../../types/organizational.js';
 
 // Component props
 interface PolicyConfigurationViewProps {
@@ -153,72 +153,64 @@ type PolicyCategory =
 
 type PolicyStatus = 'draft' | 'active' | 'deprecated' | 'disabled';
 
-type PolicyEnforcementLevel =
-  | 'monitor'
-  | 'warn'
-  | 'block'
-  | 'audit';
+type PolicyEnforcementLevel = 'monitor' | 'warn' | 'block' | 'audit';
 
 type PolicyScope = 'global' | 'team' | 'operator' | 'resource';
 
-type PolicyRuleType =
-  | 'validation'
-  | 'restriction'
-  | 'requirement'
-  | 'guideline';
+type PolicyRuleType = 'validation' | 'restriction' | 'requirement' | 'guideline';
 
-type PolicyActionType =
-  | 'log'
-  | 'alert'
-  | 'block'
-  | 'redirect'
-  | 'approve'
-  | 'audit';
+type PolicyActionType = 'log' | 'alert' | 'block' | 'redirect' | 'approve' | 'audit';
 
 // Configuration
-const ENFORCEMENT_LEVEL_CONFIG: Record<PolicyEnforcementLevel, {
-  label: string;
-  icon: string;
-  color: string;
-  description: string;
-}> = {
+const ENFORCEMENT_LEVEL_CONFIG: Record<
+  PolicyEnforcementLevel,
+  {
+    label: string;
+    icon: string;
+    color: string;
+    description: string;
+  }
+> = {
   monitor: {
     label: 'Monitor',
     icon: '👁️',
     color: 'var(--org-monitor)',
-    description: 'Track violations but do not prevent actions'
+    description: 'Track violations but do not prevent actions',
   },
   warn: {
     label: 'Warn',
     icon: '⚠️',
     color: 'var(--warn)',
-    description: 'Show warnings but allow actions to proceed'
+    description: 'Show warnings but allow actions to proceed',
   },
   block: {
     label: 'Block',
     icon: '🚫',
     color: 'var(--fail)',
-    description: 'Prevent actions that violate policy'
+    description: 'Prevent actions that violate policy',
   },
   audit: {
     label: 'Audit',
     icon: '📋',
     color: 'var(--org-audit)',
-    description: 'Log all actions for compliance review'
-  }
+    description: 'Log all actions for compliance review',
+  },
 };
 
-const CATEGORY_CONFIG: Record<PolicyCategory, {
-  label: string;
-  icon: string;
-  color: string;
-}> = {
+const CATEGORY_CONFIG: Record<
+  PolicyCategory,
+  {
+    label: string;
+    icon: string;
+    color: string;
+  }
+> = {
   data_governance: { label: 'Data Governance', icon: '🗂️', color: 'var(--org-data)' },
   access_control: { label: 'Access Control', icon: '🔐', color: 'var(--org-access)' },
   security: { label: 'Security', icon: '🔒', color: 'var(--org-security)' },
   compliance: { label: 'Compliance', icon: '📋', color: 'var(--org-compliance)' },
   operational: { label: 'Operational', icon: '⚙️', color: 'var(--org-operational)' },
-  privacy: { label: 'Privacy', icon: '🛡️', color: 'var(--org-privacy)' }
+  privacy: { label: 'Privacy', icon: '🛡️', color: 'var(--org-privacy)' },
 };
 
 /**
@@ -235,7 +227,7 @@ export function PolicyConfigurationView({
   compact = false,
   onPolicyToggle,
   onEnforcementChange,
-  onConfigurationUpdate
+  onConfigurationUpdate,
 }: PolicyConfigurationViewProps) {
   const [policies, setPolicies] = useState<PolicyConfiguration[]>([]);
   const [loading, setLoading] = useState(true);
@@ -253,7 +245,7 @@ export function PolicyConfigurationView({
 
         const params = new URLSearchParams({
           ...(teamId && { teamId }),
-          ...(showActiveOnly && { status: 'active' })
+          ...(showActiveOnly && { status: 'active' }),
         });
 
         const response = await fetch(`/api/policies/configuration?${params}`);
@@ -263,7 +255,6 @@ export function PolicyConfigurationView({
 
         const data = await response.json();
         setPolicies(data.policies || []);
-
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load policy configuration');
         // Generate mock data for development
@@ -275,7 +266,7 @@ export function PolicyConfigurationView({
     };
 
     loadPolicies();
-  }, [teamId, showActiveOnly]);
+  }, [teamId, showActiveOnly, generateMockPolicies]);
 
   // Generate mock policy data
   const generateMockPolicies = (): PolicyConfiguration[] => {
@@ -308,8 +299,8 @@ export function PolicyConfigurationView({
             enabled: true,
             severity: index === 0 ? 'critical' : index === 1 ? 'error' : 'warning',
             message: `${category} validation failed`,
-            parameters: { threshold: 0.8, timeout: 30 }
-          }
+            parameters: { threshold: 0.8, timeout: 30 },
+          },
         ],
         conditions: [
           {
@@ -318,31 +309,36 @@ export function PolicyConfigurationView({
             operator: 'equals',
             field: 'teamId',
             value: teamId || 'any',
-            enabled: true
-          }
+            enabled: true,
+          },
         ],
         actions: [
           {
             id: `action-${index}-1`,
-            type: enforcementLevel === 'block' ? 'block' : enforcementLevel === 'warn' ? 'alert' : 'log',
+            type:
+              enforcementLevel === 'block'
+                ? 'block'
+                : enforcementLevel === 'warn'
+                  ? 'alert'
+                  : 'log',
             parameters: { message: 'Policy violation detected', severity: 'medium' },
             enabled: true,
-            order: 1
-          }
+            order: 1,
+          },
         ],
         metadata: {
-          createdAt: now - (index * 30 * 24 * 60 * 60 * 1000),
-          updatedAt: now - (index * 7 * 24 * 60 * 60 * 1000),
+          createdAt: now - index * 30 * 24 * 60 * 60 * 1000,
+          updatedAt: now - index * 7 * 24 * 60 * 60 * 1000,
           createdBy: 'policy-admin',
           lastModifiedBy: 'policy-admin',
           tags: [category, 'automated', status],
           priority: index === 0 ? 10 : index < 3 ? 7 : 5,
-          riskLevel: index === 0 ? 'critical' : index === 1 ? 'high' : 'medium'
+          riskLevel: index === 0 ? 'critical' : index === 1 ? 'high' : 'medium',
         },
         deployment: {
           environment: 'production',
           rolloutPercentage: status === 'active' ? 100 : 0,
-          targetTeams: teamId ? [teamId] : undefined
+          targetTeams: teamId ? [teamId] : undefined,
         },
         monitoring: {
           enabled: true,
@@ -352,8 +348,8 @@ export function PolicyConfigurationView({
             violationCount: Math.floor(Math.random() * 50),
             complianceRate: 0.85 + Math.random() * 0.1,
             lastEvaluation: now - Math.floor(Math.random() * 60 * 60 * 1000),
-            averageEvaluationTime: Math.floor(Math.random() * 100) + 20
-          }
+            averageEvaluationTime: Math.floor(Math.random() * 100) + 20,
+          },
         },
         testing: {
           testCases: [
@@ -362,20 +358,20 @@ export function PolicyConfigurationView({
               name: 'Basic compliance test',
               description: 'Test basic policy compliance scenarios',
               input: { category, teamId: teamId || 'test-team', operatorId: 'test-operator' },
-              expectedOutput: { compliant: true }
-            }
+              expectedOutput: { compliant: true },
+            },
           ],
-          lastTested: now - (2 * 24 * 60 * 60 * 1000),
+          lastTested: now - 2 * 24 * 60 * 60 * 1000,
           testResults: [
             {
               testCaseId: `test-${index}-1`,
               passed: Math.random() > 0.2,
               actualOutput: { compliant: true },
               executionTime: Math.floor(Math.random() * 100) + 10,
-              timestamp: now - (2 * 24 * 60 * 60 * 1000)
-            }
-          ]
-        }
+              timestamp: now - 2 * 24 * 60 * 60 * 1000,
+            },
+          ],
+        },
       };
     });
   };
@@ -386,22 +382,23 @@ export function PolicyConfigurationView({
 
     // Filter by category
     if (filterCategory !== 'all') {
-      filtered = filtered.filter(policy => policy.category === filterCategory);
+      filtered = filtered.filter((policy) => policy.category === filterCategory);
     }
 
     // Filter by search query
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(policy =>
-        policy.name.toLowerCase().includes(query) ||
-        policy.description.toLowerCase().includes(query) ||
-        policy.category.toLowerCase().includes(query)
+      filtered = filtered.filter(
+        (policy) =>
+          policy.name.toLowerCase().includes(query) ||
+          policy.description.toLowerCase().includes(query) ||
+          policy.category.toLowerCase().includes(query),
       );
     }
 
     // Filter by active status if requested
     if (showActiveOnly) {
-      filtered = filtered.filter(policy => policy.status === 'active');
+      filtered = filtered.filter((policy) => policy.status === 'active');
     }
 
     return filtered.sort((a, b) => b.metadata.priority - a.metadata.priority);
@@ -414,11 +411,11 @@ export function PolicyConfigurationView({
   const handlePolicyToggle = (policyId: string, enabled: boolean) => {
     if (!canModifyPolicies) return;
 
-    setPolicies(prev => prev.map(policy =>
-      policy.id === policyId
-        ? { ...policy, status: enabled ? 'active' : 'disabled' }
-        : policy
-    ));
+    setPolicies((prev) =>
+      prev.map((policy) =>
+        policy.id === policyId ? { ...policy, status: enabled ? 'active' : 'disabled' } : policy,
+      ),
+    );
 
     if (onPolicyToggle) {
       onPolicyToggle(policyId, enabled);
@@ -429,11 +426,11 @@ export function PolicyConfigurationView({
   const handleEnforcementChange = (policyId: string, level: PolicyEnforcementLevel) => {
     if (!canModifyPolicies) return;
 
-    setPolicies(prev => prev.map(policy =>
-      policy.id === policyId
-        ? { ...policy, enforcementLevel: level }
-        : policy
-    ));
+    setPolicies((prev) =>
+      prev.map((policy) =>
+        policy.id === policyId ? { ...policy, enforcementLevel: level } : policy,
+      ),
+    );
 
     if (onEnforcementChange) {
       onEnforcementChange(policyId, level);
@@ -444,8 +441,10 @@ export function PolicyConfigurationView({
     'org-card',
     'policy-configuration-view',
     compact ? 'compact' : '',
-    className
-  ].filter(Boolean).join(' ');
+    className,
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   // Loading state
   if (loading) {
@@ -460,9 +459,7 @@ export function PolicyConfigurationView({
         <div className="org-card__content">
           <div className="policy-configuration-loading">
             <div className="policy-configuration-loading-spinner" />
-            <div className="policy-configuration-loading-text">
-              Loading policy configuration...
-            </div>
+            <div className="policy-configuration-loading-text">Loading policy configuration...</div>
           </div>
         </div>
       </div>
@@ -482,9 +479,7 @@ export function PolicyConfigurationView({
         <div className="org-card__content">
           <div className="policy-configuration-error">
             <div className="policy-configuration-error__icon">⚠️</div>
-            <div className="policy-configuration-error__message">
-              {error}
-            </div>
+            <div className="policy-configuration-error__message">{error}</div>
           </div>
         </div>
       </div>
@@ -531,7 +526,7 @@ export function PolicyConfigurationView({
                 All ({policies.length})
               </button>
               {Object.entries(CATEGORY_CONFIG).map(([category, config]) => {
-                const count = policies.filter(p => p.category === category).length;
+                const count = policies.filter((p) => p.category === category).length;
                 if (count === 0) return null;
 
                 return (
@@ -541,15 +536,9 @@ export function PolicyConfigurationView({
                     onClick={() => setFilterCategory(category as PolicyCategory)}
                     style={{ borderColor: config.color }}
                   >
-                    <span className="policy-category-filter__icon">
-                      {config.icon}
-                    </span>
-                    <span className="policy-category-filter__label">
-                      {config.label}
-                    </span>
-                    <span className="policy-category-filter__count">
-                      {count}
-                    </span>
+                    <span className="policy-category-filter__icon">{config.icon}</span>
+                    <span className="policy-category-filter__label">{config.label}</span>
+                    <span className="policy-category-filter__count">{count}</span>
                   </button>
                 );
               })}
@@ -560,7 +549,7 @@ export function PolicyConfigurationView({
         {/* Policy List */}
         {filteredPolicies.length > 0 ? (
           <div className="policy-configuration-list">
-            {filteredPolicies.slice(0, compact ? 5 : 10).map(policy => {
+            {filteredPolicies.slice(0, compact ? 5 : 10).map((policy) => {
               const categoryConfig = CATEGORY_CONFIG[policy.category];
               const enforcementConfig = ENFORCEMENT_LEVEL_CONFIG[policy.enforcementLevel];
               const isExpanded = selectedPolicy === policy.id;
@@ -589,13 +578,9 @@ export function PolicyConfigurationView({
                           </span>
                         </div>
 
-                        <div className="policy-configuration-item__name">
-                          {policy.name}
-                        </div>
+                        <div className="policy-configuration-item__name">{policy.name}</div>
 
-                        <div className="policy-configuration-item__version">
-                          {policy.version}
-                        </div>
+                        <div className="policy-configuration-item__version">{policy.version}</div>
                       </div>
 
                       <div className="policy-configuration-item__status-row">
@@ -632,7 +617,12 @@ export function PolicyConfigurationView({
                         <select
                           className="policy-configuration-enforcement-select"
                           value={policy.enforcementLevel}
-                          onChange={(e) => handleEnforcementChange(policy.id, e.target.value as PolicyEnforcementLevel)}
+                          onChange={(e) =>
+                            handleEnforcementChange(
+                              policy.id,
+                              e.target.value as PolicyEnforcementLevel,
+                            )
+                          }
                           title="Change enforcement level"
                         >
                           {Object.entries(ENFORCEMENT_LEVEL_CONFIG).map(([level, config]) => (
@@ -657,16 +647,21 @@ export function PolicyConfigurationView({
                           Rules ({policy.rules.length})
                         </div>
                         <div className="policy-configuration-rules">
-                          {policy.rules.map(rule => (
-                            <div key={rule.id} className={`policy-configuration-rule ${rule.enabled ? 'enabled' : 'disabled'}`}>
+                          {policy.rules.map((rule) => (
+                            <div
+                              key={rule.id}
+                              className={`policy-configuration-rule ${rule.enabled ? 'enabled' : 'disabled'}`}
+                            >
                               <div className="policy-configuration-rule__header">
-                                <div className="policy-configuration-rule__name">
-                                  {rule.name}
-                                </div>
-                                <div className={`policy-configuration-rule__severity ${rule.severity}`}>
+                                <div className="policy-configuration-rule__name">{rule.name}</div>
+                                <div
+                                  className={`policy-configuration-rule__severity ${rule.severity}`}
+                                >
                                   {rule.severity}
                                 </div>
-                                <div className={`policy-configuration-rule__status ${rule.enabled ? 'enabled' : 'disabled'}`}>
+                                <div
+                                  className={`policy-configuration-rule__status ${rule.enabled ? 'enabled' : 'disabled'}`}
+                                >
                                   {rule.enabled ? '✓' : '✗'}
                                 </div>
                               </div>
@@ -680,9 +675,7 @@ export function PolicyConfigurationView({
 
                       {/* Monitoring Metrics */}
                       <div className="policy-configuration-detail-section">
-                        <div className="policy-configuration-detail-section__title">
-                          Monitoring
-                        </div>
+                        <div className="policy-configuration-detail-section__title">Monitoring</div>
                         <div className="policy-configuration-metrics">
                           <div className="policy-configuration-metric">
                             <div className="policy-configuration-metric__label">Evaluations</div>
@@ -712,33 +705,35 @@ export function PolicyConfigurationView({
                       </div>
 
                       {/* Test Results */}
-                      {showTesting && policy.testing.testResults && policy.testing.testResults.length > 0 && (
-                        <div className="policy-configuration-detail-section">
-                          <div className="policy-configuration-detail-section__title">
-                            Test Results
-                          </div>
-                          <div className="policy-configuration-test-results">
-                            {policy.testing.testResults.slice(0, 3).map((result, index) => (
-                              <div
-                                key={index}
-                                className={`policy-configuration-test-result ${result.passed ? 'passed' : 'failed'}`}
-                              >
-                                <div className="policy-configuration-test-result__status">
-                                  {result.passed ? '✅' : '❌'}
-                                </div>
-                                <div className="policy-configuration-test-result__info">
-                                  <div className="policy-configuration-test-result__name">
-                                    Test case {result.testCaseId}
+                      {showTesting &&
+                        policy.testing.testResults &&
+                        policy.testing.testResults.length > 0 && (
+                          <div className="policy-configuration-detail-section">
+                            <div className="policy-configuration-detail-section__title">
+                              Test Results
+                            </div>
+                            <div className="policy-configuration-test-results">
+                              {policy.testing.testResults.slice(0, 3).map((result, index) => (
+                                <div
+                                  key={index}
+                                  className={`policy-configuration-test-result ${result.passed ? 'passed' : 'failed'}`}
+                                >
+                                  <div className="policy-configuration-test-result__status">
+                                    {result.passed ? '✅' : '❌'}
                                   </div>
-                                  <div className="policy-configuration-test-result__time">
-                                    {result.executionTime}ms
+                                  <div className="policy-configuration-test-result__info">
+                                    <div className="policy-configuration-test-result__name">
+                                      Test case {result.testCaseId}
+                                    </div>
+                                    <div className="policy-configuration-test-result__time">
+                                      {result.executionTime}ms
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            ))}
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )}
                     </div>
                   )}
                 </div>
@@ -747,16 +742,15 @@ export function PolicyConfigurationView({
 
             {filteredPolicies.length > (compact ? 5 : 10) && (
               <div className="policy-configuration-more">
-                +{filteredPolicies.length - (compact ? 5 : 10)} more polic{filteredPolicies.length - (compact ? 5 : 10) !== 1 ? 'ies' : 'y'}
+                +{filteredPolicies.length - (compact ? 5 : 10)} more polic
+                {filteredPolicies.length - (compact ? 5 : 10) !== 1 ? 'ies' : 'y'}
               </div>
             )}
           </div>
         ) : (
           <div className="policy-configuration-empty">
             <div className="policy-configuration-empty__icon">⚙️</div>
-            <div className="policy-configuration-empty__message">
-              No policies configured
-            </div>
+            <div className="policy-configuration-empty__message">No policies configured</div>
             <div className="policy-configuration-empty__description">
               Policy configurations will appear here once they are created and deployed.
             </div>

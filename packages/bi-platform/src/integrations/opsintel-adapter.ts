@@ -6,7 +6,7 @@
  */
 
 import { readFile, stat } from 'node:fs/promises';
-import type { SourceAdapter, SystemHealth, EfficiencyMetrics } from './types.js';
+import type { EfficiencyMetrics, SourceAdapter, SystemHealth } from './types.js';
 
 export interface OpsIntelAdapterConfig {
   /** Path to ops-intel report or data directory */
@@ -89,9 +89,7 @@ export class OpsIntelAdapter implements SourceAdapter {
     return report.drift ?? [];
   }
 
-  async getAssertionResults(): Promise<
-    Array<{ name: string; passed: boolean; message?: string }>
-  > {
+  async getAssertionResults(): Promise<Array<{ name: string; passed: boolean; message?: string }>> {
     const report = await this.getReport();
     return report.assertions ?? [];
   }

@@ -6,17 +6,17 @@
  * Task: 3.1
  */
 
-import type { Router } from '../router.js';
-import { sendJson } from '../router.js';
+import type { CacheClient } from '../../cache/cache.js';
+import type { DbPool } from '../../db/pool.js';
 import type { DataAggregator } from '../../synthesis/aggregator.js';
 import type { MetricEngine } from '../../synthesis/metric-engine.js';
-import type { DbPool } from '../../db/pool.js';
-import type { CacheClient } from '../../cache/cache.js';
+import type { Router } from '../router.js';
+import { sendJson } from '../router.js';
 
 export function registerPerformanceRoutes(
   router: Router,
   aggregator: DataAggregator,
-  metricEngine: MetricEngine,
+  _metricEngine: MetricEngine,
   db: DbPool,
   cache: CacheClient,
 ): void {
@@ -42,11 +42,20 @@ export function registerPerformanceRoutes(
       agents: latest.agents.map((a) => ({
         agentId: a.agentId,
         agentName: a.agentName,
-        status: a.performance.failureRate > 0.5 ? 'critical' : a.performance.failureRate > 0.1 ? 'warning' : 'healthy',
+        status:
+          a.performance.failureRate > 0.5
+            ? 'critical'
+            : a.performance.failureRate > 0.1
+              ? 'warning'
+              : 'healthy',
         totalExecutions: a.performance.totalExecutions,
         successRate: Math.round(a.performance.successRate * 1000) / 10,
         avgResponseTimeMs: Math.round(a.performance.avgDurationMs),
-        source: a.agentId.startsWith('openclaw-') ? 'openclaw' : a.agentId.startsWith('soma-') ? 'soma' : 'agentflow',
+        source: a.agentId.startsWith('openclaw-')
+          ? 'openclaw'
+          : a.agentId.startsWith('soma-')
+            ? 'soma'
+            : 'agentflow',
         costPerExecution: a.efficiency.costPerExecution ?? null,
         tokenUsage: a.efficiency.tokenUsage ?? null,
       })),

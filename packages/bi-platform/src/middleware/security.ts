@@ -46,11 +46,13 @@ export function createCorsMiddleware(config: CorsConfig): Middleware {
     const origin = ctx.req.headers.origin;
 
     if (origin) {
-      const allowed =
-        config.allowedOrigins.includes('*') || config.allowedOrigins.includes(origin);
+      const allowed = config.allowedOrigins.includes('*') || config.allowedOrigins.includes(origin);
 
       if (allowed) {
-        ctx.res.setHeader('Access-Control-Allow-Origin', config.allowedOrigins.includes('*') ? '*' : origin);
+        ctx.res.setHeader(
+          'Access-Control-Allow-Origin',
+          config.allowedOrigins.includes('*') ? '*' : origin,
+        );
         if (config.credentials) {
           ctx.res.setHeader('Access-Control-Allow-Credentials', 'true');
         }

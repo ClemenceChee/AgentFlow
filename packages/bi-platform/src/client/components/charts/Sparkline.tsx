@@ -1,5 +1,3 @@
-import React from 'react';
-
 interface Props {
   values: number[];
   color?: string;
@@ -21,8 +19,12 @@ export function Sparkline({ values, color = 'var(--info)', width = 120, height =
     return { x, y };
   });
 
-  const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
-  const areaPath = linePath + ` L${points[points.length - 1].x.toFixed(1)},${height} L${points[0].x.toFixed(1)},${height} Z`;
+  const linePath = points
+    .map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`)
+    .join(' ');
+  const areaPath =
+    linePath +
+    ` L${points[points.length - 1].x.toFixed(1)},${height} L${points[0].x.toFixed(1)},${height} Z`;
 
   return (
     <svg className="sparkline" width={width} height={height} viewBox={`0 0 ${width} ${height}`}>

@@ -1,6 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { OrganizationalBreadcrumbs } from './OrganizationalBreadcrumbs';
+import type React from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { usePrefetch } from '../../../hooks/usePrefetch.js';
+import { OrganizationalBreadcrumbs } from './OrganizationalBreadcrumbs';
 
 interface NavigationItem {
   readonly id: string;
@@ -50,7 +51,7 @@ export const OrganizationalNavigationMenu: React.FC<Props> = ({
   onSubViewChange,
   className = '',
   compact = false,
-  showSearch = true
+  showSearch = true,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set([currentView]));
@@ -59,15 +60,11 @@ export const OrganizationalNavigationMenu: React.FC<Props> = ({
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Initialize prefetch hooks
-  const {
-    prefetchTeamData,
-    prefetchTeamPerformance,
-    prefetchTeamActivity,
-    prefetch
-  } = usePrefetch();
+  const { prefetchTeamData, prefetchTeamPerformance, prefetchTeamActivity, prefetch } =
+    usePrefetch();
 
-  const currentItem = items.find(item => item.id === currentView);
-  const currentSubItem = currentItem?.subItems?.find(sub => sub.id === currentSubView);
+  const currentItem = items.find((item) => item.id === currentView);
+  const currentSubItem = currentItem?.subItems?.find((sub) => sub.id === currentSubView);
 
   // Generate breadcrumbs based on current navigation state
   const breadcrumbs = [];
@@ -75,13 +72,13 @@ export const OrganizationalNavigationMenu: React.FC<Props> = ({
     breadcrumbs.push({
       label: currentItem.label,
       path: `/${currentItem.id}`,
-      icon: currentItem.icon
+      icon: currentItem.icon,
     });
 
     if (currentSubItem) {
       breadcrumbs.push({
         label: currentSubItem.label,
-        path: `/${currentItem.id}/${currentSubItem.id}`
+        path: `/${currentItem.id}/${currentSubItem.id}`,
       });
     }
   }
@@ -114,11 +111,10 @@ export const OrganizationalNavigationMenu: React.FC<Props> = ({
       switch (itemId) {
         case 'team':
           // Prefetch team data for all teams
-          prefetch(
-            `teams:list`,
-            () => fetch('/api/teams').then(r => r.json()),
-            { delay: 200, priority: 'normal' }
-          );
+          prefetch(`teams:list`, () => fetch('/api/teams').then((r) => r.json()), {
+            delay: 200,
+            priority: 'normal',
+          });
           break;
 
         case 'performance':
@@ -126,21 +122,21 @@ export const OrganizationalNavigationMenu: React.FC<Props> = ({
           if (subItemId === 'query-performance') {
             prefetch(
               `performance:query-all`,
-              () => fetch('/api/performance/queries').then(r => r.json()),
-              { delay: 200, priority: 'normal' }
+              () => fetch('/api/performance/queries').then((r) => r.json()),
+              { delay: 200, priority: 'normal' },
             );
           } else if (subItemId === 'cache-efficiency') {
             prefetch(
               `performance:cache-all`,
-              () => fetch('/api/performance/cache').then(r => r.json()),
-              { delay: 200, priority: 'normal' }
+              () => fetch('/api/performance/cache').then((r) => r.json()),
+              { delay: 200, priority: 'normal' },
             );
           } else {
             // Generic performance overview
             prefetch(
               `performance:overview`,
-              () => fetch('/api/performance/overview').then(r => r.json()),
-              { delay: 200, priority: 'normal' }
+              () => fetch('/api/performance/overview').then((r) => r.json()),
+              { delay: 200, priority: 'normal' },
             );
           }
           break;
@@ -150,14 +146,14 @@ export const OrganizationalNavigationMenu: React.FC<Props> = ({
           if (subItemId === 'operator-timeline') {
             prefetch(
               `activity:operators-recent`,
-              () => fetch('/api/operators?recent=true').then(r => r.json()),
-              { delay: 200, priority: 'normal' }
+              () => fetch('/api/operators?recent=true').then((r) => r.json()),
+              { delay: 200, priority: 'normal' },
             );
           } else {
             prefetch(
               `activity:overview`,
-              () => fetch('/api/activity/overview').then(r => r.json()),
-              { delay: 200, priority: 'normal' }
+              () => fetch('/api/activity/overview').then((r) => r.json()),
+              { delay: 200, priority: 'normal' },
             );
           }
           break;
@@ -166,56 +162,56 @@ export const OrganizationalNavigationMenu: React.FC<Props> = ({
           // Prefetch session correlation data
           prefetch(
             `sessions:recent`,
-            () => fetch('/api/sessions?recent=true&limit=50').then(r => r.json()),
-            { delay: 200, priority: 'normal' }
+            () => fetch('/api/sessions?recent=true&limit=50').then((r) => r.json()),
+            { delay: 200, priority: 'normal' },
           );
           break;
 
         case 'policy':
           // Prefetch policy status data
-          prefetch(
-            `policy:status`,
-            () => fetch('/api/policy/status').then(r => r.json()),
-            { delay: 200, priority: 'normal' }
-          );
+          prefetch(`policy:status`, () => fetch('/api/policy/status').then((r) => r.json()), {
+            delay: 200,
+            priority: 'normal',
+          });
           break;
 
         case 'monitoring':
           // Prefetch real-time monitoring data
-          prefetch(
-            `monitoring:live`,
-            () => fetch('/api/monitoring/live').then(r => r.json()),
-            { delay: 100, priority: 'high' }
-          );
+          prefetch(`monitoring:live`, () => fetch('/api/monitoring/live').then((r) => r.json()), {
+            delay: 100,
+            priority: 'high',
+          });
           break;
       }
     };
 
     return {
       onMouseEnter: handleMouseEnter,
-      onFocus: handleMouseEnter
+      onFocus: handleMouseEnter,
     };
   };
 
   const filteredItems = searchQuery
-    ? items.filter(item =>
-        item.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.subItems?.some(sub =>
-          sub.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          sub.description.toLowerCase().includes(searchQuery.toLowerCase())
-        )
+    ? items.filter(
+        (item) =>
+          item.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          item.subItems?.some(
+            (sub) =>
+              sub.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              sub.description.toLowerCase().includes(searchQuery.toLowerCase()),
+          ),
       )
     : items;
 
   // Build flattened list for keyboard navigation
   const getFlatItemsList = () => {
-    const flatItems: Array<{ type: 'main' | 'sub', item: any, parentId?: string }> = [];
+    const flatItems: Array<{ type: 'main' | 'sub'; item: any; parentId?: string }> = [];
 
-    filteredItems.forEach(item => {
+    filteredItems.forEach((item) => {
       flatItems.push({ type: 'main', item });
       if (expandedItems.has(item.id) && item.subItems) {
-        item.subItems.forEach(subItem => {
+        item.subItems.forEach((subItem) => {
           flatItems.push({ type: 'sub', item: subItem, parentId: item.id });
         });
       }
@@ -234,12 +230,12 @@ export const OrganizationalNavigationMenu: React.FC<Props> = ({
       switch (event.key) {
         case 'ArrowUp':
           event.preventDefault();
-          setFocusedIndex(prev => Math.max(0, prev - 1));
+          setFocusedIndex((prev) => Math.max(0, prev - 1));
           break;
 
         case 'ArrowDown':
           event.preventDefault();
-          setFocusedIndex(prev => Math.min(flatItems.length - 1, prev + 1));
+          setFocusedIndex((prev) => Math.min(flatItems.length - 1, prev + 1));
           break;
 
         case 'Enter':
@@ -290,12 +286,12 @@ export const OrganizationalNavigationMenu: React.FC<Props> = ({
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [focusedIndex, searchQuery, filteredItems, expandedItems]);
+  }, [focusedIndex, searchQuery, getFlatItemsList, handleItemClick, handleSubItemClick]);
 
   // Reset focus when items change
   useEffect(() => {
     setFocusedIndex(-1);
-  }, [searchQuery, expandedItems]);
+  }, []);
 
   return (
     <div
@@ -306,7 +302,7 @@ export const OrganizationalNavigationMenu: React.FC<Props> = ({
       {breadcrumbs.length > 0 && (
         <div className="org-navigation-breadcrumbs">
           <OrganizationalBreadcrumbs
-            items={breadcrumbs.map(crumb => ({
+            items={breadcrumbs.map((crumb) => ({
               ...crumb,
               onClick: () => {
                 if (crumb.path.split('/').length === 2) {
@@ -318,7 +314,7 @@ export const OrganizationalNavigationMenu: React.FC<Props> = ({
                   onViewChange(viewId);
                   onSubViewChange?.(subViewId);
                 }
-              }
+              },
             }))}
           />
         </div>
@@ -328,7 +324,9 @@ export const OrganizationalNavigationMenu: React.FC<Props> = ({
       {showSearch && (
         <div className="org-navigation-search">
           <div className="org-search-input-container">
-            <span className="org-search-icon" aria-hidden="true">🔍</span>
+            <span className="org-search-icon" aria-hidden="true">
+              🔍
+            </span>
             <input
               ref={searchInputRef}
               type="text"
@@ -354,12 +352,14 @@ export const OrganizationalNavigationMenu: React.FC<Props> = ({
 
       {/* Navigation items */}
       <nav className="org-navigation-items" aria-label="Organizational navigation">
-        {filteredItems.map((item, itemIndex) => {
+        {filteredItems.map((item, _itemIndex) => {
           const isExpanded = expandedItems.has(item.id);
           const isActive = currentView === item.id;
           const hasSubItems = item.subItems && item.subItems.length > 0;
           const flatItems = getFlatItemsList();
-          const itemFocusIndex = flatItems.findIndex(fi => fi.type === 'main' && fi.item.id === item.id);
+          const itemFocusIndex = flatItems.findIndex(
+            (fi) => fi.type === 'main' && fi.item.id === item.id,
+          );
           const isKeyboardFocused = focusedIndex === itemFocusIndex;
           const prefetchHandlers = createPrefetchHandlers(item.id);
 
@@ -393,9 +393,7 @@ export const OrganizationalNavigationMenu: React.FC<Props> = ({
                         )}
                       </div>
                       {!compact && (
-                        <div className="org-nav-item-description">
-                          {item.description}
-                        </div>
+                        <div className="org-nav-item-description">{item.description}</div>
                       )}
                     </div>
                   </div>
@@ -413,10 +411,12 @@ export const OrganizationalNavigationMenu: React.FC<Props> = ({
               {/* Sub-items */}
               {hasSubItems && isExpanded && (
                 <div className="org-navigation-subitems">
-                  {item.subItems!.map((subItem) => {
+                  {item.subItems?.map((subItem) => {
                     const isSubActive = currentSubView === subItem.id;
                     const flatItems = getFlatItemsList();
-                    const subItemFocusIndex = flatItems.findIndex(fi => fi.type === 'sub' && fi.item.id === subItem.id);
+                    const subItemFocusIndex = flatItems.findIndex(
+                      (fi) => fi.type === 'sub' && fi.item.id === subItem.id,
+                    );
                     const isSubKeyboardFocused = focusedIndex === subItemFocusIndex;
                     const subPrefetchHandlers = createPrefetchHandlers(item.id, subItem.id);
 
@@ -433,15 +433,16 @@ export const OrganizationalNavigationMenu: React.FC<Props> = ({
                           <div className="org-nav-subitem-label">
                             {subItem.label}
                             {subItem.count !== undefined && (
-                              <span className="org-nav-subitem-count" aria-label={`${subItem.count} items`}>
+                              <span
+                                className="org-nav-subitem-count"
+                                aria-label={`${subItem.count} items`}
+                              >
                                 {subItem.count}
                               </span>
                             )}
                           </div>
                           {!compact && (
-                            <div className="org-nav-subitem-description">
-                              {subItem.description}
-                            </div>
+                            <div className="org-nav-subitem-description">{subItem.description}</div>
                           )}
                         </div>
                       </button>

@@ -95,7 +95,7 @@
 .ed-header__ts {
   color: var(--color-fg-subtle, #8c959f);
   font-size: 12px;
-  font-family: var(--font-mono, 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace);
+  font-family: var(--font-mono, "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace);
 }
 
 /* Status indicator dot */

@@ -40,9 +40,7 @@ function loadTweaks(): Tweaks {
   if (typeof window === 'undefined') return DEFAULTS;
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    const merged = raw
-      ? ({ ...DEFAULTS, ...JSON.parse(raw) } as Tweaks)
-      : DEFAULTS;
+    const merged = raw ? ({ ...DEFAULTS, ...JSON.parse(raw) } as Tweaks) : DEFAULTS;
     const validTiers: Tweaks['tier'][] = ['free', 'pro', 'enterprise'];
     if (!validTiers.includes(merged.tier)) merged.tier = DEFAULTS.tier;
     // Personal/tailnet deploys: always land on the enterprise tier so the

@@ -53,7 +53,7 @@ function ExecutionCard({ exec }: { exec: AgentExecution }) {
   const [expanded, setExpanded] = useState(false);
   const ts = new Date(exec.startTime).toLocaleString();
   const dur = exec.duration > 1000 ? `${(exec.duration / 1000).toFixed(1)}s` : `${exec.duration}ms`;
-  const preview = exec.body && exec.body.length > 200 ? exec.body.slice(0, 200) + '…' : exec.body;
+  const preview = exec.body && exec.body.length > 200 ? `${exec.body.slice(0, 200)}…` : exec.body;
 
   return (
     <div className="aicp-intelligence__execution">

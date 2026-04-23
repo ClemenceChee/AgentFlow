@@ -7,7 +7,12 @@
  * @module
  */
 
-import type { OperatorContext, SessionCorrelation, PolicyStatus, SessionHookData } from '../client/types/organizational.js';
+import type {
+  OperatorContext,
+  PolicyStatus,
+  SessionCorrelation,
+  SessionHookData,
+} from '../client/types/organizational.js';
 
 /** A single node within an execution trace. */
 export interface NormalizedNode {

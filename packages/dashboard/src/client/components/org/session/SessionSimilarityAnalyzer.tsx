@@ -5,14 +5,27 @@
  * solution reuse opportunities based on historical session data.
  */
 
-import { useState, useEffect } from 'react';
-import { Search, Copy, BookOpen, TrendingUp, Lightbulb, Filter, ExternalLink, CheckCircle } from 'lucide-react';
+import {
+  BookOpen,
+  CheckCircle,
+  Copy,
+  ExternalLink,
+  Lightbulb,
+  Search,
+  TrendingUp,
+} from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useOrganizationalContext } from '../../../../contexts/OrganizationalContext';
 import type { SessionCorrelation } from '../../../types/organizational.js';
 
 export interface PatternMatch {
   readonly id: string;
-  readonly type: 'workflow' | 'problem-solving' | 'code-pattern' | 'decision-making' | 'collaboration';
+  readonly type:
+    | 'workflow'
+    | 'problem-solving'
+    | 'code-pattern'
+    | 'decision-making'
+    | 'collaboration';
   readonly pattern: string;
   readonly confidence: number;
   readonly frequency: number;
@@ -80,23 +93,35 @@ interface SessionSimilarityAnalyzerProps {
 
 const getPatternTypeIcon = (type: PatternMatch['type']) => {
   switch (type) {
-    case 'workflow': return <TrendingUp className="h-4 w-4" />;
-    case 'problem-solving': return <Lightbulb className="h-4 w-4" />;
-    case 'code-pattern': return <Copy className="h-4 w-4" />;
-    case 'decision-making': return <Search className="h-4 w-4" />;
-    case 'collaboration': return <BookOpen className="h-4 w-4" />;
-    default: return <Search className="h-4 w-4" />;
+    case 'workflow':
+      return <TrendingUp className="h-4 w-4" />;
+    case 'problem-solving':
+      return <Lightbulb className="h-4 w-4" />;
+    case 'code-pattern':
+      return <Copy className="h-4 w-4" />;
+    case 'decision-making':
+      return <Search className="h-4 w-4" />;
+    case 'collaboration':
+      return <BookOpen className="h-4 w-4" />;
+    default:
+      return <Search className="h-4 w-4" />;
   }
 };
 
 const getPatternTypeColor = (type: PatternMatch['type']) => {
   switch (type) {
-    case 'workflow': return 'org-text-info';
-    case 'problem-solving': return 'org-text-warning';
-    case 'code-pattern': return 'org-text-success';
-    case 'decision-making': return 'org-text-primary';
-    case 'collaboration': return 'org-text-secondary';
-    default: return 'org-text-muted';
+    case 'workflow':
+      return 'org-text-info';
+    case 'problem-solving':
+      return 'org-text-warning';
+    case 'code-pattern':
+      return 'org-text-success';
+    case 'decision-making':
+      return 'org-text-primary';
+    case 'collaboration':
+      return 'org-text-secondary';
+    default:
+      return 'org-text-muted';
   }
 };
 
@@ -120,12 +145,13 @@ const PatternsView: React.FC<{
 }> = ({ analysis, similarityThreshold }) => {
   const [selectedType, setSelectedType] = useState<string>('all');
 
-  const filteredPatterns = selectedType === 'all' ?
-    analysis.identifiedPatterns :
-    analysis.identifiedPatterns.filter(p => p.type === selectedType);
+  const filteredPatterns =
+    selectedType === 'all'
+      ? analysis.identifiedPatterns
+      : analysis.identifiedPatterns.filter((p) => p.type === selectedType);
 
   const sortedPatterns = [...filteredPatterns].sort((a, b) => b.confidence - a.confidence);
-  const patternTypes = [...new Set(analysis.identifiedPatterns.map(p => p.type))];
+  const patternTypes = [...new Set(analysis.identifiedPatterns.map((p) => p.type))];
 
   return (
     <div className="org-similarity-patterns">
@@ -137,7 +163,7 @@ const PatternsView: React.FC<{
           className="org-select org-select-sm"
         >
           <option value="all">All Types</option>
-          {patternTypes.map(type => (
+          {patternTypes.map((type) => (
             <option key={type} value={type}>
               {type.charAt(0).toUpperCase() + type.slice(1)}
             </option>
@@ -161,7 +187,9 @@ const PatternsView: React.FC<{
                 </div>
               </div>
               <div className="text-right">
-                <div className={`org-text-sm org-font-medium ${getConfidenceColor(pattern.confidence)}`}>
+                <div
+                  className={`org-text-sm org-font-medium ${getConfidenceColor(pattern.confidence)}`}
+                >
                   {Math.round(pattern.confidence * 100)}%
                 </div>
                 <div className="org-text-xs org-text-muted">confidence</div>
@@ -216,7 +244,9 @@ const SessionsView: React.FC<{
   similarityThreshold: number;
   onNavigateToSession?: (sessionId: string) => void;
 }> = ({ analysis, similarityThreshold, onNavigateToSession }) => {
-  const filteredSessions = analysis.similarSessions.filter(s => s.similarity >= similarityThreshold);
+  const filteredSessions = analysis.similarSessions.filter(
+    (s) => s.similarity >= similarityThreshold,
+  );
   const sortedSessions = [...filteredSessions].sort((a, b) => b.similarity - a.similarity);
 
   return (
@@ -241,9 +271,7 @@ const SessionsView: React.FC<{
               <div className="flex-1">
                 <div className="flex items-center space-x-2 mb-1">
                   <span className="org-font-semibold">{session.title}</span>
-                  {onNavigateToSession && (
-                    <ExternalLink className="h-4 w-4 org-text-muted" />
-                  )}
+                  {onNavigateToSession && <ExternalLink className="h-4 w-4 org-text-muted" />}
                 </div>
                 <div className="org-text-sm org-text-muted mb-2">{session.summary}</div>
                 <div className="flex items-center space-x-4 org-text-xs org-text-muted">
@@ -332,11 +360,11 @@ const SolutionsView: React.FC<{
   const handleApplySolution = async (solutionId: string) => {
     if (!onApplySolution) return;
 
-    setApplyingSolutions(prev => new Set([...prev, solutionId]));
+    setApplyingSolutions((prev) => new Set([...prev, solutionId]));
     try {
       await onApplySolution(solutionId);
     } finally {
-      setApplyingSolutions(prev => {
+      setApplyingSolutions((prev) => {
         const next = new Set(prev);
         next.delete(solutionId);
         return next;
@@ -345,7 +373,7 @@ const SolutionsView: React.FC<{
   };
 
   const toggleSolutionDetails = (solutionId: string) => {
-    setExpandedSolutions(prev => {
+    setExpandedSolutions((prev) => {
       const next = new Set(prev);
       if (next.has(solutionId)) {
         next.delete(solutionId);
@@ -356,8 +384,8 @@ const SolutionsView: React.FC<{
     });
   };
 
-  const sortedSolutions = [...analysis.solutionSuggestions].sort((a, b) =>
-    b.confidence * b.applicability - a.confidence * a.applicability
+  const sortedSolutions = [...analysis.solutionSuggestions].sort(
+    (a, b) => b.confidence * b.applicability - a.confidence * a.applicability,
   );
 
   return (
@@ -381,12 +409,17 @@ const SolutionsView: React.FC<{
                 <div className="flex-1">
                   <div className="flex items-center space-x-2 mb-1">
                     <h5 className="org-font-semibold">{solution.title}</h5>
-                    <span className={`org-badge org-badge-xs ${
-                      solution.source === 'similar-session' ? 'org-badge-info' :
-                      solution.source === 'pattern-analysis' ? 'org-badge-warning' :
-                      solution.source === 'team-knowledge' ? 'org-badge-success' :
-                      'org-badge-secondary'
-                    }`}>
+                    <span
+                      className={`org-badge org-badge-xs ${
+                        solution.source === 'similar-session'
+                          ? 'org-badge-info'
+                          : solution.source === 'pattern-analysis'
+                            ? 'org-badge-warning'
+                            : solution.source === 'team-knowledge'
+                              ? 'org-badge-success'
+                              : 'org-badge-secondary'
+                      }`}
+                    >
                       {solution.source.replace('-', ' ')}
                     </span>
                   </div>
@@ -470,8 +503,11 @@ const SolutionsView: React.FC<{
                     <div>
                       <div className="org-text-sm org-font-medium mb-1">Related Sessions</div>
                       <div className="flex flex-wrap gap-1">
-                        {solution.relatedSessions.map(sessionId => (
-                          <span key={sessionId} className="org-badge org-badge-secondary org-badge-xs">
+                        {solution.relatedSessions.map((sessionId) => (
+                          <span
+                            key={sessionId}
+                            className="org-badge org-badge-secondary org-badge-xs"
+                          >
                             {sessionId.slice(-8)}
                           </span>
                         ))}
@@ -523,10 +559,13 @@ const SummaryView: React.FC<{ analysis: SimilarityAnalysis }> = ({ analysis }) =
         <h4 className="org-font-semibold mb-3">Top Pattern Types</h4>
         <div className="space-y-2">
           {Object.entries(
-            analysis.identifiedPatterns.reduce((acc, pattern) => {
-              acc[pattern.type] = (acc[pattern.type] || 0) + 1;
-              return acc;
-            }, {} as Record<string, number>)
+            analysis.identifiedPatterns.reduce(
+              (acc, pattern) => {
+                acc[pattern.type] = (acc[pattern.type] || 0) + 1;
+                return acc;
+              },
+              {} as Record<string, number>,
+            ),
           )
             .sort(([, a], [, b]) => b - a)
             .slice(0, 5)
@@ -540,8 +579,7 @@ const SummaryView: React.FC<{ analysis: SimilarityAnalysis }> = ({ analysis }) =
                 </div>
                 <span className="org-text-muted">{count}</span>
               </div>
-            ))
-          }
+            ))}
         </div>
       </div>
 
@@ -549,10 +587,13 @@ const SummaryView: React.FC<{ analysis: SimilarityAnalysis }> = ({ analysis }) =
         <h4 className="org-font-semibold mb-3">Solution Sources</h4>
         <div className="space-y-2">
           {Object.entries(
-            analysis.solutionSuggestions.reduce((acc, solution) => {
-              acc[solution.source] = (acc[solution.source] || 0) + 1;
-              return acc;
-            }, {} as Record<string, number>)
+            analysis.solutionSuggestions.reduce(
+              (acc, solution) => {
+                acc[solution.source] = (acc[solution.source] || 0) + 1;
+                return acc;
+              },
+              {} as Record<string, number>,
+            ),
           )
             .sort(([, a], [, b]) => b - a)
             .map(([source, count]) => (
@@ -560,8 +601,7 @@ const SummaryView: React.FC<{ analysis: SimilarityAnalysis }> = ({ analysis }) =
                 <span className="org-font-medium capitalize">{source.replace('-', ' ')}</span>
                 <span className="org-text-muted">{count}</span>
               </div>
-            ))
-          }
+            ))}
         </div>
       </div>
     </div>
@@ -576,13 +616,13 @@ const SummaryView: React.FC<{ analysis: SimilarityAnalysis }> = ({ analysis }) =
         <div>
           <div className="org-text-muted">High-Confidence Solutions</div>
           <div className="org-font-semibold">
-            {analysis.solutionSuggestions.filter(s => s.confidence >= 0.8).length}
+            {analysis.solutionSuggestions.filter((s) => s.confidence >= 0.8).length}
           </div>
         </div>
         <div>
           <div className="org-text-muted">Reusable Patterns</div>
           <div className="org-font-semibold">
-            {analysis.identifiedPatterns.filter(p => p.successRate >= 0.7).length}
+            {analysis.identifiedPatterns.filter((p) => p.successRate >= 0.7).length}
           </div>
         </div>
       </div>
@@ -597,7 +637,7 @@ export const SessionSimilarityAnalyzer: React.FC<SessionSimilarityAnalyzerProps>
   showImplementationSteps = true,
   onApplySolution,
   onNavigateToSession,
-  className = ''
+  className = '',
 }) => {
   const { teamFilter } = useOrganizationalContext();
   const [analysis, setAnalysis] = useState<SimilarityAnalysis | null>(null);
@@ -621,7 +661,7 @@ export const SessionSimilarityAnalyzer: React.FC<SessionSimilarityAnalyzerProps>
             lastSeen: Date.now() - 3600000,
             outcomes: ['Bug fixed', 'Feature deployed', 'Tests passed'],
             successRate: 0.87,
-            averageDuration: 2700000 // 45 minutes
+            averageDuration: 2700000, // 45 minutes
           },
           {
             id: 'pattern-2',
@@ -632,7 +672,7 @@ export const SessionSimilarityAnalyzer: React.FC<SessionSimilarityAnalyzerProps>
             lastSeen: Date.now() - 7200000,
             outcomes: ['Problem resolved', 'Knowledge gained'],
             successRate: 0.94,
-            averageDuration: 1800000 // 30 minutes
+            averageDuration: 1800000, // 30 minutes
           },
           {
             id: 'pattern-3',
@@ -643,30 +683,39 @@ export const SessionSimilarityAnalyzer: React.FC<SessionSimilarityAnalyzerProps>
             lastSeen: Date.now() - 1800000,
             outcomes: ['Code improved', 'Knowledge shared'],
             successRate: 0.91,
-            averageDuration: 1200000 // 20 minutes
-          }
+            averageDuration: 1200000, // 20 minutes
+          },
         ];
 
-        const similarSessions: SimilarSession[] = sessionCorrelation.relatedSessions.slice(0, 4).map((sessionId, index) => ({
-          sessionId,
-          operatorId: `op-${sessionId.slice(-8)}`,
-          teamId: sessionCorrelation.teamId,
-          timestamp: sessionCorrelation.timestamp - (index + 1) * 86400000,
-          duration: 1800000 + Math.random() * 3600000,
-          title: `Similar Problem Resolution ${index + 1}`,
-          summary: `Session focused on similar debugging and deployment patterns with ${Math.round(0.6 + index * 0.1)}% similarity.`,
-          similarity: 0.9 - index * 0.15,
-          commonPatterns: patterns.slice(0, 2 - index % 2),
-          outcomes: ['Bug fixed', 'Tests improved', 'Documentation updated'].slice(0, 2 + index % 2),
-          solutions: ['Configuration fix', 'Test improvement', 'Process optimization'].slice(0, 2 + index % 2),
-          reusabilityScore: 0.8 - index * 0.1
-        }));
+        const similarSessions: SimilarSession[] = sessionCorrelation.relatedSessions
+          .slice(0, 4)
+          .map((sessionId, index) => ({
+            sessionId,
+            operatorId: `op-${sessionId.slice(-8)}`,
+            teamId: sessionCorrelation.teamId,
+            timestamp: sessionCorrelation.timestamp - (index + 1) * 86400000,
+            duration: 1800000 + Math.random() * 3600000,
+            title: `Similar Problem Resolution ${index + 1}`,
+            summary: `Session focused on similar debugging and deployment patterns with ${Math.round(0.6 + index * 0.1)}% similarity.`,
+            similarity: 0.9 - index * 0.15,
+            commonPatterns: patterns.slice(0, 2 - (index % 2)),
+            outcomes: ['Bug fixed', 'Tests improved', 'Documentation updated'].slice(
+              0,
+              2 + (index % 2),
+            ),
+            solutions: ['Configuration fix', 'Test improvement', 'Process optimization'].slice(
+              0,
+              2 + (index % 2),
+            ),
+            reusabilityScore: 0.8 - index * 0.1,
+          }));
 
         const solutions: SolutionSuggestion[] = [
           {
             id: 'solution-1',
             title: 'Apply debugging workflow pattern',
-            description: 'Use the proven debug → test → deploy sequence that has shown 87% success rate',
+            description:
+              'Use the proven debug → test → deploy sequence that has shown 87% success rate',
             source: 'pattern-analysis',
             confidence: 0.92,
             applicability: 0.85,
@@ -678,13 +727,13 @@ export const SessionSimilarityAnalyzer: React.FC<SessionSimilarityAnalyzerProps>
               'Apply the fix with confidence',
               'Run comprehensive test suite',
               'Deploy to staging for validation',
-              'Deploy to production with monitoring'
+              'Deploy to production with monitoring',
             ],
             successExamples: [
               'Fixed authentication bug using this pattern in 45 minutes',
-              'Resolved API performance issue with minimal downtime'
+              'Resolved API performance issue with minimal downtime',
             ],
-            relatedSessions: sessionCorrelation.relatedSessions.slice(0, 2)
+            relatedSessions: sessionCorrelation.relatedSessions.slice(0, 2),
           },
           {
             id: 'solution-2',
@@ -700,14 +749,14 @@ export const SessionSimilarityAnalyzer: React.FC<SessionSimilarityAnalyzerProps>
               'Adapt the documented solution to current context',
               'Validate the approach with original solver',
               'Apply the solution with monitoring',
-              'Update documentation with any refinements'
+              'Update documentation with any refinements',
             ],
             successExamples: [
               'Reused configuration pattern from similar project',
-              'Applied team debugging checklist with success'
+              'Applied team debugging checklist with success',
             ],
-            relatedSessions: sessionCorrelation.relatedSessions.slice(1, 3)
-          }
+            relatedSessions: sessionCorrelation.relatedSessions.slice(1, 3),
+          },
         ];
 
         setAnalysis({
@@ -717,7 +766,7 @@ export const SessionSimilarityAnalyzer: React.FC<SessionSimilarityAnalyzerProps>
           solutionSuggestions: solutions,
           overallReusabilityScore: 0.83,
           potentialTimeSavings: solutions.reduce((sum, s) => sum + s.estimatedTimesSaving, 0),
-          analyzedAt: Date.now()
+          analyzedAt: Date.now(),
         });
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to analyze session similarity');

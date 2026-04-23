@@ -7,16 +7,12 @@
  * Task: 3.3
  */
 
+import type { CacheClient } from '../../cache/cache.js';
+import type { DbPool } from '../../db/pool.js';
 import type { Router } from '../router.js';
 import { sendJson } from '../router.js';
-import type { DbPool } from '../../db/pool.js';
-import type { CacheClient } from '../../cache/cache.js';
 
-export function registerComplianceRoutes(
-  router: Router,
-  db: DbPool,
-  cache: CacheClient,
-): void {
+export function registerComplianceRoutes(router: Router, db: DbPool, cache: CacheClient): void {
   // Overall compliance status
   router.get('/api/v1/compliance', async (ctx) => {
     const cacheKey = 'api:compliance:overview';
@@ -52,7 +48,8 @@ export function registerComplianceRoutes(
 
     const totalRecords = rows.reduce((s, r) => s + Number(r.total_records), 0);
     const totalCompliant = rows.reduce((s, r) => s + Number(r.compliant_count), 0);
-    const overallScore = totalRecords > 0 ? Math.round((totalCompliant / totalRecords) * 1000) / 10 : 100;
+    const overallScore =
+      totalRecords > 0 ? Math.round((totalCompliant / totalRecords) * 1000) / 10 : 100;
 
     const response = {
       overallComplianceScore: overallScore,

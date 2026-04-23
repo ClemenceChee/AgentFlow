@@ -45,7 +45,12 @@ export interface TaskAssignment {
 }
 
 export interface NotificationPayload {
-  type: 'decision_review' | 'vote_request' | 'decision_outcome' | 'task_assigned' | 'critical_alert';
+  type:
+    | 'decision_review'
+    | 'vote_request'
+    | 'decision_outcome'
+    | 'task_assigned'
+    | 'critical_alert';
   recipientId: string;
   title: string;
   message: string;
@@ -91,7 +96,11 @@ export class CollaborationService {
       });
     }
 
-    this.logger.info('Decision workflow created', { id, title, stakeholders: stakeholderIds.length });
+    this.logger.info('Decision workflow created', {
+      id,
+      title,
+      stakeholders: stakeholderIds.length,
+    });
     return id;
   }
 

@@ -6,7 +6,7 @@
  * with interactive approval actions and delegation capabilities.
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { TeamAccessLevel } from '../../../types/organizational.js';
 
 // Component props
@@ -125,71 +125,77 @@ type ApprovalStatus = 'pending' | 'approved' | 'rejected' | 'cancelled' | 'expir
 type ApprovalAction = 'approve' | 'reject' | 'delegate' | 'request_info' | 'cancel';
 
 // Configuration
-const APPROVAL_TYPE_CONFIG: Record<ApprovalType, {
-  label: string;
-  icon: string;
-  color: string;
-  description: string;
-}> = {
+const APPROVAL_TYPE_CONFIG: Record<
+  ApprovalType,
+  {
+    label: string;
+    icon: string;
+    color: string;
+    description: string;
+  }
+> = {
   policy_exception: {
     label: 'Policy Exception',
     icon: '🛡️',
     color: 'var(--org-policy)',
-    description: 'Request to bypass or modify policy requirements'
+    description: 'Request to bypass or modify policy requirements',
   },
   access_grant: {
     label: 'Access Grant',
     icon: '🔐',
     color: 'var(--org-access)',
-    description: 'Request for elevated or additional access permissions'
+    description: 'Request for elevated or additional access permissions',
   },
   data_access: {
     label: 'Data Access',
     icon: '📊',
     color: 'var(--org-data)',
-    description: 'Request to access restricted or sensitive data'
+    description: 'Request to access restricted or sensitive data',
   },
   configuration_change: {
     label: 'Configuration Change',
     icon: '⚙️',
     color: 'var(--org-config)',
-    description: 'Request to modify system or policy configurations'
+    description: 'Request to modify system or policy configurations',
   },
   team_modification: {
     label: 'Team Modification',
     icon: '👥',
     color: 'var(--org-team)',
-    description: 'Request to modify team membership or structure'
+    description: 'Request to modify team membership or structure',
   },
   governance_override: {
     label: 'Governance Override',
     icon: '📋',
     color: 'var(--org-governance)',
-    description: 'Request to override governance rules or procedures'
+    description: 'Request to override governance rules or procedures',
   },
   security_exemption: {
     label: 'Security Exemption',
     icon: '🔒',
     color: 'var(--org-security)',
-    description: 'Request for security policy exemption'
+    description: 'Request for security policy exemption',
   },
   operational_change: {
     label: 'Operational Change',
     icon: '🔄',
     color: 'var(--org-operational)',
-    description: 'Request to modify operational procedures'
-  }
+    description: 'Request to modify operational procedures',
+  },
 };
 
-const PRIORITY_CONFIG: Record<ApprovalPriority, {
-  label: string;
-  color: string;
-  urgency: number;
-}> = {
+const PRIORITY_CONFIG: Record<
+  ApprovalPriority,
+  {
+    label: string;
+    color: string;
+    urgency: number;
+  }
+> = {
   urgent: { label: 'Urgent', color: 'var(--fail)', urgency: 4 },
   high: { label: 'High', color: 'var(--warn)', urgency: 3 },
   medium: { label: 'Medium', color: 'var(--org-primary)', urgency: 2 },
-  low: { label: 'Low', color: 'var(--t3)', urgency: 1 }
+  low: { label: 'Low', color: 'var(--t3)', urgency: 1 },
 };
 
 /**
@@ -204,7 +210,7 @@ export function ApprovalWorkflowDisplay({
   className = '',
   compact = false,
   onApprovalAction,
-  onDelegationRequest
+  onDelegationRequest,
 }: ApprovalWorkflowDisplayProps) {
   const [approvals, setApprovals] = useState<ApprovalWorkflow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -226,7 +232,7 @@ export function ApprovalWorkflowDisplay({
         const params = new URLSearchParams({
           ...(teamId && { teamId }),
           ...(operatorId && { operatorId }),
-          ...(showOnlyMyApprovals && { assignedTo: operatorId || '' })
+          ...(showOnlyMyApprovals && { assignedTo: operatorId || '' }),
         });
 
         const response = await fetch(`/api/approvals?${params}`);
@@ -236,7 +242,6 @@ export function ApprovalWorkflowDisplay({
 
         const data = await response.json();
         setApprovals(data.approvals || []);
-
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load approvals');
         // Generate mock data for development
@@ -248,7 +253,7 @@ export function ApprovalWorkflowDisplay({
     };
 
     loadApprovals();
-  }, [teamId, operatorId, showOnlyMyApprovals]);
+  }, [teamId, operatorId, showOnlyMyApprovals, generateMockApprovals]);
 
   // Generate mock approval data (for development)
   const generateMockApprovals = (): ApprovalWorkflow[] => {
@@ -260,7 +265,7 @@ export function ApprovalWorkflowDisplay({
       const type = types[index % types.length];
       const priority = priorities[index % priorities.length];
       const status = index === 0 ? 'pending' : statuses[index % statuses.length];
-      const requestedAt = Date.now() - (index * 24 * 60 * 60 * 1000);
+      const requestedAt = Date.now() - index * 24 * 60 * 60 * 1000;
 
       return {
         id: `approval-${index + 1}`,
@@ -277,21 +282,21 @@ export function ApprovalWorkflowDisplay({
             operatorName: 'Current User',
             role: 'primary',
             requiredAccessLevel: 'admin',
-            canDelegate: true
-          }
+            canDelegate: true,
+          },
         ],
         currentStage: status === 'pending' ? 1 : 2,
         totalStages: 2,
         requestedAt,
-        dueDate: requestedAt + (7 * 24 * 60 * 60 * 1000), // 7 days from request
-        completedAt: status !== 'pending' ? requestedAt + (2 * 24 * 60 * 60 * 1000) : undefined,
+        dueDate: requestedAt + 7 * 24 * 60 * 60 * 1000, // 7 days from request
+        completedAt: status !== 'pending' ? requestedAt + 2 * 24 * 60 * 60 * 1000 : undefined,
         metadata: {
           resourceType: 'team_data',
           resourceId: `resource-${index}`,
           teamId: teamId || `team-${index}`,
           riskLevel: ['low', 'medium', 'high'][index % 3] as any,
           businessJustification: `Business justification for ${type} request`,
-          technicalDetails: 'Technical implementation details and requirements'
+          technicalDetails: 'Technical implementation details and requirements',
         },
         approvalStages: [
           {
@@ -306,10 +311,10 @@ export function ApprovalWorkflowDisplay({
                 operatorId: operatorId || 'current-operator',
                 role: 'primary',
                 requiredAccessLevel: 'admin',
-                canDelegate: true
-              }
+                canDelegate: true,
+              },
             ],
-            completedAt: status !== 'pending' ? requestedAt + (60 * 60 * 1000) : undefined
+            completedAt: status !== 'pending' ? requestedAt + 60 * 60 * 1000 : undefined,
           },
           {
             id: 'stage-2',
@@ -317,29 +322,33 @@ export function ApprovalWorkflowDisplay({
             description: 'Senior review and final decision',
             requiredApprovals: 1,
             receivedApprovals: status === 'approved' ? 1 : 0,
-            status: status === 'approved' ? 'approved' : status === 'rejected' ? 'rejected' : 'pending',
+            status:
+              status === 'approved' ? 'approved' : status === 'rejected' ? 'rejected' : 'pending',
             approvers: [
               {
                 operatorId: 'senior-approver',
                 operatorName: 'Senior Approver',
                 role: 'primary',
                 requiredAccessLevel: 'admin',
-                canDelegate: false
-              }
+                canDelegate: false,
+              },
             ],
-            completedAt: status === 'approved' ? requestedAt + (2 * 24 * 60 * 60 * 1000) : undefined
-          }
+            completedAt: status === 'approved' ? requestedAt + 2 * 24 * 60 * 60 * 1000 : undefined,
+          },
         ],
-        history: status !== 'pending' ? [
-          {
-            timestamp: requestedAt + (60 * 60 * 1000),
-            operatorId: operatorId || 'current-operator',
-            operatorName: 'Current User',
-            action: 'approve',
-            comment: 'Initial approval with minor conditions',
-            stage: 'stage-1'
-          }
-        ] : [],
+        history:
+          status !== 'pending'
+            ? [
+                {
+                  timestamp: requestedAt + 60 * 60 * 1000,
+                  operatorId: operatorId || 'current-operator',
+                  operatorName: 'Current User',
+                  action: 'approve',
+                  comment: 'Initial approval with minor conditions',
+                  stage: 'stage-1',
+                },
+              ]
+            : [],
         attachments: [
           {
             id: 'attachment-1',
@@ -347,9 +356,9 @@ export function ApprovalWorkflowDisplay({
             type: 'application/pdf',
             size: 256000,
             uploadedAt: requestedAt,
-            uploadedBy: `operator-${index + 1}`
-          }
-        ]
+            uploadedBy: `operator-${index + 1}`,
+          },
+        ],
       };
     });
   };
@@ -360,19 +369,20 @@ export function ApprovalWorkflowDisplay({
 
     // Filter by team if specified
     if (teamId) {
-      filtered = filtered.filter(approval => approval.metadata.teamId === teamId);
+      filtered = filtered.filter((approval) => approval.metadata.teamId === teamId);
     }
 
     // Filter by assignments if showOnlyMyApprovals is true
     if (showOnlyMyApprovals && operatorId) {
-      filtered = filtered.filter(approval =>
-        approval.assignedApprovers.some(approver => approver.operatorId === operatorId)
+      filtered = filtered.filter((approval) =>
+        approval.assignedApprovers.some((approver) => approver.operatorId === operatorId),
       );
     }
 
     // Sort by priority and due date
     return filtered.sort((a, b) => {
-      const priorityDiff = PRIORITY_CONFIG[b.priority].urgency - PRIORITY_CONFIG[a.priority].urgency;
+      const priorityDiff =
+        PRIORITY_CONFIG[b.priority].urgency - PRIORITY_CONFIG[a.priority].urgency;
       if (priorityDiff !== 0) return priorityDiff;
 
       const aDue = a.dueDate || Infinity;
@@ -385,9 +395,10 @@ export function ApprovalWorkflowDisplay({
   const myPendingApprovals = useMemo(() => {
     if (!operatorId) return [];
 
-    return filteredApprovals.filter(approval =>
-      approval.status === 'pending' &&
-      approval.assignedApprovers.some(approver => approver.operatorId === operatorId)
+    return filteredApprovals.filter(
+      (approval) =>
+        approval.status === 'pending' &&
+        approval.assignedApprovers.some((approver) => approver.operatorId === operatorId),
     );
   }, [filteredApprovals, operatorId]);
 
@@ -398,25 +409,29 @@ export function ApprovalWorkflowDisplay({
     }
 
     // Update local state
-    setApprovals(prev => prev.map(approval => {
-      if (approval.id !== approvalId) return approval;
+    setApprovals((prev) =>
+      prev.map((approval) => {
+        if (approval.id !== approvalId) return approval;
 
-      const newHistory: ApprovalHistoryEntry = {
-        timestamp: Date.now(),
-        operatorId: operatorId || 'unknown',
-        operatorName: 'Current User',
-        action,
-        comment,
-        stage: `stage-${approval.currentStage}`
-      };
+        const newHistory: ApprovalHistoryEntry = {
+          timestamp: Date.now(),
+          operatorId: operatorId || 'unknown',
+          operatorName: 'Current User',
+          action,
+          comment,
+          stage: `stage-${approval.currentStage}`,
+        };
 
-      return {
-        ...approval,
-        status: action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : approval.status,
-        completedAt: action === 'approve' || action === 'reject' ? Date.now() : approval.completedAt,
-        history: [...approval.history, newHistory]
-      };
-    }));
+        return {
+          ...approval,
+          status:
+            action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : approval.status,
+          completedAt:
+            action === 'approve' || action === 'reject' ? Date.now() : approval.completedAt,
+          history: [...approval.history, newHistory],
+        };
+      }),
+    );
 
     setShowCommentDialog(null);
     setActionComment('');
@@ -447,8 +462,8 @@ export function ApprovalWorkflowDisplay({
   const canCurrentUserApprove = (approval: ApprovalWorkflow): boolean => {
     if (!operatorId || approval.status !== 'pending') return false;
 
-    return approval.assignedApprovers.some(approver =>
-      approver.operatorId === operatorId && approver.role === 'primary'
+    return approval.assignedApprovers.some(
+      (approver) => approver.operatorId === operatorId && approver.role === 'primary',
     );
   };
 
@@ -456,8 +471,10 @@ export function ApprovalWorkflowDisplay({
     'org-card',
     'approval-workflow-display',
     compact ? 'compact' : '',
-    className
-  ].filter(Boolean).join(' ');
+    className,
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   // Loading state
   if (loading) {
@@ -472,9 +489,7 @@ export function ApprovalWorkflowDisplay({
         <div className="org-card__content">
           <div className="approval-workflow-loading">
             <div className="approval-workflow-loading-spinner" />
-            <div className="approval-workflow-loading-text">
-              Loading approval workflows...
-            </div>
+            <div className="approval-workflow-loading-text">Loading approval workflows...</div>
           </div>
         </div>
       </div>
@@ -494,9 +509,7 @@ export function ApprovalWorkflowDisplay({
         <div className="org-card__content">
           <div className="approval-workflow-error">
             <div className="approval-workflow-error__icon">⚠️</div>
-            <div className="approval-workflow-error__message">
-              {error}
-            </div>
+            <div className="approval-workflow-error__message">{error}</div>
           </div>
         </div>
       </div>
@@ -533,7 +546,7 @@ export function ApprovalWorkflowDisplay({
               </div>
             </div>
             <div className="approval-workflow-pending-list">
-              {myPendingApprovals.slice(0, 3).map(approval => {
+              {myPendingApprovals.slice(0, 3).map((approval) => {
                 const typeConfig = APPROVAL_TYPE_CONFIG[approval.type];
                 const priorityConfig = PRIORITY_CONFIG[approval.priority];
 
@@ -591,7 +604,8 @@ export function ApprovalWorkflowDisplay({
 
               {myPendingApprovals.length > 3 && (
                 <div className="approval-workflow-pending-more">
-                  +{myPendingApprovals.length - 3} more pending approval{myPendingApprovals.length - 3 !== 1 ? 's' : ''}
+                  +{myPendingApprovals.length - 3} more pending approval
+                  {myPendingApprovals.length - 3 !== 1 ? 's' : ''}
                 </div>
               )}
             </div>
@@ -602,12 +616,10 @@ export function ApprovalWorkflowDisplay({
         {filteredApprovals.length > 0 ? (
           <div className="approval-workflow-list">
             <div className="approval-workflow-list__header">
-              <div className="approval-workflow-list__title">
-                All Workflows
-              </div>
+              <div className="approval-workflow-list__title">All Workflows</div>
             </div>
 
-            {filteredApprovals.slice(0, compact ? 5 : 10).map(approval => {
+            {filteredApprovals.slice(0, compact ? 5 : 10).map((approval) => {
               const typeConfig = APPROVAL_TYPE_CONFIG[approval.type];
               const priorityConfig = PRIORITY_CONFIG[approval.priority];
               const canApprove = canCurrentUserApprove(approval);
@@ -630,9 +642,7 @@ export function ApprovalWorkflowDisplay({
                         >
                           {typeConfig.icon}
                         </span>
-                        <span className="approval-workflow-item__title">
-                          {approval.title}
-                        </span>
+                        <span className="approval-workflow-item__title">{approval.title}</span>
                       </div>
 
                       <div className="approval-workflow-item__meta">
@@ -651,9 +661,7 @@ export function ApprovalWorkflowDisplay({
                       </div>
                     </div>
 
-                    <div className="approval-workflow-item__arrow">
-                      {isExpanded ? '▲' : '▼'}
-                    </div>
+                    <div className="approval-workflow-item__arrow">{isExpanded ? '▲' : '▼'}</div>
                   </button>
 
                   {isExpanded && (
@@ -685,13 +693,9 @@ export function ApprovalWorkflowDisplay({
                               className={`approval-workflow-stage ${stage.status}`}
                             >
                               <div className="approval-workflow-stage__header">
-                                <div className="approval-workflow-stage__number">
-                                  {index + 1}
-                                </div>
+                                <div className="approval-workflow-stage__number">{index + 1}</div>
                                 <div className="approval-workflow-stage__info">
-                                  <div className="approval-workflow-stage__name">
-                                    {stage.name}
-                                  </div>
+                                  <div className="approval-workflow-stage__name">{stage.name}</div>
                                   <div className="approval-workflow-stage__description">
                                     {stage.description}
                                   </div>
@@ -744,9 +748,7 @@ export function ApprovalWorkflowDisplay({
                       {/* History */}
                       {showHistory && approval.history.length > 0 && (
                         <div className="approval-workflow-detail-section">
-                          <div className="approval-workflow-detail-section__title">
-                            History
-                          </div>
+                          <div className="approval-workflow-detail-section__title">History</div>
                           <div className="approval-workflow-history">
                             {approval.history.slice(0, 5).map((entry, index) => (
                               <div key={index} className="approval-workflow-history-entry">
@@ -774,16 +776,15 @@ export function ApprovalWorkflowDisplay({
 
             {filteredApprovals.length > (compact ? 5 : 10) && (
               <div className="approval-workflow-more">
-                +{filteredApprovals.length - (compact ? 5 : 10)} more workflow{filteredApprovals.length - (compact ? 5 : 10) !== 1 ? 's' : ''}
+                +{filteredApprovals.length - (compact ? 5 : 10)} more workflow
+                {filteredApprovals.length - (compact ? 5 : 10) !== 1 ? 's' : ''}
               </div>
             )}
           </div>
         ) : (
           <div className="approval-workflow-empty">
             <div className="approval-workflow-empty__icon">✅</div>
-            <div className="approval-workflow-empty__message">
-              No approval workflows
-            </div>
+            <div className="approval-workflow-empty__message">No approval workflows</div>
             <div className="approval-workflow-empty__description">
               Approval workflows will appear here when they require your attention.
             </div>
@@ -834,7 +835,13 @@ export function ApprovalWorkflowDisplay({
               </button>
               <button
                 className={`approval-workflow-comment-dialog__action approval-workflow-comment-dialog__action--confirm`}
-                onClick={() => handleApprovalAction(showCommentDialog.approvalId, showCommentDialog.action, actionComment || undefined)}
+                onClick={() =>
+                  handleApprovalAction(
+                    showCommentDialog.approvalId,
+                    showCommentDialog.action,
+                    actionComment || undefined,
+                  )
+                }
                 disabled={showCommentDialog.action === 'reject' && !actionComment.trim()}
               >
                 {showCommentDialog.action === 'approve' && 'Approve'}

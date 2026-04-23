@@ -38,7 +38,9 @@
   background: var(--color-bg-primary, #ffffff);
   color: var(--color-fg-default, #24292f);
   font-size: 14px;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .org-global-search-input:focus {

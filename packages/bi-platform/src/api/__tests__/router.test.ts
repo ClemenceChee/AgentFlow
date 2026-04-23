@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { Router, sendJson } from '../router.js';
 
 function createMockReq(method: string, url: string) {
@@ -16,8 +16,14 @@ function createMockRes() {
     _body: '',
     _status: 200,
     headersSent: false,
-    writeHead: vi.fn(function (this: any, status: number) { this._status = status; return this; }),
-    end: vi.fn(function (this: any, body?: string) { this._body = body ?? ''; return this; }),
+    writeHead: vi.fn(function (this: any, status: number) {
+      this._status = status;
+      return this;
+    }),
+    end: vi.fn(function (this: any, body?: string) {
+      this._body = body ?? '';
+      return this;
+    }),
   };
   return res;
 }
@@ -126,9 +132,12 @@ describe('sendJson', () => {
     sendJson(res, 201, { id: 1 });
 
     expect(res._status).toBe(201);
-    expect(res.writeHead).toHaveBeenCalledWith(201, expect.objectContaining({
-      'Content-Type': 'application/json',
-    }));
+    expect(res.writeHead).toHaveBeenCalledWith(
+      201,
+      expect.objectContaining({
+        'Content-Type': 'application/json',
+      }),
+    );
     expect(JSON.parse(res._body)).toEqual({ id: 1 });
   });
 });

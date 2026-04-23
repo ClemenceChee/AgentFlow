@@ -1,27 +1,27 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { Header } from './components/Header';
-import { ExecutiveDashboard } from './components/ExecutiveDashboard';
-import { OperationalDashboard } from './components/OperationalDashboard';
-import { ComplianceDashboard } from './components/ComplianceDashboard';
+import { useEffect, useMemo, useState } from 'react';
 import { AlertBanner } from './components/AlertBanner';
-import { StatusBar } from './components/StatusBar';
+import { ComplianceDashboard } from './components/ComplianceDashboard';
+import { DecisionsDashboard } from './components/DecisionsDashboard';
+import { ExecutiveDashboard } from './components/ExecutiveDashboard';
+import { Header } from './components/Header';
 import { HelpPanel } from './components/HelpPanel';
-import { useKpis } from './hooks/useKpis';
+import { OperationalDashboard } from './components/OperationalDashboard';
+import { StatusBar } from './components/StatusBar';
 import { useAgents } from './hooks/useAgents';
 import { useAnomalies } from './hooks/useAnomalies';
 import { useCompliance } from './hooks/useCompliance';
-import { useFreshness } from './hooks/useFreshness';
-import { useRoi } from './hooks/useRoi';
-import { useCosts } from './hooks/useCosts';
-import { useTokenEconomics } from './hooks/useTokenEconomics';
-import { useCronHealth } from './hooks/useCronHealth';
-import { useKnowledgeHealth } from './hooks/useKnowledgeHealth';
-import { useDecisionRecommendations } from './hooks/useDecisionRecommendations';
-import { useDecisionPatterns } from './hooks/useDecisionPatterns';
-import { useDecisionRoi } from './hooks/useDecisionRoi';
 import { useComplianceRisks } from './hooks/useComplianceRisks';
+import { useCosts } from './hooks/useCosts';
+import { useCronHealth } from './hooks/useCronHealth';
 import { useDecisionAlerts } from './hooks/useDecisionAlerts';
-import { DecisionsDashboard } from './components/DecisionsDashboard';
+import { useDecisionPatterns } from './hooks/useDecisionPatterns';
+import { useDecisionRecommendations } from './hooks/useDecisionRecommendations';
+import { useDecisionRoi } from './hooks/useDecisionRoi';
+import { useFreshness } from './hooks/useFreshness';
+import { useKnowledgeHealth } from './hooks/useKnowledgeHealth';
+import { useKpis } from './hooks/useKpis';
+import { useRoi } from './hooks/useRoi';
+import { useTokenEconomics } from './hooks/useTokenEconomics';
 
 declare const __APP_VERSION__: string;
 
@@ -45,7 +45,7 @@ export function App() {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, []);
+  }, [switchPage]);
 
   const kpis = useKpis();
   const agents = useAgents();
@@ -64,7 +64,10 @@ export function App() {
   const decisionAlerts = useDecisionAlerts();
 
   const criticalAnomalies = useMemo(
-    () => (anomalies?.anomalies ?? []).filter((a) => !a.acknowledged && (a.severity === 'critical' || a.severity === 'high')),
+    () =>
+      (anomalies?.anomalies ?? []).filter(
+        (a) => !a.acknowledged && (a.severity === 'critical' || a.severity === 'high'),
+      ),
     [anomalies],
   );
 
@@ -75,18 +78,47 @@ export function App() {
 
   return (
     <div className="bi">
-      <Header page={page} onPageChange={switchPage} version={typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.1.0'} onHelp={() => setShowHelp(true)} />
+      <Header
+        page={page}
+        onPageChange={switchPage}
+        version={typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.1.0'}
+        onHelp={() => setShowHelp(true)}
+      />
       {criticalAnomalies.length > 0 && <AlertBanner anomalies={criticalAnomalies} />}
       <main className="bi-main">
         {page === 'executive' && (
-          <ExecutiveDashboard kpis={kpis} agents={agents} anomalies={anomalies} roi={roi} freshness={freshness} tokenEconomics={tokenEconomics} knowledgeHealth={knowledgeHealth} cronHealth={cronHealth} />
+          <ExecutiveDashboard
+            kpis={kpis}
+            agents={agents}
+            anomalies={anomalies}
+            roi={roi}
+            freshness={freshness}
+            tokenEconomics={tokenEconomics}
+            knowledgeHealth={knowledgeHealth}
+            cronHealth={cronHealth}
+          />
         )}
         {page === 'operational' && (
-          <OperationalDashboard agents={agents} costs={costs} anomalies={anomalies} freshness={freshness} tokenEconomics={tokenEconomics} cronHealth={cronHealth} />
+          <OperationalDashboard
+            agents={agents}
+            costs={costs}
+            anomalies={anomalies}
+            freshness={freshness}
+            tokenEconomics={tokenEconomics}
+            cronHealth={cronHealth}
+          />
         )}
-        {page === 'compliance' && <ComplianceDashboard compliance={compliance} anomalies={anomalies} />}
+        {page === 'compliance' && (
+          <ComplianceDashboard compliance={compliance} anomalies={anomalies} />
+        )}
         {page === 'decisions' && (
-          <DecisionsDashboard recommendations={decisionRecs} patterns={decisionPatterns} roi={decisionRoi} complianceRisks={decisionRisks} alerts={decisionAlerts} />
+          <DecisionsDashboard
+            recommendations={decisionRecs}
+            patterns={decisionPatterns}
+            roi={decisionRoi}
+            complianceRisks={decisionRisks}
+            alerts={decisionAlerts}
+          />
         )}
       </main>
       <StatusBar freshness={freshness} agents={agents} />

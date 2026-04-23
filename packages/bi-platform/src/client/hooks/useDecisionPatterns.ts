@@ -1,8 +1,13 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 export interface BusinessPattern {
   id: string;
-  type: 'performance_cluster' | 'cost_trend' | 'failure_cascade' | 'efficiency_gap' | 'compliance_drift';
+  type:
+    | 'performance_cluster'
+    | 'cost_trend'
+    | 'failure_cascade'
+    | 'efficiency_gap'
+    | 'compliance_drift';
   title: string;
   description: string;
   affectedAgents: string[];
@@ -30,7 +35,9 @@ export function useDecisionPatterns(): PatternsResponse | null {
     try {
       const res = await fetch('/api/v1/decisions/patterns');
       if (res.ok) setData(await res.json());
-    } catch { /* retry */ }
+    } catch {
+      /* retry */
+    }
   }, []);
 
   useEffect(() => {

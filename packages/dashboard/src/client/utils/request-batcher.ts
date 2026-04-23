@@ -58,7 +58,7 @@ class RequestBatcher {
     batchedRequests: 0,
     averageBatchSize: 0,
     timeSaved: 0,
-    errorRate: 0
+    errorRate: 0,
   };
   private errorCount = 0;
   private batchCount = 0;
@@ -67,10 +67,10 @@ class RequestBatcher {
     this.config = {
       maxBatchSize: 20,
       maxWaitTime: 100, // 100ms max wait
-      debounceTime: 10,  // 10ms debounce
+      debounceTime: 10, // 10ms debounce
       batchEndpoint: '/api/batch',
       enabled: true,
-      ...config
+      ...config,
     };
   }
 
@@ -83,7 +83,7 @@ class RequestBatcher {
     options: {
       priority?: 'low' | 'normal' | 'high';
       bypassBatching?: boolean;
-    } = {}
+    } = {},
   ): Promise<T> {
     const { priority = 'normal', bypassBatching = false } = options;
 
@@ -108,7 +108,7 @@ class RequestBatcher {
         resolve,
         reject,
         timestamp: Date.now(),
-        priority
+        priority,
       };
 
       this.pendingRequests.set(id, request);
@@ -137,7 +137,7 @@ class RequestBatcher {
     return {
       ...this.stats,
       averageBatchSize: this.batchCount > 0 ? this.stats.batchedRequests / this.batchCount : 0,
-      errorRate: this.stats.totalRequests > 0 ? this.errorCount / this.stats.totalRequests : 0
+      errorRate: this.stats.totalRequests > 0 ? this.errorCount / this.stats.totalRequests : 0,
     };
   }
 
@@ -150,7 +150,7 @@ class RequestBatcher {
       batchedRequests: 0,
       averageBatchSize: 0,
       timeSaved: 0,
-      errorRate: 0
+      errorRate: 0,
     };
     this.errorCount = 0;
     this.batchCount = 0;
@@ -179,20 +179,16 @@ class RequestBatcher {
       /^\/api\/performance/,
       /^\/api\/activity/,
       /^\/api\/sessions/,
-      /^\/api\/policy/
+      /^\/api\/policy/,
     ];
 
     // Exclude certain endpoints that shouldn't be batched
-    const excludePatterns = [
-      /\/upload$/,
-      /\/download$/,
-      /\/stream$/,
-      /\/websocket$/,
-      /\/sse$/
-    ];
+    const excludePatterns = [/\/upload$/, /\/download$/, /\/stream$/, /\/websocket$/, /\/sse$/];
 
-    return batchablePatterns.some(pattern => pattern.test(endpoint)) &&
-           !excludePatterns.some(pattern => pattern.test(endpoint));
+    return (
+      batchablePatterns.some((pattern) => pattern.test(endpoint)) &&
+      !excludePatterns.some((pattern) => pattern.test(endpoint))
+    );
   }
 
   private scheduleBatch(): void {
@@ -204,7 +200,7 @@ class RequestBatcher {
     // Check if we should send immediately due to batch size or high priority requests
     const shouldSendImmediately =
       this.pendingRequests.size >= this.config.maxBatchSize ||
-      Array.from(this.pendingRequests.values()).some(req => req.priority === 'high');
+      Array.from(this.pendingRequests.values()).some((req) => req.priority === 'high');
 
     if (shouldSendImmediately) {
       this.processBatch();
@@ -213,10 +209,11 @@ class RequestBatcher {
 
     // Check if any request is approaching max wait time
     const now = Date.now();
-    const oldestRequest = Array.from(this.pendingRequests.values())
-      .sort((a, b) => a.timestamp - b.timestamp)[0];
+    const oldestRequest = Array.from(this.pendingRequests.values()).sort(
+      (a, b) => a.timestamp - b.timestamp,
+    )[0];
 
-    if (oldestRequest && (now - oldestRequest.timestamp) >= this.config.maxWaitTime) {
+    if (oldestRequest && now - oldestRequest.timestamp >= this.config.maxWaitTime) {
       this.processBatch();
       return;
     }
@@ -247,7 +244,7 @@ class RequestBatcher {
       .slice(0, this.config.maxBatchSize);
 
     // Remove processed requests from pending
-    requests.forEach(req => this.pendingRequests.delete(req.id));
+    requests.forEach((req) => this.pendingRequests.delete(req.id));
 
     // Update stats
     this.stats.batchedRequests += requests.length;
@@ -259,13 +256,12 @@ class RequestBatcher {
       // Calculate estimated time saved
       const estimatedTimeSaved = (requests.length - 1) * 50; // Assume 50ms per request overhead
       this.stats.timeSaved += estimatedTimeSaved;
-
     } catch (error) {
       console.error('Batch processing failed:', error);
       this.errorCount += requests.length;
 
       // Reject all requests in the batch
-      requests.forEach(req => {
+      requests.forEach((req) => {
         req.reject(new Error(`Batch processing failed: ${error}`));
       });
     }
@@ -278,21 +274,21 @@ class RequestBatcher {
 
   private async sendBatch(requests: BatchRequest[]): Promise<void> {
     const batchPayload = {
-      requests: requests.map(req => ({
+      requests: requests.map((req) => ({
         id: req.id,
         endpoint: req.endpoint,
         params: req.params,
-        priority: req.priority
-      }))
+        priority: req.priority,
+      })),
     };
 
     try {
       const response = await fetch(this.config.batchEndpoint, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify(batchPayload)
+        body: JSON.stringify(batchPayload),
       });
 
       if (!response.ok) {
@@ -302,8 +298,8 @@ class RequestBatcher {
       const batchResponse: BatchResponse = await response.json();
 
       // Process individual responses
-      batchResponse.results.forEach(result => {
-        const request = requests.find(req => req.id === result.id);
+      batchResponse.results.forEach((result) => {
+        const request = requests.find((req) => req.id === result.id);
         if (!request) return;
 
         if (result.success) {
@@ -320,8 +316,7 @@ class RequestBatcher {
           this.errorCount++;
         }
       });
-
-    } catch (error) {
+    } catch (_error) {
       // If batch request fails, try individual requests as fallback
       await this.fallbackToIndividualRequests(requests);
     }
@@ -345,7 +340,7 @@ class RequestBatcher {
 
   private async makeDirectRequest<T = any>(
     endpoint: string,
-    params?: Record<string, any>
+    params?: Record<string, any>,
   ): Promise<T> {
     const url = new URL(endpoint, window.location.origin);
 
@@ -386,8 +381,8 @@ export const organizationalAPI = {
   async getTeams(teamIds?: string[], options?: { priority?: 'low' | 'normal' | 'high' }) {
     if (teamIds && teamIds.length > 1) {
       // Batch multiple team requests
-      const promises = teamIds.map(id =>
-        requestBatcher.request(`/api/teams/${id}`, undefined, options)
+      const promises = teamIds.map((id) =>
+        requestBatcher.request(`/api/teams/${id}`, undefined, options),
       );
       return Promise.all(promises);
     }
@@ -406,8 +401,8 @@ export const organizationalAPI = {
    */
   async getOperators(operatorIds?: string[], options?: { priority?: 'low' | 'normal' | 'high' }) {
     if (operatorIds && operatorIds.length > 1) {
-      const promises = operatorIds.map(id =>
-        requestBatcher.request(`/api/operators/${id}`, undefined, options)
+      const promises = operatorIds.map((id) =>
+        requestBatcher.request(`/api/operators/${id}`, undefined, options),
       );
       return Promise.all(promises);
     }
@@ -417,21 +412,33 @@ export const organizationalAPI = {
   /**
    * Get performance data with batching
    */
-  async getPerformanceData(type: string = 'overview', params?: Record<string, any>, options?: { priority?: 'low' | 'normal' | 'high' }) {
+  async getPerformanceData(
+    type: string = 'overview',
+    params?: Record<string, any>,
+    options?: { priority?: 'low' | 'normal' | 'high' },
+  ) {
     return requestBatcher.request(`/api/performance/${type}`, params, options);
   },
 
   /**
    * Get activity data with batching
    */
-  async getActivityData(type: string = 'overview', params?: Record<string, any>, options?: { priority?: 'low' | 'normal' | 'high' }) {
+  async getActivityData(
+    type: string = 'overview',
+    params?: Record<string, any>,
+    options?: { priority?: 'low' | 'normal' | 'high' },
+  ) {
     return requestBatcher.request(`/api/activity/${type}`, params, options);
   },
 
   /**
    * Get session data with batching
    */
-  async getSessionData(sessionId?: string, params?: Record<string, any>, options?: { priority?: 'low' | 'normal' | 'high' }) {
+  async getSessionData(
+    sessionId?: string,
+    params?: Record<string, any>,
+    options?: { priority?: 'low' | 'normal' | 'high' },
+  ) {
     const endpoint = sessionId ? `/api/sessions/${sessionId}` : '/api/sessions';
     return requestBatcher.request(endpoint, params, options);
   },
@@ -439,7 +446,10 @@ export const organizationalAPI = {
   /**
    * Get policy data with batching
    */
-  async getPolicyData(params?: Record<string, any>, options?: { priority?: 'low' | 'normal' | 'high' }) {
+  async getPolicyData(
+    params?: Record<string, any>,
+    options?: { priority?: 'low' | 'normal' | 'high' },
+  ) {
     return requestBatcher.request('/api/policy/status', params, options);
   },
 
@@ -452,11 +462,11 @@ export const organizationalAPI = {
       endpoint: string;
       params?: Record<string, any>;
       priority?: 'low' | 'normal' | 'high';
-    }>
+    }>,
   ): Promise<T> {
     const promises = requests.map(async ({ key, endpoint, params, priority }) => ({
       key,
-      result: await requestBatcher.request(endpoint, params, { priority })
+      result: await requestBatcher.request(endpoint, params, { priority }),
     }));
 
     const results = await Promise.allSettled(promises);
@@ -494,7 +504,7 @@ export const organizationalAPI = {
    */
   configure(config: Partial<BatchConfig>) {
     requestBatcher.updateConfig(config);
-  }
+  },
 };
 
 // Auto-flush on page unload to prevent lost requests
@@ -511,5 +521,5 @@ if (typeof window !== 'undefined') {
   }, 5000); // Flush every 5 seconds if there are pending requests
 }
 
-export { RequestBatcher, requestBatcher };
 export type { BatchConfig, RequestStats };
+export { RequestBatcher, requestBatcher };

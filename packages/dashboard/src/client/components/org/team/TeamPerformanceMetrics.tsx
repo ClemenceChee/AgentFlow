@@ -6,7 +6,7 @@
  * with trend analysis and performance optimization insights.
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { OrganizationalTrace, TeamMembership } from '../../../types/organizational.js';
 
 // Component props
@@ -116,7 +116,7 @@ export function TeamPerformanceMetrics({
   showTrends = true,
   className = '',
   compact = false,
-  onPerformanceAlert
+  onPerformanceAlert,
 }: TeamPerformanceMetricsProps) {
   const [performanceData, setPerformanceData] = useState<TeamPerformanceData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -130,12 +130,11 @@ export function TeamPerformanceMetrics({
       '24h': 24 * 60 * 60 * 1000,
       '7d': 7 * 24 * 60 * 60 * 1000,
       '30d': 30 * 24 * 60 * 60 * 1000,
-      '90d': 90 * 24 * 60 * 60 * 1000
+      '90d': 90 * 24 * 60 * 60 * 1000,
     }[timeRange];
 
-    return traces.filter(trace =>
-      trace.operatorContext?.teamId === teamId &&
-      trace.timestamp > (now - timeRangeMs)
+    return traces.filter(
+      (trace) => trace.operatorContext?.teamId === teamId && trace.timestamp > now - timeRangeMs,
     );
   }, [traces, teamId, timeRange]);
 
@@ -147,9 +146,9 @@ export function TeamPerformanceMetrics({
     }
 
     // Calculate success metrics
-    const successfulTraces = teamTraces.filter(trace => trace.status === 'success').length;
-    const errorTraces = teamTraces.filter(trace => trace.status === 'error').length;
-    const completedTraces = teamTraces.filter(trace => trace.status !== 'running').length;
+    const successfulTraces = teamTraces.filter((trace) => trace.status === 'success').length;
+    const errorTraces = teamTraces.filter((trace) => trace.status === 'error').length;
+    const completedTraces = teamTraces.filter((trace) => trace.status !== 'running').length;
 
     const successRate = totalTraces > 0 ? successfulTraces / totalTraces : 0;
     const errorRate = totalTraces > 0 ? errorTraces / totalTraces : 0;
@@ -157,25 +156,31 @@ export function TeamPerformanceMetrics({
 
     // Calculate timing metrics
     const responseTimes = teamTraces
-      .filter(trace => trace.endTime && trace.startTime)
-      .map(trace => trace.endTime! - trace.startTime);
+      .filter((trace) => trace.endTime && trace.startTime)
+      .map((trace) => trace.endTime! - trace.startTime);
 
-    const averageResponseTime = responseTimes.length > 0 ?
-      responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length : 0;
+    const averageResponseTime =
+      responseTimes.length > 0
+        ? responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length
+        : 0;
 
     const sortedResponseTimes = responseTimes.sort((a, b) => a - b);
-    const medianResponseTime = sortedResponseTimes.length > 0 ?
-      sortedResponseTimes[Math.floor(sortedResponseTimes.length / 2)] : 0;
+    const medianResponseTime =
+      sortedResponseTimes.length > 0
+        ? sortedResponseTimes[Math.floor(sortedResponseTimes.length / 2)]
+        : 0;
 
-    const p95ResponseTime = sortedResponseTimes.length > 0 ?
-      sortedResponseTimes[Math.floor(sortedResponseTimes.length * 0.95)] : 0;
+    const p95ResponseTime =
+      sortedResponseTimes.length > 0
+        ? sortedResponseTimes[Math.floor(sortedResponseTimes.length * 0.95)]
+        : 0;
 
     // Calculate throughput metrics
     const timeRangeHours = {
       '24h': 24,
       '7d': 168,
       '30d': 720,
-      '90d': 2160
+      '90d': 2160,
     }[timeRange];
 
     const tracesPerHour = totalTraces / timeRangeHours;
@@ -183,24 +188,25 @@ export function TeamPerformanceMetrics({
 
     // Calculate peak hour throughput
     const hourlyBuckets = new Map<number, number>();
-    teamTraces.forEach(trace => {
+    teamTraces.forEach((trace) => {
       const hour = Math.floor(trace.timestamp / (1000 * 60 * 60));
       hourlyBuckets.set(hour, (hourlyBuckets.get(hour) || 0) + 1);
     });
     const peakHourThroughput = Math.max(...hourlyBuckets.values(), 0);
 
     // Calculate quality metrics
-    const averageTraceLength = teamTraces.length > 0 ?
-      teamTraces.reduce((sum, trace) => sum + (trace.steps?.length || 0), 0) / teamTraces.length : 0;
+    const averageTraceLength =
+      teamTraces.length > 0
+        ? teamTraces.reduce((sum, trace) => sum + (trace.steps?.length || 0), 0) / teamTraces.length
+        : 0;
 
-    const toolUsageTraces = teamTraces.filter(trace =>
-      trace.steps?.some(step => step.toolCalls && step.toolCalls.length > 0)
+    const toolUsageTraces = teamTraces.filter((trace) =>
+      trace.steps?.some((step) => step.toolCalls && step.toolCalls.length > 0),
     );
     const toolUsageEfficiency = totalTraces > 0 ? toolUsageTraces.length / totalTraces : 0;
 
-    const recoveredErrorTraces = teamTraces.filter(trace =>
-      trace.status === 'success' &&
-      trace.steps?.some(step => step.type === 'error')
+    const recoveredErrorTraces = teamTraces.filter(
+      (trace) => trace.status === 'success' && trace.steps?.some((step) => step.type === 'error'),
     );
     const errorRecoveryRate = errorTraces > 0 ? recoveredErrorTraces.length / errorTraces : 0;
 
@@ -209,27 +215,37 @@ export function TeamPerformanceMetrics({
     const firstHalf = teamTraces.slice(0, midPoint);
     const secondHalf = teamTraces.slice(midPoint);
 
-    const firstHalfSuccessRate = firstHalf.length > 0 ?
-      firstHalf.filter(t => t.status === 'success').length / firstHalf.length : 0;
-    const secondHalfSuccessRate = secondHalf.length > 0 ?
-      secondHalf.filter(t => t.status === 'success').length / secondHalf.length : 0;
+    const firstHalfSuccessRate =
+      firstHalf.length > 0
+        ? firstHalf.filter((t) => t.status === 'success').length / firstHalf.length
+        : 0;
+    const secondHalfSuccessRate =
+      secondHalf.length > 0
+        ? secondHalf.filter((t) => t.status === 'success').length / secondHalf.length
+        : 0;
 
-    const successRateTrend = secondHalfSuccessRate > firstHalfSuccessRate * 1.05 ? 'improving' :
-                           secondHalfSuccessRate < firstHalfSuccessRate * 0.95 ? 'declining' : 'stable';
+    const successRateTrend =
+      secondHalfSuccessRate > firstHalfSuccessRate * 1.05
+        ? 'improving'
+        : secondHalfSuccessRate < firstHalfSuccessRate * 0.95
+          ? 'declining'
+          : 'stable';
 
     // Similar calculations for response time and throughput trends
     const responseTimeTrend = 'stable'; // Simplified
-    const throughputTrend = 'stable';   // Simplified
+    const throughputTrend = 'stable'; // Simplified
 
     // Fetch comparative data from API
     let comparative = {
       successRatePercentile: 50,
       responseTimePercentile: 50,
-      throughputPercentile: 50
+      throughputPercentile: 50,
     };
 
     try {
-      const response = await fetch(`/api/teams/${teamId}/comparative-metrics?timeRange=${timeRange}`);
+      const response = await fetch(
+        `/api/teams/${teamId}/comparative-metrics?timeRange=${timeRange}`,
+      );
       if (response.ok) {
         const comparativeData = await response.json();
         comparative = comparativeData;
@@ -246,12 +262,14 @@ export function TeamPerformanceMetrics({
           const recentTraces = teamTraces.slice(Math.max(0, index - 10), index + 1);
           points.push({
             timestamp: trace.timestamp,
-            successRate: recentTraces.filter(t => t.status === 'success').length / recentTraces.length,
-            responseTime: recentTraces
-              .filter(t => t.endTime && t.startTime)
-              .reduce((sum, t) => sum + (t.endTime! - t.startTime), 0) / recentTraces.length,
+            successRate:
+              recentTraces.filter((t) => t.status === 'success').length / recentTraces.length,
+            responseTime:
+              recentTraces
+                .filter((t) => t.endTime && t.startTime)
+                .reduce((sum, t) => sum + (t.endTime! - t.startTime), 0) / recentTraces.length,
             throughput: recentTraces.length,
-            errorCount: recentTraces.filter(t => t.status === 'error').length
+            errorCount: recentTraces.filter((t) => t.status === 'error').length,
           });
         }
         return points;
@@ -273,7 +291,7 @@ export function TeamPerformanceMetrics({
       trends: {
         successRate: successRateTrend,
         responseTime: responseTimeTrend,
-        throughput: throughputTrend
+        throughput: throughputTrend,
       },
       comparative,
       rawMetrics: {
@@ -281,8 +299,8 @@ export function TeamPerformanceMetrics({
         successfulTraces,
         errorTraces,
         timeRange,
-        dataPoints
-      }
+        dataPoints,
+      },
     };
   }, [teamTraces, timeRange, teamId]);
 
@@ -306,28 +324,28 @@ export function TeamPerformanceMetrics({
             message: `Success rate is ${(data.successRate * 100).toFixed(1)}%`,
             value: data.successRate,
             threshold: 0.8,
-            suggestion: 'Review error patterns and improve error handling'
+            suggestion: 'Review error patterns and improve error handling',
           });
         }
 
-        if (data.averageResponseTime > 30000) { // 30 seconds
+        if (data.averageResponseTime > 30000) {
+          // 30 seconds
           alerts.push({
             type: 'response_time',
             severity: data.averageResponseTime > 60000 ? 'high' : 'medium',
             message: `Average response time is ${(data.averageResponseTime / 1000).toFixed(1)}s`,
             value: data.averageResponseTime,
             threshold: 30000,
-            suggestion: 'Optimize tool usage and reduce complexity'
+            suggestion: 'Optimize tool usage and reduce complexity',
           });
         }
 
         // Notify about alerts
-        alerts.forEach(alert => {
+        alerts.forEach((alert) => {
           if (onPerformanceAlert) {
             onPerformanceAlert(alert);
           }
         });
-
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to calculate performance metrics');
       } finally {
@@ -370,25 +388,28 @@ export function TeamPerformanceMetrics({
   // Get trend indicator
   const getTrendIndicator = (trend: 'improving' | 'declining' | 'stable'): string => {
     switch (trend) {
-      case 'improving': return '📈';
-      case 'declining': return '📉';
-      case 'stable': return '➡️';
+      case 'improving':
+        return '📈';
+      case 'declining':
+        return '📉';
+      case 'stable':
+        return '➡️';
     }
   };
 
   // Get performance level color
-  const getPerformanceColor = (value: number, thresholds: { good: number; warning: number }): string => {
+  const getPerformanceColor = (
+    value: number,
+    thresholds: { good: number; warning: number },
+  ): string => {
     if (value >= thresholds.good) return 'var(--success)';
     if (value >= thresholds.warning) return 'var(--warn)';
     return 'var(--fail)';
   };
 
-  const cardClasses = [
-    'org-card',
-    'team-performance-metrics',
-    compact ? 'compact' : '',
-    className
-  ].filter(Boolean).join(' ');
+  const cardClasses = ['org-card', 'team-performance-metrics', compact ? 'compact' : '', className]
+    .filter(Boolean)
+    .join(' ');
 
   // Loading state
   if (loading) {
@@ -403,9 +424,7 @@ export function TeamPerformanceMetrics({
         <div className="org-card__content">
           <div className="team-performance-loading">
             <div className="team-performance-loading-spinner" />
-            <div className="team-performance-loading-text">
-              Calculating performance metrics...
-            </div>
+            <div className="team-performance-loading-text">Calculating performance metrics...</div>
           </div>
         </div>
       </div>
@@ -425,9 +444,7 @@ export function TeamPerformanceMetrics({
         <div className="org-card__content">
           <div className="team-performance-error">
             <div className="team-performance-error__icon">⚠️</div>
-            <div className="team-performance-error__message">
-              {error}
-            </div>
+            <div className="team-performance-error__message">{error}</div>
           </div>
         </div>
       </div>
@@ -468,7 +485,12 @@ export function TeamPerformanceMetrics({
               </div>
               <div
                 className="team-performance-metric__value"
-                style={{ color: getPerformanceColor(performanceData.successRate, { good: 0.9, warning: 0.7 }) }}
+                style={{
+                  color: getPerformanceColor(performanceData.successRate, {
+                    good: 0.9,
+                    warning: 0.7,
+                  }),
+                }}
               >
                 {formatPercentage(performanceData.successRate)}
               </div>
@@ -490,7 +512,12 @@ export function TeamPerformanceMetrics({
               </div>
               <div
                 className="team-performance-metric__value"
-                style={{ color: getPerformanceColor(30000 - performanceData.averageResponseTime, { good: 20000, warning: 10000 }) }}
+                style={{
+                  color: getPerformanceColor(30000 - performanceData.averageResponseTime, {
+                    good: 20000,
+                    warning: 10000,
+                  }),
+                }}
               >
                 {formatDuration(performanceData.averageResponseTime)}
               </div>
@@ -527,7 +554,12 @@ export function TeamPerformanceMetrics({
                 </div>
                 <div
                   className="team-performance-metric__value"
-                  style={{ color: getPerformanceColor(1 - performanceData.errorRate, { good: 0.95, warning: 0.8 }) }}
+                  style={{
+                    color: getPerformanceColor(1 - performanceData.errorRate, {
+                      good: 0.95,
+                      warning: 0.8,
+                    }),
+                  }}
                 >
                   {formatPercentage(performanceData.errorRate)}
                 </div>

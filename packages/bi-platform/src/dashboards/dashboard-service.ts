@@ -5,13 +5,13 @@
  *        6.7 (interactive charts), 6.8 (anomaly alerts), 6.9 (personalization)
  */
 
-import type { DataAggregator, AgentAggregation } from '../synthesis/aggregator.js';
-import type { MetricEngine, BusinessMetric } from '../synthesis/metric-engine.js';
-import type { AnomalyDetector, Anomaly } from '../synthesis/anomaly-detector.js';
-import type { RecommendationEngine, Recommendation } from '../decisions/recommendation-engine.js';
-import type { DbPool } from '../db/pool.js';
-import type { CacheClient } from '../cache/cache.js';
 import type { UserRole } from '../auth/types.js';
+import type { CacheClient } from '../cache/cache.js';
+import type { DbPool } from '../db/pool.js';
+import type { RecommendationEngine } from '../decisions/recommendation-engine.js';
+import type { DataAggregator } from '../synthesis/aggregator.js';
+import type { AnomalyDetector } from '../synthesis/anomaly-detector.js';
+import type { MetricEngine } from '../synthesis/metric-engine.js';
 
 export interface DashboardData {
   type: 'executive' | 'operational' | 'compliance';
@@ -39,7 +39,7 @@ export class DashboardService {
   constructor(
     private aggregator: DataAggregator,
     private metricEngine: MetricEngine,
-    private anomalyDetector: AnomalyDetector,
+    _anomalyDetector: AnomalyDetector,
     private recommendationEngine: RecommendationEngine,
     private db: DbPool,
     private cache: CacheClient,
@@ -123,9 +123,7 @@ export class DashboardService {
     const latest = this.aggregator.getLatest();
     const agents = latest?.agents ?? [];
 
-    const focusAgents = agentId
-      ? agents.filter((a) => a.agentId === agentId)
-      : agents;
+    const focusAgents = agentId ? agents.filter((a) => a.agentId === agentId) : agents;
 
     // Get historical trend data
     const { rows: trendData } = await this.db.query<{
@@ -215,7 +213,13 @@ export class DashboardService {
          GROUP BY regulation`,
         params,
       ),
-      this.db.query<{ id: string; regulation: string; severity: string; description: string; detected_at: string }>(
+      this.db.query<{
+        id: string;
+        regulation: string;
+        severity: string;
+        description: string;
+        detected_at: string;
+      }>(
         `SELECT id, regulation, severity, description, detected_at
          FROM compliance_records
          WHERE status = 'violation' AND resolved_at IS NULL ${regFilter}
@@ -239,9 +243,8 @@ export class DashboardService {
         title: 'Compliance Status',
         data: complianceOverview.rows.map((r) => ({
           regulation: r.regulation,
-          score: Number(r.total) > 0
-            ? Math.round((Number(r.compliant) / Number(r.total)) * 100)
-            : 100,
+          score:
+            Number(r.total) > 0 ? Math.round((Number(r.compliant) / Number(r.total)) * 100) : 100,
           violations: Number(r.violations),
           total: Number(r.total),
         })),

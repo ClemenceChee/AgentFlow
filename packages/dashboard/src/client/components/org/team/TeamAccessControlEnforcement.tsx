@@ -6,9 +6,10 @@
  * checks, and graceful degradation for unauthorized access attempts.
  */
 
-import React, { ReactNode, useEffect, useState, useMemo } from 'react';
+import type React from 'react';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { useOrganizationalContext } from '../../../../../contexts/OrganizationalContext';
-import type { TeamAccessLevel, OperatorContext } from '../../../types/organizational.js';
+import type { TeamAccessLevel } from '../../../types/organizational.js';
 
 // Access control configuration
 export type AccessAction =
@@ -31,7 +32,7 @@ const ACCESS_RULES: Record<TeamAccessLevel, AccessAction[]> = {
     'export_data',
     'manage_team',
     'manage_operators',
-    'view_sensitive_data'
+    'view_sensitive_data',
   ],
   maintainer: [
     'view_traces',
@@ -39,18 +40,10 @@ const ACCESS_RULES: Record<TeamAccessLevel, AccessAction[]> = {
     'view_team_metrics',
     'view_operator_details',
     'export_data',
-    'manage_operators'
+    'manage_operators',
   ],
-  member: [
-    'view_traces',
-    'view_team_members',
-    'view_team_metrics',
-    'view_operator_details'
-  ],
-  observer: [
-    'view_traces',
-    'view_team_metrics'
-  ]
+  member: ['view_traces', 'view_team_members', 'view_team_metrics', 'view_operator_details'],
+  observer: ['view_traces', 'view_team_metrics'],
 };
 
 // Access check result
@@ -142,7 +135,6 @@ export function useTeamAccess(teamId: string) {
         });
 
         setAccessLevels(accessMap);
-
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load team access');
         // In error case, assume no access
@@ -153,14 +145,14 @@ export function useTeamAccess(teamId: string) {
     };
 
     loadAccessLevels();
-  }, [state.currentOperator, teamId]);
+  }, [state.currentOperator]);
 
   // Check if operator has access to perform action on team
   const checkAccess = (action: AccessAction): AccessCheckResult => {
     if (loading) {
       return {
         hasAccess: false,
-        reason: 'Access check in progress'
+        reason: 'Access check in progress',
       };
     }
 
@@ -168,7 +160,7 @@ export function useTeamAccess(teamId: string) {
       return {
         hasAccess: false,
         reason: 'Unable to verify team access',
-        suggestion: 'Please refresh the page or contact support'
+        suggestion: 'Please refresh the page or contact support',
       };
     }
 
@@ -177,7 +169,7 @@ export function useTeamAccess(teamId: string) {
       return {
         hasAccess: false,
         reason: 'No access to this team',
-        suggestion: 'Request access from a team administrator'
+        suggestion: 'Request access from a team administrator',
       };
     }
 
@@ -188,7 +180,7 @@ export function useTeamAccess(teamId: string) {
       hasAccess,
       accessLevel,
       reason: hasAccess ? undefined : `Insufficient permissions (${accessLevel})`,
-      suggestion: hasAccess ? undefined : 'Contact team administrator for elevated access'
+      suggestion: hasAccess ? undefined : 'Contact team administrator for elevated access',
     };
   };
 
@@ -215,7 +207,7 @@ export function useTeamAccess(teamId: string) {
     getAccessibleTeams,
     loading,
     error,
-    hasAnyAccess: accessLevels.size > 0
+    hasAnyAccess: accessLevels.size > 0,
   };
 }
 
@@ -229,7 +221,7 @@ export function AccessControlWrapper({
   fallback,
   showAccessDenied = true,
   className = '',
-  onAccessDenied
+  onAccessDenied,
 }: AccessControlWrapperProps) {
   const { checkAccess } = useTeamAccess(teamId);
   const accessResult = checkAccess(action);
@@ -244,25 +236,19 @@ export function AccessControlWrapper({
   const wrapperClasses = [
     'access-control-wrapper',
     accessResult.hasAccess ? 'access-granted' : 'access-denied',
-    className
-  ].filter(Boolean).join(' ');
+    className,
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   // Render children if access is granted
   if (accessResult.hasAccess) {
-    return (
-      <div className={wrapperClasses}>
-        {children}
-      </div>
-    );
+    return <div className={wrapperClasses}>{children}</div>;
   }
 
   // Render custom fallback if provided
   if (fallback) {
-    return (
-      <div className={wrapperClasses}>
-        {fallback}
-      </div>
-    );
+    return <div className={wrapperClasses}>{fallback}</div>;
   }
 
   // Render access denied message
@@ -292,7 +278,7 @@ function AccessDeniedMessage({
   action,
   reason,
   suggestion,
-  accessLevel
+  accessLevel,
 }: {
   teamId: string;
   action: AccessAction;
@@ -302,15 +288,24 @@ function AccessDeniedMessage({
 }) {
   const getActionDescription = (action: AccessAction): string => {
     switch (action) {
-      case 'view_traces': return 'view team traces';
-      case 'view_team_members': return 'view team members';
-      case 'view_team_metrics': return 'view team metrics';
-      case 'view_operator_details': return 'view operator details';
-      case 'export_data': return 'export team data';
-      case 'manage_team': return 'manage team settings';
-      case 'manage_operators': return 'manage team operators';
-      case 'view_sensitive_data': return 'view sensitive information';
-      default: return 'perform this action';
+      case 'view_traces':
+        return 'view team traces';
+      case 'view_team_members':
+        return 'view team members';
+      case 'view_team_metrics':
+        return 'view team metrics';
+      case 'view_operator_details':
+        return 'view operator details';
+      case 'export_data':
+        return 'export team data';
+      case 'manage_team':
+        return 'manage team settings';
+      case 'manage_operators':
+        return 'manage team operators';
+      case 'view_sensitive_data':
+        return 'view sensitive information';
+      default:
+        return 'perform this action';
     }
   };
 
@@ -329,40 +324,30 @@ function AccessDeniedMessage({
     <div className="access-denied-message">
       <div className="access-denied-message__icon">🔒</div>
       <div className="access-denied-message__content">
-        <div className="access-denied-message__title">
-          Access Restricted
-        </div>
+        <div className="access-denied-message__title">Access Restricted</div>
         <div className="access-denied-message__description">
           You don't have permission to {getActionDescription(action)} for this team.
         </div>
-        {reason && (
-          <div className="access-denied-message__reason">
-            {reason}
-          </div>
-        )}
+        {reason && <div className="access-denied-message__reason">{reason}</div>}
         <div className="access-denied-message__requirements">
           <div className="access-denied-message__current">
-            Current access: {accessLevel ? (
+            Current access:{' '}
+            {accessLevel ? (
               <span className={`access-level-badge access-level-${accessLevel}`}>
                 {accessLevel}
               </span>
             ) : (
-              <span className="access-level-badge access-level-none">
-                None
-              </span>
+              <span className="access-level-badge access-level-none">None</span>
             )}
           </div>
           <div className="access-denied-message__required">
-            Required access: <span className={`access-level-badge access-level-${requiredLevel}`}>
+            Required access:{' '}
+            <span className={`access-level-badge access-level-${requiredLevel}`}>
               {requiredLevel} or higher
             </span>
           </div>
         </div>
-        {suggestion && (
-          <div className="access-denied-message__suggestion">
-            💡 {suggestion}
-          </div>
-        )}
+        {suggestion && <div className="access-denied-message__suggestion">💡 {suggestion}</div>}
       </div>
     </div>
   );
@@ -374,7 +359,7 @@ function AccessDeniedMessage({
 export function TeamAccessControlProvider({
   children,
   strictMode = true,
-  onAccessLog
+  onAccessLog,
 }: AccessControlProviderProps) {
   // Log access events
   const logAccessEvent = (event: AccessLogEvent) => {
@@ -385,16 +370,15 @@ export function TeamAccessControlProvider({
   };
 
   // Enhanced context value with logging
-  const contextValue = useMemo(() => ({
-    strictMode,
-    logAccessEvent
-  }), [strictMode]);
-
-  return (
-    <div className="team-access-control-provider">
-      {children}
-    </div>
+  const _contextValue = useMemo(
+    () => ({
+      strictMode,
+      logAccessEvent,
+    }),
+    [strictMode, logAccessEvent],
   );
+
+  return <div className="team-access-control-provider">{children}</div>;
 }
 
 /**
@@ -410,7 +394,7 @@ export function useAccessControlGuard(teamId: string, action: AccessAction) {
     ...accessResult,
     loading,
     error,
-    canRender: accessResult.hasAccess && !loading && !error
+    canRender: accessResult.hasAccess && !loading && !error,
   };
 }
 
@@ -420,7 +404,7 @@ export function useAccessControlGuard(teamId: string, action: AccessAction) {
 export function withTeamAccessControl<P extends object>(
   WrappedComponent: React.ComponentType<P>,
   teamIdProp: string = 'teamId',
-  action: AccessAction = 'view_traces'
+  action: AccessAction = 'view_traces',
 ) {
   const displayName = WrappedComponent.displayName || WrappedComponent.name || 'Component';
 
@@ -433,11 +417,7 @@ export function withTeamAccessControl<P extends object>(
     }
 
     return (
-      <AccessControlWrapper
-        teamId={teamId}
-        action={action}
-        showAccessDenied={true}
-      >
+      <AccessControlWrapper teamId={teamId} action={action} showAccessDenied={true}>
         <WrappedComponent {...props} />
       </AccessControlWrapper>
     );
@@ -473,19 +453,19 @@ export function AccessControlledTeamSelector({
   selectedTeamId,
   onTeamChange,
   requiredAction,
-  className = ''
+  className = '',
 }: AccessControlledTeamSelectorProps) {
   // Check access for all available teams
   const teamAccessChecks = useMemo(() => {
-    return availableTeams.map(teamId => ({
+    return availableTeams.map((teamId) => ({
       teamId,
       // We can't use the hook in a loop, so we'll need to check access differently
       // This is a simplified version - in practice you'd want a more sophisticated approach
-      hasAccess: true // Placeholder
+      hasAccess: true, // Placeholder
     }));
-  }, [availableTeams, requiredAction]);
+  }, [availableTeams]);
 
-  const accessibleTeams = teamAccessChecks.filter(team => team.hasAccess);
+  const accessibleTeams = teamAccessChecks.filter((team) => team.hasAccess);
 
   return (
     <div className={`access-controlled-team-selector ${className}`}>
@@ -546,7 +526,7 @@ export const teamAccessUtils = {
   compareAccessLevels: (level1: TeamAccessLevel, level2: TeamAccessLevel): number => {
     const hierarchy: TeamAccessLevel[] = ['observer', 'member', 'maintainer', 'admin'];
     return hierarchy.indexOf(level1) - hierarchy.indexOf(level2);
-  }
+  },
 };
 
 // Export default for easy importing

@@ -1,4 +1,4 @@
-import React from 'react';
+import type React from 'react';
 
 interface BreadcrumbItem {
   readonly label: string;
@@ -19,11 +19,9 @@ export const OrganizationalBreadcrumbs: React.FC<Props> = ({
   items,
   className = '',
   showHome = true,
-  separator = '/'
+  separator = '/',
 }) => {
-  const allItems = showHome
-    ? [{ label: 'Organization', path: '/', icon: '🏢' }, ...items]
-    : items;
+  const allItems = showHome ? [{ label: 'Organization', path: '/', icon: '🏢' }, ...items] : items;
 
   return (
     <nav className={`org-breadcrumbs ${className}`} aria-label="Breadcrumb">

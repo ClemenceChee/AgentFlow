@@ -1,0 +1,41 @@
+{
+  "id": "trace-1776948145410",
+  "rootNodeId": "node-1",
+  "agentId": "update-agent",
+  "name": "update-agent Test Execution",
+  "trigger": "external",
+  "filename": "update-test.json",
+  "startTime": 1776948135410,
+  "endTime": 1776948145410,
+  "status": "completed",
+  "nodes": {
+    "node-1": {
+      "id": "node-1",
+      "type": "agent",
+      "name": "Root Node",
+      "startTime": 1776948135410,
+      "endTime": 1776948145410,
+      "status": "completed",
+      "parentId": null,
+      "children": ["node-2"],
+      "metadata": {
+        "framework": "external"
+      },
+      "state": {}
+    },
+    "node-2": {
+      "id": "node-2",
+      "type": "tool",
+      "name": "Process External Data",
+      "startTime": 1776948137410,
+      "endTime": 1776948143410,
+      "status": "completed",
+      "parentId": "node-1",
+      "children": [],
+      "metadata": {
+        "external": true
+      },
+      "state": {}
+    }
+  }
+}

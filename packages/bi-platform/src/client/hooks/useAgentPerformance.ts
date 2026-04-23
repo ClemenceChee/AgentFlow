@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useCallback, useState } from 'react';
 
 export interface AgentPerformanceHistory {
   date: string;
@@ -37,7 +37,9 @@ export function useAgentPerformance() {
     try {
       const res = await fetch(`/api/v1/agents/${encodeURIComponent(agentId)}/performance`);
       if (res.ok) setData(await res.json());
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     setLoading(false);
   }, []);
 

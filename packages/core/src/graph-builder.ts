@@ -91,7 +91,7 @@ interface TeamBriefingContext {
 async function generateOrganizationalBriefing(
   operatorContext?: import('./types.js').OperatorContext,
   agentId?: string,
-  trigger?: string
+  trigger?: string,
 ): Promise<OrganizationalBriefing> {
   const timestamp = Date.now();
 
@@ -104,11 +104,11 @@ async function generateOrganizationalBriefing(
       warnings: [],
       recommendations: [
         'Consider setting OPERATOR_ID and CLAUDE_CODE_SESSION_ID environment variables for organizational intelligence',
-        'Enable team context with TEAM_ID for collaborative insights'
+        'Enable team context with TEAM_ID for collaborative insights',
       ],
       relatedSessions: [],
       timestamp,
-      source: 'fallback'
+      source: 'fallback',
     };
   }
 
@@ -116,7 +116,7 @@ async function generateOrganizationalBriefing(
     // Attempt dynamic SOMA vault integration
     const briefing = await generateSOMABriefing(operatorContext, agentId, trigger);
     if (briefing) return briefing;
-  } catch (error) {
+  } catch (_error) {
     // SOMA integration failed - fall back to environment-based briefing
   }
 
@@ -162,7 +162,7 @@ function generateFallbackBriefing(
       confidence: 1.0,
       actionable: false,
       relatedEntities: [operatorContext.operatorId],
-      timestamp
+      timestamp,
     });
   }
 
@@ -174,9 +174,11 @@ function generateFallbackBriefing(
       confidence: 0.8,
       actionable: true,
       relatedEntities: [operatorContext.teamId],
-      timestamp
+      timestamp,
     });
-    recommendations.push('Team-scoped insights available - consider enabling SOMA integration for enhanced team intelligence');
+    recommendations.push(
+      'Team-scoped insights available - consider enabling SOMA integration for enhanced team intelligence',
+    );
   }
 
   if (operatorContext.instanceId) {
@@ -187,7 +189,7 @@ function generateFallbackBriefing(
       confidence: 0.7,
       actionable: false,
       relatedEntities: [],
-      timestamp
+      timestamp,
     });
   }
 
@@ -210,23 +212,25 @@ function generateFallbackBriefing(
     warnings,
     recommendations,
     relatedSessions: [],
-    teamContext: operatorContext.teamId ? {
-      teamId: operatorContext.teamId,
-      recentActivity: {
-        sessionsLastWeek: 0,
-        activeOperators: 1,
-        commonPatterns: [],
-      },
-      currentFocus: [],
-      knowledgeGaps: ['SOMA integration needed for comprehensive team insights'],
-      collaboration: {
-        crossTeamSessions: 0,
-        externalTeams: [],
-        knowledgeSharing: 0
-      }
-    } : undefined,
+    teamContext: operatorContext.teamId
+      ? {
+          teamId: operatorContext.teamId,
+          recentActivity: {
+            sessionsLastWeek: 0,
+            activeOperators: 1,
+            commonPatterns: [],
+          },
+          currentFocus: [],
+          knowledgeGaps: ['SOMA integration needed for comprehensive team insights'],
+          collaboration: {
+            crossTeamSessions: 0,
+            externalTeams: [],
+            knowledgeSharing: 0,
+          },
+        }
+      : undefined,
     timestamp,
-    source: 'fallback'
+    source: 'fallback',
   };
 }
 
@@ -335,7 +339,7 @@ export function createGraphBuilder(config?: AgentFlowConfig): GraphBuilder {
         action: 'auth_validation_failed',
         operatorId: context.operatorId || 'unknown',
         reason: 'Missing required operator context fields (operatorId, sessionId)',
-        timestamp
+        timestamp,
       };
       return { valid: false, auditEvent };
     }
@@ -355,7 +359,7 @@ export function createGraphBuilder(config?: AgentFlowConfig): GraphBuilder {
       action: 'auth_validation_success',
       operatorId: context.operatorId,
       reason: `Operator authenticated with${context.teamId ? ` team ${context.teamId}` : ' no team'}`,
-      timestamp
+      timestamp,
     };
 
     return { valid: true, warnings, auditEvent };
@@ -412,7 +416,6 @@ export function createGraphBuilder(config?: AgentFlowConfig): GraphBuilder {
       });
     }
   }
-
 
   function assertNotBuilt(): void {
     if (built) {
@@ -496,58 +499,65 @@ export function createGraphBuilder(config?: AgentFlowConfig): GraphBuilder {
       traceId,
       spanId,
       parentSpanId,
-      operatorContext: operatorContext?.operatorId && operatorContext?.sessionId ? {
-        operatorId: operatorContext.operatorId,
-        sessionId: operatorContext.sessionId,
-        teamId: operatorContext.teamId,
-        instanceId: operatorContext.instanceId,
-        timestamp: operatorContext.timestamp,
-        userAgent: operatorContext.userAgent,
-      } : undefined,
+      operatorContext:
+        operatorContext?.operatorId && operatorContext?.sessionId
+          ? {
+              operatorId: operatorContext.operatorId,
+              sessionId: operatorContext.sessionId,
+              teamId: operatorContext.teamId,
+              instanceId: operatorContext.instanceId,
+              timestamp: operatorContext.timestamp,
+              userAgent: operatorContext.userAgent,
+            }
+          : undefined,
       metadata: {
-        organizationalBriefing: organizationalBriefing ? {
-          status: organizationalBriefing.status,
-          summary: organizationalBriefing.summary,
-          insightCount: organizationalBriefing.insights.length,
-          warningCount: organizationalBriefing.warnings.length,
-          recommendationCount: organizationalBriefing.recommendations.length,
-          teamContextAvailable: organizationalBriefing.teamContext !== undefined,
-          relatedSessionCount: organizationalBriefing.relatedSessions.length,
-          source: organizationalBriefing.source,
-          timestamp: organizationalBriefing.timestamp,
-          // Include key insights for execution environment
-          keyInsights: organizationalBriefing.insights.slice(0, 3).map(insight => ({
-            type: insight.type,
-            title: insight.title,
-            description: insight.description,
-            confidence: insight.confidence,
-            actionable: insight.actionable
-          })),
-          // Include warnings and recommendations
-          warnings: organizationalBriefing.warnings,
-          recommendations: organizationalBriefing.recommendations.slice(0, 3),
-          // Team context summary if available
-          teamSummary: organizationalBriefing.teamContext ? {
-            teamId: organizationalBriefing.teamContext.teamId,
-            recentActivity: organizationalBriefing.teamContext.recentActivity,
-            currentFocus: organizationalBriefing.teamContext.currentFocus
-          } : undefined
-        } : {
-          status: 'unavailable',
-          summary: 'No organizational briefing generated',
-          insightCount: 0,
-          warningCount: 0,
-          recommendationCount: 0,
-          teamContextAvailable: false,
-          relatedSessionCount: 0,
-          source: 'none',
-          timestamp: Date.now(),
-          keyInsights: [],
-          warnings: [],
-          recommendations: ['Enable organizational context for intelligent briefings'],
-          teamSummary: undefined
-        }
-      }
+        organizationalBriefing: organizationalBriefing
+          ? {
+              status: organizationalBriefing.status,
+              summary: organizationalBriefing.summary,
+              insightCount: organizationalBriefing.insights.length,
+              warningCount: organizationalBriefing.warnings.length,
+              recommendationCount: organizationalBriefing.recommendations.length,
+              teamContextAvailable: organizationalBriefing.teamContext !== undefined,
+              relatedSessionCount: organizationalBriefing.relatedSessions.length,
+              source: organizationalBriefing.source,
+              timestamp: organizationalBriefing.timestamp,
+              // Include key insights for execution environment
+              keyInsights: organizationalBriefing.insights.slice(0, 3).map((insight) => ({
+                type: insight.type,
+                title: insight.title,
+                description: insight.description,
+                confidence: insight.confidence,
+                actionable: insight.actionable,
+              })),
+              // Include warnings and recommendations
+              warnings: organizationalBriefing.warnings,
+              recommendations: organizationalBriefing.recommendations.slice(0, 3),
+              // Team context summary if available
+              teamSummary: organizationalBriefing.teamContext
+                ? {
+                    teamId: organizationalBriefing.teamContext.teamId,
+                    recentActivity: organizationalBriefing.teamContext.recentActivity,
+                    currentFocus: organizationalBriefing.teamContext.currentFocus,
+                  }
+                : undefined,
+            }
+          : {
+              status: 'unavailable',
+              summary: 'No organizational briefing generated',
+              insightCount: 0,
+              warningCount: 0,
+              recommendationCount: 0,
+              teamContextAvailable: false,
+              relatedSessionCount: 0,
+              source: 'none',
+              timestamp: Date.now(),
+              keyInsights: [],
+              warnings: [],
+              recommendations: ['Enable organizational context for intelligent briefings'],
+              teamSummary: undefined,
+            },
+      },
     };
 
     return deepFreeze(graph);
@@ -582,7 +592,7 @@ export function createGraphBuilder(config?: AgentFlowConfig): GraphBuilder {
         briefingSummary: organizationalBriefing?.summary,
         teamContext: organizationalBriefing?.teamContext?.teamId,
         insightCount: organizationalBriefing?.insights.length || 0,
-        warningCount: organizationalBriefing?.warnings.length || 0
+        warningCount: organizationalBriefing?.warnings.length || 0,
       };
     },
 
@@ -599,16 +609,76 @@ export function createGraphBuilder(config?: AgentFlowConfig): GraphBuilder {
           const briefingPromise = generateOrganizationalBriefing(operatorContext, agentId, trigger);
 
           // For sync hooks, wait for briefing if it's fast
-          if (typeof sessionHooks.onSessionStart !== 'function' || sessionHooks.onSessionStart.constructor.name !== 'AsyncFunction') {
+          if (
+            typeof sessionHooks.onSessionStart !== 'function' ||
+            sessionHooks.onSessionStart.constructor.name !== 'AsyncFunction'
+          ) {
             // Synchronous hook - try to get briefing quickly
             Promise.race([
               briefingPromise,
-              new Promise(resolve => setTimeout(() => resolve(null), 100)) // 100ms timeout for sync hooks
-            ]).then(briefing => {
-              organizationalBriefing = briefing as OrganizationalBriefing || null;
+              new Promise((resolve) => setTimeout(() => resolve(null), 100)), // 100ms timeout for sync hooks
+            ])
+              .then((briefing) => {
+                organizationalBriefing = (briefing as OrganizationalBriefing) || null;
 
-              if (organizationalBriefing) {
-                // Call sync hook with briefing
+                if (organizationalBriefing) {
+                  // Call sync hook with briefing
+                  try {
+                    const hookContext = {
+                      operatorId: operatorContext?.operatorId,
+                      teamId: operatorContext?.teamId,
+                      sessionId: operatorContext?.sessionId,
+                      agentId,
+                      trigger,
+                      briefing: organizationalBriefing.summary,
+                      insights: organizationalBriefing.insights,
+                      warnings: organizationalBriefing.warnings,
+                      recommendations: organizationalBriefing.recommendations,
+                    };
+
+                    // Call the hook if it exists
+                    if (sessionHooks.onSessionStart) {
+                      sessionHooks.onSessionStart(hookContext as any);
+                    }
+                  } catch (error) {
+                    console.warn('[AgentFlow] Session start hook failed:', error);
+                  }
+                }
+              })
+              .catch((error) => {
+                console.warn('[AgentFlow] Organizational briefing generation failed:', error);
+              });
+          } else {
+            // Async hook - generate briefing and call hook
+            briefingPromise
+              .then((briefing) => {
+                organizationalBriefing = briefing;
+
+                const hookContext = {
+                  operatorId: operatorContext?.operatorId,
+                  teamId: operatorContext?.teamId,
+                  sessionId: operatorContext?.sessionId,
+                  agentId,
+                  trigger,
+                  briefing: briefing.summary,
+                  insights: briefing.insights,
+                  warnings: briefing.warnings,
+                  recommendations: briefing.recommendations,
+                };
+
+                try {
+                  const result = sessionHooks.onSessionStart?.(hookContext as any);
+                  Promise.resolve(result).catch((error: unknown) => {
+                    console.warn('[AgentFlow] Async session start hook failed:', error);
+                  });
+                } catch (error) {
+                  console.warn('[AgentFlow] Session start hook failed:', error);
+                }
+              })
+              .catch((error) => {
+                console.warn('[AgentFlow] Organizational briefing generation failed:', error);
+
+                // Still call hook with minimal context
                 try {
                   const hookContext = {
                     operatorId: operatorContext?.operatorId,
@@ -616,71 +686,26 @@ export function createGraphBuilder(config?: AgentFlowConfig): GraphBuilder {
                     sessionId: operatorContext?.sessionId,
                     agentId,
                     trigger,
-                    briefing: organizationalBriefing.summary,
-                    insights: organizationalBriefing.insights,
-                    warnings: organizationalBriefing.warnings,
-                    recommendations: organizationalBriefing.recommendations
+                    briefing: 'Organizational context unavailable',
+                    warnings: [
+                      `Briefing generation failed: ${error instanceof Error ? error.message : String(error)}`,
+                    ],
                   };
 
-                  // Call the hook if it exists
-                  if (sessionHooks.onSessionStart) {
-                    sessionHooks.onSessionStart(hookContext as any);
-                  }
-                } catch (error) {
-                  console.warn('[AgentFlow] Session start hook failed:', error);
+                  const result = sessionHooks.onSessionStart?.(hookContext as any);
+                  Promise.resolve(result).catch((hookErr: unknown) => {
+                    console.warn(
+                      '[AgentFlow] Async session start hook failed after briefing error:',
+                      hookErr,
+                    );
+                  });
+                } catch (hookError) {
+                  console.warn(
+                    '[AgentFlow] Session start hook failed after briefing error:',
+                    hookError,
+                  );
                 }
-              }
-            }).catch(error => {
-              console.warn('[AgentFlow] Organizational briefing generation failed:', error);
-            });
-          } else {
-            // Async hook - generate briefing and call hook
-            briefingPromise.then(briefing => {
-              organizationalBriefing = briefing;
-
-              const hookContext = {
-                operatorId: operatorContext?.operatorId,
-                teamId: operatorContext?.teamId,
-                sessionId: operatorContext?.sessionId,
-                agentId,
-                trigger,
-                briefing: briefing.summary,
-                insights: briefing.insights,
-                warnings: briefing.warnings,
-                recommendations: briefing.recommendations
-              };
-
-              try {
-                const result = sessionHooks.onSessionStart!(hookContext as any);
-                Promise.resolve(result).catch((error: unknown) => {
-                  console.warn('[AgentFlow] Async session start hook failed:', error);
-                });
-              } catch (error) {
-                console.warn('[AgentFlow] Session start hook failed:', error);
-              }
-            }).catch(error => {
-              console.warn('[AgentFlow] Organizational briefing generation failed:', error);
-
-              // Still call hook with minimal context
-              try {
-                const hookContext = {
-                  operatorId: operatorContext?.operatorId,
-                  teamId: operatorContext?.teamId,
-                  sessionId: operatorContext?.sessionId,
-                  agentId,
-                  trigger,
-                  briefing: 'Organizational context unavailable',
-                  warnings: [`Briefing generation failed: ${error instanceof Error ? error.message : String(error)}`]
-                };
-
-                const result = sessionHooks.onSessionStart!(hookContext as any);
-                Promise.resolve(result).catch((hookErr: unknown) => {
-                  console.warn('[AgentFlow] Async session start hook failed after briefing error:', hookErr);
-                });
-              } catch (hookError) {
-                console.warn('[AgentFlow] Session start hook failed after briefing error:', hookError);
-              }
-            });
+              });
           }
         } catch (error) {
           console.warn('[AgentFlow] Session start hook setup failed:', error);
@@ -735,15 +760,15 @@ export function createGraphBuilder(config?: AgentFlowConfig): GraphBuilder {
                 briefingSummary: organizationalBriefing?.summary,
                 insightCount: organizationalBriefing?.insights.length || 0,
                 teamContext: organizationalBriefing?.teamContext,
-                relatedSessions: organizationalBriefing?.relatedSessions || []
-              }
+                relatedSessions: organizationalBriefing?.relatedSessions || [],
+              },
             };
 
             // Call sync version or queue async version
             const result = sessionHooks.onSessionInitialized(hookContext as any);
             if (result && typeof result.then === 'function') {
               // Async hook - don't wait but log if it fails
-              result.catch(error => {
+              result.catch((error) => {
                 console.warn('[AgentFlow] Session initialized hook failed:', error);
               });
             }
@@ -852,23 +877,25 @@ export function createGraphBuilder(config?: AgentFlowConfig): GraphBuilder {
             status: graph.status as 'completed' | 'failed' | 'timeout',
             duration: Date.now() - startTime,
             briefing: organizationalBriefing,
-            organizationalContext: organizationalBriefing ? {
-              briefingAvailable: true,
-              briefingSummary: organizationalBriefing.summary,
-              insightCount: organizationalBriefing.insights.length,
-              teamContext: organizationalBriefing.teamContext
-            } : {
-              briefingAvailable: false,
-              briefingSummary: 'No organizational context available',
-              insightCount: 0,
-              teamContext: undefined
-            }
+            organizationalContext: organizationalBriefing
+              ? {
+                  briefingAvailable: true,
+                  briefingSummary: organizationalBriefing.summary,
+                  insightCount: organizationalBriefing.insights.length,
+                  teamContext: organizationalBriefing.teamContext,
+                }
+              : {
+                  briefingAvailable: false,
+                  briefingSummary: 'No organizational context available',
+                  insightCount: 0,
+                  teamContext: undefined,
+                },
           };
 
           const result = sessionHooks.onSessionEnd(hookContext);
           if (result && typeof result.then === 'function') {
             // Async hook - don't wait but log if it fails
-            result.catch(error => {
+            result.catch((error) => {
               console.warn('[AgentFlow] Session end hook failed:', error);
             });
           }

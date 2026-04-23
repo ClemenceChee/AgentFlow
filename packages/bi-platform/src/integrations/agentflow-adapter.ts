@@ -5,9 +5,9 @@
  * Loosely coupled: reads output files, does not import agentflow-core directly.
  */
 
-import { readFile, readdir, stat } from 'node:fs/promises';
+import { readdir, readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { SourceAdapter, SystemHealth, AgentPerformance } from './types.js';
+import type { AgentPerformance, SourceAdapter, SystemHealth } from './types.js';
 
 export interface AgentFlowAdapterConfig {
   /** Path to AgentFlow traces directory */

@@ -6,9 +6,9 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { organizationalAPI } from '../utils/request-batcher.js';
-import { organizationalCache } from '../utils/organizational-cache.js';
 import type { CacheOptions } from '../utils/organizational-cache.js';
+import { organizationalCache } from '../utils/organizational-cache.js';
+import { organizationalAPI } from '../utils/request-batcher.js';
 
 interface BatchedDataOptions extends CacheOptions {
   /** Whether to enable request batching */
@@ -42,7 +42,7 @@ type BatchedDataResult<T> = BatchedDataState<T> & BatchedDataActions<T>;
 export function useBatchedOrganizationalData<T = any>(
   key: string,
   fetcher: () => Promise<T>,
-  options: BatchedDataOptions = {}
+  options: BatchedDataOptions = {},
 ): BatchedDataResult<T> {
   const {
     enableBatching = true,
@@ -58,7 +58,7 @@ export function useBatchedOrganizationalData<T = any>(
       data: cached,
       loading: !cached,
       error: null,
-      stale: false
+      stale: false,
     };
   });
 
@@ -74,79 +74,82 @@ export function useBatchedOrganizationalData<T = any>(
   }, [key, staleTime]);
 
   // Fetch data with batching
-  const fetchData = useCallback(async (background = false): Promise<T | null> => {
-    // Check cache first for immediate response
-    const cached = organizationalCache.get<T>(key);
-    if (cached && staleWhileRevalidate && !background) {
-      setState(prev => ({ ...prev, data: cached, loading: false }));
+  const fetchData = useCallback(
+    async (background = false): Promise<T | null> => {
+      // Check cache first for immediate response
+      const cached = organizationalCache.get<T>(key);
+      if (cached && staleWhileRevalidate && !background) {
+        setState((prev) => ({ ...prev, data: cached, loading: false }));
 
-      // If data is not stale, return cached data
-      if (!isStale()) {
-        return cached;
+        // If data is not stale, return cached data
+        if (!isStale()) {
+          return cached;
+        }
       }
-    }
 
-    // Prevent concurrent fetches
-    if (fetchingRef.current && !background) {
-      return fetchingRef.current;
-    }
+      // Prevent concurrent fetches
+      if (fetchingRef.current && !background) {
+        return fetchingRef.current;
+      }
 
-    // Cancel previous request
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
+      // Cancel previous request
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
 
-    abortControllerRef.current = new AbortController();
+      abortControllerRef.current = new AbortController();
 
-    const fetchPromise = (async (): Promise<T> => {
-      setState(prev => ({
-        ...prev,
-        loading: !prev.data || !staleWhileRevalidate,
-        error: null
-      }));
+      const fetchPromise = (async (): Promise<T> => {
+        setState((prev) => ({
+          ...prev,
+          loading: !prev.data || !staleWhileRevalidate,
+          error: null,
+        }));
+
+        try {
+          const result = await fetcher();
+
+          // Cache the result
+          organizationalCache.set(key, result, {
+            ...cacheOptions,
+            priority,
+          });
+
+          setState((prev) => ({
+            ...prev,
+            data: result,
+            loading: false,
+            error: null,
+            stale: false,
+          }));
+
+          return result;
+        } catch (error) {
+          const err = error instanceof Error ? error : new Error(String(error));
+
+          setState((prev) => ({
+            ...prev,
+            loading: false,
+            error: err,
+          }));
+
+          throw err;
+        }
+      })();
+
+      fetchingRef.current = fetchPromise;
 
       try {
-        const result = await fetcher();
-
-        // Cache the result
-        organizationalCache.set(key, result, {
-          ...cacheOptions,
-          priority
-        });
-
-        setState(prev => ({
-          ...prev,
-          data: result,
-          loading: false,
-          error: null,
-          stale: false
-        }));
-
+        const result = await fetchPromise;
         return result;
-      } catch (error) {
-        const err = error instanceof Error ? error : new Error(String(error));
-
-        setState(prev => ({
-          ...prev,
-          loading: false,
-          error: err
-        }));
-
-        throw err;
+      } finally {
+        if (fetchingRef.current === fetchPromise) {
+          fetchingRef.current = null;
+        }
       }
-    })();
-
-    fetchingRef.current = fetchPromise;
-
-    try {
-      const result = await fetchPromise;
-      return result;
-    } finally {
-      if (fetchingRef.current === fetchPromise) {
-        fetchingRef.current = null;
-      }
-    }
-  }, [key, fetcher, cacheOptions, priority, staleWhileRevalidate, isStale]);
+    },
+    [key, fetcher, cacheOptions, priority, staleWhileRevalidate, isStale],
+  );
 
   // Refetch data
   const refetch = useCallback(async (): Promise<void> => {
@@ -156,22 +159,25 @@ export function useBatchedOrganizationalData<T = any>(
   // Invalidate cached data
   const invalidate = useCallback(() => {
     organizationalCache.delete(key);
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
       data: null,
-      stale: true
+      stale: true,
     }));
   }, [key]);
 
   // Optimistically update data
-  const mutate = useCallback((data: T) => {
-    organizationalCache.set(key, data, cacheOptions);
-    setState(prev => ({
-      ...prev,
-      data,
-      stale: false
-    }));
-  }, [key, cacheOptions]);
+  const mutate = useCallback(
+    (data: T) => {
+      organizationalCache.set(key, data, cacheOptions);
+      setState((prev) => ({
+        ...prev,
+        data,
+        stale: false,
+      }));
+    },
+    [key, cacheOptions],
+  );
 
   // Initial fetch
   useEffect(() => {
@@ -182,7 +188,7 @@ export function useBatchedOrganizationalData<T = any>(
   useEffect(() => {
     const checkStale = () => {
       if (state.data && isStale()) {
-        setState(prev => ({ ...prev, stale: true }));
+        setState((prev) => ({ ...prev, stale: true }));
 
         // Fetch fresh data in background if stale-while-revalidate is enabled
         if (staleWhileRevalidate) {
@@ -204,12 +210,15 @@ export function useBatchedOrganizationalData<T = any>(
     };
   }, []);
 
-  return useMemo(() => ({
-    ...state,
-    refetch,
-    invalidate,
-    mutate
-  }), [state, refetch, invalidate, mutate]);
+  return useMemo(
+    () => ({
+      ...state,
+      refetch,
+      invalidate,
+      mutate,
+    }),
+    [state, refetch, invalidate, mutate],
+  );
 }
 
 /**
@@ -225,15 +234,11 @@ export function useBatchedTeamData(teamId?: string, options?: BatchedDataOptions
     }
   }, [teamId, options?.priority]);
 
-  return useBatchedOrganizationalData(
-    teamId ? `team:${teamId}` : 'teams:list',
-    fetcher,
-    {
-      ttl: 10 * 60 * 1000, // 10 minutes
-      priority: 'high',
-      ...options
-    }
-  );
+  return useBatchedOrganizationalData(teamId ? `team:${teamId}` : 'teams:list', fetcher, {
+    ttl: 10 * 60 * 1000, // 10 minutes
+    priority: 'high',
+    ...options,
+  });
 }
 
 export function useBatchedOperatorData(operatorId?: string, options?: BatchedDataOptions) {
@@ -251,64 +256,66 @@ export function useBatchedOperatorData(operatorId?: string, options?: BatchedDat
     {
       ttl: 5 * 60 * 1000, // 5 minutes
       priority: 'normal',
-      ...options
-    }
+      ...options,
+    },
   );
 }
 
-export function useBatchedPerformanceData(type: string = 'overview', params?: Record<string, any>, options?: BatchedDataOptions) {
+export function useBatchedPerformanceData(
+  type: string = 'overview',
+  params?: Record<string, any>,
+  options?: BatchedDataOptions,
+) {
   const fetcher = useCallback(async () => {
     return organizationalAPI.getPerformanceData(type, params, { priority: options?.priority });
   }, [type, params, options?.priority]);
 
-  const key = `performance:${type}${params ? ':' + JSON.stringify(params) : ''}`;
+  const key = `performance:${type}${params ? `:${JSON.stringify(params)}` : ''}`;
 
-  return useBatchedOrganizationalData(
-    key,
-    fetcher,
-    {
-      ttl: 1 * 60 * 1000, // 1 minute
-      priority: 'normal',
-      staleTime: 15000, // 15 seconds
-      ...options
-    }
-  );
+  return useBatchedOrganizationalData(key, fetcher, {
+    ttl: 1 * 60 * 1000, // 1 minute
+    priority: 'normal',
+    staleTime: 15000, // 15 seconds
+    ...options,
+  });
 }
 
-export function useBatchedActivityData(type: string = 'overview', params?: Record<string, any>, options?: BatchedDataOptions) {
+export function useBatchedActivityData(
+  type: string = 'overview',
+  params?: Record<string, any>,
+  options?: BatchedDataOptions,
+) {
   const fetcher = useCallback(async () => {
     return organizationalAPI.getActivityData(type, params, { priority: options?.priority });
   }, [type, params, options?.priority]);
 
-  const key = `activity:${type}${params ? ':' + JSON.stringify(params) : ''}`;
+  const key = `activity:${type}${params ? `:${JSON.stringify(params)}` : ''}`;
 
-  return useBatchedOrganizationalData(
-    key,
-    fetcher,
-    {
-      ttl: 2 * 60 * 1000, // 2 minutes
-      priority: 'normal',
-      ...options
-    }
-  );
+  return useBatchedOrganizationalData(key, fetcher, {
+    ttl: 2 * 60 * 1000, // 2 minutes
+    priority: 'normal',
+    ...options,
+  });
 }
 
-export function useBatchedSessionData(sessionId?: string, params?: Record<string, any>, options?: BatchedDataOptions) {
+export function useBatchedSessionData(
+  sessionId?: string,
+  params?: Record<string, any>,
+  options?: BatchedDataOptions,
+) {
   const fetcher = useCallback(async () => {
     return organizationalAPI.getSessionData(sessionId, params, { priority: options?.priority });
   }, [sessionId, params, options?.priority]);
 
-  const key = sessionId ? `session:${sessionId}` : `sessions:list${params ? ':' + JSON.stringify(params) : ''}`;
+  const key = sessionId
+    ? `session:${sessionId}`
+    : `sessions:list${params ? `:${JSON.stringify(params)}` : ''}`;
 
-  return useBatchedOrganizationalData(
-    key,
-    fetcher,
-    {
-      ttl: 3 * 60 * 1000, // 3 minutes
-      priority: 'normal',
-      ...options
-    }
-  );
+  return useBatchedOrganizationalData(key, fetcher, {
+    ttl: 3 * 60 * 1000, // 3 minutes
+    priority: 'normal',
+    ...options,
+  });
 }
 
 /**
@@ -322,7 +329,7 @@ export function useBatchedOrganizationalDataSet<T extends Record<string, any>>(
     priority?: 'low' | 'normal' | 'high';
     cacheOptions?: CacheOptions;
   }>,
-  options: BatchedDataOptions = {}
+  _options: BatchedDataOptions = {},
 ): BatchedDataResult<T> {
   const [state, setState] = useState<BatchedDataState<T>>(() => {
     // Try to get all data from cache
@@ -342,7 +349,7 @@ export function useBatchedOrganizationalDataSet<T extends Record<string, any>>(
       data: hasAllData ? cachedData : null,
       loading: !hasAllData,
       error: null,
-      stale: false
+      stale: false,
     };
   });
 
@@ -354,7 +361,7 @@ export function useBatchedOrganizationalDataSet<T extends Record<string, any>>(
     }
 
     const fetchPromise = (async (): Promise<T> => {
-      setState(prev => ({ ...prev, loading: true, error: null }));
+      setState((prev) => ({ ...prev, loading: true, error: null }));
 
       try {
         const result = await organizationalAPI.batchRequests<T>(requests);
@@ -367,21 +374,21 @@ export function useBatchedOrganizationalDataSet<T extends Record<string, any>>(
           }
         });
 
-        setState(prev => ({
+        setState((prev) => ({
           ...prev,
           data: result,
           loading: false,
           error: null,
-          stale: false
+          stale: false,
         }));
 
         return result;
       } catch (error) {
         const err = error instanceof Error ? error : new Error(String(error));
-        setState(prev => ({
+        setState((prev) => ({
           ...prev,
           loading: false,
-          error: err
+          error: err,
         }));
         throw err;
       }
@@ -405,18 +412,21 @@ export function useBatchedOrganizationalDataSet<T extends Record<string, any>>(
     requests.forEach(({ key }) => {
       organizationalCache.delete(key);
     });
-    setState(prev => ({ ...prev, data: null, stale: true }));
+    setState((prev) => ({ ...prev, data: null, stale: true }));
   }, [requests]);
 
-  const mutate = useCallback((data: T) => {
-    requests.forEach(({ key }) => {
-      const keyData = data[key as keyof T];
-      if (keyData) {
-        organizationalCache.set(key, keyData);
-      }
-    });
-    setState(prev => ({ ...prev, data, stale: false }));
-  }, [requests]);
+  const mutate = useCallback(
+    (data: T) => {
+      requests.forEach(({ key }) => {
+        const keyData = data[key as keyof T];
+        if (keyData) {
+          organizationalCache.set(key, keyData);
+        }
+      });
+      setState((prev) => ({ ...prev, data, stale: false }));
+    },
+    [requests],
+  );
 
   // Initial fetch
   useEffect(() => {
@@ -425,10 +435,13 @@ export function useBatchedOrganizationalDataSet<T extends Record<string, any>>(
     }
   }, [state.data, fetchData]);
 
-  return useMemo(() => ({
-    ...state,
-    refetch,
-    invalidate,
-    mutate
-  }), [state, refetch, invalidate, mutate]);
+  return useMemo(
+    () => ({
+      ...state,
+      refetch,
+      invalidate,
+      mutate,
+    }),
+    [state, refetch, invalidate, mutate],
+  );
 }

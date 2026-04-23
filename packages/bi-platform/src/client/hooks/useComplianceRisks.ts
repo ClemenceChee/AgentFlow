@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 export interface ComplianceRisk {
   id: string;
@@ -25,7 +25,9 @@ export function useComplianceRisks(): ComplianceRisksResponse | null {
     try {
       const res = await fetch('/api/v1/decisions/compliance-risks');
       if (res.ok) setData(await res.json());
-    } catch { /* retry */ }
+    } catch {
+      /* retry */
+    }
   }, []);
 
   useEffect(() => {

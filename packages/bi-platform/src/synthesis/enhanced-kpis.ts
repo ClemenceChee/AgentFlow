@@ -5,8 +5,8 @@
  * Tasks: 3.1-3.6, 4.1-4.5, 5.1-5.5
  */
 
+import type { CronAdapter } from '../integrations/cron-adapter.js';
 import type { OpenClawSessionAdapter } from '../integrations/openclaw-session-adapter.js';
-import type { CronAdapter, CronOverview } from '../integrations/cron-adapter.js';
 import type { SomaAdapter } from '../integrations/soma-adapter.js';
 import type { AgentAggregation } from './aggregator.js';
 
@@ -39,8 +39,12 @@ export async function computeTokenEconomics(
 
   // Per-agent with cost per success
   const perAgent = sessionEcon.perAgent.map((a) => {
-    const agg = agents.find((ag) => ag.agentId.includes(a.agentId) || a.agentId.includes(ag.agentId));
-    const successCount = agg ? Math.round(agg.performance.totalExecutions * agg.performance.successRate) : 1;
+    const agg = agents.find(
+      (ag) => ag.agentId.includes(a.agentId) || a.agentId.includes(ag.agentId),
+    );
+    const successCount = agg
+      ? Math.round(agg.performance.totalExecutions * agg.performance.successRate)
+      : 1;
     return {
       ...a,
       costPerSuccess: successCount > 0 ? a.cost / successCount : a.cost,
@@ -62,9 +66,12 @@ export async function computeTokenEconomics(
     }
   }
   // Add failed cron cost
-  const cronFailedPct = cronOverview.totalRuns > 0
-    ? (cronOverview.totalRuns - Math.round(cronOverview.overallSuccessRate * cronOverview.totalRuns)) / cronOverview.totalRuns
-    : 0;
+  const cronFailedPct =
+    cronOverview.totalRuns > 0
+      ? (cronOverview.totalRuns -
+          Math.round(cronOverview.overallSuccessRate * cronOverview.totalRuns)) /
+        cronOverview.totalRuns
+      : 0;
   wastedSpend += cronTokenCost * cronFailedPct;
 
   const wastedPct = totalSpend > 0 ? (wastedSpend / totalSpend) * 100 : 0;
@@ -111,7 +118,7 @@ export async function computeKnowledgeHealth(
   try {
     // Access the raw report for governance field
     const insights = await somaAdapter.getInsights();
-    const policies = await somaAdapter.getPolicies();
+    const _policies = await somaAdapter.getPolicies();
     // Governance is embedded — count by status
     const proposed = insights.filter((i) => i.status === 'proposed').length;
     const promoted = insights.filter((i) => i.status === 'promoted').length;
@@ -185,7 +192,10 @@ export async function computeOperationalEffectiveness(
 
   // Delegation success: combine SOMA + OpenClaw + Cron
   const somaTotal = somaAgents.reduce((s, a) => s + a.performance.totalExecutions, 0);
-  const somaSuccess = somaAgents.reduce((s, a) => s + Math.round(a.performance.totalExecutions * a.performance.successRate), 0);
+  const somaSuccess = somaAgents.reduce(
+    (s, a) => s + Math.round(a.performance.totalExecutions * a.performance.successRate),
+    0,
+  );
   const cronTotal = cronOverview.totalRuns;
   const cronSuccess = Math.round(cronOverview.overallSuccessRate * cronTotal);
   const ocTotal = ocAgents.reduce((s, a) => s + a.totalMessages, 0);
@@ -203,7 +213,10 @@ export async function computeOperationalEffectiveness(
   // Duration from cron runs
   const allDurations = cronOverview.jobs.flatMap((j) => j.recentDurations);
   const sortedDurations = [...allDurations].sort((a, b) => a - b);
-  const meanDuration = sortedDurations.length > 0 ? sortedDurations.reduce((s, d) => s + d, 0) / sortedDurations.length : 0;
+  const meanDuration =
+    sortedDurations.length > 0
+      ? sortedDurations.reduce((s, d) => s + d, 0) / sortedDurations.length
+      : 0;
   const p95Index = Math.floor(sortedDurations.length * 0.95);
   const p95Duration = sortedDurations[p95Index] ?? 0;
 

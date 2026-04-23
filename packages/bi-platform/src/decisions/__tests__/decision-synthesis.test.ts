@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DecisionSynthesisService } from '../decision-synthesis.js';
 
 function createMockDb() {
@@ -17,7 +17,13 @@ function createMockCache() {
 }
 
 function createMockLogger() {
-  return { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(), child: vi.fn().mockReturnThis() };
+  return {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+    child: vi.fn().mockReturnThis(),
+  };
 }
 
 function createMockAggregator(agents: any[] = []) {
@@ -25,7 +31,11 @@ function createMockAggregator(agents: any[] = []) {
     getLatest: vi.fn(() => ({
       timestamp: new Date().toISOString(),
       agents,
-      systemHealth: { soma: { status: 'healthy', insightCount: 0, policyCount: 0 }, agentflow: { status: 'healthy', activeAgents: 0, totalExecutions: 0 }, opsintel: { status: 'healthy', driftAlerts: 0, assertionsPassed: 0 } },
+      systemHealth: {
+        soma: { status: 'healthy', insightCount: 0, policyCount: 0 },
+        agentflow: { status: 'healthy', activeAgents: 0, totalExecutions: 0 },
+        opsintel: { status: 'healthy', driftAlerts: 0, assertionsPassed: 0 },
+      },
       crossSystemCorrelations: [],
     })),
     aggregate: vi.fn(),
@@ -44,8 +54,14 @@ function createMockAnomalyDetector() {
 
 function makeAgent(id: string, failureRate: number, drifted: boolean, costPerExec = 0.1) {
   return {
-    agentId: id, agentName: id,
-    performance: { totalExecutions: 100, successRate: 1 - failureRate, avgDurationMs: 100, failureRate },
+    agentId: id,
+    agentName: id,
+    performance: {
+      totalExecutions: 100,
+      successRate: 1 - failureRate,
+      avgDurationMs: 100,
+      failureRate,
+    },
     efficiency: { costPerExecution: costPerExec },
     compliance: { drifted, driftScore: drifted ? 0.5 : 0, alerts: [] },
     businessImpact: {},
@@ -56,10 +72,7 @@ describe('DecisionSynthesisService', () => {
   let service: DecisionSynthesisService;
 
   beforeEach(() => {
-    const agents = [
-      makeAgent('a1', 0.05, false),
-      makeAgent('a2', 0.10, false),
-    ];
+    const agents = [makeAgent('a1', 0.05, false), makeAgent('a2', 0.1, false)];
     service = new DecisionSynthesisService(
       createMockAggregator(agents) as any,
       createMockRecommendationEngine() as any,
@@ -77,9 +90,9 @@ describe('DecisionSynthesisService', () => {
 
   it('detectPatterns finds failure cascade', async () => {
     const agents = [
-      makeAgent('a1', 0.30, false),
-      makeAgent('a2', 0.40, false),
-      makeAgent('a3', 0.50, false),
+      makeAgent('a1', 0.3, false),
+      makeAgent('a2', 0.4, false),
+      makeAgent('a3', 0.5, false),
     ];
     service = new DecisionSynthesisService(
       createMockAggregator(agents) as any,
@@ -93,15 +106,12 @@ describe('DecisionSynthesisService', () => {
     const patterns = await service.detectPatterns();
     const cascade = patterns.find((p) => p.type === 'failure_cascade');
     expect(cascade).toBeDefined();
-    expect(cascade!.affectedAgents).toHaveLength(3);
-    expect(cascade!.businessImpact.severity).toBe('critical');
+    expect(cascade?.affectedAgents).toHaveLength(3);
+    expect(cascade?.businessImpact.severity).toBe('critical');
   });
 
   it('detectPatterns finds compliance drift', async () => {
-    const agents = [
-      makeAgent('a1', 0.05, true),
-      makeAgent('a2', 0.05, true),
-    ];
+    const agents = [makeAgent('a1', 0.05, true), makeAgent('a2', 0.05, true)];
     service = new DecisionSynthesisService(
       createMockAggregator(agents) as any,
       createMockRecommendationEngine() as any,
@@ -124,10 +134,7 @@ describe('DecisionSynthesisService', () => {
   });
 
   it('getComplianceRisks returns risks for drifting agents', async () => {
-    const agents = [
-      makeAgent('a1', 0.05, true),
-      makeAgent('a2', 0.05, true),
-    ];
+    const agents = [makeAgent('a1', 0.05, true), makeAgent('a2', 0.05, true)];
     service = new DecisionSynthesisService(
       createMockAggregator(agents) as any,
       createMockRecommendationEngine() as any,
@@ -144,9 +151,9 @@ describe('DecisionSynthesisService', () => {
 
   it('getCriticalAlerts converts critical patterns to alerts', async () => {
     const agents = [
-      makeAgent('a1', 0.30, false),
-      makeAgent('a2', 0.40, false),
-      makeAgent('a3', 0.50, false),
+      makeAgent('a1', 0.3, false),
+      makeAgent('a2', 0.4, false),
+      makeAgent('a3', 0.5, false),
     ];
     service = new DecisionSynthesisService(
       createMockAggregator(agents) as any,

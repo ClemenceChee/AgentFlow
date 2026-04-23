@@ -5,7 +5,7 @@
  * persistence, access control validation, and filter synchronization.
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useHistory, useLocation } from 'react-router-dom';
 import { useOrganizationalContext } from '../../contexts/OrganizationalContext.js';
 import type { OrganizationalTrace, TeamFilterState } from '../../types/organizational.js';
@@ -69,7 +69,7 @@ interface UseTeamScopedFilteringReturn {
  */
 export function useTeamScopedFiltering(
   traces: OrganizationalTrace[],
-  config: TeamFilterConfig = {}
+  config: TeamFilterConfig = {},
 ): UseTeamScopedFilteringReturn {
   const {
     persistInUrl = true,
@@ -77,7 +77,7 @@ export function useTeamScopedFiltering(
     enforceAccessControl = true,
     defaultTeamId = null,
     onFilterChange,
-    customTraceFilter
+    customTraceFilter,
   } = config;
 
   const history = useHistory();
@@ -103,36 +103,42 @@ export function useTeamScopedFiltering(
   const [selectedTeamId, setSelectedTeamIdState] = useState<string | null>(getInitialTeamId);
 
   // Update URL when team filter changes
-  const updateUrlState = useCallback((teamId: string | null) => {
-    if (!persistInUrl) return;
+  const updateUrlState = useCallback(
+    (teamId: string | null) => {
+      if (!persistInUrl) return;
 
-    const urlParams = new URLSearchParams(location.search);
+      const urlParams = new URLSearchParams(location.search);
 
-    if (teamId) {
-      urlParams.set(urlParam, teamId);
-    } else {
-      urlParams.delete(urlParam);
-    }
+      if (teamId) {
+        urlParams.set(urlParam, teamId);
+      } else {
+        urlParams.delete(urlParam);
+      }
 
-    const newSearch = urlParams.toString();
-    const newUrl = `${location.pathname}${newSearch ? `?${newSearch}` : ''}`;
+      const newSearch = urlParams.toString();
+      const newUrl = `${location.pathname}${newSearch ? `?${newSearch}` : ''}`;
 
-    // Only update URL if it actually changed
-    if (newUrl !== `${location.pathname}${location.search}`) {
-      history.replace(newUrl);
-    }
-  }, [history, location, persistInUrl, urlParam]);
+      // Only update URL if it actually changed
+      if (newUrl !== `${location.pathname}${location.search}`) {
+        history.replace(newUrl);
+      }
+    },
+    [history, location, persistInUrl, urlParam],
+  );
 
   // Update organizational context when team filter changes
-  const updateOrganizationalContext = useCallback((teamId: string | null) => {
-    const filterState: TeamFilterState = {
-      selectedTeamId: teamId,
-      availableTeams: state.availableTeams,
-      lastUpdated: Date.now()
-    };
+  const updateOrganizationalContext = useCallback(
+    (teamId: string | null) => {
+      const filterState: TeamFilterState = {
+        selectedTeamId: teamId,
+        availableTeams: state.availableTeams,
+        lastUpdated: Date.now(),
+      };
 
-    actions.setTeamFilter(filterState);
-  }, [actions, state.availableTeams]);
+      actions.setTeamFilter(filterState);
+    },
+    [actions, state.availableTeams],
+  );
 
   // Load available team IDs user has access to
   const loadAvailableTeamIds = useCallback(async () => {
@@ -142,11 +148,9 @@ export function useTeamScopedFiltering(
 
       if (!enforceAccessControl) {
         // If access control is disabled, extract all team IDs from traces
-        const teamIds = Array.from(new Set(
-          traces
-            .map(trace => trace.operatorContext?.teamId)
-            .filter(Boolean) as string[]
-        ));
+        const teamIds = Array.from(
+          new Set(traces.map((trace) => trace.operatorContext?.teamId).filter(Boolean) as string[]),
+        );
         setAvailableTeamIds(teamIds);
         return;
       }
@@ -160,7 +164,6 @@ export function useTeamScopedFiltering(
       const data = await response.json();
       const teamIds = data.teams?.map((team: any) => team.teamId) || [];
       setAvailableTeamIds(teamIds);
-
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load team access');
       console.error('Error loading available team IDs:', err);
@@ -183,14 +186,14 @@ export function useTeamScopedFiltering(
       if (!enforceAccessControl) return traces;
 
       // Filter to only show traces from accessible teams
-      return traces.filter(trace => {
+      return traces.filter((trace) => {
         const traceTeamId = trace.operatorContext?.teamId;
         return !traceTeamId || availableTeamIds.includes(traceTeamId);
       });
     }
 
     // Filter by specific team
-    return traces.filter(trace => {
+    return traces.filter((trace) => {
       const traceTeamId = trace.operatorContext?.teamId;
 
       // Use custom filter if provided
@@ -204,30 +207,33 @@ export function useTeamScopedFiltering(
   }, [traces, selectedTeamId, availableTeamIds, enforceAccessControl, customTraceFilter]);
 
   // Main function to set team filter
-  const setTeamFilter = useCallback((teamId: string | null) => {
-    // Validate team access
-    if (teamId && enforceAccessControl && !availableTeamIds.includes(teamId)) {
-      setError(`Access denied to team: ${teamId}`);
-      return;
-    }
+  const setTeamFilter = useCallback(
+    (teamId: string | null) => {
+      // Validate team access
+      if (teamId && enforceAccessControl && !availableTeamIds.includes(teamId)) {
+        setError(`Access denied to team: ${teamId}`);
+        return;
+      }
 
-    setError(null);
-    setSelectedTeamIdState(teamId);
-    updateUrlState(teamId);
-    updateOrganizationalContext(teamId);
+      setError(null);
+      setSelectedTeamIdState(teamId);
+      updateUrlState(teamId);
+      updateOrganizationalContext(teamId);
 
-    // Call change callback
-    if (onFilterChange) {
-      onFilterChange(teamId, filteredTraces);
-    }
-  }, [
-    availableTeamIds,
-    enforceAccessControl,
-    updateUrlState,
-    updateOrganizationalContext,
-    onFilterChange,
-    filteredTraces
-  ]);
+      // Call change callback
+      if (onFilterChange) {
+        onFilterChange(teamId, filteredTraces);
+      }
+    },
+    [
+      availableTeamIds,
+      enforceAccessControl,
+      updateUrlState,
+      updateOrganizationalContext,
+      onFilterChange,
+      filteredTraces,
+    ],
+  );
 
   // Clear team filter (show all teams)
   const clearTeamFilter = useCallback(() => {
@@ -251,7 +257,7 @@ export function useTeamScopedFiltering(
       setSelectedTeamIdState(urlTeamId);
       updateOrganizationalContext(urlTeamId);
     }
-  }, [location.search, getInitialTeamId, selectedTeamId, updateOrganizationalContext]);
+  }, [getInitialTeamId, selectedTeamId, updateOrganizationalContext]);
 
   // Validate selected team access on availability changes
   useEffect(() => {
@@ -265,11 +271,14 @@ export function useTeamScopedFiltering(
   }, [selectedTeamId, availableTeamIds, enforceAccessControl, setTeamFilter]);
 
   // Build current filter state
-  const filterState: TeamFilterState = useMemo(() => ({
-    selectedTeamId,
-    availableTeams: state.availableTeams,
-    lastUpdated: Date.now()
-  }), [selectedTeamId, state.availableTeams]);
+  const filterState: TeamFilterState = useMemo(
+    () => ({
+      selectedTeamId,
+      availableTeams: state.availableTeams,
+      lastUpdated: Date.now(),
+    }),
+    [selectedTeamId, state.availableTeams],
+  );
 
   return {
     selectedTeamId,
@@ -281,17 +290,14 @@ export function useTeamScopedFiltering(
     setTeamFilter,
     clearTeamFilter,
     refreshTeamAccess,
-    filterState
+    filterState,
   };
 }
 
 /**
  * Utility function to extract team filter from URL
  */
-export function extractTeamFilterFromUrl(
-  url: string,
-  paramName: string = 'team'
-): string | null {
+export function extractTeamFilterFromUrl(url: string, paramName: string = 'team'): string | null {
   try {
     const urlObj = new URL(url, window.location.origin);
     return urlObj.searchParams.get(paramName);
@@ -306,7 +312,7 @@ export function extractTeamFilterFromUrl(
 export function buildUrlWithTeamFilter(
   baseUrl: string,
   teamId: string | null,
-  paramName: string = 'team'
+  paramName: string = 'team',
 ): string {
   try {
     const url = new URL(baseUrl, window.location.origin);
@@ -326,10 +332,7 @@ export function buildUrlWithTeamFilter(
 /**
  * Utility function to validate team access permissions
  */
-export async function validateTeamAccess(
-  teamId: string,
-  operatorId?: string
-): Promise<boolean> {
+export async function validateTeamAccess(teamId: string, operatorId?: string): Promise<boolean> {
   try {
     const url = operatorId
       ? `/api/teams/${teamId}/access?operatorId=${operatorId}`

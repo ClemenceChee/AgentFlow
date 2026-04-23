@@ -6,9 +6,9 @@
  * Enables seamless jumping between related organizational sessions.
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useHistory, useLocation } from 'react-router-dom';
-import type { SessionCorrelation, CorrelationType } from '../../../types/organizational.js';
+import type { CorrelationType, SessionCorrelation } from '../../../types/organizational.js';
 
 // Component props
 interface SessionNavigationLinksProps {
@@ -37,7 +37,11 @@ interface SessionNavigationLinksProps {
   preserveOrgContext?: boolean;
 
   /** Callback when navigation is about to occur */
-  onNavigate?: (sessionId: string, correlationType: CorrelationType, preserved: NavigationState) => void;
+  onNavigate?: (
+    sessionId: string,
+    correlationType: CorrelationType,
+    preserved: NavigationState,
+  ) => void;
 
   /** Custom navigation handler (overrides default routing) */
   customNavigationHandler?: (sessionId: string, state: NavigationState) => void;
@@ -56,21 +60,24 @@ interface NavigationState {
 }
 
 // Navigation link configuration
-const NAVIGATION_CONFIG: Record<CorrelationType, {
-  priority: number;
-  shortLabel: string;
-  fullLabel: string;
-  description: string;
-  icon: string;
-  color: string;
-}> = {
+const NAVIGATION_CONFIG: Record<
+  CorrelationType,
+  {
+    priority: number;
+    shortLabel: string;
+    fullLabel: string;
+    description: string;
+    icon: string;
+    color: string;
+  }
+> = {
   operator_continuity: {
     priority: 5,
     shortLabel: 'Same Op',
     fullLabel: 'Same Operator',
     description: 'Continue session with same operator',
     icon: '👤',
-    color: 'var(--org-operator)'
+    color: 'var(--org-operator)',
   },
   solution_pattern: {
     priority: 4,
@@ -78,7 +85,7 @@ const NAVIGATION_CONFIG: Record<CorrelationType, {
     fullLabel: 'Similar Solution',
     description: 'Session with similar solution approach',
     icon: '💡',
-    color: 'var(--org-solution)'
+    color: 'var(--org-solution)',
   },
   problem_similarity: {
     priority: 3,
@@ -86,7 +93,7 @@ const NAVIGATION_CONFIG: Record<CorrelationType, {
     fullLabel: 'Similar Problem',
     description: 'Session addressing similar problem',
     icon: '🎯',
-    color: 'var(--org-problem)'
+    color: 'var(--org-problem)',
   },
   team_context: {
     priority: 2,
@@ -94,7 +101,7 @@ const NAVIGATION_CONFIG: Record<CorrelationType, {
     fullLabel: 'Team Context',
     description: 'Related session within team',
     icon: '👥',
-    color: 'var(--org-team)'
+    color: 'var(--org-team)',
   },
   cross_instance: {
     priority: 2,
@@ -102,7 +109,7 @@ const NAVIGATION_CONFIG: Record<CorrelationType, {
     fullLabel: 'Cross Instance',
     description: 'Session from different Claude Code instance',
     icon: '🔄',
-    color: 'var(--org-cross-instance)'
+    color: 'var(--org-cross-instance)',
   },
   temporal_proximity: {
     priority: 1,
@@ -110,8 +117,8 @@ const NAVIGATION_CONFIG: Record<CorrelationType, {
     fullLabel: 'Recent Session',
     description: 'Session from around the same time',
     icon: '⏰',
-    color: 'var(--org-temporal)'
-  }
+    color: 'var(--org-temporal)',
+  },
 };
 
 /**
@@ -127,7 +134,7 @@ export function SessionNavigationLinks({
   preserveSearch = true,
   preserveOrgContext = true,
   onNavigate,
-  customNavigationHandler
+  customNavigationHandler,
 }: SessionNavigationLinksProps) {
   const history = useHistory();
   const location = useLocation();
@@ -143,86 +150,93 @@ export function SessionNavigationLinks({
       timeRange: preserveFilters ? urlParams.get('timeRange') || undefined : undefined,
       sortOrder: preserveFilters ? urlParams.get('sort') || undefined : undefined,
       viewMode: preserveFilters ? urlParams.get('view') || undefined : undefined,
-      orgContextExpanded: preserveOrgContext ?
-        (urlParams.get('orgExpanded') === 'true' || undefined) : undefined,
-      correlationFilters: preserveFilters ?
-        urlParams.get('correlationTypes')?.split(',') || undefined : undefined,
-      confidenceThreshold: preserveFilters ?
-        parseFloat(urlParams.get('confidence') || '0.3') || undefined : undefined
+      orgContextExpanded: preserveOrgContext
+        ? urlParams.get('orgExpanded') === 'true' || undefined
+        : undefined,
+      correlationFilters: preserveFilters
+        ? urlParams.get('correlationTypes')?.split(',') || undefined
+        : undefined,
+      confidenceThreshold: preserveFilters
+        ? parseFloat(urlParams.get('confidence') || '0.3') || undefined
+        : undefined,
     };
   }, [location.search, preserveFilters, preserveSearch, preserveOrgContext]);
 
   // Build navigation URL with preserved state
-  const buildNavigationUrl = useCallback((sessionId: string, state: NavigationState): string => {
-    const baseUrl = `/traces/${sessionId}`;
-    const params = new URLSearchParams();
+  const buildNavigationUrl = useCallback(
+    (sessionId: string, state: NavigationState): string => {
+      const baseUrl = `/traces/${sessionId}`;
+      const params = new URLSearchParams();
 
-    // Add preserved state parameters
-    if (state.teamFilter) params.set('team', state.teamFilter);
-    if (state.searchQuery) params.set('q', state.searchQuery);
-    if (state.timeRange) params.set('timeRange', state.timeRange);
-    if (state.sortOrder) params.set('sort', state.sortOrder);
-    if (state.viewMode) params.set('view', state.viewMode);
-    if (state.orgContextExpanded) params.set('orgExpanded', 'true');
-    if (state.correlationFilters?.length) {
-      params.set('correlationTypes', state.correlationFilters.join(','));
-    }
-    if (state.confidenceThreshold !== undefined && state.confidenceThreshold !== 0.3) {
-      params.set('confidence', state.confidenceThreshold.toString());
-    }
+      // Add preserved state parameters
+      if (state.teamFilter) params.set('team', state.teamFilter);
+      if (state.searchQuery) params.set('q', state.searchQuery);
+      if (state.timeRange) params.set('timeRange', state.timeRange);
+      if (state.sortOrder) params.set('sort', state.sortOrder);
+      if (state.viewMode) params.set('view', state.viewMode);
+      if (state.orgContextExpanded) params.set('orgExpanded', 'true');
+      if (state.correlationFilters?.length) {
+        params.set('correlationTypes', state.correlationFilters.join(','));
+      }
+      if (state.confidenceThreshold !== undefined && state.confidenceThreshold !== 0.3) {
+        params.set('confidence', state.confidenceThreshold.toString());
+      }
 
-    // Add navigation context
-    params.set('from', currentSessionId);
-    params.set('navType', 'correlation');
+      // Add navigation context
+      params.set('from', currentSessionId);
+      params.set('navType', 'correlation');
 
-    const queryString = params.toString();
-    return queryString ? `${baseUrl}?${queryString}` : baseUrl;
-  }, [currentSessionId]);
+      const queryString = params.toString();
+      return queryString ? `${baseUrl}?${queryString}` : baseUrl;
+    },
+    [currentSessionId],
+  );
 
   // Handle navigation to correlated session
-  const handleNavigate = useCallback(async (
-    correlation: SessionCorrelation
-  ) => {
-    const sessionId = correlation.correlatedSessionId;
-    setIsNavigating(sessionId);
+  const handleNavigate = useCallback(
+    async (correlation: SessionCorrelation) => {
+      const sessionId = correlation.correlatedSessionId;
+      setIsNavigating(sessionId);
 
-    try {
-      const preservedState = getCurrentNavigationState();
+      try {
+        const preservedState = getCurrentNavigationState();
 
-      // Call onNavigate callback if provided
-      if (onNavigate) {
-        onNavigate(sessionId, correlation.type, preservedState);
+        // Call onNavigate callback if provided
+        if (onNavigate) {
+          onNavigate(sessionId, correlation.type, preservedState);
+        }
+
+        // Use custom navigation handler if provided
+        if (customNavigationHandler) {
+          customNavigationHandler(sessionId, preservedState);
+          return;
+        }
+
+        // Default navigation using React Router
+        const navigationUrl = buildNavigationUrl(sessionId, preservedState);
+        history.push(navigationUrl);
+      } catch (error) {
+        console.error('Navigation error:', error);
+        // Fallback to simple navigation
+        history.push(`/traces/${sessionId}`);
+      } finally {
+        setIsNavigating(null);
       }
-
-      // Use custom navigation handler if provided
-      if (customNavigationHandler) {
-        customNavigationHandler(sessionId, preservedState);
-        return;
-      }
-
-      // Default navigation using React Router
-      const navigationUrl = buildNavigationUrl(sessionId, preservedState);
-      history.push(navigationUrl);
-
-    } catch (error) {
-      console.error('Navigation error:', error);
-      // Fallback to simple navigation
-      history.push(`/traces/${sessionId}`);
-    } finally {
-      setIsNavigating(null);
-    }
-  }, [getCurrentNavigationState, onNavigate, customNavigationHandler, buildNavigationUrl, history]);
+    },
+    [getCurrentNavigationState, onNavigate, customNavigationHandler, buildNavigationUrl, history],
+  );
 
   // Sort and filter correlations for navigation
   const navigationCorrelations = useMemo(() => {
     return correlations
-      .filter(correlation =>
-        correlation.correlatedSessionId !== currentSessionId &&
-        correlation.confidence >= 0.3 // Minimum confidence for navigation
+      .filter(
+        (correlation) =>
+          correlation.correlatedSessionId !== currentSessionId && correlation.confidence >= 0.3, // Minimum confidence for navigation
       )
       .sort((a, b) => {
         // Sort by priority first, then confidence
-        const priorityDiff = NAVIGATION_CONFIG[b.type].priority - NAVIGATION_CONFIG[a.type].priority;
+        const priorityDiff =
+          NAVIGATION_CONFIG[b.type].priority - NAVIGATION_CONFIG[a.type].priority;
         if (priorityDiff !== 0) return priorityDiff;
         return b.confidence - a.confidence;
       })
@@ -234,11 +248,9 @@ export function SessionNavigationLinks({
     return sessionId.substring(0, compact ? 6 : 8);
   };
 
-  const containerClasses = [
-    'session-navigation-links',
-    compact ? 'compact' : '',
-    className
-  ].filter(Boolean).join(' ');
+  const containerClasses = ['session-navigation-links', compact ? 'compact' : '', className]
+    .filter(Boolean)
+    .join(' ');
 
   // No correlations available for navigation
   if (navigationCorrelations.length === 0) {
@@ -246,9 +258,7 @@ export function SessionNavigationLinks({
       <div className={containerClasses}>
         <div className="session-navigation-empty">
           <div className="session-navigation-empty__icon">🔗</div>
-          <div className="session-navigation-empty__text">
-            No related sessions
-          </div>
+          <div className="session-navigation-empty__text">No related sessions</div>
         </div>
       </div>
     );
@@ -262,9 +272,7 @@ export function SessionNavigationLinks({
           <span className="session-navigation-title__text">
             {compact ? 'Related' : 'Related Sessions'}
           </span>
-          <span className="session-navigation-count">
-            {navigationCorrelations.length}
-          </span>
+          <span className="session-navigation-count">{navigationCorrelations.length}</span>
         </div>
       </div>
 
@@ -288,10 +296,7 @@ export function SessionNavigationLinks({
                 {isCurrentlyNavigating ? (
                   <div className="session-navigation-loading-spinner" />
                 ) : (
-                  <span
-                    className="session-navigation-link__icon"
-                    style={{ color: config.color }}
-                  >
+                  <span className="session-navigation-link__icon" style={{ color: config.color }}>
                     {config.icon}
                   </span>
                 )}
@@ -322,9 +327,7 @@ export function SessionNavigationLinks({
               </div>
 
               {/* Navigation Arrow */}
-              <div className="session-navigation-link__arrow">
-                →
-              </div>
+              <div className="session-navigation-link__arrow">→</div>
             </button>
           );
         })}
@@ -340,8 +343,10 @@ export function SessionNavigationLinks({
               {[
                 preserveFilters && 'filters',
                 preserveSearch && 'search',
-                preserveOrgContext && 'context'
-              ].filter(Boolean).join(', ')}
+                preserveOrgContext && 'context',
+              ]
+                .filter(Boolean)
+                .join(', ')}
             </span>
           </div>
         </div>
@@ -361,7 +366,11 @@ export function SessionNavigationLinks({
 
 // Export utility functions for external use
 export const sessionNavigationUtils = {
-  buildNavigationUrl: (sessionId: string, currentUrl: string, preserveState: boolean = true): string => {
+  buildNavigationUrl: (
+    sessionId: string,
+    currentUrl: string,
+    preserveState: boolean = true,
+  ): string => {
     if (!preserveState) {
       return `/traces/${sessionId}`;
     }
@@ -376,7 +385,9 @@ export const sessionNavigationUtils = {
     return `/traces/${sessionId}?${params.toString()}`;
   },
 
-  extractNavigationContext: (url: string): {
+  extractNavigationContext: (
+    url: string,
+  ): {
     from?: string;
     navType?: string;
   } => {
@@ -385,9 +396,9 @@ export const sessionNavigationUtils = {
 
     return {
       from: params.get('from') || undefined,
-      navType: params.get('navType') || undefined
+      navType: params.get('navType') || undefined,
     };
-  }
+  },
 };
 
 // Export default for easy importing

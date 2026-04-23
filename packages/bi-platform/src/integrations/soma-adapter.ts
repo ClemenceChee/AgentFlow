@@ -15,13 +15,12 @@
  */
 
 import { readFile, stat } from 'node:fs/promises';
-import { join } from 'node:path';
 import type {
-  SourceAdapter,
-  SystemHealth,
   AgentPerformance,
   KnowledgeInsight,
   PolicyInfo,
+  SourceAdapter,
+  SystemHealth,
 } from './types.js';
 
 export interface SomaAdapterConfig {

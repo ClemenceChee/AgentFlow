@@ -4,8 +4,8 @@
 
 import type { RouteHandler } from '../api/router.js';
 import { sendJson } from '../api/router.js';
-import type { DbPool } from '../db/pool.js';
 import type { CacheClient } from '../cache/cache.js';
+import type { DbPool } from '../db/pool.js';
 import type { SourceAdapter } from '../integrations/types.js';
 
 export interface HealthDependencies {
@@ -44,7 +44,7 @@ export function createHealthHandler(deps: HealthDependencies): RouteHandler {
     }
 
     // Check cache
-    const cacheStats = deps.cache.getStats();
+    const _cacheStats = deps.cache.getStats();
     checks.cache = {
       status: 'healthy',
       latencyMs: 0,

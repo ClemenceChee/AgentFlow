@@ -6,9 +6,9 @@
  * for organizational context visualization.
  */
 
-import React, { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useOrganizationalData } from '../../../hooks/organizational/index.js';
-import type { TeamMembership, TeamAccessLevel } from '../../../types/organizational.js';
+import type { TeamAccessLevel, TeamMembership } from '../../../types/organizational.js';
 
 // Component props
 interface TeamMembershipDisplayProps {
@@ -38,41 +38,44 @@ interface TeamMembershipDisplayProps {
 }
 
 // Access level configuration
-const ACCESS_LEVEL_CONFIG: Record<TeamAccessLevel, {
-  label: string;
-  icon: string;
-  description: string;
-  color: string;
-  priority: number;
-}> = {
+const ACCESS_LEVEL_CONFIG: Record<
+  TeamAccessLevel,
+  {
+    label: string;
+    icon: string;
+    description: string;
+    color: string;
+    priority: number;
+  }
+> = {
   admin: {
     label: 'Admin',
     icon: '👑',
     description: 'Full team administration rights',
     color: 'var(--fail)',
-    priority: 4
+    priority: 4,
   },
   maintainer: {
     label: 'Maintainer',
     icon: '🔧',
     description: 'Can manage team settings and members',
     color: 'var(--warn)',
-    priority: 3
+    priority: 3,
   },
   member: {
     label: 'Member',
     icon: '👤',
     description: 'Standard team member',
     color: 'var(--org-primary)',
-    priority: 2
+    priority: 2,
   },
   observer: {
     label: 'Observer',
     icon: '👁️',
     description: 'Read-only access to team resources',
     color: 'var(--t3)',
-    priority: 1
-  }
+    priority: 1,
+  },
 };
 
 /**
@@ -86,7 +89,7 @@ export function TeamMembershipDisplay({
   showActivity = true,
   showAccessLevel = true,
   onTeamClick,
-  onViewMembers
+  onViewMembers,
 }: TeamMembershipDisplayProps) {
   const { useTeamMembership } = useOrganizationalData();
   const [membership, setMembership] = useState<TeamMembership | null>(null);
@@ -134,7 +137,7 @@ export function TeamMembershipDisplay({
   // Get current operator's access level
   const getCurrentOperatorAccess = (): TeamAccessLevel | null => {
     if (!membership || !operatorId) return null;
-    const member = membership.members.find(m => m.operatorId === operatorId);
+    const member = membership.members.find((m) => m.operatorId === operatorId);
     return member?.accessLevel || null;
   };
 
@@ -152,22 +155,19 @@ export function TeamMembershipDisplay({
     const now = new Date();
     const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
     const activeMembers = membership.members.filter(
-      m => m.lastActivity && new Date(m.lastActivity) > oneDayAgo
+      (m) => m.lastActivity && new Date(m.lastActivity) > oneDayAgo,
     ).length;
 
     return {
       activeMembers,
       totalMembers: membership.members.length,
-      activityRatio: membership.members.length > 0 ? activeMembers / membership.members.length : 0
+      activityRatio: membership.members.length > 0 ? activeMembers / membership.members.length : 0,
     };
   };
 
-  const cardClasses = [
-    'org-card',
-    'team-membership-display',
-    compact ? 'compact' : '',
-    className
-  ].filter(Boolean).join(' ');
+  const cardClasses = ['org-card', 'team-membership-display', compact ? 'compact' : '', className]
+    .filter(Boolean)
+    .join(' ');
 
   // Loading state
   if (loading) {
@@ -182,9 +182,7 @@ export function TeamMembershipDisplay({
         <div className="org-card__content">
           <div className="team-membership-loading">
             <div className="team-membership-loading__spinner" />
-            <div className="team-membership-loading__text">
-              Loading team information...
-            </div>
+            <div className="team-membership-loading__text">Loading team information...</div>
           </div>
         </div>
       </div>
@@ -204,12 +202,8 @@ export function TeamMembershipDisplay({
         <div className="org-card__content">
           <div className="team-membership-error">
             <div className="team-membership-error__icon">⚠️</div>
-            <div className="team-membership-error__message">
-              Failed to load team membership
-            </div>
-            <div className="team-membership-error__details">
-              {error}
-            </div>
+            <div className="team-membership-error__message">Failed to load team membership</div>
+            <div className="team-membership-error__details">{error}</div>
           </div>
         </div>
       </div>
@@ -229,9 +223,7 @@ export function TeamMembershipDisplay({
         <div className="org-card__content">
           <div className="team-membership-empty">
             <div className="team-membership-empty__icon">🔍</div>
-            <div className="team-membership-empty__message">
-              No team information available
-            </div>
+            <div className="team-membership-empty__message">No team information available</div>
           </div>
         </div>
       </div>
@@ -252,13 +244,14 @@ export function TeamMembershipDisplay({
           <div className="team-membership-activity-indicator">
             <div
               className={`team-membership-activity-dot ${
-                activity.activityRatio > 0.5 ? 'high' :
-                activity.activityRatio > 0.2 ? 'medium' : 'low'
+                activity.activityRatio > 0.5
+                  ? 'high'
+                  : activity.activityRatio > 0.2
+                    ? 'medium'
+                    : 'low'
               }`}
             />
-            <span className="team-membership-activity-text">
-              {activity.activeMembers} active
-            </span>
+            <span className="team-membership-activity-text">{activity.activeMembers} active</span>
           </div>
         )}
       </div>
@@ -274,9 +267,7 @@ export function TeamMembershipDisplay({
             >
               <div className="team-badge__header">
                 <span className="team-badge__icon">👥</span>
-                <span className="team-badge__name">
-                  {membership.teamName || teamId}
-                </span>
+                <span className="team-badge__name">{membership.teamName || teamId}</span>
               </div>
               <div className="team-badge__id">
                 <code>{teamId.substring(0, 8)}...</code>
@@ -359,35 +350,34 @@ export function TeamMembershipDisplay({
             <div className="team-membership-section__content">
               <div className="team-membership-access-distribution">
                 {Object.entries(
-                  membership.members.reduce((acc, member) => {
-                    acc[member.accessLevel] = (acc[member.accessLevel] || 0) + 1;
-                    return acc;
-                  }, {} as Record<TeamAccessLevel, number>)
+                  membership.members.reduce(
+                    (acc, member) => {
+                      acc[member.accessLevel] = (acc[member.accessLevel] || 0) + 1;
+                      return acc;
+                    },
+                    {} as Record<TeamAccessLevel, number>,
+                  ),
                 )
-                .sort(([, countA], [, countB]) => countB - countA)
-                .map(([level, count]) => {
-                  const config = ACCESS_LEVEL_CONFIG[level as TeamAccessLevel];
-                  return (
-                    <div
-                      key={level}
-                      className="team-membership-access-group"
-                      style={{ borderColor: config.color }}
-                    >
-                      <span
-                        className="team-membership-access-group__icon"
-                        style={{ color: config.color }}
+                  .sort(([, countA], [, countB]) => countB - countA)
+                  .map(([level, count]) => {
+                    const config = ACCESS_LEVEL_CONFIG[level as TeamAccessLevel];
+                    return (
+                      <div
+                        key={level}
+                        className="team-membership-access-group"
+                        style={{ borderColor: config.color }}
                       >
-                        {config.icon}
-                      </span>
-                      <span className="team-membership-access-group__label">
-                        {config.label}
-                      </span>
-                      <span className="team-membership-access-group__count">
-                        {count}
-                      </span>
-                    </div>
-                  );
-                })}
+                        <span
+                          className="team-membership-access-group__icon"
+                          style={{ color: config.color }}
+                        >
+                          {config.icon}
+                        </span>
+                        <span className="team-membership-access-group__label">{config.label}</span>
+                        <span className="team-membership-access-group__count">{count}</span>
+                      </div>
+                    );
+                  })}
               </div>
             </div>
           </div>
@@ -396,14 +386,9 @@ export function TeamMembershipDisplay({
         {/* Actions */}
         {onViewMembers && !compact && (
           <div className="team-membership-actions">
-            <button
-              className="team-membership-action"
-              onClick={() => onViewMembers(teamId)}
-            >
+            <button className="team-membership-action" onClick={() => onViewMembers(teamId)}>
               <span className="team-membership-action__icon">👥</span>
-              <span className="team-membership-action__label">
-                View All Members
-              </span>
+              <span className="team-membership-action__label">View All Members</span>
             </button>
           </div>
         )}
@@ -413,9 +398,7 @@ export function TeamMembershipDisplay({
           <div className="team-membership-compact-summary">
             <div className="team-membership-compact-item">
               <span className="team-membership-compact-icon">👤</span>
-              <span className="team-membership-compact-text">
-                {membership.members.length}
-              </span>
+              <span className="team-membership-compact-text">{membership.members.length}</span>
             </div>
 
             {currentAccess && (

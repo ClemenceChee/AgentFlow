@@ -5,8 +5,8 @@
  * cross-operator learning opportunities within the organization.
  */
 
-import { useState, useEffect } from 'react';
-import { Users, Share, BookOpen, MessageCircle, TrendingUp, ArrowRight, Clock, Award } from 'lucide-react';
+import { ArrowRight, BookOpen, MessageCircle, Share, TrendingUp, Users } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useOrganizationalContext } from '../../../../contexts/OrganizationalContext';
 import type { SessionCorrelation } from '../../../types/organizational.js';
 
@@ -14,7 +14,12 @@ export interface KnowledgeExchange {
   readonly id: string;
   readonly sourceOperatorId: string;
   readonly targetOperatorId: string;
-  readonly exchangeType: 'solution-sharing' | 'problem-consultation' | 'code-review' | 'mentoring' | 'pair-programming';
+  readonly exchangeType:
+    | 'solution-sharing'
+    | 'problem-consultation'
+    | 'code-review'
+    | 'mentoring'
+    | 'pair-programming';
   readonly knowledgeDomain: string;
   readonly timestamp: number;
   readonly effectiveness: number; // 0-1 score based on outcome
@@ -25,7 +30,12 @@ export interface KnowledgeExchange {
 
 export interface CollaborationPattern {
   readonly id: string;
-  readonly patternType: 'frequent-collaborators' | 'knowledge-hub' | 'expertise-cluster' | 'mentoring-chain' | 'problem-solver-network';
+  readonly patternType:
+    | 'frequent-collaborators'
+    | 'knowledge-hub'
+    | 'expertise-cluster'
+    | 'mentoring-chain'
+    | 'problem-solver-network';
   readonly participants: readonly string[];
   readonly strength: number; // 0-1 indicating how strong the pattern is
   readonly frequency: number; // How often this pattern occurs
@@ -77,34 +87,52 @@ interface OperatorCollaborationIndicatorsProps {
 
 const getExchangeTypeIcon = (type: KnowledgeExchange['exchangeType']) => {
   switch (type) {
-    case 'solution-sharing': return <Share className="h-4 w-4" />;
-    case 'problem-consultation': return <MessageCircle className="h-4 w-4" />;
-    case 'code-review': return <BookOpen className="h-4 w-4" />;
-    case 'mentoring': return <Users className="h-4 w-4" />;
-    case 'pair-programming': return <TrendingUp className="h-4 w-4" />;
-    default: return <Users className="h-4 w-4" />;
+    case 'solution-sharing':
+      return <Share className="h-4 w-4" />;
+    case 'problem-consultation':
+      return <MessageCircle className="h-4 w-4" />;
+    case 'code-review':
+      return <BookOpen className="h-4 w-4" />;
+    case 'mentoring':
+      return <Users className="h-4 w-4" />;
+    case 'pair-programming':
+      return <TrendingUp className="h-4 w-4" />;
+    default:
+      return <Users className="h-4 w-4" />;
   }
 };
 
 const getExchangeTypeColor = (type: KnowledgeExchange['exchangeType']) => {
   switch (type) {
-    case 'solution-sharing': return 'org-text-success';
-    case 'problem-consultation': return 'org-text-info';
-    case 'code-review': return 'org-text-warning';
-    case 'mentoring': return 'org-text-primary';
-    case 'pair-programming': return 'org-text-secondary';
-    default: return 'org-text-muted';
+    case 'solution-sharing':
+      return 'org-text-success';
+    case 'problem-consultation':
+      return 'org-text-info';
+    case 'code-review':
+      return 'org-text-warning';
+    case 'mentoring':
+      return 'org-text-primary';
+    case 'pair-programming':
+      return 'org-text-secondary';
+    default:
+      return 'org-text-muted';
   }
 };
 
 const getPatternTypeColor = (type: CollaborationPattern['patternType']) => {
   switch (type) {
-    case 'frequent-collaborators': return 'org-badge-info';
-    case 'knowledge-hub': return 'org-badge-warning';
-    case 'expertise-cluster': return 'org-badge-success';
-    case 'mentoring-chain': return 'org-badge-primary';
-    case 'problem-solver-network': return 'org-badge-secondary';
-    default: return 'org-badge-muted';
+    case 'frequent-collaborators':
+      return 'org-badge-info';
+    case 'knowledge-hub':
+      return 'org-badge-warning';
+    case 'expertise-cluster':
+      return 'org-badge-success';
+    case 'mentoring-chain':
+      return 'org-badge-primary';
+    case 'problem-solver-network':
+      return 'org-badge-secondary';
+    default:
+      return 'org-badge-muted';
   }
 };
 
@@ -117,10 +145,14 @@ const getEffectivenessColor = (effectiveness: number) => {
 
 const getTrendIcon = (trend: CollaborationPattern['trends']) => {
   switch (trend) {
-    case 'increasing': return <TrendingUp className="h-3 w-3 org-text-success" />;
-    case 'decreasing': return <TrendingUp className="h-3 w-3 org-text-error transform rotate-180" />;
-    case 'stable': return <ArrowRight className="h-3 w-3 org-text-muted" />;
-    default: return <ArrowRight className="h-3 w-3 org-text-muted" />;
+    case 'increasing':
+      return <TrendingUp className="h-3 w-3 org-text-success" />;
+    case 'decreasing':
+      return <TrendingUp className="h-3 w-3 org-text-error transform rotate-180" />;
+    case 'stable':
+      return <ArrowRight className="h-3 w-3 org-text-muted" />;
+    default:
+      return <ArrowRight className="h-3 w-3 org-text-muted" />;
   }
 };
 
@@ -137,25 +169,28 @@ const NetworkView: React.FC<{
     const radius = 100;
     return {
       x: 200 + Math.cos(angle) * radius,
-      y: 150 + Math.sin(angle) * radius
+      y: 150 + Math.sin(angle) * radius,
     };
   };
 
   // Build collaboration connections
-  const connections = exchanges.reduce((acc, exchange) => {
-    const key = `${exchange.sourceOperatorId}-${exchange.targetOperatorId}`;
-    if (!acc[key]) {
-      acc[key] = {
-        source: exchange.sourceOperatorId,
-        target: exchange.targetOperatorId,
-        strength: 0,
-        count: 0
-      };
-    }
-    acc[key].strength += exchange.effectiveness;
-    acc[key].count += 1;
-    return acc;
-  }, {} as Record<string, any>);
+  const connections = exchanges.reduce(
+    (acc, exchange) => {
+      const key = `${exchange.sourceOperatorId}-${exchange.targetOperatorId}`;
+      if (!acc[key]) {
+        acc[key] = {
+          source: exchange.sourceOperatorId,
+          target: exchange.targetOperatorId,
+          strength: 0,
+          count: 0,
+        };
+      }
+      acc[key].strength += exchange.effectiveness;
+      acc[key].count += 1;
+      return acc;
+    },
+    {} as Record<string, any>,
+  );
 
   return (
     <div className="org-collaboration-network">
@@ -169,8 +204,12 @@ const NetworkView: React.FC<{
       <svg viewBox="0 0 400 300" className="w-full h-64 org-bg-surface rounded-lg mb-4">
         {/* Render collaboration edges */}
         {Object.values(connections).map((connection: any, index) => {
-          const sourceIndex = metrics.topCollaborators.findIndex(op => op.operatorId === connection.source);
-          const targetIndex = metrics.topCollaborators.findIndex(op => op.operatorId === connection.target);
+          const sourceIndex = metrics.topCollaborators.findIndex(
+            (op) => op.operatorId === connection.source,
+          );
+          const targetIndex = metrics.topCollaborators.findIndex(
+            (op) => op.operatorId === connection.target,
+          );
 
           if (sourceIndex === -1 || targetIndex === -1) return null;
 
@@ -206,9 +245,15 @@ const NetworkView: React.FC<{
                 cy={pos.y}
                 r={radius}
                 className={`org-operator-node ${isSelected ? 'org-node-selected' : ''}`}
-                fill={operator.collaborationScore >= 0.8 ? '#10b981' :
-                      operator.collaborationScore >= 0.6 ? '#3b82f6' :
-                      operator.collaborationScore >= 0.4 ? '#f59e0b' : '#6b7280'}
+                fill={
+                  operator.collaborationScore >= 0.8
+                    ? '#10b981'
+                    : operator.collaborationScore >= 0.6
+                      ? '#3b82f6'
+                      : operator.collaborationScore >= 0.4
+                        ? '#f59e0b'
+                        : '#6b7280'
+                }
                 onClick={() => {
                   setSelectedOperator(operator.operatorId);
                   onSelectOperator?.(operator.operatorId);
@@ -233,7 +278,9 @@ const NetworkView: React.FC<{
         <div className="org-card-inner">
           <h5 className="org-font-semibold mb-2">Operator Profile</h5>
           {(() => {
-            const operator = metrics.topCollaborators.find(op => op.operatorId === selectedOperator);
+            const operator = metrics.topCollaborators.find(
+              (op) => op.operatorId === selectedOperator,
+            );
             if (!operator) return null;
 
             return (
@@ -405,7 +452,9 @@ const MetricsView: React.FC<{ metrics: CollaborationMetrics }> = ({ metrics }) =
                 </div>
               </div>
               <div className="text-right">
-                <div className={`org-text-sm org-font-semibold ${getEffectivenessColor(operator.collaborationScore)}`}>
+                <div
+                  className={`org-text-sm org-font-semibold ${getEffectivenessColor(operator.collaborationScore)}`}
+                >
                   {Math.round(operator.collaborationScore * 100)}%
                 </div>
                 <div className="org-text-xs org-text-muted">score</div>
@@ -419,28 +468,33 @@ const MetricsView: React.FC<{ metrics: CollaborationMetrics }> = ({ metrics }) =
         <h4 className="org-font-semibold mb-3">Knowledge Domains</h4>
         <div className="space-y-2">
           {metrics.topCollaborators
-            .flatMap(op => op.knowledgeDomains)
-            .reduce((acc, domain) => {
-              acc[domain] = (acc[domain] || 0) + 1;
-              return acc;
-            }, {} as Record<string, number>)
-          && Object.entries(
-            metrics.topCollaborators
-              .flatMap(op => op.knowledgeDomains)
-              .reduce((acc, domain) => {
+            .flatMap((op) => op.knowledgeDomains)
+            .reduce(
+              (acc, domain) => {
                 acc[domain] = (acc[domain] || 0) + 1;
                 return acc;
-              }, {} as Record<string, number>)
-          )
-            .sort(([, a], [, b]) => b - a)
-            .slice(0, 8)
-            .map(([domain, count]) => (
-              <div key={domain} className="flex items-center justify-between">
-                <span className="org-font-medium">{domain}</span>
-                <span className="org-text-muted">{count} experts</span>
-              </div>
-            ))
-          }
+              },
+              {} as Record<string, number>,
+            ) &&
+            Object.entries(
+              metrics.topCollaborators
+                .flatMap((op) => op.knowledgeDomains)
+                .reduce(
+                  (acc, domain) => {
+                    acc[domain] = (acc[domain] || 0) + 1;
+                    return acc;
+                  },
+                  {} as Record<string, number>,
+                ),
+            )
+              .sort(([, a], [, b]) => b - a)
+              .slice(0, 8)
+              .map(([domain, count]) => (
+                <div key={domain} className="flex items-center justify-between">
+                  <span className="org-font-medium">{domain}</span>
+                  <span className="org-text-muted">{count} experts</span>
+                </div>
+              ))}
         </div>
       </div>
     </div>
@@ -452,7 +506,8 @@ const MetricsView: React.FC<{ metrics: CollaborationMetrics }> = ({ metrics }) =
           <div className="org-text-muted">Mentorship Connections</div>
           <div className="org-font-semibold">{metrics.mentorshipConnections}</div>
           <div className="org-text-xs org-text-muted">
-            {Math.round((metrics.mentorshipConnections / metrics.totalExchanges) * 100)}% of exchanges
+            {Math.round((metrics.mentorshipConnections / metrics.totalExchanges) * 100)}% of
+            exchanges
           </div>
         </div>
         <div>
@@ -477,12 +532,15 @@ const TimelineView: React.FC<{
   timeWindow: string;
 }> = ({ exchanges, timeWindow }) => {
   const sortedExchanges = [...exchanges].sort((a, b) => b.timestamp - a.timestamp);
-  const groupedByDay = sortedExchanges.reduce((acc, exchange) => {
-    const day = new Date(exchange.timestamp).toDateString();
-    if (!acc[day]) acc[day] = [];
-    acc[day].push(exchange);
-    return acc;
-  }, {} as Record<string, KnowledgeExchange[]>);
+  const groupedByDay = sortedExchanges.reduce(
+    (acc, exchange) => {
+      const day = new Date(exchange.timestamp).toDateString();
+      if (!acc[day]) acc[day] = [];
+      acc[day].push(exchange);
+      return acc;
+    },
+    {} as Record<string, KnowledgeExchange[]>,
+  );
 
   return (
     <div className="org-collaboration-timeline">
@@ -494,56 +552,66 @@ const TimelineView: React.FC<{
       </div>
 
       <div className="space-y-4">
-        {Object.entries(groupedByDay).slice(0, 7).map(([day, dayExchanges]) => (
-          <div key={day} className="org-timeline-day">
-            <div className="flex items-center space-x-3 mb-3">
-              <div className="w-3 h-3 rounded-full org-bg-primary"></div>
-              <div className="org-font-semibold">{day}</div>
-              <div className="org-text-sm org-text-muted">
-                {dayExchanges.length} exchanges
+        {Object.entries(groupedByDay)
+          .slice(0, 7)
+          .map(([day, dayExchanges]) => (
+            <div key={day} className="org-timeline-day">
+              <div className="flex items-center space-x-3 mb-3">
+                <div className="w-3 h-3 rounded-full org-bg-primary"></div>
+                <div className="org-font-semibold">{day}</div>
+                <div className="org-text-sm org-text-muted">{dayExchanges.length} exchanges</div>
               </div>
-            </div>
 
-            <div className="ml-6 space-y-2">
-              {dayExchanges.slice(0, 5).map((exchange) => (
-                <div key={exchange.id} className="org-card-inner org-card-sm">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center space-x-2">
-                      <div className={getExchangeTypeColor(exchange.exchangeType)}>
-                        {getExchangeTypeIcon(exchange.exchangeType)}
+              <div className="ml-6 space-y-2">
+                {dayExchanges.slice(0, 5).map((exchange) => (
+                  <div key={exchange.id} className="org-card-inner org-card-sm">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center space-x-2">
+                        <div className={getExchangeTypeColor(exchange.exchangeType)}>
+                          {getExchangeTypeIcon(exchange.exchangeType)}
+                        </div>
+                        <span className="org-font-medium capitalize">
+                          {exchange.exchangeType.replace('-', ' ')}
+                        </span>
                       </div>
-                      <span className="org-font-medium capitalize">
-                        {exchange.exchangeType.replace('-', ' ')}
+                      <div
+                        className={`org-text-sm ${getEffectivenessColor(exchange.effectiveness)}`}
+                      >
+                        {Math.round(exchange.effectiveness * 100)}% effective
+                      </div>
+                    </div>
+
+                    <div className="flex items-center space-x-4 org-text-sm org-text-muted">
+                      <span>
+                        {exchange.sourceOperatorId.slice(-6)} →{' '}
+                        {exchange.targetOperatorId.slice(-6)}
+                      </span>
+                      <span>{exchange.knowledgeDomain}</span>
+                      <span
+                        className={`org-badge org-badge-xs ${
+                          exchange.outcomeImpact === 'critical'
+                            ? 'org-badge-error'
+                            : exchange.outcomeImpact === 'high'
+                              ? 'org-badge-warning'
+                              : exchange.outcomeImpact === 'medium'
+                                ? 'org-badge-info'
+                                : 'org-badge-secondary'
+                        }`}
+                      >
+                        {exchange.outcomeImpact} impact
                       </span>
                     </div>
-                    <div className={`org-text-sm ${getEffectivenessColor(exchange.effectiveness)}`}>
-                      {Math.round(exchange.effectiveness * 100)}% effective
-                    </div>
                   </div>
+                ))}
 
-                  <div className="flex items-center space-x-4 org-text-sm org-text-muted">
-                    <span>{exchange.sourceOperatorId.slice(-6)} → {exchange.targetOperatorId.slice(-6)}</span>
-                    <span>{exchange.knowledgeDomain}</span>
-                    <span className={`org-badge org-badge-xs ${
-                      exchange.outcomeImpact === 'critical' ? 'org-badge-error' :
-                      exchange.outcomeImpact === 'high' ? 'org-badge-warning' :
-                      exchange.outcomeImpact === 'medium' ? 'org-badge-info' :
-                      'org-badge-secondary'
-                    }`}>
-                      {exchange.outcomeImpact} impact
-                    </span>
+                {dayExchanges.length > 5 && (
+                  <div className="org-text-sm org-text-muted ml-2">
+                    +{dayExchanges.length - 5} more exchanges
                   </div>
-                </div>
-              ))}
-
-              {dayExchanges.length > 5 && (
-                <div className="org-text-sm org-text-muted ml-2">
-                  +{dayExchanges.length - 5} more exchanges
-                </div>
-              )}
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
       </div>
     </div>
   );
@@ -555,7 +623,7 @@ export const OperatorCollaborationIndicators: React.FC<OperatorCollaborationIndi
   timeWindow = 'week',
   includeCrossTeam = true,
   onSelectOperator,
-  className = ''
+  className = '',
 }) => {
   const { teamFilter } = useOrganizationalContext();
   const [metrics, setMetrics] = useState<CollaborationMetrics | null>(null);
@@ -575,19 +643,32 @@ export const OperatorCollaborationIndicators: React.FC<OperatorCollaborationIndi
           id: `exchange-${i}`,
           sourceOperatorId: `op-${Math.random().toString(36).slice(2, 10)}`,
           targetOperatorId: `op-${Math.random().toString(36).slice(2, 10)}`,
-          exchangeType: ['solution-sharing', 'problem-consultation', 'code-review', 'mentoring', 'pair-programming'][i % 5] as KnowledgeExchange['exchangeType'],
+          exchangeType: [
+            'solution-sharing',
+            'problem-consultation',
+            'code-review',
+            'mentoring',
+            'pair-programming',
+          ][i % 5] as KnowledgeExchange['exchangeType'],
           knowledgeDomain: ['Frontend', 'Backend', 'DevOps', 'Testing', 'Architecture'][i % 5],
           timestamp: sessionCorrelation.timestamp - i * 3600000,
           effectiveness: 0.6 + Math.random() * 0.4,
-          contextType: ['direct', 'indirect', 'documented', 'observed'][i % 4] as KnowledgeExchange['contextType'],
-          outcomeImpact: ['low', 'medium', 'high', 'critical'][Math.floor(Math.random() * 4)] as KnowledgeExchange['outcomeImpact'],
-          sessionIds: sessionCorrelation.relatedSessions.slice(0, 2)
+          contextType: ['direct', 'indirect', 'documented', 'observed'][
+            i % 4
+          ] as KnowledgeExchange['contextType'],
+          outcomeImpact: ['low', 'medium', 'high', 'critical'][
+            Math.floor(Math.random() * 4)
+          ] as KnowledgeExchange['outcomeImpact'],
+          sessionIds: sessionCorrelation.relatedSessions.slice(0, 2),
         }));
 
         const mockProfiles: OperatorProfile[] = Array.from({ length: 6 }, (_, i) => ({
           operatorId: `op-${Math.random().toString(36).slice(2, 10)}`,
           teamId: sessionCorrelation.teamId,
-          knowledgeDomains: ['Frontend', 'Backend', 'DevOps', 'Testing', 'Architecture'].slice(0, 2 + i % 3),
+          knowledgeDomains: ['Frontend', 'Backend', 'DevOps', 'Testing', 'Architecture'].slice(
+            0,
+            2 + (i % 3),
+          ),
           collaborationScore: 0.6 + Math.random() * 0.4,
           mentorshipGiven: Math.floor(Math.random() * 10),
           mentorshipReceived: Math.floor(Math.random() * 5),
@@ -595,43 +676,52 @@ export const OperatorCollaborationIndicators: React.FC<OperatorCollaborationIndi
           knowledgeReceived: Math.floor(Math.random() * 15),
           networkCentrality: Math.random(),
           specializations: ['React', 'Node.js', 'Docker', 'Jest', 'GraphQL'].slice(0, 2),
-          preferredCollaborationStyles: ['pair-programming', 'code-review', 'mentoring'].slice(0, 2)
+          preferredCollaborationStyles: ['pair-programming', 'code-review', 'mentoring'].slice(
+            0,
+            2,
+          ),
         }));
 
         const mockPatterns: CollaborationPattern[] = [
           {
             id: 'pattern-1',
             patternType: 'frequent-collaborators',
-            participants: mockProfiles.slice(0, 3).map(p => p.operatorId),
+            participants: mockProfiles.slice(0, 3).map((p) => p.operatorId),
             strength: 0.85,
             frequency: 12,
             domains: ['Frontend', 'Backend'],
             trends: 'increasing',
             discoveredAt: sessionCorrelation.timestamp - 604800000, // 1 week ago
-            lastSeen: sessionCorrelation.timestamp - 3600000
+            lastSeen: sessionCorrelation.timestamp - 3600000,
           },
           {
             id: 'pattern-2',
             patternType: 'knowledge-hub',
-            participants: [mockProfiles[0].operatorId, ...mockProfiles.slice(2, 5).map(p => p.operatorId)],
+            participants: [
+              mockProfiles[0].operatorId,
+              ...mockProfiles.slice(2, 5).map((p) => p.operatorId),
+            ],
             strength: 0.73,
             frequency: 8,
             domains: ['Architecture', 'DevOps'],
             trends: 'stable',
             discoveredAt: sessionCorrelation.timestamp - 1209600000, // 2 weeks ago
-            lastSeen: sessionCorrelation.timestamp - 7200000
-          }
+            lastSeen: sessionCorrelation.timestamp - 7200000,
+          },
         ];
 
         const mockMetrics: CollaborationMetrics = {
           totalExchanges: mockExchanges.length,
           uniqueCollaboratorPairs: 8,
-          averageEffectiveness: mockExchanges.reduce((sum, e) => sum + e.effectiveness, 0) / mockExchanges.length,
+          averageEffectiveness:
+            mockExchanges.reduce((sum, e) => sum + e.effectiveness, 0) / mockExchanges.length,
           knowledgeDomainsCovered: 5,
-          mentorshipConnections: mockExchanges.filter(e => e.exchangeType === 'mentoring').length,
+          mentorshipConnections: mockExchanges.filter((e) => e.exchangeType === 'mentoring').length,
           crossTeamCollaborations: includeCrossTeam ? 3 : 0,
-          topCollaborators: mockProfiles.sort((a, b) => b.collaborationScore - a.collaborationScore),
-          emergingPatterns: mockPatterns.filter(p => p.discoveredAt > Date.now() - 604800000) // Last week
+          topCollaborators: mockProfiles.sort(
+            (a, b) => b.collaborationScore - a.collaborationScore,
+          ),
+          emergingPatterns: mockPatterns.filter((p) => p.discoveredAt > Date.now() - 604800000), // Last week
         };
 
         setExchanges(mockExchanges);
@@ -645,7 +735,7 @@ export const OperatorCollaborationIndicators: React.FC<OperatorCollaborationIndi
     };
 
     fetchCollaborationData();
-  }, [sessionCorrelation, timeWindow, includeCrossTeam]);
+  }, [sessionCorrelation, includeCrossTeam]);
 
   if (loading) {
     return (
@@ -686,25 +776,18 @@ export const OperatorCollaborationIndicators: React.FC<OperatorCollaborationIndi
         <div className="flex items-center justify-between mb-4">
           <h3 className="org-text-lg org-font-semibold">Operator Collaboration</h3>
           <div className="org-text-sm org-text-muted">
-            {metrics.totalExchanges} exchanges, {Math.round(metrics.averageEffectiveness * 100)}% avg effectiveness
+            {metrics.totalExchanges} exchanges, {Math.round(metrics.averageEffectiveness * 100)}%
+            avg effectiveness
           </div>
         </div>
       )}
 
       {mode === 'network' && (
-        <NetworkView
-          metrics={metrics}
-          exchanges={exchanges}
-          onSelectOperator={onSelectOperator}
-        />
+        <NetworkView metrics={metrics} exchanges={exchanges} onSelectOperator={onSelectOperator} />
       )}
-      {mode === 'patterns' && (
-        <PatternsView patterns={patterns} timeWindow={timeWindow} />
-      )}
+      {mode === 'patterns' && <PatternsView patterns={patterns} timeWindow={timeWindow} />}
       {mode === 'metrics' && <MetricsView metrics={metrics} />}
-      {mode === 'timeline' && (
-        <TimelineView exchanges={exchanges} timeWindow={timeWindow} />
-      )}
+      {mode === 'timeline' && <TimelineView exchanges={exchanges} timeWindow={timeWindow} />}
     </div>
   );
 };

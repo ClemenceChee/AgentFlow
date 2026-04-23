@@ -101,9 +101,7 @@ function verifyHmacToken(token: string, secret: string): void {
   if (parts.length !== 3) throw new AuthError('Invalid token format');
 
   const [header, payload, signature] = parts;
-  const expected = createHmac('sha256', secret)
-    .update(`${header}.${payload}`)
-    .digest('base64url');
+  const expected = createHmac('sha256', secret).update(`${header}.${payload}`).digest('base64url');
 
   if (signature !== expected) {
     throw new AuthError('Invalid token signature');

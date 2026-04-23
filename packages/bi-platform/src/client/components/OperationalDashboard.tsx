@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import type { AgentsResponse } from '../hooks/useAgents';
-import type { CostsResponse } from '../hooks/useCosts';
 import type { AnomaliesResponse } from '../hooks/useAnomalies';
+import type { CostsResponse } from '../hooks/useCosts';
+import type { CronHealthResponse } from '../hooks/useCronHealth';
 import type { FreshnessResponse } from '../hooks/useFreshness';
 import type { TokenEconomicsResponse } from '../hooks/useTokenEconomics';
-import type { CronHealthResponse } from '../hooks/useCronHealth';
-import { AnomalyList } from './AnomalyList';
 import { AgentDrillDown } from './AgentDrillDown';
-import { CostChart } from './charts/CostChart';
+import { AnomalyList } from './AnomalyList';
 import { CronHealthTable } from './CronHealthTable';
+import { CostChart } from './charts/CostChart';
 
 interface Props {
   agents: AgentsResponse | null;
@@ -21,7 +21,14 @@ interface Props {
 
 type Tab = 'agents' | 'costs' | 'tokens' | 'cron' | 'anomalies';
 
-export function OperationalDashboard({ agents, costs, anomalies, freshness, tokenEconomics, cronHealth }: Props) {
+export function OperationalDashboard({
+  agents,
+  costs,
+  anomalies,
+  freshness,
+  tokenEconomics,
+  cronHealth,
+}: Props) {
   const [tab, setTab] = useState<Tab>('agents');
   const [drillAgent, setDrillAgent] = useState<string | null>(null);
 
@@ -46,19 +53,34 @@ export function OperationalDashboard({ agents, costs, anomalies, freshness, toke
 
       {/* Tabs */}
       <div className="bi-tabs">
-        <button className={`bi-tab${tab === 'agents' ? ' bi-tab--active' : ''}`} onClick={() => setTab('agents')}>
+        <button
+          className={`bi-tab${tab === 'agents' ? ' bi-tab--active' : ''}`}
+          onClick={() => setTab('agents')}
+        >
           Agents ({agents?.totalAgents ?? 0})
         </button>
-        <button className={`bi-tab${tab === 'costs' ? ' bi-tab--active' : ''}`} onClick={() => setTab('costs')}>
+        <button
+          className={`bi-tab${tab === 'costs' ? ' bi-tab--active' : ''}`}
+          onClick={() => setTab('costs')}
+        >
           Cost Analysis
         </button>
-        <button className={`bi-tab${tab === 'tokens' ? ' bi-tab--active' : ''}`} onClick={() => setTab('tokens')}>
+        <button
+          className={`bi-tab${tab === 'tokens' ? ' bi-tab--active' : ''}`}
+          onClick={() => setTab('tokens')}
+        >
           Token Economics
         </button>
-        <button className={`bi-tab${tab === 'cron' ? ' bi-tab--active' : ''}`} onClick={() => setTab('cron')}>
+        <button
+          className={`bi-tab${tab === 'cron' ? ' bi-tab--active' : ''}`}
+          onClick={() => setTab('cron')}
+        >
           Cron Health ({cronHealth?.totalJobs ?? 0})
         </button>
-        <button className={`bi-tab${tab === 'anomalies' ? ' bi-tab--active' : ''}`} onClick={() => setTab('anomalies')}>
+        <button
+          className={`bi-tab${tab === 'anomalies' ? ' bi-tab--active' : ''}`}
+          onClick={() => setTab('anomalies')}
+        >
           Anomalies ({anomalies?.count ?? 0})
         </button>
       </div>
@@ -91,17 +113,40 @@ export function OperationalDashboard({ agents, costs, anomalies, freshness, toke
                           {a.agentName}
                         </div>
                       </td>
-                      <td><span className="badge badge--neutral">{(a as any).source ?? 'unknown'}</span></td>
-                      <td><span className={`badge badge--${statusBadge(a.status)}`}>{a.status}</span></td>
-                      <td style={{ fontFamily: 'var(--fm)' }}>{a.totalExecutions.toLocaleString()}</td>
                       <td>
-                        <span style={{ fontFamily: 'var(--fm)', color: a.successRate >= 95 ? 'var(--ok)' : a.successRate >= 80 ? 'var(--warn)' : 'var(--fail)' }}>
+                        <span className="badge badge--neutral">
+                          {(a as any).source ?? 'unknown'}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={`badge badge--${statusBadge(a.status)}`}>{a.status}</span>
+                      </td>
+                      <td style={{ fontFamily: 'var(--fm)' }}>
+                        {a.totalExecutions.toLocaleString()}
+                      </td>
+                      <td>
+                        <span
+                          style={{
+                            fontFamily: 'var(--fm)',
+                            color:
+                              a.successRate >= 95
+                                ? 'var(--ok)'
+                                : a.successRate >= 80
+                                  ? 'var(--warn)'
+                                  : 'var(--fail)',
+                          }}
+                        >
                           {a.successRate.toFixed(1)}%
                         </span>
                       </td>
-                      <td style={{ fontFamily: 'var(--fm)' }}>{fmtDuration(a.avgResponseTimeMs)}</td>
+                      <td style={{ fontFamily: 'var(--fm)' }}>
+                        {fmtDuration(a.avgResponseTimeMs)}
+                      </td>
                       <td>
-                        <button className="bi-btn bi-btn--sm" onClick={() => setDrillAgent(a.agentId === drillAgent ? null : a.agentId)}>
+                        <button
+                          className="bi-btn bi-btn--sm"
+                          onClick={() => setDrillAgent(a.agentId === drillAgent ? null : a.agentId)}
+                        >
                           Details
                         </button>
                       </td>
@@ -131,11 +176,20 @@ export function OperationalDashboard({ agents, costs, anomalies, freshness, toke
             </span>
           </div>
           {tokenEconomics.perAgent.length === 0 ? (
-            <div className="bi-empty"><span>No token data available</span></div>
+            <div className="bi-empty">
+              <span>No token data available</span>
+            </div>
           ) : (
             <div style={{ overflowX: 'auto' }}>
               <table className="bi-table">
-                <thead><tr><th>Agent</th><th>Cost</th><th>Tokens</th><th>Cost/Success</th></tr></thead>
+                <thead>
+                  <tr>
+                    <th>Agent</th>
+                    <th>Cost</th>
+                    <th>Tokens</th>
+                    <th>Cost/Success</th>
+                  </tr>
+                </thead>
                 <tbody>
                   {tokenEconomics.perAgent.map((a) => (
                     <tr key={a.agentId}>
@@ -150,17 +204,34 @@ export function OperationalDashboard({ agents, costs, anomalies, freshness, toke
             </div>
           )}
           {tokenEconomics.perModel.length > 0 && (
-            <div style={{ marginTop: 'var(--s4)', borderTop: '1px solid var(--bdm)', paddingTop: 'var(--s3)' }}>
-              <div style={{ fontSize: 'var(--xs)', color: 'var(--t3)', marginBottom: 'var(--s2)' }}>Model Cost Comparison</div>
+            <div
+              style={{
+                marginTop: 'var(--s4)',
+                borderTop: '1px solid var(--bdm)',
+                paddingTop: 'var(--s3)',
+              }}
+            >
+              <div style={{ fontSize: 'var(--xs)', color: 'var(--t3)', marginBottom: 'var(--s2)' }}>
+                Model Cost Comparison
+              </div>
               <table className="bi-table">
-                <thead><tr><th>Model</th><th>Cost</th><th>Tokens</th><th>$/Token</th></tr></thead>
+                <thead>
+                  <tr>
+                    <th>Model</th>
+                    <th>Cost</th>
+                    <th>Tokens</th>
+                    <th>$/Token</th>
+                  </tr>
+                </thead>
                 <tbody>
                   {tokenEconomics.perModel.map((m) => (
                     <tr key={m.model}>
                       <td>{m.model}</td>
                       <td style={{ fontFamily: 'var(--fm)' }}>${m.cost.toFixed(4)}</td>
                       <td style={{ fontFamily: 'var(--fm)' }}>{(m.tokens / 1000).toFixed(1)}K</td>
-                      <td style={{ fontFamily: 'var(--fm)' }}>${(m.costPerToken * 1000).toFixed(4)}/1K</td>
+                      <td style={{ fontFamily: 'var(--fm)' }}>
+                        ${(m.costPerToken * 1000).toFixed(4)}/1K
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -169,7 +240,8 @@ export function OperationalDashboard({ agents, costs, anomalies, freshness, toke
           )}
           {tokenEconomics.wastedWarning && (
             <div className="badge badge--warn" style={{ marginTop: 'var(--s3)' }}>
-              Wasted spend: ${tokenEconomics.wastedSpend.toFixed(2)} ({tokenEconomics.wastedPct.toFixed(0)}% of total)
+              Wasted spend: ${tokenEconomics.wastedSpend.toFixed(2)} (
+              {tokenEconomics.wastedPct.toFixed(0)}% of total)
             </div>
           )}
         </div>
