@@ -2,6 +2,7 @@ import './styles/tokens.css';
 import './styles/shell.css';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { AicpPage } from './components/AicpPage';
 import { SettingsPanel } from './components/SettingsPanel';
 import { Placeholder } from './components/v2/Placeholder';
 import {
@@ -17,8 +18,6 @@ import {
 } from './components/v2/pages';
 import { type PageId, Shell, useTweaks } from './components/v2/shell';
 import { OrganizationalContextProvider } from './contexts/OrganizationalContext';
-// Organizational-specific hooks/components intentionally kept out of the
-// v2 Org page for now — Phase 7 will wire richer data sources.
 import { useAgents } from './hooks/useAgents';
 import { useProcessHealth } from './hooks/useProcessHealth';
 import { useProcessModel } from './hooks/useProcessModel';
@@ -99,7 +98,7 @@ export function App() {
   })();
 
   return (
-    <>
+    <OrganizationalContextProvider>
       <Shell
         page={page}
         onPage={handlePage}
@@ -124,30 +123,28 @@ export function App() {
         )}
 
         {page === 'agents' && (
-          <OrganizationalContextProvider>
-            <div style={{ overflowY: 'auto', minHeight: 0, height: '100%' }}>
-              {!selectedAgent && <Placeholder page="agents" />}
-              {selectedAgent && agentView === 'profile' && (
-                <AgentProfilePage
-                  agentId={selectedAgent}
-                  agents={agents}
-                  traces={traces}
-                  processModel={processModel.data}
-                  onSelectTrace={handleSelectExecution}
-                />
-              )}
-              {selectedAgent && agentView === 'execution' && (
-                <ExecutionDetailPage
-                  trace={trace}
-                  loading={traceLoading}
-                  onBack={() => {
-                    setAgentView('profile');
-                    clearSelection();
-                  }}
-                />
-              )}
-            </div>
-          </OrganizationalContextProvider>
+          <div style={{ overflowY: 'auto', minHeight: 0, height: '100%' }}>
+            {!selectedAgent && <Placeholder page="agents" />}
+            {selectedAgent && agentView === 'profile' && (
+              <AgentProfilePage
+                agentId={selectedAgent}
+                agents={agents}
+                traces={traces}
+                processModel={processModel.data}
+                onSelectTrace={handleSelectExecution}
+              />
+            )}
+            {selectedAgent && agentView === 'execution' && (
+              <ExecutionDetailPage
+                trace={trace}
+                loading={traceLoading}
+                onBack={() => {
+                  setAgentView('profile');
+                  clearSelection();
+                }}
+              />
+            )}
+          </div>
         )}
 
         {page === 'mining' && (
@@ -168,9 +165,15 @@ export function App() {
           ) : (
             <OrgPage agents={agents} grouped={grouped} />
           ))}
+
+        {page === 'aicp' && (
+          <div style={{ overflowY: 'auto', minHeight: 0, height: '100%' }}>
+            <AicpPage />
+          </div>
+        )}
       </Shell>
 
       {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
-    </>
+    </OrganizationalContextProvider>
   );
 }
