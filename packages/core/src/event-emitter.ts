@@ -90,6 +90,7 @@ export function createExecutionEvent(
     ...(failurePoint ? { failurePoint } : {}),
     ...(options?.processContext ? { processContext: options.processContext } : {}),
     ...(options?.semantic ? { semantic: options.semantic } : {}),
+    ...(graph.operatorContext ? { operatorId: graph.operatorContext.operatorId, operatorContext: graph.operatorContext } : {}),
     violations: options?.violations ?? [],
   };
 }
@@ -119,12 +120,22 @@ export function createPatternEvent(
   model: ProcessModel,
   variants: Variant[],
   bottlenecks: Bottleneck[],
+  operatorContext?: {
+    readonly sessionId: string;
+    readonly operatorId: string;
+    readonly teamId?: string;
+    readonly instanceId?: string;
+    readonly timestamp?: number;
+    readonly userAgent?: string;
+  },
 ): PatternEvent {
   return {
     eventType: 'pattern.discovered',
     agentId,
     timestamp: Date.now(),
     schemaVersion: SCHEMA_VERSION,
+    ...(operatorContext?.operatorId ? { operatorId: operatorContext.operatorId } : {}),
+    ...(operatorContext ? { operatorContext } : {}),
     pattern: {
       totalGraphs: model.totalGraphs,
       variantCount: variants.length,

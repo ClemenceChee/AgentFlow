@@ -1,0 +1,39 @@
+{
+  "host": "0.0.0.0",
+  "port": 3000,
+  "skipFiles": [
+    "harvester.log",
+    "reconciler.log",
+    "synthesizer.log",
+    "cartographer.log",
+    "curator.log",
+    "janitor.log",
+    "distiller.log",
+    "surveyor.log",
+    "soma.log"
+  ],
+  "skipDirectories": [
+    "archive",
+    "knowledge"
+  ],
+  "discoveryPaths": [
+    "~/.openclaw/workspace/traces",
+    "~/.openclaw/cron/runs",
+    "~/.openclaw/cron",
+    "~/.openclaw/subagents",
+    "~/.openclaw/agents/main/sessions",
+    "~/.openclaw/agents/default/sessions",
+    "~/.openclaw/agents/claude-code/sessions",
+    "~/.openclaw/agents/soma-harvester/sessions",
+    "~/.openclaw/agents/soma-reconciler/sessions",
+    "~/.openclaw/agents/soma-synthesizer/sessions",
+    "~/.openclaw/agents/soma-cartographer/sessions",
+    "~/.openclaw/agents/vault-curator/sessions",
+    "~/.openclaw/agents/vault-distiller/sessions",
+    "~/.openclaw/agents/vault-janitor/sessions",
+    "~/.openclaw/agents/vault-surveyor/sessions",
+    "~/.openclaw/agents/test-agent/sessions",
+    "~/.soma/traces",
+    "~/.soma/data"
+  ]
+}

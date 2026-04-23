@@ -7,6 +7,8 @@
  * @module
  */
 
+import type { OperatorContext, SessionCorrelation, PolicyStatus, SessionHookData } from '../client/types/organizational.js';
+
 /** A single node within an execution trace. */
 export interface NormalizedNode {
   id: string;
@@ -46,6 +48,16 @@ export interface NormalizedTrace {
   sessionEvents?: unknown[];
   /** Original file path (for file-based adapters) */
   filePath?: string;
+
+  // Organizational context extensions
+  /** Operator context for organizational tracking */
+  operatorContext?: OperatorContext;
+  /** Session correlation data */
+  sessionCorrelation?: SessionCorrelation;
+  /** Policy compliance status */
+  policyStatus?: PolicyStatus;
+  /** Session hook execution data */
+  sessionHooks?: SessionHookData;
 }
 
 /**

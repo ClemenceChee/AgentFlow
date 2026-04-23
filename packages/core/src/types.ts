@@ -97,6 +97,16 @@ export interface DecisionTraceData {
 }
 
 /** The complete execution graph for one agent run. */
+/** Operator context for organizational tracking across AgentFlow and SOMA */
+export interface OperatorContext {
+  readonly operatorId: string;         // UUID of the human operator - REQUIRED
+  readonly sessionId: string;          // Claude Code session ID - REQUIRED
+  readonly teamId?: string;            // Team membership - OPTIONAL
+  readonly instanceId?: string;        // Specific tool invocation ID - OPTIONAL
+  readonly timestamp?: number;         // When the operator action occurred - OPTIONAL
+  readonly userAgent?: string;         // Client/tool information - OPTIONAL
+}
+
 export interface ExecutionGraph {
   readonly id: string;
   readonly rootNodeId: string;
@@ -117,6 +127,8 @@ export interface ExecutionGraph {
   readonly spanId?: string;
   /** Parent span ID, or null if this is the root span. */
   readonly parentSpanId?: string | null;
+  /** Operator context for organizational tracking. */
+  readonly operatorContext?: OperatorContext;
   /** Arbitrary metadata preserved from the trace file. */
   readonly metadata?: Record<string, unknown>;
 }
@@ -163,6 +175,63 @@ export interface AgentFlowConfig {
   readonly traceId?: string;
   /** Parent span ID for linking to an upstream graph. */
   readonly parentSpanId?: string;
+  /** Operator context for organizational tracking. */
+  readonly operatorContext?: OperatorContext;
+  /** Session initialization hooks for organizational context. */
+  readonly sessionHooks?: {
+    /** Called before graph construction starts. */
+    readonly onSessionStart?: (context: {
+      operatorId?: string;
+      teamId?: string;
+      sessionId?: string;
+      agentId?: string;
+      trigger?: string;
+      briefing?: string;
+      insights?: readonly unknown[];
+      warnings?: readonly string[];
+      recommendations?: readonly string[];
+    }) => Promise<{
+      shouldProceed: boolean;
+      briefing?: string;
+      warnings?: string[];
+    }> | {
+      shouldProceed: boolean;
+      briefing?: string;
+      warnings?: string[];
+    };
+    /** Called after graph construction but before execution. */
+    readonly onSessionInitialized?: (context: {
+      operatorId?: string;
+      teamId?: string;
+      sessionId?: string;
+      graphId: string;
+      traceId: string;
+      briefing?: unknown;
+      organizationalContext?: {
+        briefingAvailable: boolean;
+        briefingSummary?: string;
+        insightCount: number;
+        teamContext?: unknown;
+        relatedSessions: readonly unknown[];
+      };
+    }) => Promise<void> | void;
+    /** Called when session ends (graph build completes). */
+    readonly onSessionEnd?: (context: {
+      operatorId?: string;
+      teamId?: string;
+      sessionId?: string;
+      graphId: string;
+      status: 'completed' | 'failed' | 'timeout';
+      duration: number;
+      briefing?: unknown;
+      organizationalContext?: {
+        briefingAvailable: boolean;
+        briefingSummary?: string;
+        insightCount: number;
+        teamContext?: unknown;
+      };
+    }) => Promise<void> | void;
+  };
 }
 
 /**
@@ -273,6 +342,19 @@ export interface GraphBuilder {
    * The builder remains usable after calling this.
    */
   getSnapshot(): ExecutionGraph;
+
+  /** Get organizational briefing if available (may return null if briefing hasn't been generated yet). */
+  getOrganizationalBriefing(): unknown | null;
+
+  /** Get organizational context summary for execution environment. */
+  getOrganizationalContext(): {
+    operatorContext?: OperatorContext;
+    briefingAvailable: boolean;
+    briefingSummary?: string;
+    teamContext?: string;
+    insightCount: number;
+    warningCount: number;
+  };
 
   /** Freeze and return the completed execution graph. Throws if no root node exists. */
   build(): ExecutionGraph;
@@ -645,6 +727,10 @@ export interface ExecutionEvent {
   readonly usage?: { readonly input_tokens?: number; readonly output_tokens?: number; readonly total_tokens?: number };
   /** Model used for the execution. */
   readonly model?: string;
+  /** UUID of the operator who initiated this execution. */
+  readonly operatorId?: string;
+  /** Operator context from Claude Code session. */
+  readonly operatorContext?: OperatorContext;
 }
 
 /** A structured event emitted when process mining discovers a pattern. */
@@ -653,6 +739,8 @@ export interface PatternEvent {
   readonly agentId: string;
   readonly timestamp: number;
   readonly schemaVersion: number;
+  readonly operatorId?: string;
+  readonly operatorContext?: OperatorContext;
   readonly pattern: {
     readonly totalGraphs: number;
     readonly variantCount: number;
