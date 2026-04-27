@@ -26,7 +26,7 @@
     "prepublishOnly": "npm run build && npm run test"
   },
   "dependencies": {
-    "better-sqlite3": "^9.2.2",
+    "better-sqlite3": "^12.9.0",
     "chokidar": "^3.5.3"
   },
   "devDependencies": {
