@@ -127,7 +127,11 @@ export class AgentStats {
     } catch (error) {
       console.warn('Error analyzing trace with AgentFlow:', error);
 
-      const nodes = trace.nodes instanceof Map ? Array.from(trace.nodes.values()) : [];
+      const nodes = trace.nodes instanceof Map
+        ? Array.from(trace.nodes.values())
+        : Array.isArray(trace.nodes)
+          ? trace.nodes
+          : Object.values(trace.nodes || {});
 
       const failedNodes = nodes.filter((node) => node.status === 'failed').length;
 
