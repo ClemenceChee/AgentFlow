@@ -16,11 +16,11 @@ export class AgentFlowOTelExporter {
    * Export an AgentFlow execution graph to OpenTelemetry
    */
   async exportGraph(graph: ExecutionGraph): Promise<void> {
-    const rootSpan = this.createSpanFromNode(graph.nodes.get(graph.rootId)!, graph);
+    const rootSpan = this.createSpanFromNode(graph.nodes.get(graph.rootNodeId)!, graph);
 
     // Create spans for all nodes in topological order
     const processedNodes = new Set<string>();
-    await this.processNodeHierarchy(graph.rootId, graph, rootSpan, processedNodes);
+    await this.processNodeHierarchy(graph.rootNodeId, graph, rootSpan, processedNodes);
 
     rootSpan.end();
   }
