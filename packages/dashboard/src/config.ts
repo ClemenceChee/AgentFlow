@@ -72,6 +72,8 @@ export interface DashboardUserConfig {
   skipDirectories?: string[];
   /** Additional directories to scan for traces (tilde-expanded) */
   discoveryPaths?: string[];
+  /** Path to the SOMA vault directory (tilde-expanded). Enables Intelligence features. Overridden by --soma-vault flag / SOMA_VAULT env. */
+  somaVault?: string;
   /** Systemd service unit names to query for process/directory discovery */
   systemdServices?: string[];
   /** Config-driven agent identification rules */
@@ -173,6 +175,10 @@ export function getSkipDirectories(config: DashboardUserConfig): string[] {
 
 export function getDiscoveryPaths(config: DashboardUserConfig): string[] {
   return (config.discoveryPaths ?? []).map(expandTilde);
+}
+
+export function getSomaVault(config: DashboardUserConfig): string | undefined {
+  return config.somaVault ? expandTilde(config.somaVault) : undefined;
 }
 
 export function getSystemdServices(config: DashboardUserConfig): string[] {

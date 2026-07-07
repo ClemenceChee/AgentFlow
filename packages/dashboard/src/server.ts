@@ -1,6 +1,7 @@
 import { execFileSync, execSync } from 'node:child_process';
 import * as fs from 'node:fs';
 import { createServer } from 'node:http';
+import { homedir } from 'node:os';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { ExecutionGraph, KnowledgeStore, ProcessAuditResult } from 'agentflow-core';
@@ -23,6 +24,7 @@ import {
   type DashboardUserConfig,
   getDiscoveryPaths,
   getProcessPreference,
+  getSomaVault,
   getSystemdServices,
   getValidatedExternalCommands,
   loadConfig,
@@ -32,7 +34,8 @@ import { parseOtlpPayload } from './adapters/otel.js';
 import { deduplicateAgents, groupAgents } from './agent-clustering.js';
 import { type CommandExecutor, createCommandExecutor } from './command-executor.js';
 import { AgentStats } from './stats.js';
-import { TraceWatcher, type WatchedTrace } from './watcher.js';
+import { type SessionEvent, TraceWatcher, type WatchedTrace } from './watcher.js';
+import { SomaDataAdapter } from './soma-adapter.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -203,6 +206,50 @@ function parseVaultFrontmatter(content: string): Record<string, unknown> | null 
   return fm;
 }
 
+interface DriftReport {
+  status: 'insufficient_data' | 'stable' | 'degrading' | 'improving';
+  slope: number;
+  r2: number;
+  windowSize: number;
+  dataPoints: number;
+}
+
+/**
+ * Detect conformance drift from a score history via least-squares linear regression.
+ * Filesystem-only: operates on points read from conformance-history.json.
+ */
+function computeDriftFromHistory(points: { score: number }[]): DriftReport {
+  const n = points.length;
+  if (n < 10) {
+    return { status: 'insufficient_data', slope: 0, r2: 0, windowSize: n, dataPoints: n };
+  }
+  let sumX = 0,
+    sumY = 0,
+    sumXY = 0,
+    sumX2 = 0;
+  for (let i = 0; i < n; i++) {
+    const y = points[i]?.score;
+    sumX += i;
+    sumY += y;
+    sumXY += i * y;
+    sumX2 += i * i;
+  }
+  const denom = n * sumX2 - sumX * sumX;
+  const slope = denom !== 0 ? (n * sumXY - sumX * sumY) / denom : 0;
+  const intercept = (sumY - slope * sumX) / n;
+  const meanY = sumY / n;
+  let ssRes = 0,
+    ssTot = 0;
+  for (let i = 0; i < n; i++) {
+    const y = points[i]?.score;
+    ssRes += (y - (intercept + slope * i)) ** 2;
+    ssTot += (y - meanY) ** 2;
+  }
+  const r2 = ssTot > 0 ? 1 - ssRes / ssTot : 0;
+  const status = r2 > 0.3 ? (slope < 0 ? 'degrading' : 'improving') : 'stable';
+  return { status, slope, r2, windowSize: n, dataPoints: n };
+}
+
 function serializeTrace(trace: WatchedTrace): Record<string, unknown> {
   if (!trace) return trace;
   const obj: Record<string, unknown> = { ...trace };
@@ -258,6 +305,13 @@ export class DashboardServer {
     const { config: userCfg, configPath: cfgPath } = loadConfig(config.configPath);
     this.userConfig = userCfg;
     this.configPath = cfgPath;
+
+    // Merge somaVault from user config (tilde-expanded).
+    // CLI --soma-vault flag / SOMA_VAULT env are applied before construction and take precedence.
+    if (!config.somaVault) {
+      const configVault = getSomaVault(this.userConfig);
+      if (configVault) config.somaVault = configVault;
+    }
 
     // Merge extra dirs from saved dashboard config (persisted via Settings panel)
     const home = process.env.HOME ?? process.env.USERPROFILE ?? '/tmp';
@@ -471,59 +525,94 @@ export class DashboardServer {
       }
     });
 
-    this.app.get('/api/stats', (_req, res) => {
+    this.app.get('/api/stats', async (_req, res) => {
       try {
         const globalStats = this.stats.getGlobalStats();
-        res.json(globalStats);
+
+        // Add organizational intelligence from SOMA if available
+        let organizationalIntelligence = undefined;
+        if (this.config.somaVault) {
+          try {
+            const somaAdapter = new SomaDataAdapter(this.config.somaVault);
+            organizationalIntelligence = await somaAdapter.buildOrganizationalIntelligence();
+          } catch (somaError) {
+            console.warn('Failed to load SOMA organizational intelligence:', somaError);
+          }
+        }
+
+        res.json({
+          ...globalStats,
+          organizationalIntelligence
+        });
       } catch (_error) {
         res.status(500).json({ error: 'Failed to load statistics' });
       }
     });
 
     // Teams endpoint: organizational teams for filtering and context
-    this.app.get('/api/teams', (req, res) => {
+    this.app.get('/api/teams', async (req, res) => {
       try {
         const accessContext = getTeamAccessContext(req);
 
-        // Extract teams from traces with organizational context
-        const allTraces = this.watcher.getAllTraces();
-        const teams = new Map<
-          string,
-          { teamId: string; teamName: string; memberCount: number; isAccessible: boolean }
-        >();
+        let teams: Array<{ teamId: string; teamName: string; memberCount: number; isAccessible: boolean }> = [];
 
-        for (const trace of allTraces) {
-          // Apply team boundary validation
-          if (!validateTeamAccess(trace, accessContext)) {
-            continue;
-          }
-
-          // Check if trace has operator context with team information
-          if ('operatorContext' in trace && trace.operatorContext && trace.operatorContext.teamId) {
-            const teamId = trace.operatorContext.teamId;
-            if (!teams.has(teamId)) {
-              teams.set(teamId, {
-                teamId,
-                teamName: teamId.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()), // Convert kebab-case to Title Case
-                memberCount: 1,
-                isAccessible:
-                  !accessContext.allowedTeams ||
-                  accessContext.allowedTeams.includes(teamId) ||
-                  accessContext.isSuperUser,
-              });
-            } else {
-              // Increment member count (approximate based on unique operators)
-              const team = teams.get(teamId)!;
-              team.memberCount += 1;
-            }
+        // Try SOMA data first if available
+        if (this.config.somaVault) {
+          try {
+            const somaAdapter = new SomaDataAdapter(this.config.somaVault);
+            const teamFilterState = await somaAdapter.buildTeamFilterState();
+            teams = teamFilterState.availableTeams.map(team => ({
+              ...team,
+              isAccessible:
+                !accessContext.allowedTeams ||
+                accessContext.allowedTeams.includes(team.teamId) ||
+                accessContext.isSuperUser
+            }));
+          } catch (somaError) {
+            console.warn('Failed to load teams from SOMA, falling back to local traces:', somaError);
           }
         }
 
-        // Convert to array and add an "All Teams" option (only if user has multi-team access)
+        // Fallback to local traces if SOMA not available or failed
+        if (teams.length === 0) {
+          const allTraces = this.watcher.getAllTraces();
+          const teamMap = new Map<
+            string,
+            { teamId: string; teamName: string; memberCount: number; isAccessible: boolean }
+          >();
+
+          for (const trace of allTraces) {
+            if (!validateTeamAccess(trace, accessContext)) {
+              continue;
+            }
+
+            if ('operatorContext' in trace && trace.operatorContext && trace.operatorContext.teamId) {
+              const teamId = trace.operatorContext.teamId;
+              if (!teamMap.has(teamId)) {
+                teamMap.set(teamId, {
+                  teamId,
+                  teamName: teamId.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
+                  memberCount: 1,
+                  isAccessible:
+                    !accessContext.allowedTeams ||
+                    accessContext.allowedTeams.includes(teamId) ||
+                    accessContext.isSuperUser,
+                });
+              } else {
+                const team = teamMap.get(teamId)!;
+                team.memberCount += 1;
+              }
+            }
+          }
+          teams = Array.from(teamMap.values());
+        }
+
+        // Add "All Teams" option if user has multi-team access
         const teamList = [];
         if (
           accessContext.isSuperUser ||
-          (accessContext.allowedTeams && accessContext.allowedTeams.length > 1)
+          (accessContext.allowedTeams && accessContext.allowedTeams.length > 1) ||
+          teams.length > 1
         ) {
           teamList.push({
             teamId: '',
@@ -532,11 +621,50 @@ export class DashboardServer {
             isAccessible: true,
           });
         }
-        teamList.push(...Array.from(teams.values()));
+        teamList.push(...teams);
 
         res.json({ teams: teamList });
       } catch (_error) {
         res.status(500).json({ error: 'Failed to load teams' });
+      }
+    });
+
+    // Organizational traces endpoint: enriched traces with organizational context
+    this.app.get('/api/organizational/traces', async (req, res) => {
+      try {
+        const accessContext = getTeamAccessContext(req);
+        const teamFilter = req.query.team as string;
+        const limit = Math.min(parseInt(req.query.limit as string, 10) || 100, 500);
+
+        if (!this.config.somaVault) {
+          return res.status(404).json({ error: 'SOMA vault not configured' });
+        }
+
+        const somaAdapter = new SomaDataAdapter(this.config.somaVault);
+        let traces = await somaAdapter.getOrganizationalTraces();
+
+        // Apply team filter if specified
+        if (teamFilter) {
+          traces = traces.filter(trace =>
+            trace.operatorContext?.teamId === teamFilter
+          );
+        }
+
+        // Apply access control
+        traces = traces.filter(trace => {
+          if (accessContext.isSuperUser) return true;
+          if (!accessContext.allowedTeams?.length) return true;
+          return !trace.operatorContext?.teamId ||
+                 accessContext.allowedTeams.includes(trace.operatorContext.teamId);
+        });
+
+        // Apply limit
+        traces = traces.slice(0, limit);
+
+        res.json({ traces, total: traces.length });
+      } catch (error) {
+        console.error('Failed to load organizational traces:', error);
+        res.status(500).json({ error: 'Failed to load organizational traces' });
       }
     });
 
@@ -937,10 +1065,9 @@ export class DashboardServer {
     });
 
     // Variant analysis endpoint — supports ?by=model for model-aware variants
-    this.app.get('/api/agents/:agentId/variants', async (req, res) => {
+    this.app.get('/api/agents/:agentId/variants', (req, res) => {
       try {
         const agentId = req.params.agentId;
-        const byModel = req.query.by === 'model';
         const graphs = this.getGraphTraces(agentId);
         if (graphs.length === 0) {
           return res.json({ agentId, totalTraces: 0, variants: [], modelVariants: [] });
@@ -951,24 +1078,11 @@ export class DashboardServer {
           percentage: v.percentage,
         }));
 
-        // Model-aware variants (SOMA premium)
-        let modelVariants: typeof variants = [];
-        if (byModel) {
-          try {
-            const { findVariantsWithModel } = await import(
-              /* webpackIgnore: true */ 'soma/ops-intel'
-            );
-            modelVariants = findVariantsWithModel(graphs, { includeModel: true }).map(
-              (v: { pathSignature: string; count: number; percentage: number }) => ({
-                pathSignature: v.pathSignature,
-                count: v.count,
-                percentage: v.percentage,
-              }),
-            );
-          } catch {
-            // SOMA not available — return empty model variants
-          }
-        }
+        // Model-aware variants (?by=model) require SOMA's model-annotated path
+        // signatures, which are not derivable from local graph traces or the
+        // .soma/ filesystem artifacts. AgentFlow never imports the soma module
+        // (filesystem-only boundary), so this always returns an empty list.
+        const modelVariants: typeof variants = [];
 
         res.json({ agentId, totalTraces: graphs.length, variants, modelVariants });
       } catch (error) {
@@ -999,7 +1113,7 @@ export class DashboardServer {
     });
 
     // Agent health briefing — synthesizes all SOMA intelligence for an agent
-    this.app.get('/api/agents/:agentId/health-briefing', async (req, res) => {
+    this.app.get('/api/agents/:agentId/health-briefing', (req, res) => {
       const somaVault = this.config.somaVault;
       if (!somaVault) return res.status(404).json({ error: 'Soma vault not configured' });
       try {
@@ -1069,25 +1183,14 @@ export class DashboardServer {
         }
         peers.sort((a, b) => b.successRate - a.successRate);
 
-        // Read drift data
-        let drift = null;
+        // Read drift data from conformance history (filesystem-only)
+        let drift: DriftReport | null = null;
         try {
           const historyPath = path.join(somaVault, '..', 'conformance-history.json');
           if (fs.existsSync(historyPath)) {
             const history = JSON.parse(fs.readFileSync(historyPath, 'utf-8'));
             const agentHistory = history.filter((e: { agentId: string }) => e.agentId === agentId);
-            if (agentHistory.length >= 10) {
-              try {
-                const { detectDrift: dd } = await import(
-                  /* webpackIgnore: true */ 'soma/ops-intel'
-                );
-                drift = dd(agentHistory);
-              } catch {
-                drift = { status: 'stable', dataPoints: agentHistory.length };
-              }
-            } else {
-              drift = { status: 'insufficient_data', dataPoints: agentHistory.length };
-            }
+            drift = computeDriftFromHistory(agentHistory);
           }
         } catch {
           /* no drift data */
@@ -1127,25 +1230,18 @@ export class DashboardServer {
         let decisions: unknown[] = [];
 
         if (sessionEvents && sessionEvents.length > 0) {
-          // Session trace — extract from session events
-          try {
-            import('soma/ops-intel')
-              .then(({ extractDecisionsFromSession, computePatternSignature }) => {
-                decisions = extractDecisionsFromSession(sessionEvents as Record<string, unknown>[]);
-                res.json({
-                  decisions,
-                  pattern: computePatternSignature(
-                    decisions as { action: string; index: number; outcome: string }[],
-                  ),
-                });
-              })
-              .catch(() => {
-                res.json({ decisions: [], pattern: '' });
-              });
-            return;
-          } catch {
-            /* fallback */
-          }
+          // Session trace — extract tool-call decisions locally from parsed
+          // session events (filesystem-only; mirrors the graph-node extraction below)
+          const toolCalls = (sessionEvents as SessionEvent[]).filter((e) => e.type === 'tool_call');
+          decisions = toolCalls.map((e, i) => ({
+            action: e.toolName ?? e.name ?? 'tool',
+            tool: e.toolName ?? e.name ?? 'tool',
+            outcome: e.toolError ? 'failed' : 'ok',
+            durationMs: e.duration,
+            index: i,
+          }));
+          const sessionPattern = decisions.map((d) => (d as { action: string }).action).join('→');
+          return res.json({ decisions, pattern: sessionPattern });
         }
 
         // JSON trace — extract from nodes
@@ -1682,14 +1778,18 @@ export class DashboardServer {
       }
     });
 
-    // AICP: Preflight authorization endpoint
-    this.app.get('/api/aicp/preflight', async (req, res) => {
+    // AICP: Preflight authorization endpoint.
+    // Evaluated from vault filesystem artifacts only (agent entity failure rate,
+    // constraint/contradiction/policy entries, insight recommendations) — the
+    // soma module is never imported (filesystem-only boundary).
+    this.app.get('/api/aicp/preflight', (req, res) => {
+      const started = Date.now();
       const agentId = req.query.agentId as string;
       if (!agentId) {
         return res.status(400).json({ error: 'agentId query parameter required' });
       }
       const somaVault = this.config.somaVault;
-      if (!somaVault) {
+      if (!somaVault || !fs.existsSync(somaVault)) {
         return res.json({
           proceed: true,
           warnings: [],
@@ -1699,53 +1799,124 @@ export class DashboardServer {
         });
       }
       try {
-        const { evaluatePreflight } = await import(/* webpackIgnore: true */ 'soma');
-        const { createVault } = await import(/* webpackIgnore: true */ 'soma');
-        const vault = createVault({ baseDir: somaVault });
-        const result = evaluatePreflight(vault, safePath(agentId));
-        res.json(result);
+        const agentRef = safePath(agentId);
+        const agentRefDashed = safePath(agentId.replace(/:/g, '-'));
+        const mentionsAgent = (content: string) =>
+          content.includes(agentRef) || content.includes(agentRefDashed);
+
+        const warnings: {
+          rule: string;
+          threshold?: number;
+          actual?: number;
+          message: string;
+          source: string;
+          sourceAgents?: string[];
+        }[] = [];
+        const recommendations: { insight: string; sourceAgents: string[]; confidence: number }[] =
+          [];
+        let proceed = true;
+
+        // Agent entity: failure-rate gate
+        const agentFile = path.join(somaVault, 'agent', `${agentRefDashed}.md`);
+        if (fs.existsSync(agentFile)) {
+          const fm = parseVaultFrontmatter(fs.readFileSync(agentFile, 'utf-8')) ?? {};
+          const failureRate = Number(fm.failureRate ?? 0);
+          const totalExecutions = Number(fm.totalExecutions ?? 0);
+          if (totalExecutions > 0 && failureRate > 0.1) {
+            warnings.push({
+              rule: 'max-failure-rate',
+              threshold: 0.1,
+              actual: failureRate,
+              message: `Agent failure rate ${(failureRate * 100).toFixed(1)}% exceeds 10% threshold (${totalExecutions} executions)`,
+              source: 'agent entity',
+            });
+          }
+          if (totalExecutions > 0 && failureRate > 0.5) proceed = false;
+        }
+
+        // Constraints, contradictions, and policies referencing this agent
+        for (const kt of ['constraint', 'contradiction', 'policy']) {
+          const dir = path.join(somaVault, kt);
+          if (!fs.existsSync(dir)) continue;
+          for (const f of fs.readdirSync(dir)) {
+            if (!f.endsWith('.md')) continue;
+            try {
+              const content = fs.readFileSync(path.join(dir, f), 'utf-8');
+              if (!mentionsAgent(content)) continue;
+              const parsed = parseVaultFrontmatter(content);
+              if (!parsed) continue;
+              const sourceAgents = Array.isArray(parsed.source_agents)
+                ? parsed.source_agents.map(String)
+                : undefined;
+              warnings.push({
+                rule: String(parsed.name ?? f.replace('.md', '')),
+                message: String(parsed.claim ?? '').slice(0, 300),
+                source: String(parsed.layer ?? kt),
+                sourceAgents,
+              });
+            } catch {
+              /* skip unreadable entries */
+            }
+          }
+        }
+
+        // Insights referencing this agent become recommendations
+        const insightDir = path.join(somaVault, 'insight');
+        if (fs.existsSync(insightDir)) {
+          for (const f of fs.readdirSync(insightDir)) {
+            if (!f.endsWith('.md')) continue;
+            try {
+              const content = fs.readFileSync(path.join(insightDir, f), 'utf-8');
+              if (!mentionsAgent(content)) continue;
+              const parsed = parseVaultFrontmatter(content);
+              if (!parsed) continue;
+              const rawConfidence = parsed.confidence;
+              const confidence =
+                typeof rawConfidence === 'number'
+                  ? rawConfidence
+                  : ({ high: 0.9, medium: 0.6, low: 0.3 }[String(rawConfidence)] ?? 0.5);
+              recommendations.push({
+                insight: String(parsed.claim ?? parsed.name ?? f.replace('.md', '')).slice(0, 300),
+                sourceAgents: Array.isArray(parsed.source_agents)
+                  ? parsed.source_agents.map(String)
+                  : [],
+                confidence,
+              });
+            } catch {
+              /* skip unreadable entries */
+            }
+          }
+        }
+
+        res.json({
+          proceed,
+          warnings,
+          recommendations,
+          available: true,
+          _meta: { durationMs: Date.now() - started },
+        });
       } catch {
         res.json({
           proceed: true,
           warnings: [],
           recommendations: [],
           available: false,
-          _meta: { durationMs: 0 },
+          _meta: { durationMs: Date.now() - started },
         });
       }
     });
 
-    // Ops-Intel: Efficiency (premium — calls SOMA getEfficiency with fallback)
-    this.app.get('/api/soma/efficiency', async (_req, res) => {
+    // Ops-Intel: Efficiency — computed from soma-report.json (filesystem-only;
+    // the soma module is never imported)
+    this.app.get('/api/soma/efficiency', (_req, res) => {
       try {
-        // Try SOMA ops-intel library first — collect all graph traces across agents
-        const allTraces = this.watcher.getAllTraces().map(serializeTrace);
-        const graphs: ExecutionGraph[] = [];
-        for (const t of allTraces) {
-          try {
-            if (t.sourceType === 'session' || t.sourceType === 'log') continue;
-            if (!t.rootNodeId && !t.rootId) continue;
-            const nodes = t.nodes;
-            if (!nodes || (typeof nodes === 'object' && Object.keys(nodes).length === 0)) continue;
-            graphs.push(loadGraph(t));
-          } catch {
-            /* skip non-graph traces */
-          }
-        }
-        try {
-          const { getEfficiency } = await import(/* webpackIgnore: true */ 'soma/ops-intel');
-          const report = getEfficiency(graphs);
-          return res.json(report);
-        } catch {
-          // SOMA not available — fallback to inline computation from report
-        }
-
-        // Fallback: read from soma-report.json
         const somaVault = this.config.somaVault;
         if (!somaVault) return res.status(404).json({ error: 'Soma vault not configured' });
         const reportPath = path.join(somaVault, '..', 'soma-report.json');
         if (!fs.existsSync(reportPath)) {
-          return res.status(404).json({ error: 'No SOMA report found' });
+          return res.status(404).json({
+            error: 'Efficiency requires SOMA report data (soma-report.json). Run soma report.',
+          });
         }
         const report = JSON.parse(fs.readFileSync(reportPath, 'utf-8'));
         const agents = report.agents ?? [];
@@ -1780,8 +1951,9 @@ export class DashboardServer {
       }
     });
 
-    // Ops-Intel: Drift (premium — calls SOMA detectDrift with fallback)
-    this.app.get('/api/soma/drift', async (req, res) => {
+    // Ops-Intel: Drift — linear regression over conformance-history.json
+    // (filesystem-only; the soma module is never imported)
+    this.app.get('/api/soma/drift', (req, res) => {
       const agentId = req.query.agentId as string;
       if (!agentId) return res.status(400).json({ error: 'agentId query parameter required' });
       try {
@@ -1797,49 +1969,8 @@ export class DashboardServer {
 
         const agentHistory = history.filter((e: { agentId: string }) => e.agentId === agentId);
 
-        // Try SOMA ops-intel library
-        try {
-          const { detectDrift } = await import(/* webpackIgnore: true */ 'soma/ops-intel');
-          const driftReport = detectDrift(agentHistory);
-          return res.json({ drift: driftReport, points: agentHistory });
-        } catch {
-          // SOMA not available — fallback to inline
-        }
-
-        // Fallback: inline regression
-        const n = agentHistory.length;
-        if (n < 10) {
-          return res.json({
-            drift: { status: 'insufficient_data', slope: 0, r2: 0, windowSize: n, dataPoints: n },
-            points: agentHistory,
-          });
-        }
-        let sumX = 0,
-          sumY = 0,
-          sumXY = 0,
-          sumX2 = 0;
-        for (let i = 0; i < n; i++) {
-          const y = agentHistory[i]?.score;
-          sumX += i;
-          sumY += y;
-          sumXY += i * y;
-          sumX2 += i * i;
-        }
-        const denom = n * sumX2 - sumX * sumX;
-        const slope = denom !== 0 ? (n * sumXY - sumX * sumY) / denom : 0;
-        const intercept = (sumY - slope * sumX) / n;
-        const meanY = sumY / n;
-        let ssRes = 0,
-          ssTot = 0;
-        for (let i = 0; i < n; i++) {
-          const y = agentHistory[i]?.score;
-          ssRes += (y - (intercept + slope * i)) ** 2;
-          ssTot += (y - meanY) ** 2;
-        }
-        const r2 = ssTot > 0 ? 1 - ssRes / ssTot : 0;
-        const status = r2 > 0.3 ? (slope < 0 ? 'degrading' : 'improving') : 'stable';
         res.json({
-          drift: { status, slope, r2, windowSize: n, dataPoints: n },
+          drift: computeDriftFromHistory(agentHistory),
           points: agentHistory,
         });
       } catch {
@@ -2233,7 +2364,7 @@ export class DashboardServer {
     this.app.get('/api/directories', (_req, res) => {
       try {
         // Read extra dirs from saved config
-        const home = process.env.HOME ?? '/home/trader';
+        const home = homedir();
         const configPath = path.join(home, '.agentflow/dashboard-config.json');
         let extraDirs: string[] = [];
         try {
@@ -2315,10 +2446,7 @@ export class DashboardServer {
           }
         }
 
-        const configPath = path.join(
-          process.env.HOME ?? '/home/trader',
-          '.agentflow/dashboard-config.json',
-        );
+        const configPath = path.join(homedir(), '.agentflow/dashboard-config.json');
 
         let config: { extraDirs?: string[] } = {};
         try {
