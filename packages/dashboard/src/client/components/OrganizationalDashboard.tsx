@@ -7,6 +7,9 @@ import { TeamQueryPerformanceChart } from './org/performance/TeamQueryPerformanc
 import { GovernanceRecommendations } from './org/policy/GovernanceRecommendations';
 import { PolicyConfigurationView } from './org/policy/PolicyConfigurationView';
 import { TeamFilterDropdown } from './org/team/TeamFilterDropdown';
+import { TeamActivityOverview } from './org/team/TeamActivityOverview';
+import { TeamPerformanceMetricsSimple } from './org/team/TeamPerformanceMetricsSimple';
+import { OrganizationalIntelligencePanel } from './org/intelligence/OrganizationalIntelligencePanel';
 
 type OrgSubView = 'team' | 'policy' | 'session' | 'activity' | 'performance';
 
@@ -115,7 +118,7 @@ function TeamView(): JSX.Element {
 
   return (
     <section className="organizational-view">
-      <h2>Team</h2>
+      <h2>Team Intelligence</h2>
       <div className="organizational-view__controls">
         <TeamFilterDropdown
           selectedTeamId={selectedTeamId}
@@ -125,15 +128,38 @@ function TeamView(): JSX.Element {
           }}
         />
       </div>
-      <PendingDataLayerNote
-        components={[
-          'TeamActivityOverview',
-          'TeamPerformanceMetrics',
-          'TeamComparisonView',
-          'DashboardTeamFilterIntegration',
-        ]}
-        requires="OrganizationalTrace[]"
-      />
+
+      <div className="organizational-view__content">
+        {/* Team Activity Overview */}
+        <TeamActivityOverview
+          teamId={selectedTeamId}
+          timeRange="24h"
+          realTimeUpdates={true}
+          showWorkloadDistribution={true}
+          showCollaboration={true}
+          onOperatorClick={(operatorId) => {
+            // TODO: Navigate to operator detail view
+            console.log('Navigate to operator:', operatorId);
+          }}
+        />
+
+        {/* Team Performance Metrics */}
+        <TeamPerformanceMetricsSimple
+          teamId={selectedTeamId}
+          timeframe="day"
+        />
+
+        {/* Organizational Intelligence Panel */}
+        <OrganizationalIntelligencePanel />
+
+        <PendingDataLayerNote
+          components={[
+            'TeamComparisonView',
+            'DashboardTeamFilterIntegration',
+          ]}
+          requires="Enhanced team comparison and filter integration"
+        />
+      </div>
     </section>
   );
 }
@@ -144,13 +170,19 @@ function PolicyView(): JSX.Element {
 
   return (
     <section className="organizational-view">
-      <h2>Policy</h2>
-      <GovernanceRecommendations />
-      <PolicyConfigurationView teamId={selectedTeamId} />
-      <PendingDataLayerNote
-        components={['PolicyStatusIndicator', 'PolicyComplianceCard', 'PolicyHistoryView']}
-        requires="PolicyStatus"
-      />
+      <h2>Policy & Governance</h2>
+      <div className="organizational-view__content">
+        <GovernanceRecommendations />
+        <PolicyConfigurationView teamId={selectedTeamId} />
+
+        {/* Simple Policy Status using organizational intelligence data */}
+        <OrganizationalIntelligencePanel />
+
+        <PendingDataLayerNote
+          components={['PolicyStatusIndicator', 'PolicyComplianceCard', 'PolicyHistoryView']}
+          requires="Enhanced policy-specific interfaces for detailed compliance tracking"
+        />
+      </div>
     </section>
   );
 }
@@ -158,19 +190,24 @@ function PolicyView(): JSX.Element {
 function SessionView(): JSX.Element {
   return (
     <section className="organizational-view">
-      <h2>Session</h2>
-      <PendingDataLayerNote
-        components={[
-          'SessionHookVisualizer',
-          'SessionCorrelationChain',
-          'OrganizationalBriefingDisplay',
-          'CrossInstanceSessionTracker',
-          'SessionSimilarityAnalyzer',
-          'TemporalSessionClustering',
-          'OperatorCollaborationIndicators',
-        ]}
-        requires="SessionCorrelation"
-      />
+      <h2>Session Intelligence</h2>
+      <div className="organizational-view__content">
+        {/* Show organizational intelligence with focus on session correlation */}
+        <OrganizationalIntelligencePanel />
+
+        <PendingDataLayerNote
+          components={[
+            'SessionHookVisualizer',
+            'SessionCorrelationChain',
+            'OrganizationalBriefingDisplay',
+            'CrossInstanceSessionTracker',
+            'SessionSimilarityAnalyzer',
+            'TemporalSessionClustering',
+            'OperatorCollaborationIndicators',
+          ]}
+          requires="Advanced session correlation and analysis components"
+        />
+      </div>
     </section>
   );
 }
@@ -178,19 +215,32 @@ function SessionView(): JSX.Element {
 function ActivityView(): JSX.Element {
   return (
     <section className="organizational-view">
-      <h2>Activity</h2>
-      <PendingDataLayerNote
-        components={[
-          'OperatorTimelineView',
-          'MultiOperatorComparison',
-          'WorkflowPatternIdentifier',
-          'ProblemSolvingPatternAnalysis',
-          'TeamCollaborationTimeline',
-          'ProductivityInsights',
-          'CollaborationOpportunityIdentifier',
-        ]}
-        requires="SessionCorrelation"
-      />
+      <h2>Activity Intelligence</h2>
+      <div className="organizational-view__content">
+        {/* Show team activity overview for all teams */}
+        <TeamActivityOverview
+          timeRange="24h"
+          realTimeUpdates={true}
+          showCollaboration={true}
+          showActivityTimeline={true}
+        />
+
+        {/* Show organizational intelligence with focus on operator insights */}
+        <OrganizationalIntelligencePanel />
+
+        <PendingDataLayerNote
+          components={[
+            'OperatorTimelineView',
+            'MultiOperatorComparison',
+            'WorkflowPatternIdentifier',
+            'ProblemSolvingPatternAnalysis',
+            'TeamCollaborationTimeline',
+            'ProductivityInsights',
+            'CollaborationOpportunityIdentifier',
+          ]}
+          requires="Advanced activity analysis and pattern detection components"
+        />
+      </div>
     </section>
   );
 }
@@ -201,10 +251,19 @@ function PerformanceView(): JSX.Element {
 
   return (
     <section className="organizational-view">
-      <h2>Performance</h2>
-      <TeamQueryPerformanceChart teamId={selectedTeamId} />
-      <CacheEfficiencyVisualizer teamId={selectedTeamId} />
-      <OrganizationalIntelligenceMetrics teamId={selectedTeamId} />
+      <h2>Performance Analytics</h2>
+      <div className="organizational-view__content">
+        <TeamPerformanceMetricsSimple
+          teamId={selectedTeamId}
+          timeframe="day"
+        />
+
+        <OrganizationalIntelligencePanel />
+
+        <TeamQueryPerformanceChart teamId={selectedTeamId} />
+        <CacheEfficiencyVisualizer teamId={selectedTeamId} />
+        <OrganizationalIntelligenceMetrics teamId={selectedTeamId} />
+      </div>
     </section>
   );
 }
