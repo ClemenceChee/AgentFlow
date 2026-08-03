@@ -1,5 +1,4 @@
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
-import { Resource } from '@opentelemetry/resources';
 import { NodeSDK } from '@opentelemetry/sdk-node';
 import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions';
 
@@ -22,18 +21,15 @@ export class AgentFlowOTelConfig {
    * Initialize OpenTelemetry with the specified configuration
    */
   async initialize(config: OTelConfig): Promise<void> {
-    const resource = new Resource({
-      [SemanticResourceAttributes.SERVICE_NAME]: config.serviceName,
-      [SemanticResourceAttributes.SERVICE_VERSION]: config.serviceVersion || '1.0.0',
-      [SemanticResourceAttributes.SERVICE_NAMESPACE]: 'agentflow',
-    });
-
     const traceExporter = this.createExporter(config);
 
     this.sdk = new NodeSDK({
-      resource,
+      resource: {
+        [SemanticResourceAttributes.SERVICE_NAME]: config.serviceName,
+        [SemanticResourceAttributes.SERVICE_VERSION]: config.serviceVersion || '1.0.0',
+        [SemanticResourceAttributes.SERVICE_NAMESPACE]: 'agentflow',
+      },
       traceExporter,
-      samplingRatio: config.samplingRatio || 1.0,
     });
 
     await this.sdk.start();

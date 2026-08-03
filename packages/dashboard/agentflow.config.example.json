@@ -37,6 +37,9 @@
   "// skipDirectories": "Directory names to skip during recursive scanning",
   "skipDirectories": ["knowledge"],
 
+  "// somaVault": "SOMA vault directory (tilde-expanded). Enables Intelligence features. Overridden by --soma-vault flag / SOMA_VAULT env.",
+  "somaVault": "~/.soma/vault",
+
   "// discoveryPaths": "Additional directories to auto-discover and watch for traces",
   "discoveryPaths": [
     "~/.soma/traces",

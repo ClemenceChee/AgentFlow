@@ -6,13 +6,10 @@
  */
 
 import type React from 'react';
-import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useOrganizationalContext } from '../../../contexts/OrganizationalContext';
-import { useOrganizationalData } from '../../../hooks/organizational/index.js';
 import { useTeamData } from '../../../hooks/useOrganizationalCache.js';
-import { useHoverPrefetch } from '../../../hooks/usePrefetch.js';
 import type { TeamAccessLevel, TeamMembership } from '../../../types/organizational.js';
-import { useExpensiveMemo, useStableCallback } from '../../../utils/react-optimizations.js';
 
 // Component props
 interface TeamFilterDropdownProps {
@@ -68,7 +65,6 @@ const _TeamOptionItem = memo<{
   onSelect: (teamId: string) => void;
   getActivityStatus: (ratio: number) => string;
   formatTeamName: (team: TeamMembership) => string;
-  hoverHandlers: any;
 }>(
   ({
     option,
@@ -78,9 +74,8 @@ const _TeamOptionItem = memo<{
     onSelect,
     getActivityStatus,
     formatTeamName,
-    hoverHandlers,
   }) => {
-    const handleSelect = useStableCallback(() => {
+    const handleSelect = useCallback(() => {
       onSelect(option.team.teamId);
     }, [onSelect, option.team.teamId]);
 
@@ -90,7 +85,6 @@ const _TeamOptionItem = memo<{
         onClick={handleSelect}
         role="option"
         aria-selected={isSelected}
-        {...hoverHandlers}
       >
         <div className="team-filter-dropdown__option-content">
           <div className="team-filter-dropdown__option-icon">👥</div>
@@ -163,8 +157,6 @@ const TeamFilterDropdownComponent = function TeamFilterDropdown({
   customFilter,
 }: TeamFilterDropdownProps) {
   const { state } = useOrganizationalContext();
-  const { useTeamMembership } = useOrganizationalData();
-  const { createHoverHandlers } = useHoverPrefetch();
 
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -184,72 +176,64 @@ const TeamFilterDropdownComponent = function TeamFilterDropdown({
     staleTime: 2 * 60 * 1000, // Consider stale after 2 minutes
   });
 
-  // Process team options with access levels and activity (optimized)
-  const teamOptions = useExpensiveMemo(
-    (): TeamOption[] => {
-      if (!teams || !Array.isArray(teams)) return [];
+  // Process team options with access levels and activity
+  const teamOptions = useMemo((): TeamOption[] => {
+    if (!teams?.availableTeams || !Array.isArray(teams.availableTeams)) return [];
 
-      const now = new Date();
-      const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-      const currentOperator = state.currentOperator;
+    const now = new Date();
+    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const currentOperator = state.currentOperator;
 
-      return teams.map((team) => {
-        // Calculate activity metrics
-        const activeMembers = team.members.filter(
-          (m) => m.lastActivity && new Date(m.lastActivity) > oneDayAgo,
-        ).length;
+    return teams.availableTeams.map((team) => {
+      // For now, use placeholder values for activity and access
+      // These can be enhanced when we have real member data from SOMA
+      const activeMembers = Math.floor(team.memberCount * 0.3); // Placeholder: 30% active
+      const accessLevel = 'observer' as TeamAccessLevel; // Default access level
 
-        // Get current user's access level to this team
-        const membership = team.members.find((m) => m.operatorId === currentOperator);
-        const accessLevel = membership?.accessLevel || 'observer';
+      return {
+        team: {
+          teamId: team.teamId,
+          teamName: team.teamName,
+          members: [], // Placeholder - will be filled when we have member data
+        } as TeamMembership,
+        accessLevel,
+        memberCount: team.memberCount,
+        activeMembers,
+        activityRatio: team.memberCount > 0 ? activeMembers / team.memberCount : 0,
+      };
+    });
+  }, [teams, state.currentOperator]);
 
-        return {
-          team,
-          accessLevel,
-          memberCount: team.members.length,
-          activeMembers,
-          activityRatio: team.members.length > 0 ? activeMembers / team.members.length : 0,
-        };
-      });
-    },
-    [teams, state.currentOperator],
-    'TeamOptions Processing',
-  );
+  // Filter teams based on search query
+  const filteredTeamOptions = useMemo(() => {
+    if (!searchQuery) return teamOptions;
 
-  // Filter teams based on search query (optimized)
-  const filteredTeamOptions = useExpensiveMemo(
-    () => {
-      if (!searchQuery) return teamOptions;
+    const query = searchQuery.toLowerCase().trim();
 
-      const query = searchQuery.toLowerCase().trim();
+    return teamOptions.filter((option) => {
+      if (customFilter) {
+        return customFilter(option.team, query);
+      }
 
-      return teamOptions.filter((option) => {
-        if (customFilter) {
-          return customFilter(option.team, query);
-        }
+      // Default filtering logic
+      const teamName = (option.team.teamName || '').toLowerCase();
+      const teamId = option.team.teamId.toLowerCase();
 
-        // Default filtering logic
-        const teamName = (option.team.teamName || '').toLowerCase();
-        const teamId = option.team.teamId.toLowerCase();
-
-        return (
-          teamName.includes(query) ||
-          teamId.includes(query) ||
-          teamId.substring(0, 8).includes(query)
-        );
-      });
-    },
-    [teamOptions, searchQuery, customFilter],
-    'Team Filtering',
-  );
+      return (
+        teamName.includes(query) ||
+        teamId.includes(query) ||
+        teamId.substring(0, 8).includes(query)
+      );
+    });
+  }, [teamOptions, searchQuery, customFilter]);
 
   // Get selected team info
   const selectedTeam = useMemo(() => {
     return teamOptions.find((option) => option.team.teamId === selectedTeamId);
   }, [teamOptions, selectedTeamId]);
 
-  // Handle dropdown toggle (optimized)
-  const handleToggle = useStableCallback(() => {
+  // Handle dropdown toggle
+  const handleToggle = useCallback(() => {
     if (disabled) return;
     setIsOpen(!isOpen);
 
@@ -261,8 +245,8 @@ const TeamFilterDropdownComponent = function TeamFilterDropdown({
     }
   }, [disabled, isOpen, enableSearch]);
 
-  // Handle team selection (optimized)
-  const handleTeamSelect = useStableCallback(
+  // Handle team selection
+  const handleTeamSelect = useCallback(
     (teamId: string | null) => {
       onTeamChange(teamId);
       setIsOpen(false);
@@ -286,8 +270,8 @@ const TeamFilterDropdownComponent = function TeamFilterDropdown({
     }
   }, [isOpen]);
 
-  // Handle keyboard navigation (optimized)
-  const handleKeyDown = useStableCallback(
+  // Handle keyboard navigation
+  const handleKeyDown = useCallback(
     (event: React.KeyboardEvent) => {
       if (event.key === 'Escape') {
         setIsOpen(false);
@@ -440,22 +424,16 @@ const TeamFilterDropdownComponent = function TeamFilterDropdown({
               )}
 
               {/* Individual Team Options */}
-              {filteredTeamOptions.map((option) => {
-                const hoverHandlers = createHoverHandlers(option.team.teamId, 'team', {
-                  priority: 'normal',
-                });
-
-                return (
-                  <button
-                    key={option.team.teamId}
-                    className={`team-filter-dropdown__option ${
-                      selectedTeamId === option.team.teamId ? 'selected' : ''
-                    }`}
-                    onClick={() => handleTeamSelect(option.team.teamId)}
-                    role="option"
-                    aria-selected={selectedTeamId === option.team.teamId}
-                    {...hoverHandlers}
-                  >
+              {filteredTeamOptions.map((option) => (
+                <button
+                  key={option.team.teamId}
+                  className={`team-filter-dropdown__option ${
+                    selectedTeamId === option.team.teamId ? 'selected' : ''
+                  }`}
+                  onClick={() => handleTeamSelect(option.team.teamId)}
+                  role="option"
+                  aria-selected={selectedTeamId === option.team.teamId}
+                >
                     <div className="team-filter-dropdown__option-content">
                       <div className="team-filter-dropdown__option-icon">👥</div>
 
@@ -501,8 +479,8 @@ const TeamFilterDropdownComponent = function TeamFilterDropdown({
                       </div>
                     </div>
                   </button>
-                );
-              })}
+                )
+              )}
 
               {/* No Results */}
               {filteredTeamOptions.length === 0 && searchQuery && (

@@ -6,16 +6,14 @@
  * real-time team dynamics with collaboration indicators.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useOrganizationalIntelligence, useOrganizationalTraces } from '../../../hooks/useOrganizationalData.js';
 import type { OrganizationalTrace, TeamMembership } from '../../../types/organizational.js';
 
 // Component props
 interface TeamActivityOverviewProps {
-  /** Team ID to show activity for */
-  teamId: string;
-
-  /** Array of traces to analyze */
-  traces: OrganizationalTrace[];
+  /** Team ID to show activity for (optional - if not provided, shows all teams) */
+  teamId?: string;
 
   /** Time range for activity analysis */
   timeRange?: '1h' | '6h' | '24h' | '7d';
@@ -81,7 +79,6 @@ interface ActivityTimeBucket {
  */
 export function TeamActivityOverview({
   teamId,
-  traces,
   timeRange = '24h',
   realTimeUpdates = false,
   showWorkloadDistribution = true,
@@ -92,6 +89,15 @@ export function TeamActivityOverview({
   onOperatorClick,
   onActivityPattern,
 }: TeamActivityOverviewProps) {
+  // Fetch organizational data using our SOMA hooks
+  const { intelligence } = useOrganizationalIntelligence();
+  const { traces, loading: tracesLoading, error: tracesError } = useOrganizationalTraces({
+    teamFilter: teamId,
+    limit: 100,
+    autoRefresh: realTimeUpdates,
+    refreshInterval: realTimeUpdates ? 30000 : undefined
+  });
+
   const [operatorActivities, setOperatorActivities] = useState<OperatorActivity[]>([]);
   const [activityTimeline, setActivityTimeline] = useState<ActivityTimeBucket[]>([]);
   const [teamInfo, setTeamInfo] = useState<TeamMembership | null>(null);
@@ -99,8 +105,10 @@ export function TeamActivityOverview({
   const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState(Date.now());
 
-  // Filter traces for team and time range
+  // Filter traces for time range (team filtering is handled by the hook)
   const teamTraces = useMemo(() => {
+    if (!traces) return [];
+
     const now = Date.now();
     const timeRangeMs = {
       '1h': 60 * 60 * 1000,
@@ -109,10 +117,8 @@ export function TeamActivityOverview({
       '7d': 7 * 24 * 60 * 60 * 1000,
     }[timeRange];
 
-    return traces.filter(
-      (trace) => trace.operatorContext?.teamId === teamId && trace.timestamp > now - timeRangeMs,
-    );
-  }, [traces, teamId, timeRange]);
+    return traces.filter((trace) => trace.startTime > now - timeRangeMs);
+  }, [traces, timeRange]);
 
   // Calculate operator activities
   const calculateOperatorActivities = useCallback(async (): Promise<OperatorActivity[]> => {
@@ -151,14 +157,14 @@ export function TeamActivityOverview({
 
     for (const [operatorId, operatorTraces] of operatorMap.entries()) {
       const tracesCount = operatorTraces.length;
-      const lastActivity = Math.max(...operatorTraces.map((t) => t.timestamp));
+      const lastActivity = Math.max(...operatorTraces.map((t) => t.startTime));
       const isActive = now - lastActivity < 30 * 60 * 1000; // Active in last 30 minutes
 
       // Calculate workload percentage
       const workloadPercentage = totalTraces > 0 ? (tracesCount / totalTraces) * 100 : 0;
 
-      // Calculate success rate
-      const successfulTraces = operatorTraces.filter((t) => t.status === 'success').length;
+      // Calculate success rate (using status: 'completed' as success)
+      const successfulTraces = operatorTraces.filter((t) => t.status === 'completed').length;
       const successRate = tracesCount > 0 ? successfulTraces / tracesCount : 0;
 
       // Calculate average response time
@@ -179,17 +185,10 @@ export function TeamActivityOverview({
             ? 'light'
             : 'inactive';
 
-      // Calculate collaboration score (simplified - based on trace overlap patterns)
-      const collaborationScore =
-        operatorTraces.filter((trace) =>
-          teamTraces.some(
-            (otherTrace) =>
-              otherTrace.operatorContext?.operatorId !== operatorId &&
-              Math.abs(otherTrace.timestamp - trace.timestamp) < 60 * 60 * 1000 && // Within 1 hour
-              (otherTrace.sessionCorrelation?.correlatedSessions.includes(trace.id) ||
-                trace.sessionCorrelation?.correlatedSessions.includes(otherTrace.id)),
-          ),
-        ).length / tracesCount;
+      // Calculate collaboration score (simplified - based on session correlation)
+      const collaborationScore = operatorTraces.filter((trace) =>
+        trace.sessionCorrelation?.confidenceScore || 0 > 0.5
+      ).length / tracesCount;
 
       activities.push({
         operatorId,
@@ -227,7 +226,7 @@ export function TeamActivityOverview({
       const operatorId = trace.operatorContext?.operatorId;
       if (!operatorId) return;
 
-      const bucketTime = Math.floor(trace.timestamp / bucketSize) * bucketSize;
+      const bucketTime = Math.floor(trace.startTime / bucketSize) * bucketSize;
 
       if (!buckets.has(bucketTime)) {
         buckets.set(bucketTime, {
@@ -313,39 +312,45 @@ export function TeamActivityOverview({
     [],
   );
 
-  // Load activity data
+  // Update loading and error states based on data fetching
   useEffect(() => {
-    const loadActivityData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+    setLoading(tracesLoading);
+    setError(tracesError);
+  }, [tracesLoading, tracesError]);
 
-        const [activities, timeline] = await Promise.all([
-          calculateOperatorActivities(),
-          Promise.resolve(calculateActivityTimeline()),
-        ]);
+  // Load activity data when traces are available
+  useEffect(() => {
+    if (!tracesLoading && !tracesError && traces) {
+      const loadActivityData = async () => {
+        try {
+          const [activities, timeline] = await Promise.all([
+            calculateOperatorActivities(),
+            Promise.resolve(calculateActivityTimeline()),
+          ]);
 
-        setOperatorActivities(activities);
-        setActivityTimeline(timeline);
+          setOperatorActivities(activities);
+          setActivityTimeline(timeline);
 
-        // Detect and report activity patterns
-        const patterns = detectActivityPatterns(activities);
-        patterns.forEach((pattern) => {
-          if (onActivityPattern) {
-            onActivityPattern(pattern);
-          }
-        });
+          // Detect and report activity patterns
+          const patterns = detectActivityPatterns(activities);
+          patterns.forEach((pattern) => {
+            if (onActivityPattern) {
+              onActivityPattern(pattern);
+            }
+          });
 
-        setLastUpdate(Date.now());
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load activity data');
-      } finally {
-        setLoading(false);
-      }
-    };
+          setLastUpdate(Date.now());
+        } catch (err) {
+          setError(err instanceof Error ? err.message : 'Failed to load activity data');
+        }
+      };
 
-    loadActivityData();
+      loadActivityData();
+    }
   }, [
+    traces,
+    tracesLoading,
+    tracesError,
     calculateOperatorActivities,
     calculateActivityTimeline,
     detectActivityPatterns,
