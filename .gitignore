@@ -65,3 +65,9 @@ packages/dashboard/agentflow.config.json
 packages/soma/
 .soma/
 **/.soma/
+
+# Workspace lockfiles. packages/* are npm workspaces, so the root lockfile
+# governs every install. A nested lockfile is never read by npm, goes stale
+# unnoticed, and gets scanned by Dependabot as if it were live. One of these
+# accounted for nine of eleven open alerts.
+packages/*/package-lock.json
